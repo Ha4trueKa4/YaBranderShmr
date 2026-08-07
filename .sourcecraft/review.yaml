@@ -1,0 +1,12 @@
+codereview:
+  auto_assign: true
+  rules:
+    - patterns:
+        - "android/**"
+      reviewers:
+        usernames:
+          - "pigin-pawel"
+          - "antvg05"
+          - "kelemandean"
+        assign: 1
+        need_ships: 1
