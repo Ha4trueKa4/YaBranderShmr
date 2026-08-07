@@ -1,0 +1,9 @@
+branch_protection:
+  policies:
+    ## Защита основной ветки: запрет переписывания истории, прямого пуша и удаления
+    - target: default_branch
+      message: "Прямой push в основную ветку запрещён, создай предложение изменений (PR)"
+      rules:
+        - prevent_force_push
+        - prevent_non_pr_changes
+        - prevent_deletion
