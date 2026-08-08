@@ -16,12 +16,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         .filter(Boolean)
         .join(' ')}
     >
-      <input
-        {...props}
-        aria-invalid={invalid || props['aria-invalid']}
-        className={styles.input}
-        ref={ref}
-      />
+      <input {...props} className={styles.input} ref={ref} />
       {trailingContent && (
         <span className={styles.trailing}>{trailingContent}</span>
       )}

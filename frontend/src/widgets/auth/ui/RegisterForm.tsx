@@ -18,18 +18,16 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
   } = useRegisterForm({ onSubmit })
 
   return (
-    <section aria-labelledby="register-title" className={styles.card}>
+    <section className={styles.card}>
       <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
-      <h2 className={styles.title} id="register-title">
-        Создать аккаунт
-      </h2>
+      <h2 className={styles.title}>Создать аккаунт</h2>
       <form className={styles.form} onSubmit={submit}>
         <div className={styles.formFields}>
           <Controller
             control={form.control}
-            name="fullName"
+            name="nickname"
             render={({ field, fieldState }) => (
-              <FormField error={fieldState.error?.message} label="Полное имя">
+              <FormField error={fieldState.error?.message} label="Никнейм">
                 <Input
                   {...field}
                   autoComplete="name"
@@ -68,13 +66,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
                   placeholder="Придумайте пароль"
                   ref={field.ref}
                   trailingContent={
-                    <IconButton
-                      aria-label={
-                        isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'
-                      }
-                      onClick={togglePasswordVisibility}
-                      size="sm"
-                    >
+                    <IconButton onClick={togglePasswordVisibility} size="sm">
                       {isPasswordVisible ? '◉' : '◌'}
                     </IconButton>
                   }

@@ -10,7 +10,7 @@ interface UseRegisterFormOptions {
 
 export function useRegisterForm({ onSubmit }: UseRegisterFormOptions = {}) {
   const form = useForm<RegisterFormValues>({
-    defaultValues: { email: '', fullName: '', password: '' },
+    defaultValues: { email: '', nickname: '', password: '' },
     mode: 'onBlur',
     resolver: zodResolver(registerFormSchema),
   })

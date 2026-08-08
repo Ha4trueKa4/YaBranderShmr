@@ -9,7 +9,7 @@ export const loginFormSchema = z.object({
 })
 
 export const registerFormSchema = loginFormSchema.extend({
-  fullName: z
+  nickname: z
     .string()
     .min(1, 'Введите имя.')
     .min(2, 'Введите минимум 2 символа.'),

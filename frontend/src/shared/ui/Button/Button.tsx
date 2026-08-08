@@ -9,10 +9,33 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
 }
 
-export function Button({ children, className, disabled, fullWidth = false, loading = false, size = 'md', type = 'button', variant = 'primary', ...props }: ButtonProps) {
+export function Button({
+  children,
+  className,
+  disabled,
+  fullWidth = false,
+  loading = false,
+  size = 'md',
+  type = 'button',
+  variant = 'primary',
+  ...props
+}: ButtonProps) {
   return (
-    <button {...props} className={[styles.button, styles[variant], styles[size], fullWidth && styles.fullWidth, className].filter(Boolean).join(' ')} disabled={disabled || loading} type={type}>
-      {loading && <span aria-hidden="true" className={styles.spinner} />}
+    <button
+      {...props}
+      className={[
+        styles.button,
+        styles[variant],
+        styles[size],
+        fullWidth && styles.fullWidth,
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      disabled={disabled || loading}
+      type={type}
+    >
+      {loading && <span className={styles.spinner} />}
       {children}
     </button>
   )
