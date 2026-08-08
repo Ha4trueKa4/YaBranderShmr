@@ -17,6 +17,11 @@
       "trailingCommas": "all"
     }
   },
+  "css": {
+    "formatter": {
+      "indentWidth": 2
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
