@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -85,14 +86,9 @@ fun ProjectCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AsyncImage(
-                    model = project.author.avatarUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(FeedColors.SurfaceVariant),
+                AuthorAvatar(
+                    url = project.author.avatarUrl,
+                    modifier = Modifier.size(24.dp),
                 )
                 androidx.compose.material3.Text(
                     text = project.author.displayName,
@@ -104,5 +100,26 @@ fun ProjectCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * Аватар автора: изображение по [url] либо круг-плейсхолдер, если url отсутствует
+ * (или пока грузится).
+ */
+@Composable
+private fun AuthorAvatar(url: String?, modifier: Modifier = Modifier) {
+    val avatarModifier = modifier
+        .clip(CircleShape)
+        .background(FeedColors.SurfaceVariant)
+    if (url == null) {
+        Box(avatarModifier)
+    } else {
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = avatarModifier,
+        )
     }
 }
