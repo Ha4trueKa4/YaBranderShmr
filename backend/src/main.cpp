@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
     // ya_brander::AppendAuth(component_list);
-    // ya_brander::AppendProjects(component_list);
+    ya_brander::AppendProjects(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);
 }
