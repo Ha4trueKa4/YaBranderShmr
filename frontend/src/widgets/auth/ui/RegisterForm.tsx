@@ -1,26 +1,120 @@
-import { useState, type FormEvent } from 'react'
+import { Controller } from 'react-hook-form'
 import { Button, FormField, IconButton, Input } from '@shared'
 import brandMark from '@shared/assets/brandmark.svg'
+import { useRegisterForm, type RegisterSubmitHandler } from '../model'
 import styles from './AuthForms.module.css'
 
-export function RegisterForm() {
-  const [isPasswordVisible, setPasswordVisible] = useState(false)
-  const [isSubmitted, setSubmitted] = useState(false)
+interface RegisterFormProps {
+  onSubmit?: RegisterSubmitHandler
+}
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSubmitted(true) }
+export function RegisterForm({ onSubmit }: RegisterFormProps) {
+  const {
+    form,
+    isPasswordVisible,
+    isSubmitted,
+    submit,
+    togglePasswordVisibility,
+  } = useRegisterForm({ onSubmit })
 
-  return <section aria-labelledby="register-title" className={styles.card}>
-    <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
-    <h2 className={styles.title} id="register-title">Создать аккаунт</h2>
-    <form className={styles.form} onSubmit={handleSubmit}>
-      <div className={styles.formFields}>
-        <FormField label="Полное имя"><Input autoComplete="name" name="name" placeholder="Иван Иванов" required /></FormField>
-        <FormField label="Email"><Input autoComplete="email" name="email" placeholder="hello@brandkit.ai" required type="email" /></FormField>
-        <FormField label="Пароль"><Input autoComplete="new-password" name="password" placeholder="Придумайте пароль" required trailingContent={<IconButton aria-label={isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'} onClick={() => setPasswordVisible((visible) => !visible)} size="sm">{isPasswordVisible ? '◉' : '◌'}</IconButton>} type={isPasswordVisible ? 'text' : 'password'} /></FormField>
-      </div>
-      <Button fullWidth type="submit">Создать аккаунт</Button>
-      {isSubmitted && <p className={styles.success}>Аккаунт будет создан после подключения API.</p>}
-    </form>
-    <p className={styles.footer}>Уже есть аккаунт? <button className={styles.link} type="button">Войти</button></p>
-  </section>
+  return (
+    <section aria-labelledby="register-title" className={styles.card}>
+      <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
+      <h2 className={styles.title} id="register-title">
+        Создать аккаунт
+      </h2>
+      <form className={styles.form} onSubmit={submit}>
+        <div className={styles.formFields}>
+          <Controller
+            control={form.control}
+            name="fullName"
+            rules={{
+              minLength: { message: 'Введите минимум 2 символа.', value: 2 },
+              required: 'Введите имя.',
+            }}
+            render={({ field, fieldState }) => (
+              <FormField error={fieldState.error?.message} label="Полное имя">
+                <Input
+                  {...field}
+                  autoComplete="name"
+                  invalid={Boolean(fieldState.error)}
+                  placeholder="Иван Иванов"
+                  ref={field.ref}
+                />
+              </FormField>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="email"
+            rules={{
+              pattern: {
+                message: 'Введите корректный email.',
+                value: /\S+@\S+\.\S+/,
+              },
+              required: 'Введите email.',
+            }}
+            render={({ field, fieldState }) => (
+              <FormField error={fieldState.error?.message} label="Email">
+                <Input
+                  {...field}
+                  autoComplete="email"
+                  invalid={Boolean(fieldState.error)}
+                  placeholder="hello@brandkit.ai"
+                  ref={field.ref}
+                  type="email"
+                />
+              </FormField>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="password"
+            rules={{
+              minLength: {
+                message: 'Пароль должен содержать минимум 8 символов.',
+                value: 8,
+              },
+              required: 'Введите пароль.',
+            }}
+            render={({ field, fieldState }) => (
+              <FormField error={fieldState.error?.message} label="Пароль">
+                <Input
+                  {...field}
+                  autoComplete="new-password"
+                  invalid={Boolean(fieldState.error)}
+                  placeholder="Придумайте пароль"
+                  ref={field.ref}
+                  trailingContent={
+                    <IconButton
+                      aria-label={
+                        isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'
+                      }
+                      onClick={togglePasswordVisibility}
+                      size="sm"
+                    >
+                      {isPasswordVisible ? '◉' : '◌'}
+                    </IconButton>
+                  }
+                  type={isPasswordVisible ? 'text' : 'password'}
+                />
+              </FormField>
+            )}
+          />
+        </div>
+        <Button fullWidth type="submit">
+          Создать аккаунт
+        </Button>
+        {isSubmitted && (
+          <p className={styles.success}>Форма успешно отправлена.</p>
+        )}
+      </form>
+      <p className={styles.footer}>
+        Уже есть аккаунт?{' '}
+        <button className={styles.link} type="button">
+          Войти
+        </button>
+      </p>
+    </section>
+  )
 }

@@ -1,26 +1,104 @@
-import { useState, type FormEvent } from 'react'
+import { Controller } from 'react-hook-form'
 import { Button, FormField, IconButton, Input } from '@shared'
 import brandMark from '@shared/assets/brandmark.svg'
+import { useLoginForm, type LoginSubmitHandler } from '../model'
 import styles from './AuthForms.module.css'
 
-export function LoginForm() {
-  const [isPasswordVisible, setPasswordVisible] = useState(false)
-  const [isSubmitted, setSubmitted] = useState(false)
+interface LoginFormProps {
+  onSubmit?: LoginSubmitHandler
+}
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSubmitted(true) }
+export function LoginForm({ onSubmit }: LoginFormProps) {
+  const {
+    form,
+    isPasswordVisible,
+    isSubmitted,
+    submit,
+    togglePasswordVisibility,
+  } = useLoginForm({ onSubmit })
 
-  return <section aria-labelledby="login-title" className={styles.card}>
-    <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
-    <h2 className={styles.title} id="login-title">Войти</h2>
-    <form className={styles.form} onSubmit={handleSubmit}>
-      <div className={styles.formFields}>
-        <FormField label="Email"><Input autoComplete="email" name="email" placeholder="hello@brandkit.ai" required type="email" /></FormField>
-        <FormField label="Пароль"><Input autoComplete="current-password" name="password" placeholder="Введите пароль" required trailingContent={<IconButton aria-label={isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'} onClick={() => setPasswordVisible((visible) => !visible)} size="sm">{isPasswordVisible ? '◉' : '◌'}</IconButton>} type={isPasswordVisible ? 'text' : 'password'} /></FormField>
-      </div>
-      <Button fullWidth type="submit">Войти</Button>
-      <button className={styles.link} type="button">Забыли пароль?</button>
-      {isSubmitted && <p className={styles.success}>Форма готова к подключению к API.</p>}
-    </form>
-    <p className={styles.footer}>Нет аккаунта? <button className={styles.link} type="button">Зарегистрироваться</button></p>
-  </section>
+  return (
+    <section aria-labelledby="login-title" className={styles.card}>
+      <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
+      <h2 className={styles.title} id="login-title">
+        Войти
+      </h2>
+      <form className={styles.form} onSubmit={submit}>
+        <div className={styles.formFields}>
+          <Controller
+            control={form.control}
+            name="email"
+            rules={{
+              pattern: {
+                message: 'Введите корректный email.',
+                value: /\S+@\S+\.\S+/,
+              },
+              required: 'Введите email.',
+            }}
+            render={({ field, fieldState }) => (
+              <FormField error={fieldState.error?.message} label="Email">
+                <Input
+                  {...field}
+                  autoComplete="email"
+                  invalid={Boolean(fieldState.error)}
+                  placeholder="hello@brandkit.ai"
+                  ref={field.ref}
+                  type="email"
+                />
+              </FormField>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="password"
+            rules={{
+              minLength: {
+                message: 'Пароль должен содержать минимум 8 символов.',
+                value: 8,
+              },
+              required: 'Введите пароль.',
+            }}
+            render={({ field, fieldState }) => (
+              <FormField error={fieldState.error?.message} label="Пароль">
+                <Input
+                  {...field}
+                  autoComplete="current-password"
+                  invalid={Boolean(fieldState.error)}
+                  placeholder="Введите пароль"
+                  ref={field.ref}
+                  trailingContent={
+                    <IconButton
+                      aria-label={
+                        isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'
+                      }
+                      onClick={togglePasswordVisibility}
+                      size="sm"
+                    >
+                      {isPasswordVisible ? '◉' : '◌'}
+                    </IconButton>
+                  }
+                  type={isPasswordVisible ? 'text' : 'password'}
+                />
+              </FormField>
+            )}
+          />
+        </div>
+        <Button fullWidth type="submit">
+          Войти
+        </Button>
+        <button className={styles.link} type="button">
+          Забыли пароль?
+        </button>
+        {isSubmitted && (
+          <p className={styles.success}>Форма успешно отправлена.</p>
+        )}
+      </form>
+      <p className={styles.footer}>
+        Нет аккаунта?{' '}
+        <button className={styles.link} type="button">
+          Зарегистрироваться
+        </button>
+      </p>
+    </section>
+  )
 }
