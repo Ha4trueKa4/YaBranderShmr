@@ -11,7 +11,6 @@ enum Route: Hashable {
     case projectCreate
     case projectGenerating
     case projectEditor
-    case projectChat
     case projectVersionHistory
     case publicProject
 

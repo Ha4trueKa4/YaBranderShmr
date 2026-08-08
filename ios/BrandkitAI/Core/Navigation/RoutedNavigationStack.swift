@@ -12,7 +12,7 @@ struct RoutedNavigationStack: View {
                 }
         }
         .sheet(item: $router.sheet) { route in
-            SheetDestination(route: route)
+            RouteDestination.SheetDestination(route: route)
         }
         .environment(router)
     }

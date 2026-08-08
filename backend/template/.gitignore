@@ -10,6 +10,8 @@ compile_commands.json
 !.vscode/README.md
 .cores/
 .pgdata/
+build_debug/
+build_release/
 cmake-build-*
 Testing/
 .DS_Store
