@@ -1,61 +1,36 @@
-DROP SCHEMA IF EXISTS code_architecture CASCADE;
-
-CREATE SCHEMA IF NOT EXISTS code_architecture;
-
-CREATE TABLE IF NOT EXISTS code_architecture.specialty (
-    id integer primary key generated always as identity,
-    name text UNIQUE
+CREATE TABLE users
+(
+    id            UUID PRIMARY KEY         DEFAULT uuid_generate_v4(),
+    login         VARCHAR(64) UNIQUE  NOT NULL,
+    email         VARCHAR(128) UNIQUE NOT NULL,
+    password_hash VARCHAR(255)        NOT NULL,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS code_architecture.common_item (
-    id integer primary key generated always as identity,
-    name text,
-    amount integer,
-    price numeric(8, 2),
-    dosage_form text,
-    manufacturer text,
-    barcode text UNIQUE
-    );
-
-CREATE TABLE IF NOT EXISTS code_architecture.special_item (
-    id integer primary key generated always as identity,
-    name text,
-    amount integer,
-    price numeric(8, 2),
-    dosage_form text,
-    manufacturer text,
-    barcode text UNIQUE,
-    specialty_id integer references code_architecture.specialty(id)
-    );
-
-CREATE TABLE IF NOT EXISTS code_architecture.prescription_item (
-    id integer primary key generated always as identity,
-    name text,
-    amount integer,
-    price numeric(8, 2),
-    dosage_form text,
-    manufacturer text,
-    barcode text UNIQUE
-    );
-
-CREATE TABLE IF NOT EXISTS code_architecture.user_account (
-    id integer primary key,
-    full_name text,
-    phone text UNIQUE,
-    password_hash text
+CREATE TABLE projects
+(
+    id           UUID PRIMARY KEY         DEFAULT uuid_generate_v4(),
+    author_id    UUID         NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name         VARCHAR(255) NOT NULL,
+    description  TEXT,
+    chat_history JSONB        NOT NULL    DEFAULT '[]'::jsonb,
+    is_private   BOOLEAN      NOT NULL    DEFAULT TRUE,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS code_architecture.doctor_account (
-    id integer primary key,
-    full_name text,
-    phone text UNIQUE,
-    password_hash text,
-    specialty_id integer references code_architecture.specialty(id)
+CREATE TABLE project_versions
+(
+    id          UUID PRIMARY KEY         DEFAULT uuid_generate_v4(),
+    project_id  UUID    NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    version_num INTEGER NOT NULL,
+    s3_file_key VARCHAR(255),
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (project_id, version_num)
 );
 
-CREATE TABLE IF NOT EXISTS code_architecture.prescription (
-    id integer primary key generated always as identity,
-    user_id integer references code_architecture.user_account(id),
-    item_id integer references code_architecture.prescription_item(id),
-    UNIQUE (user_id, item_id)
-);
+
+CREATE INDEX idx_projects_author_id ON projects (author_id);
+CREATE INDEX idx_projects_public ON projects (created_at DESC) WHERE is_private = FALSE;
+
+CREATE INDEX idx_project_versions_list ON project_versions (project_id, version_num DESC);
