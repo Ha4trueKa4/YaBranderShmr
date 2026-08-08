@@ -17,7 +17,8 @@ local.properties
 ### macOS ###
 .DS_Store
 CLAUDE.md
-.claude
+.claude/*
+!.claude/skills
 graphify-out
 
 ### Secrets ###
