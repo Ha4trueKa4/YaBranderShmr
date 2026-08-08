@@ -1,0 +1,29 @@
+#center {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  place-content: center;
+  place-items: center;
+  gap: 25px;
+}
+
+#next-steps { display: flex; border-top: 1px solid var(--border); text-align: left; }
+#next-steps > div { flex: 1 1 0; padding: 32px; }
+#docs { border-right: 1px solid var(--border); }
+#next-steps ul { display: flex; gap: 8px; margin: 32px 0 0; padding: 0; list-style: none; }
+#next-steps a { display: flex; align-items: center; padding: 6px 12px; border-radius: 6px; color: var(--text-h); background: var(--social-bg); font-size: 16px; text-decoration: none; transition: box-shadow 0.3s; }
+#next-steps a:hover { box-shadow: var(--shadow); }
+#spacer { height: 88px; border-top: 1px solid var(--border); }
+.ticks { position: relative; width: 100%; }
+.ticks::before, .ticks::after { position: absolute; top: -4.5px; content: ''; border: 5px solid transparent; }
+.ticks::before { left: 0; border-left-color: var(--border); }
+.ticks::after { right: 0; border-right-color: var(--border); }
+
+@media (max-width: 1024px) {
+  #center { gap: 18px; padding: 32px 20px 24px; }
+  #next-steps { flex-direction: column; text-align: center; }
+  #next-steps > div { padding: 24px 20px; }
+  #docs { border-right: 0; border-bottom: 1px solid var(--border); }
+  #next-steps ul { flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+  #spacer { height: 48px; }
+}
