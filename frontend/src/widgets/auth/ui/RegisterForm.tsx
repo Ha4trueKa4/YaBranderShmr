@@ -28,10 +28,6 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
           <Controller
             control={form.control}
             name="fullName"
-            rules={{
-              minLength: { message: 'Введите минимум 2 символа.', value: 2 },
-              required: 'Введите имя.',
-            }}
             render={({ field, fieldState }) => (
               <FormField error={fieldState.error?.message} label="Полное имя">
                 <Input
@@ -47,13 +43,6 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
           <Controller
             control={form.control}
             name="email"
-            rules={{
-              pattern: {
-                message: 'Введите корректный email.',
-                value: /\S+@\S+\.\S+/,
-              },
-              required: 'Введите email.',
-            }}
             render={({ field, fieldState }) => (
               <FormField error={fieldState.error?.message} label="Email">
                 <Input
@@ -70,13 +59,6 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
           <Controller
             control={form.control}
             name="password"
-            rules={{
-              minLength: {
-                message: 'Пароль должен содержать минимум 8 символов.',
-                value: 8,
-              },
-              required: 'Введите пароль.',
-            }}
             render={({ field, fieldState }) => (
               <FormField error={fieldState.error?.message} label="Пароль">
                 <Input
