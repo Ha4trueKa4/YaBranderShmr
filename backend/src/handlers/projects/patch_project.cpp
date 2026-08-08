@@ -8,7 +8,7 @@ PatchProjectHandler::PatchProjectHandler(const userver::components::ComponentCon
     : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
 std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext&) const {
-  auto user_id = utils::auth_bearer::GetUserId(request); // ЗАГЛУШКА
+  auto user_id = context.GetData("user_id"); // ЗАГЛУШКА, требуется реализация
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
     return {};

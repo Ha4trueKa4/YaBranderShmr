@@ -16,13 +16,13 @@ std::string GetProjectHandler::HandleRequestThrow(const userver::server::http::H
     return {};
   }
 
-  auto user_id = utils::auth_bearer::GetUserId(request); // ЗАГЛУШКА
+  auto user_id = context.GetData("user_id"); // ЗАГЛУШКА, требуется реализация
   if (!project->is_public) {
     if (!user_id) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
       return {};
     }
-    if (*user_id != project->author_id) { // МОЖЕТ ПОТРЕБОВАТЬСЯ УБРАТЬ УКАЗАТЕЛЬ
+    if (*user_id != project->author_id) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
       return {};
     }

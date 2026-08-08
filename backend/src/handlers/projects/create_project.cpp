@@ -8,7 +8,7 @@ CreateProjectHandler::CreateProjectHandler(const userver::components::ComponentC
     : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
 std::string CreateProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext&) const {
-  auto user_id = utils::auth_bearer::GetUserId(request);  // ЗАГЛУШКА
+  auto user_id = context.GetData("user_id");  // ЗАГЛУШКА, требуется реализация
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
     return {};
@@ -23,7 +23,7 @@ std::string CreateProjectHandler::HandleRequestThrow(const userver::server::http
     return R"({"message": "Name is required"})";
   }
 
-  auto project = project_manager_.CreateProject(*user_id, name, desc); // МОЖЕТ ПОТРЕБОВАТЬСЯ УБРАТЬ РАЗЫИМЕННОВЫВАНИЕ
+  auto project = project_manager_.CreateProject(*user_id, name, desc);
 
   userver::formats::json::ValueBuilder res;
   res["id"] = project.id;
