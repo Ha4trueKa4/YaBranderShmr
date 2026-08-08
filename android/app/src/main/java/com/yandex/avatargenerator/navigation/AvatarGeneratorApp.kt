@@ -6,7 +6,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -61,8 +60,8 @@ private val TopLevelRoutes: Set<String> =
  * всегда верхнеуровневый), чтобы панель не мигала на старте.
  */
 private fun androidx.navigation.NavDestination?.isTopLevel(): Boolean? {
-    val destination = this ?: return null
-    return destination.hierarchy.any { it.route in TopLevelRoutes }
+    if (this == null) return null
+    return isOnAnyRoute(TopLevelRoutes)
 }
 
 /**

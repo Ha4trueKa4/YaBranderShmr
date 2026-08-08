@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hierarchy
 import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
@@ -67,7 +66,7 @@ fun AppBottomBar(
             TopLevelDestination.entries.forEach { tab ->
                 NavItem(
                     tab = tab,
-                    selected = currentDestination.isOnTab(tab),
+                    selected = currentDestination.isOnRoute(tab.destination.route),
                     onClick = { onTabSelected(tab) },
                 )
             }
@@ -115,7 +114,3 @@ private fun NavItem(
         )
     }
 }
-
-/** Активна ли вкладка [tab] с учётом вложенных маршрутов. */
-private fun NavDestination?.isOnTab(tab: TopLevelDestination): Boolean =
-    this?.hierarchy?.any { it.route == tab.destination.route } == true

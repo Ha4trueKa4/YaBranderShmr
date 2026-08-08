@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.Color
  * токенах app-wide MaterialTheme color scheme и раздавать через MaterialTheme.
  */
 internal object AppColors {
+    // ВАЖНО: при изменении Background синхронно правь @color/window_background
+    // (colors.xml) — это же значение для windowBackground до отрисовки Compose.
     val Background = Color(0xFF0F0F14)
     val Surface = Color(0xFF1A1A24)
     val SurfaceVariant = Color(0xFF22222F)
