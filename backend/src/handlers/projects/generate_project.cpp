@@ -1,0 +1,41 @@
+#include "generate_project.hpp"
+#include <userver/formats/json/serialize.hpp>
+#include "../../utils/auth_bearer.hpp"
+
+namespace brandbook::handlers {
+
+GenerateProjectHandler::GenerateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
+    : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+
+std::string GenerateProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext&) const {
+  auto user_id = utils::auth_bearer::GetUserId(request); // ЗАГЛУШКА
+  if (!user_id) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+    return {};
+  }
+
+  const auto& id = request.GetPathArg("id");
+  auto project = project_manager_.GetProject(id);
+
+  if (!project) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
+    return {};
+  }
+  if (project->author_id != *user_id) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
+    return {};
+  }
+
+  auto body = userver::formats::json::FromString(request.RequestBody());
+  std::string prompt = body["prompt"].As<std::string>("");
+
+  if (prompt.empty()) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+    return R"({"message": "Prompt cannot be empty"})";
+  }
+
+  auto new_data = project_manager_.GenerateAI(id, prompt);
+  return userver::formats::json::ToString(new_data);
+}
+
+}
