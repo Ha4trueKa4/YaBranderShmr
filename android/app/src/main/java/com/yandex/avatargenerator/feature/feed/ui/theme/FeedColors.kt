@@ -1,27 +1,29 @@
 package com.yandex.avatargenerator.feature.feed.ui.theme
 
-import androidx.compose.ui.graphics.Color
+import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
- * Цвета экрана ленты по макету (тёмная тема).
+ * Цвета экрана ленты (тёмная тема).
  *
- * TODO: временно локально для фичи Feed. Когда команда согласует общую
- * дизайн-систему — перенести в app-wide MaterialTheme (color scheme).
+ * Псевдонимы токенов из общей палитры [AppColors] — чтобы код ленты остался
+ * читаемым (FeedColors.*), а значения жили в едином месте и не расходились.
+ *
+ * TODO: когда появится app-wide MaterialTheme color scheme — брать цвета из
+ * MaterialTheme.colorScheme и удалить этот объект.
  */
 internal object FeedColors {
-    val Background = Color(0xFF0F0F14)
-    val Surface = Color(0xFF1A1A24)
-    val SurfaceVariant = Color(0xFF22222F)
-    val Border = Color(0xFF27272A)
+    val Background = AppColors.Background
+    val Surface = AppColors.Surface
+    val SurfaceVariant = AppColors.SurfaceVariant
+    val Border = AppColors.Border
 
-    val TextPrimary = Color(0xFFF4F4F5)
-    val TextSecondary = Color(0xFFA1A1AA)
-    val TextMuted = Color(0xFF52525B)
+    val TextPrimary = AppColors.TextPrimary
+    val TextSecondary = AppColors.TextSecondary
+    val TextMuted = AppColors.TextMuted
 
-    val Accent = Color(0xFF7C3AED)
-    val AccentCyan = Color(0xFF06B6D4)
+    val Accent = AppColors.Accent
+    val AccentCyan = AppColors.AccentCyan
 
-    // Плейсхолдеры скелетона загрузки (shimmer).
-    val ShimmerBase = Color(0xFF27272A)
-    val ShimmerHighlight = Color(0xFF3F3F46)
+    val ShimmerBase = AppColors.ShimmerBase
+    val ShimmerHighlight = AppColors.ShimmerHighlight
 }

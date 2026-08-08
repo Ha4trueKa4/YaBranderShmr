@@ -29,14 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
+import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
  * Нижняя панель вкладок по макету:
- *  - верхняя разделительная линия 1dp ([NavColors.Border]);
- *  - ряд вкладок высотой 64dp, фон [NavColors.Surface], отступы по бокам 32dp,
+ *  - верхняя разделительная линия 1dp ([AppColors.Border]);
+ *  - ряд вкладок высотой 64dp, фон [AppColors.Surface], отступы по бокам 32dp,
  *    вкладки распределены `SpaceBetween`;
- *  - активная вкладка окрашена в [NavColors.Accent], неактивные — в
- *    [NavColors.NavInactive] (иконка + подпись);
+ *  - активная вкладка окрашена в [AppColors.Accent], неактивные — в
+ *    [AppColors.TextMuted] (иконка + подпись);
  *  - снизу — область системного жеста («хват»), залитая тем же фоном.
  *
  * @param currentDestination текущий узел графа (для подсветки активной вкладки).
@@ -51,9 +52,9 @@ fun AppBottomBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(NavColors.Surface),
+            .background(AppColors.Surface),
     ) {
-        HorizontalDivider(thickness = 1.dp, color = NavColors.Border)
+        HorizontalDivider(thickness = 1.dp, color = AppColors.Border)
 
         Row(
             modifier = Modifier
@@ -89,7 +90,7 @@ private fun NavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tint: Color = if (selected) NavColors.Accent else NavColors.NavInactive
+    val tint: Color = if (selected) AppColors.Accent else AppColors.TextMuted
     val label = stringResource(tab.labelRes)
 
     Column(

@@ -1,5 +1,7 @@
 package com.yandex.avatargenerator.navigation
 
+import android.net.Uri
+
 /**
  * Все экраны приложения и их маршруты (routes) для Navigation Compose.
  *
@@ -24,12 +26,14 @@ sealed class Destination(val route: String) {
 
     /** Экран проекта (WebView-редактор + чат). Аргумент — id проекта. */
     data object Project : Destination("project/{$ARG_PROJECT_ID}") {
-        fun createRoute(projectId: String): String = "project/$projectId"
+        // Uri.encode: id может содержать спецсимволы URI (/, ?, #, пробел),
+        // иначе маршрут не совпал бы с паттерном. NavType.StringType декодирует.
+        fun createRoute(projectId: String): String = "project/${Uri.encode(projectId)}"
     }
 
     /** Профиль другого пользователя. Аргумент — id пользователя. */
     data object UserProfile : Destination("user/{$ARG_USER_ID}") {
-        fun createRoute(userId: String): String = "user/$userId"
+        fun createRoute(userId: String): String = "user/${Uri.encode(userId)}"
     }
 
     companion object {

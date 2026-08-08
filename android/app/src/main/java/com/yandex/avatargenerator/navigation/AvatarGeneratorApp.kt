@@ -11,6 +11,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
  * Корень UI: связывает [NavHostController], нижнюю панель ([AppBottomBar]) и
@@ -27,11 +28,11 @@ fun AvatarGeneratorApp(
 ) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
-    val showBottomBar = currentDestination.isTopLevel()
+    val showBottomBar = currentDestination.isTopLevel() ?: true
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = NavColors.Background,
+        containerColor = AppColors.Background,
         bottomBar = {
             if (showBottomBar) {
                 AppBottomBar(
@@ -48,10 +49,20 @@ fun AvatarGeneratorApp(
     }
 }
 
-/** Является ли текущий узел одной из верхнеуровневых вкладок. */
-private fun androidx.navigation.NavDestination?.isTopLevel(): Boolean {
-    val topLevelRoutes = TopLevelDestination.entries.map { it.destination.route }.toSet()
-    return this?.hierarchy?.any { it.route in topLevelRoutes } == true
+/** Маршруты верхнеуровневых вкладок; константа — считается один раз, не на каждой рекомпозиции. */
+private val TopLevelRoutes: Set<String> =
+    TopLevelDestination.entries.mapTo(HashSet()) { it.destination.route }
+
+/**
+ * Является ли текущий узел одной из верхнеуровневых вкладок.
+ *
+ * Возвращает `null`, когда узел ещё не определён (первый кадр до готовности
+ * бэкстека) — вызывающий трактует это как «показать панель» (стартовый экран
+ * всегда верхнеуровневый), чтобы панель не мигала на старте.
+ */
+private fun androidx.navigation.NavDestination?.isTopLevel(): Boolean? {
+    val destination = this ?: return null
+    return destination.hierarchy.any { it.route in TopLevelRoutes }
 }
 
 /**

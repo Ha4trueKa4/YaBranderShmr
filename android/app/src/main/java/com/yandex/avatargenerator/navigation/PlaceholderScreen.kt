@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
  * Временная заглушка для экранов, которые реализуют другие участники команды
@@ -32,21 +33,21 @@ fun PlaceholderScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(NavColors.Background)
+            .background(AppColors.Background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = title,
-            color = NavColors.TextPrimary,
+            color = AppColors.TextPrimary,
             fontSize = 22.sp,
             textAlign = TextAlign.Center,
         )
         if (subtitle != null) {
             Text(
                 text = subtitle,
-                color = NavColors.TextSecondary,
+                color = AppColors.TextSecondary,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp),
