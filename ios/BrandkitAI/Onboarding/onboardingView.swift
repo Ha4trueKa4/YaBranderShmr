@@ -11,8 +11,8 @@ struct onboardingView: View {
     var body: some View {
         TabView() {
             logoPage
-            howItWorksPage
             getStartedPage
+            howItWorksPage
         }
         .tabViewStyle(.page)
         .ignoresSafeArea(.all)
@@ -23,7 +23,14 @@ struct onboardingView: View {
     }
     
     var logoPage: some View {
-        ZStack {
+        var logo: some View {
+            Image(systemName: "xmark.circle")
+                .resizable()
+                .frame(width: 50, height: 50)
+                .padding(25)
+        }
+        
+        return ZStack {
             LinearGradient(
                 colors: [
                     Color(.colorStartGradient),
@@ -34,11 +41,13 @@ struct onboardingView: View {
             )
             .ignoresSafeArea(.all)
             VStack(spacing: 32) {
-                Image(systemName: "xmark.circle")
-                    .resizable()
-                    .frame(width: 50, height: 50)
-                    .padding(25)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 28, height: 28)))
+                if #available(iOS 26.0, *) {
+                    logo
+                        .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 28, height: 28)))
+                } else {
+                    logo
+                        .alternateBackground(cornerSize: CGSize(width: 28, height: 28))
+                }
                 VStack(spacing: 12) {
                     Text("Brandkit AI")
                         .font(.title.bold())
@@ -52,11 +61,21 @@ struct onboardingView: View {
     
     var howItWorksPage: some View {
         func makeLine(logo: Image, title: String, subtitle: String) -> some View {
-            HStack(spacing: 16) {
+            var sizedLogo: some View {
                 logo
                     .font(.system(size: 20))
                     .padding(14)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 14, height: 14)))
+                    .frame(width: 48, height: 48)
+            }
+            
+            return HStack(spacing: 16) {
+                if #available(iOS 26.0, *) {
+                    sizedLogo
+                        .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 14, height: 14)))
+                } else {
+                    sizedLogo
+                        .alternateBackground(cornerSize: CGSize(width: 14, height: 14))
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .bold()
@@ -81,7 +100,7 @@ struct onboardingView: View {
     }
     
     var getStartedPage: some View {
-        VStack(spacing: 32) {
+        var logo: some View {
             VStack(spacing: 16) {
                 Image(systemName: "wand.and.sparkles")
                     .font(.system(size: 40))
@@ -107,7 +126,16 @@ struct onboardingView: View {
                 }
             }
             .frame(width: 300, height: 300)
-            .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 24, height: 24)))
+        }
+        
+        return VStack(spacing: 32) {
+            if #available(iOS 26.0, *) {
+                logo
+                    .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 24, height: 24)))
+            } else {
+                logo
+                    .alternateBackground(cornerSize: CGSize(width: 24, height: 24))
+            }
             VStack(spacing: 20) {
                 Text("Start creating for free")
                     .font(.title.bold())
@@ -119,7 +147,7 @@ struct onboardingView: View {
                         .padding(15)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glassProminent)
+                .prominentStyle()
             }
             HStack {
                 Text("Already have an account?")
