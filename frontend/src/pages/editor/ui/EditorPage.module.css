@@ -1,11 +1,10 @@
 .page {
-  align-items: center;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   min-height: 100vh;
-  padding: var(--space-6);
 }
 .content {
+  align-self: center;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -14,6 +13,7 @@
   padding: var(--space-8);
   text-align: center;
   width: 100%;
+  margin: auto;
 }
 .content h1 {
   color: var(--color-text-primary);
