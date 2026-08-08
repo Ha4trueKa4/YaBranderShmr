@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router-dom'
 
-import { MainPage, AuthPage } from '@/pages'
+import { AuthPage } from '@pages/auth'
+import { MainPage } from '@pages/main'
 import { EditorPage } from '@pages/editor'
 import { FeedPage } from '@pages/feed'
 import { ProfilePage } from '@pages/profile'

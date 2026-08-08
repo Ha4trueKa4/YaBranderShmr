@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "biome lint --config-path=./biome.json src",
+    "lint:fix": "biome lint --config-path=./biome.json --write src",
+    "format": "biome format --config-path=./biome.json --write src",
+    "format:check": "biome format --config-path=./biome.json src",
+    "check": "pnpm typecheck && pnpm lint",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,6 +20,7 @@
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.7",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
