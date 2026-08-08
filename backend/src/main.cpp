@@ -25,9 +25,9 @@ int main(int argc, char* argv[]) {
             .Append<userver::clients::dns::Component>();
 
     // Регистрация модулей когда будут готовы
-    code_architecture::AppendCheck(component_list);
-    // code_architecture::AppendAuth(component_list);
-    // code_architecture::AppendProjects(component_list);
+    ya_brander::AppendCheck(component_list);
+    // ya_brander::AppendAuth(component_list);
+    // ya_brander::AppendProjects(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);
 }
