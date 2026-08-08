@@ -1,1 +1,2 @@
-export { EditorPage } from './ui'
+export { EditorPage } from './ui/EditorPage'
+
