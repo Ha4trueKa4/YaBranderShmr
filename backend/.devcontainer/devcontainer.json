@@ -1,0 +1,38 @@
+{
+  // Name shown in the editor's UI
+  "name": "ya_brander backend (userver)",
+
+  // Reuse your real compose file + a small dev-only override (next file).
+  // Paths are relative to THIS .devcontainer folder, so ../ points at backend/
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "docker-compose.dev.yml"
+  ],
+
+  // Which service in the compose file to attach the editor into.
+  // This is your renamed service container.
+  "service": "ya_brander-container",
+
+  // Folder opened inside the container — matches the compose mount path
+  // (.:/ya_brander), so the editor sees your source at the right place.
+  "workspaceFolder": "/ya_brander",
+
+  // Bring up Postgres too, so DB-dependent code/tests work while editing.
+  "runServices": ["postgres"],
+
+  // Editor-specific setup (VS Code here). CLion ignores this block; see below.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",  // C++ intelligence via clangd
+        "ms-vscode.cmake-tools"                    // CMake integration
+      ],
+      "settings": {
+        // Point clangd at the compile_commands.json your build already
+        // generates (via -DCMAKE_EXPORT_COMPILE_COMMANDS=ON). This file is
+        // what gives clangd real include paths and flags — the key to no red.
+        "clangd.arguments": ["--compile-commands-dir=build_debug"]
+      }
+    }
+  }
+}

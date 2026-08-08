@@ -1,0 +1,6 @@
+services:
+  ya_brander-container:
+    # Your compose runs ./tests/run_as_user.sh as entrypoint, which starts
+    # the service and exits. For DEV we want the container to stay alive so
+    # the editor can attach and you can build/run on demand inside it.
+    entrypoint: ["sleep", "infinity"]
