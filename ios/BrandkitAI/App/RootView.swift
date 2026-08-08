@@ -16,7 +16,7 @@ struct RootView: View {
 
                 case .signedOut:
                     NavigationStack {
-                        SignInView()
+                        SignInView(session: session)
                     }
                     .tint(.purple)
 
