@@ -1,5 +1,6 @@
 package com.yandex.avatargenerator.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -28,6 +29,15 @@ internal object AppColors {
 
     val Accent = Color(0xFF7C3AED)
     val AccentCyan = Color(0xFF06B6D4)
+
+    /** Цвет содержимого поверх заливки Accent (кнопки, беджи) — всегда белый по макету. */
+    val OnAccent = Color.White
+
+    val Success = Color(0xFF22C55E)
+    val Error = Color(0xFFEF4444)
+
+    /** Диагональный градиент Accent → AccentCyan — аватары, превью-плашки проектов. */
+    val AccentGradient = Brush.linearGradient(listOf(Accent, AccentCyan))
 
     // Плейсхолдеры скелетона загрузки (shimmer).
     val ShimmerBase = Color(0xFF27272A)

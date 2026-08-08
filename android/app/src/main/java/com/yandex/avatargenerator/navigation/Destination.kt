@@ -21,6 +21,12 @@ sealed class Destination(val route: String) {
      */
     data object Onboarding : Destination("onboarding")
 
+    /** Вход по email/паролю. Не вкладка — нижней панели нет. */
+    data object Login : Destination("login")
+
+    /** Регистрация нового аккаунта. Не вкладка — нижней панели нет. */
+    data object Register : Destination("register")
+
     /** Общая лента + лента подписок (вкладка). Стартовый экран. */
     data object Feed : Destination("feed")
 
