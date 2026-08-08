@@ -19,5 +19,9 @@ internal object NavColors {
     val TextPrimary = Color(0xFFF4F4F5)
     val TextSecondary = Color(0xFFA1A1AA)
 
+    /** Неактивные вкладки нижней панели (иконка + подпись). */
+    val NavInactive = Color(0xFF52525B)
+
+    /** Акцент — активная вкладка. */
     val Accent = Color(0xFF7C3AED)
 }
