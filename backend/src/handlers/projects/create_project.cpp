@@ -1,8 +1,7 @@
 #include "create_project.hpp"
 #include <userver/formats/json/serialize.hpp>
-#include "../../utils/auth_bearer.hpp"
 
-namespace brandbook::handlers {
+namespace ya_brander::handlers {
 
 CreateProjectHandler::CreateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}

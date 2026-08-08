@@ -2,7 +2,7 @@
 #include <string>
 #include <userver/formats/json/value.hpp>
 
-namespace brandbook::models {
+namespace ya_brander::models {
 
 struct Project {
   std::string id;
@@ -14,4 +14,4 @@ struct Project {
   userver::formats::json::Value data;
 };
 
-} // namespace brandbook::models
+} // namespace ya_brander::models

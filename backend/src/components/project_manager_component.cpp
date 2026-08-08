@@ -2,7 +2,7 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/formats/json/value_builder.hpp>
 
-namespace brandbook::components {
+namespace ya_brander::components {
 
 ProjectManagerComponent::ProjectManagerComponent(
     const userver::components::ComponentConfig& config,
@@ -89,4 +89,4 @@ userver::formats::json::Value ProjectManagerComponent::GenerateAI(const std::str
     return new_data;
 }
 
-} // namespace brandbook::components
+} // namespace ya_brander::components

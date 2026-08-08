@@ -9,7 +9,7 @@
 #include "../models/project.hpp"
 #include "dependencies_stubs.hpp"
 
-namespace brandbook::components {
+namespace ya_brander::components {
 
 class ProjectManagerComponent final : public userver::components::LoggableComponentBase {
 public:
@@ -35,4 +35,4 @@ private:
   PromptConstructorComponent& prompt_constructor_;
 };
 
-} // namespace brandbook::components
+} // namespace ya_brander::components

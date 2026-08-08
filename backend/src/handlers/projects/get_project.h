@@ -2,7 +2,7 @@
 #include <userver/server/handlers/http_handler_base.hpp>
 #include "../../components/project_manager_component.hpp"
 
-namespace brandbook::handlers {
+namespace ya_brander::handlers {
 class GetProjectHandler final : public userver::server::handlers::HttpHandlerBase {
 public:
   static constexpr std::string_view kName = "handler-projects-get";

@@ -1,7 +1,6 @@
 #include "delete_project.hpp"
-#include "../../utils/auth_bearer.hpp"
 
-namespace brandbook::handlers {
+namespace ya_brander::handlers {
 
 DeleteProjectHandler::DeleteProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}

@@ -4,7 +4,7 @@
 #include <userver/components/loggable_component_base.hpp>
 #include <userver/formats/json/value.hpp>
 
-namespace brandbook::components {
+namespace ya_brander::components {
 
 // ==========================================================
 // Компонент для работы с объектным хранилищем (S3) и версиями. ЗАГЛУШКА ДЛЯ project_manager_component
@@ -54,4 +54,4 @@ public:
     virtual std::string BuildEditPrompt(const userver::formats::json::Value& current_state, const std::string& user_message) = 0;
 };
 
-} // namespace brandbook::components
+} // namespace ya_brander::components
