@@ -8,9 +8,6 @@ export const zRegisterRequest = z.object({
     nickname: z.string()
 });
 
-export type RegisterRequest = z.infer<typeof zRegisterRequest>;
-
-
 export const zLoginRequest = z.object({
     email: z.email(),
     password: z.string()
