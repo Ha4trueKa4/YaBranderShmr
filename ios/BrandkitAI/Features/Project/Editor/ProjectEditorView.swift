@@ -1,25 +1,29 @@
 import SwiftUI
 
 struct ProjectEditorView: View {
-    @Environment(Router.self) private var router
+    @State private var isShowingVisibility = false
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Editor")
 
-            Button("Version history") {
-                router.push(.projectVersionHistory)
+            NavigationLink("Version history") {
+                ProjectVersionHistoryView()
             }
 
             Button("Visibility") {
-                router.present(.projectVisibility)
+                isShowingVisibility = true
             }
         }
         .navigationTitle("Editor")
+        .sheet(isPresented: $isShowingVisibility) {
+            ProjectVisibilityView()
+        }
     }
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .projectEditor)
-        .environment(AppRouter(flow: .main))
+    NavigationStack {
+        ProjectEditorView()
+    }
 }

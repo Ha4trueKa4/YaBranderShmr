@@ -10,6 +10,7 @@ struct ProjectVersionHistoryView: View {
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .projectVersionHistory)
-        .environment(AppRouter(flow: .main))
+    NavigationStack {
+        ProjectVersionHistoryView()
+    }
 }

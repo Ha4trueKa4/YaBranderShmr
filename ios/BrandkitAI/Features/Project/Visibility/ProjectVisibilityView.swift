@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct ProjectVisibilityView: View {
-    @Environment(Router.self) private var router
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Project Visibility")
 
             Button("Done") {
-                router.dismissSheet()
+                dismiss()
             }
         }
         .presentationDetents([.medium])
@@ -17,5 +17,4 @@ struct ProjectVisibilityView: View {
 
 #Preview {
     ProjectVisibilityView()
-        .environment(Router())
 }

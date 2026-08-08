@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @Environment(AppRouter.self) private var appRouter
+    var onFinish: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Onboarding")
 
             Button("Get started") {
-                appRouter.finishOnboarding()
+                onFinish()
             }
         }
         .navigationTitle("Onboarding")
@@ -16,6 +16,5 @@ struct OnboardingView: View {
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .onboarding)
-        .environment(AppRouter())
+    OnboardingView()
 }

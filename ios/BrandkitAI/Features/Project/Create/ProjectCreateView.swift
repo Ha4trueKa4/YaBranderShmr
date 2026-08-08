@@ -1,14 +1,12 @@
 import SwiftUI
 
 struct ProjectCreateView: View {
-    @Environment(Router.self) private var router
-
     var body: some View {
         VStack(spacing: 16) {
             Text("New Project")
 
-            Button("Generate Brandkit") {
-                router.push(.projectGenerating)
+            NavigationLink("Generate Brandkit") {
+                ProjectGeneratingView()
             }
         }
         .navigationTitle("New Project")
@@ -16,6 +14,7 @@ struct ProjectCreateView: View {
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .projectCreate)
-        .environment(AppRouter(flow: .main))
+    NavigationStack {
+        ProjectCreateView()
+    }
 }
