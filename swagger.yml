@@ -292,6 +292,10 @@ components:
 
     AuthResponse:
       type: object
+      required:
+        - access_token
+        - token_type
+        - user_id
       properties:
         access_token:
           type: string
@@ -300,6 +304,10 @@ components:
         token_type:
           type: string
           example: "Bearer"
+        user_id:
+          type: string
+          description: Уникальный идентификатор авторизованного пользователя
+          example: "123e4567-e89b-12d3-a456-426614174000"
     
     UserProfile:
       type: object
@@ -326,6 +334,8 @@ components:
           type: string
         name:
           type: string
+        description:
+          type: string
         is_public:
           type: boolean
         created_at:
@@ -346,11 +356,8 @@ components:
           type: string
           example: "#FFFFFF"
         layers:
-          type: array
-          items:
-            type: object
-            description: Произвольный элемент (text, rect, path и т.д.)
-            additionalProperties: true
+          type: string
+          description: SVG-разметка проекта в виде одной строки
 
     ValidationError:
       type: object
