@@ -1,0 +1,12 @@
+# Политика веток репозитория студента.
+# main защищён: без прямых пушей (только через PR), без force-push и удаления.
+# Домашки живут в отдельных ветках (одна ветка = одна ДЗ); main остаётся пустым шаблоном,
+# поэтому ветки ДЗ не перетирают друг друга.
+branch_protection:
+  policies:
+    - target: branch
+      matches: "main"
+      rules:
+        - prevent_deletion
+        - prevent_force_push
+        - prevent_non_pr_changes
