@@ -9,25 +9,38 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
+import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 
 /**
  * Граф навигации приложения.
  *
- * Стартовый экран — [Destination.Feed]. Реальными экранами пока подключён
- * только Feed; остальные узлы — [PlaceholderScreen] до готовности фич.
+ * Реальными экранами пока подключены онбординг и лента; остальные узлы —
+ * [PlaceholderScreen] до готовности фич.
  *
  * @param navController контроллер, общий со Scaffold (для нижней панели).
+ * @param startDestination стартовый маршрут: онбординг при первом запуске,
+ *  иначе лента. Выбирает вызывающий — ему доступен флаг «онбординг пройден».
  */
 @Composable
 fun AppNavHost(
     navController: NavHostController,
+    startDestination: String,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
         navController = navController,
-        startDestination = Destination.Feed.route,
+        startDestination = startDestination,
         modifier = modifier,
     ) {
+        composable(Destination.Onboarding.route) {
+            OnboardingRoute(
+                onFinish = { navController.navigateFromOnboarding() },
+                // TODO: экрана входа ещё нет — пока ведём в ленту (команда «авторизация»).
+                onSignIn = { navController.navigateFromOnboarding() },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
         composable(Destination.Feed.route) {
             FeedScreen(
                 onProjectClick = { projectId ->
@@ -67,5 +80,18 @@ fun AppNavHost(
             // TODO: профиль другого пользователя (команда «лента/профиль»).
             PlaceholderScreen(title = "Профиль пользователя", subtitle = "id: $userId")
         }
+    }
+}
+
+/**
+ * Уход с онбординга в ленту.
+ *
+ * `inclusive = true` выбрасывает онбординг из бэкстека: кнопка «назад» с ленты
+ * должна закрывать приложение, а не возвращать на уже пройденный онбординг.
+ */
+private fun NavHostController.navigateFromOnboarding() {
+    navigate(Destination.Feed.route) {
+        popUpTo(Destination.Onboarding.route) { inclusive = true }
+        launchSingleTop = true
     }
 }
