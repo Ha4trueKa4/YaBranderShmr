@@ -3,6 +3,7 @@ package com.yandex.avatargenerator.feature.feed.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,13 +73,13 @@ private fun FeedTabItem(
             modifier = Modifier.padding(vertical = 12.dp),
         )
         // Нижний индикатор активной вкладки.
-        Column(
+        Box(
             modifier = Modifier
                 .padding(bottom = 12.dp)
                 .height(2.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(1.dp))
                 .background(if (selected) FeedColors.Accent else Color.Transparent),
-        ) {}
+        )
     }
 }
