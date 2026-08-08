@@ -1,18 +1,15 @@
-import { useHealthQuery } from '@shared/api/queries';
+import { useSearchParams } from 'react-router-dom'
+import { LoginForm, RegisterForm } from '@widgets'
 
 import styles from './authPage.module.css'
 
 export function AuthPage() {
-  const { data, error, isError, isPending } = useHealthQuery()
+  const [searchParams] = useSearchParams()
+  const isRegisterMode = searchParams.get('mode') === 'register'
 
   return (
-    <div className={styles.page}>
-      <p>Страница Входа</p>
-      <p>
-        {isPending && 'Loading...'}
-        {isError && `Сервер недоступен: ${error.message}`}
-        {data && `Сервер доступен: ${data}`}
-      </p>
-    </div>
+    <main className={styles.page}>
+      {isRegisterMode ? <RegisterForm /> : <LoginForm />}
+    </main>
   )
 }

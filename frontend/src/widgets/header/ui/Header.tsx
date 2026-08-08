@@ -1,24 +1,23 @@
+import { Link } from 'react-router-dom'
 import { Button } from '@shared'
-import styles from './EditorHeader.module.css'
+import styles from './Header.module.css'
 
-interface EditorHeaderProps {
+interface HeaderProps {
   brandName?: string
   onGetStarted?: () => void
-  onSignIn?: () => void
 }
 
-export function EditorHeader({
+export function Header({
   brandName = 'Brandkit AI',
   onGetStarted,
-  onSignIn,
-}: EditorHeaderProps) {
+}: HeaderProps) {
   return (
     <header className={styles.header}>
       <span className={styles.brand}>{brandName}</span>
       <nav className={styles.actions}>
-        <button className={styles.signIn} onClick={onSignIn} type="button">
+        <Link className={styles.signIn} to="/auth">
           Sign in
-        </button>
+        </Link>
         <Button onClick={onGetStarted} size="sm">
           Get Started
         </Button>

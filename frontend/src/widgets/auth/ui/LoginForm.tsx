@@ -1,4 +1,5 @@
 import { Controller } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { Button, FormField, IconButton, Input } from '@shared'
 import brandMark from '@shared/assets/brandmark.svg'
 import { useLoginForm, type LoginSubmitHandler } from '../model'
@@ -73,9 +74,9 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       </form>
       <p className={styles.footer}>
         Нет аккаунта?{' '}
-        <button className={styles.link} type="button">
+        <Link className={styles.link} to="/auth?mode=register">
           Зарегистрироваться
-        </button>
+        </Link>
       </p>
     </section>
   )

@@ -27,6 +27,7 @@
   border: 0;
   color: #71717a;
   cursor: pointer;
+  text-decoration: none;
   font: inherit;
   font-size: .875rem;
   font-weight: var(--font-weight-semibold);
