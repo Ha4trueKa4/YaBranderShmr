@@ -9,7 +9,6 @@ private struct PickerBarHeightKey: PreferenceKey {
 }
 
 struct FeedView: View {
-//    @Environment(Router.self) private var router
     @State private var selectedTab: FeedTab = .all
     @State private var scrolledTabs: [FeedTab: Bool] = [:]
     @State private var pickerBarHeight: CGFloat = 50
@@ -42,7 +41,6 @@ struct FeedView: View {
     }
 
     var body: some View {
-        // TODO: Сделать так чтобы контент проходил под Picker
         GeometryReader() { geo in
         TabView(selection: $selectedTab) {
             FeedListView(topInset: pickerBarHeight, isScrolled: scrolledBinding(for: .all))
