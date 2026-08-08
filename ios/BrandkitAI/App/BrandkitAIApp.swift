@@ -4,7 +4,7 @@ import SwiftUI
 struct BrandkitAIApp: App {
     var body: some Scene {
         WindowGroup {
-            AuthView()
+            RootView()
         }
     }
 }
