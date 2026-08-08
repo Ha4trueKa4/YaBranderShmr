@@ -1,0 +1,220 @@
+openapi: 3.0.0
+info:
+  title: Брендбук-генератор API
+  description: API для онлайн-сервиса генерации брендбуков с помощью ИИ.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Локальный сервер разработки
+
+tags:
+  - name: Auth
+    description: Аутентификация и регистрация
+  - name: Users
+    description: Пользователи и профили
+  - name: Projects
+    description: Создание, редактирование и генерация проектов
+
+paths:
+  /users/{id}:
+    get:
+      summary: Получить профиль пользователя
+      tags: [ Users ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UserProfile'
+                  - type: object
+                    properties:
+                      projects:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProjectDescription'
+        '404':
+          description: Пользователь не найден
+
+  /projects:
+    post:
+      summary: Создать новый проект
+      tags: [ Projects ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Бренд кофейни"
+                description:
+                  type: string
+                  example: "Минималистичный стиль, темные тона, для спешелти кофейни"
+      responses:
+        '201':
+          description: Проект создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /projects/{id}:
+    get:
+      summary: Получить проект по ID
+      tags: [ Projects ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Данные проекта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    patch:
+      summary: Обновить данные проекта (ручное сохранение)
+      tags: [ Projects ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_public:
+                  type: boolean
+                data:
+                  $ref: '#/components/schemas/ProjectData'
+      responses:
+        '200':
+          description: Проект успешно обновлен
+
+  /projects/{id}/generate:
+    post:
+      summary: Изменение/генерация проекта с помощью ИИ
+      tags: [ Projects ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  example: "Добавь логотип с изображением кружки"
+      responses:
+        '200':
+          description: Сгенерированный JSON-граф элементов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectData'
+
+  /project/{id}:
+    delete:
+      summary: Удаление проекта
+      tags: [ Projects ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор проекта
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Проект удалён
+
+
+components:
+
+  schemas:
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    Project:
+      allOf:
+        - $ref: '#/components/schemas/ProjectDescription'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ProjectData'
+
+    ProjectDescription:
+      type: object
+      properties:
+        id:
+          type: string
+        author_id:
+          type: string
+        name:
+          type: string
+        is_public:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+
+    ProjectData:
+      type: object
+      properties:
+        width:
+          type: integer
+          example: 1024
+        height:
+          type: integer
+          example: 1024
+        background:
+          type: string
+          example: "#FFFFFF"
+        layers:
+          type: array
+          items:
+            type: object
+            description: Произвольный элемент (text, rect, path и т.д.)
+            additionalProperties: true
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
