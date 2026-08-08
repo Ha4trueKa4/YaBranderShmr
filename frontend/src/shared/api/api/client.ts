@@ -28,7 +28,9 @@ export function createApiClient(baseUrl: string) {
         const { query, body, headers: initialHeaders, ...requestOptions } = options;
 
         const url = new URL(
-            `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`,
+            path.startsWith('http')
+                ? path
+                : `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`,
             window.location.origin
         );
 
