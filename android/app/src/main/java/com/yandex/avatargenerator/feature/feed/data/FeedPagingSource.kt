@@ -30,7 +30,10 @@ class FeedPagingSource(
     override fun getRefreshKey(state: PagingState<Int, FeedProject>): Int? {
         val anchor = state.anchorPosition ?: return null
         val closest = state.closestPageToPosition(anchor) ?: return null
-        return closest.prevKey?.plus(1) ?: closest.nextKey?.minus(1)
+        // prevKey + 1 или nextKey - 1 дают страницу с якорем; ключ не может быть
+        // меньше стартовой страницы.
+        return (closest.prevKey?.plus(1) ?: closest.nextKey?.minus(1))
+            ?.coerceAtLeast(STARTING_PAGE)
     }
 
     private companion object {
