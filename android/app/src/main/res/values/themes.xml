@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.AvatarGenerator" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Тёмная тема окна: приложение полностью тёмное. Прозрачные системные
+         бары настраиваются в MainActivity через enableEdgeToEdge. -->
+    <style name="Theme.AvatarGenerator" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>

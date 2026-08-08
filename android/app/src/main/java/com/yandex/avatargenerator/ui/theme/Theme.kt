@@ -1,8 +1,6 @@
 package com.yandex.avatargenerator.ui.theme
 
-import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -35,9 +33,13 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun AvatarGeneratorTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Приложение пока всегда тёмное: весь UI (лента, навигация) свёрстан под
+    // тёмную палитру AppColors, а окно — под тёмный windowBackground. Поэтому
+    // не следуем системной теме и не берём dynamic color, иначе на устройстве
+    // в светлой теме Material-цвета «поплыли» бы на тёмных поверхностях.
+    // TODO: вернуть isSystemInDarkTheme()/dynamicColor, когда будет светлая тема.
+    darkTheme: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

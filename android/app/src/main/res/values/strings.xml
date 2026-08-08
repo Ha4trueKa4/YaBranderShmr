@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">AvatarGenerator</string>
+
+    <!-- Вкладки нижней навигации -->
+    <string name="nav_feed">Лента</string>
+    <string name="nav_create">Создать</string>
+    <string name="nav_profile">Профиль</string>
 </resources>

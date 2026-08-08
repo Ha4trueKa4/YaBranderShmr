@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Фон окна = AppColors.Background; тёмный, чтобы не было белой вспышки
+         на холодном старте до отрисовки Compose (весь UI приложения тёмный). -->
+    <color name="window_background">#FF0F0F14</color>
 </resources>
