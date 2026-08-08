@@ -1,29 +1,31 @@
 import SwiftUI
 
-private struct PickerBarHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
+private struct ScrollDistances: Equatable {
+    let top: CGFloat
+    let bottom: CGFloat
 }
 
 struct FeedView: View {
     @State private var selectedTab: FeedTab = .all
-    @State private var scrolledTabs: [FeedTab: Bool] = [:]
-    @State private var pickerBarHeight: CGFloat = 50
-
-    private var animatedSelection: Binding<FeedTab> {
-        Binding(
-            get: { selectedTab },
-            set: { newValue in
-                withAnimation(.easeOut) { selectedTab = newValue }
-            }
-        )
+    @State private var scrollPosition: FeedTab? = .all
+    @State private var scrollDistances: [FeedTab: ScrollDistances] = [:]
+    
+    private let toolbarFadeDistance: CGFloat = 24
+    
+    private var currentScrollDistances: ScrollDistances {
+        scrollDistances[selectedTab] ?? ScrollDistances(top: 0, bottom: 0)
     }
-
+    
+    private var toolbarOpacity: CGFloat {
+        min(max(currentScrollDistances.top / toolbarFadeDistance, 0), 1)
+    }
+    
+    private var tabBarOpacity: CGFloat {
+        1 - min(max(currentScrollDistances.bottom / toolbarFadeDistance, 0), 1)
+    }
+    
     private var picker: some View {
-        Picker(selection: animatedSelection) {
+        Picker(selection: $selectedTab) {
             ForEach(FeedTab.allCases, id: \.self) { tab in
                 Text(tab.rawValue).tag(tab)
             }
@@ -31,61 +33,86 @@ struct FeedView: View {
             EmptyView()
         }
         .pickerStyle(.segmented)
+        .padding(16)
     }
-
-    private func scrolledBinding(for tab: FeedTab) -> Binding<Bool> {
-        Binding(
-            get: { scrolledTabs[tab, default: false] },
-            set: { scrolledTabs[tab] = $0 }
-        )
+    
+    @ViewBuilder
+    private func applyingLegacyToolbarAppearance<Content: View>(to content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+        } else {
+            content
+                .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+                .toolbarBackground(.windowBackground.opacity(tabBarOpacity), for: .tabBar)
+                .toolbarBackgroundVisibility(tabBarOpacity > 0.6 ? .hidden : .visible, for: .tabBar)
+        }
     }
-
+    
     var body: some View {
-        GeometryReader() { geo in
-        TabView(selection: $selectedTab) {
-            FeedListView(topInset: pickerBarHeight, isScrolled: scrolledBinding(for: .all))
-                .tag(FeedTab.all)
-            FeedListView(topInset: pickerBarHeight, isScrolled: scrolledBinding(for: .subscriptions))
-                .tag(FeedTab.subscriptions)
-        }
-        .overlay(alignment: .top) {
-            if #available(iOS 26.0, *) {
-                measuredPickerBar(
-                    picker
-                        .glassEffect(.clear)
-                        .padding(.top, geo.safeAreaInsets.top)
-                )
-            } else {
-                measuredPickerBar(
-                    VStack(spacing: 0) {
-                        picker
-                            .padding(.top, geo.safeAreaInsets.top + 8)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
+        applyingLegacyToolbarAppearance(to:
+        //        ScrollView {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(FeedTab.allCases, id: \.self) { tab in
+                    ScrollView {
+                        FeedListView(selectedTab: tab)
+                            .containerRelativeFrame(.horizontal)
+                            .id(tab)
                     }
-                    .frame(maxWidth: .infinity)
-                    .background(.bar.opacity(scrolledTabs[selectedTab, default: false] ? 1 : 0))
-                    .animation(.easeOut(duration: 0.2), value: scrolledTabs[selectedTab, default: false])
-                    .ignoresSafeArea(edges: .top)
-                )
+                    .onScrollGeometryChange(for: ScrollDistances.self) { geometry in
+                        let topDistance = max(
+                            0,
+                            geometry.contentOffset.y + geometry.contentInsets.top
+                        )
+                        let bottomDistance = max(
+                            0,
+                            geometry.contentSize.height
+                                + geometry.contentInsets.bottom
+                                - geometry.visibleRect.maxY
+                        )
+                        return ScrollDistances(top: topDistance, bottom: bottomDistance)
+                    } action: { _, distances in
+                        scrollDistances[tab] = distances
+                    }
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $scrollPosition)
+        .onChange(of: scrollPosition) { _, tab in
+            if let tab {
+                selectedTab = tab
             }
         }
-        .onPreferenceChange(PickerBarHeightKey.self) { height in
-            guard height > 0 else { return }
-            pickerBarHeight = height
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .ignoresSafeArea(.all)
-    }
-    }
-
-    private func measuredPickerBar<Content: View>(_ content: Content) -> some View {
-        content.background {
-            GeometryReader { proxy in
-                Color.clear
-                    .preference(key: PickerBarHeightKey.self, value: proxy.size.height)
+        .onChange(of: selectedTab) { _, tab in
+            withAnimation(.spring) {
+                scrollPosition = tab
             }
         }
+        .safeAreaInset(edge: .top) {
+            if #available(iOS 26.0, *) {
+                picker
+            } else {
+                picker
+                    .background {
+                        EmptyView()
+                            .background(.bar)
+                            .opacity(toolbarOpacity)
+                    }
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+            }
+        }
+        )
     }
 }
 
