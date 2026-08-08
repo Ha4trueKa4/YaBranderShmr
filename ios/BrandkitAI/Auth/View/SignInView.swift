@@ -6,13 +6,15 @@
 import SwiftUI
 
 struct SignInView: View {
-    @Environment(SessionStore.self) private var session
+    @State private var viewModel: SignInViewModel
 
-    @State private var email = ""
-    @State private var password = ""
-    @State private var isShowingRegister = false
+    init(session: SessionStore) {
+        _viewModel = State(initialValue: SignInViewModel(session: session))
+    }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         AuthScreenLayout {
             AuthHeader(title: "Sign in")
                 .padding(.bottom, 32)
@@ -21,7 +23,7 @@ struct SignInView: View {
                 AuthField(
                     label: "Email",
                     placeholder: "hello@brandkit.ai",
-                    text: $email,
+                    text: $viewModel.email,
                     textContentType: .emailAddress,
                     keyboardType: .emailAddress
                 )
@@ -29,7 +31,7 @@ struct SignInView: View {
                 AuthField(
                     label: "Password",
                     placeholder: "Enter your password",
-                    text: $password,
+                    text: $viewModel.password,
                     isSecure: true,
                     textContentType: .password,
                     submitLabel: .go
@@ -37,7 +39,7 @@ struct SignInView: View {
             }
 
             PrimaryButton(title: "Sign in") {
-                session.signIn(email: email, password: password)
+                viewModel.signIn()
             }
             .padding(.top, 24)
 
@@ -45,19 +47,18 @@ struct SignInView: View {
                 .padding(.top, 16)
 
             AuthFooter(question: "No account?", actionTitle: "Register") {
-                isShowingRegister = true
+                viewModel.openRegister()
             }
             .padding(.top, 32)
         }
-        .navigationDestination(isPresented: $isShowingRegister) {
-            SignUpView()
+        .navigationDestination(isPresented: $viewModel.isShowingRegister) {
+            SignUpView(viewModel: viewModel.makeSignUpViewModel())
         }
     }
 }
 
 #Preview {
     NavigationStack {
-        SignInView()
+        SignInView(session: SessionStore())
     }
-    .environment(SessionStore())
 }

@@ -6,14 +6,17 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
 
-    @State private var fullName = ""
-    @State private var email = ""
-    @State private var password = ""
+    @State private var viewModel: SignUpViewModel
+
+    init(viewModel: SignUpViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
+
         AuthScreenLayout {
             AuthHeader(title: "Create account")
                 .padding(.bottom, 32)
@@ -22,7 +25,7 @@ struct SignUpView: View {
                 AuthField(
                     label: "Full name",
                     placeholder: "John Doe",
-                    text: $fullName,
+                    text: $viewModel.fullName,
                     textContentType: .name,
                     autocapitalization: .words
                 )
@@ -30,7 +33,7 @@ struct SignUpView: View {
                 AuthField(
                     label: "Email",
                     placeholder: "hello@brandkit.ai",
-                    text: $email,
+                    text: $viewModel.email,
                     textContentType: .emailAddress,
                     keyboardType: .emailAddress
                 )
@@ -38,7 +41,7 @@ struct SignUpView: View {
                 AuthField(
                     label: "Password",
                     placeholder: "Enter your password",
-                    text: $password,
+                    text: $viewModel.password,
                     isSecure: true,
                     textContentType: .newPassword,
                     submitLabel: .go
@@ -46,7 +49,7 @@ struct SignUpView: View {
             }
 
             PrimaryButton(title: "Create account") {
-                session.register(email: email, password: password, nickname: fullName)
+                viewModel.register()
             }
             .padding(.top, 24)
 
@@ -63,7 +66,6 @@ struct SignUpView: View {
 
 #Preview {
     NavigationStack {
-        SignUpView()
+        SignUpView(viewModel: SignUpViewModel(session: SessionStore()))
     }
-    .environment(SessionStore())
 }

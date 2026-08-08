@@ -5,7 +5,7 @@ struct ProjectsView: View {
     var onOpenChat: (ProjectListItem) -> Void = { _ in }
     var onNewProject: () -> Void = {}
 
-    private let items = ProjectListItem.mocks
+    @State private var viewModel = ProjectsViewModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,7 +13,7 @@ struct ProjectsView: View {
 
             ScrollView {
                 LazyVStack(spacing: 12) {
-                    ForEach(items) { item in
+                    ForEach(viewModel.items) { item in
                         ProjectRow(item: item) {
                             onOpenChat(item)
                         }
@@ -33,11 +33,14 @@ struct ProjectsView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .preferredColorScheme(.dark)
+        .task {
+            viewModel.load()
+        }
     }
 
     private var header: some View {
         VStack(spacing: 0) {
-            Text("Chats")
+            Text(viewModel.title)
                 .font(.title3.bold())
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
@@ -48,3 +51,6 @@ struct ProjectsView: View {
     }
 }
 
+#Preview {
+    ProjectsView()
+}
