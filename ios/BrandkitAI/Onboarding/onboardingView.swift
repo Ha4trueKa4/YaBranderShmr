@@ -11,8 +11,8 @@ struct onboardingView: View {
     var body: some View {
         TabView() {
             logoPage
-            getStartedPage
             howItWorksPage
+            getStartedPage
         }
         .tabViewStyle(.page)
         .ignoresSafeArea(.all)
