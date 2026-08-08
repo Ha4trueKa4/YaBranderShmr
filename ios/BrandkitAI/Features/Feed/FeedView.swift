@@ -40,6 +40,11 @@ struct FeedView: View {
     private func applyingLegacyToolbarAppearance<Content: View>(to content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
+                .safeAreaInset(edge: .bottom) {
+                    LinearGradient(colors: [.black, .clear], startPoint: .bottom, endPoint: .top)
+                        .ignoresSafeArea()
+                        .frame(height: 0)
+                }
         } else {
             content
                 .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
