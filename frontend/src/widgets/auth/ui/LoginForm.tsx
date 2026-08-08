@@ -6,9 +6,10 @@ import styles from './AuthForms.module.css'
 
 interface LoginFormProps {
   onSubmit?: LoginSubmitHandler
+  onSwitchToRegister?: () => void
 }
 
-export function LoginForm({ onSubmit }: LoginFormProps) {
+export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
   const {
     form,
     isPasswordVisible,
@@ -73,7 +74,11 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       </form>
       <p className={styles.footer}>
         Нет аккаунта?{' '}
-        <button className={styles.link} type="button">
+        <button
+          className={styles.link}
+          onClick={onSwitchToRegister}
+          type="button"
+        >
           Зарегистрироваться
         </button>
       </p>
