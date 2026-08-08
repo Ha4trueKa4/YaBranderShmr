@@ -1,8 +1,9 @@
 type QueryValue = string | number | boolean | null | undefined;
 
-type QueryParams = Record<string, QueryValue>;
+export type QueryParams = Record<string, QueryValue>;
 
-interface ApiRequestOptions<Body = unknown> extends Omit<RequestInit, 'body'> {
+export interface ApiRequestOptions<Body = unknown>
+    extends Omit<RequestInit, 'body'> {
     query?: QueryParams;
     body?: Body | FormData;
 }
@@ -26,12 +27,10 @@ export function createApiClient(baseUrl: string) {
     ): Promise<Response> {
         const { query, body, headers: initialHeaders, ...requestOptions } = options;
 
-        const url = baseUrl.startsWith('http')
-            ? new URL(path, baseUrl)
-            : new URL(
-                  `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`,
-                  window.location.origin
-              );
+        const url = new URL(
+            `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`,
+            window.location.origin
+        );
 
         Object.entries(query ?? {}).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
