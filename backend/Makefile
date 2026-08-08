@@ -29,7 +29,7 @@ build_release/CMakeCache.txt: cmake-release
 # Build using cmake
 .PHONY: build-debug build-release
 build-debug build-release: build-%: build_%/CMakeCache.txt
-	cmake --build build_$* -j $(NPROCS) --target code_architecture
+	cmake --build build_$* -j $(NPROCS) --target ya_brander
 
 # Test
 .PHONY: test-debug test-release
@@ -40,7 +40,7 @@ test-debug test-release: test-%: build-%
 # Start the service (via testsuite service runner)
 .PHONY: service-start-debug service-start-release
 service-start-debug service-start-release: service-start-%: build-%
-	cmake --build build_$* -v --target start-code_architecture
+	cmake --build build_$* -v --target start-ya_brander
 
 # Cleanup data
 .PHONY: clean-debug clean-release
@@ -56,7 +56,7 @@ dist-clean:
 # Install
 .PHONY: install-debug install-release
 install-debug install-release: install-%: build-%
-	cmake --install build_$* -v --component code_architecture
+	cmake --install build_$* -v --component ya_brander
 
 .PHONY: install
 install: install-release
@@ -69,20 +69,20 @@ format:
 
 # Internal hidden targets that are used only in docker environment
 --in-docker-start-debug --in-docker-start-release: --in-docker-start-%: install-%
-	psql 'postgresql://user:password@service-postgres:5432/code_architecture_db_1' -f ./postgresql/data/initial_data.sql
-	/home/user/.local/bin/code_architecture \
-		--config /home/user/.local/etc/code_architecture/static_config.yaml \
-		--config_vars /home/user/.local/etc/code_architecture/config_vars.docker.yaml
+	psql 'postgresql://user:password@service-postgres:5432/ya_brander_db_1' -f ./postgresql/data/initial_data.sql
+	/home/user/.local/bin/ya_brander \
+		--config /home/user/.local/etc/ya_brander/static_config.yaml \
+		--config_vars /home/user/.local/etc/ya_brander/config_vars.docker.yaml
 
 # Build and run service in docker environment
 .PHONY: docker-start-service-debug docker-start-service-release
 docker-start-service-debug docker-start-service-release: docker-start-service-%:
-	$(DOCKER_COMPOSE) run -p 8080:8080 --rm code_architecture-container make -- --in-docker-start-$*
+	$(DOCKER_COMPOSE) run -p 8080:8080 --rm ya_brander-container make -- --in-docker-start-$*
 
 # Start targets makefile in docker environment
 .PHONY: docker-cmake-debug docker-build-debug docker-test-debug docker-clean-debug docker-install-debug docker-cmake-release docker-build-release docker-test-release docker-clean-release docker-install-release
 docker-cmake-debug docker-build-debug docker-test-debug docker-clean-debug docker-install-debug docker-cmake-release docker-build-release docker-test-release docker-clean-release docker-install-release: docker-%:
-	$(DOCKER_COMPOSE) run --rm code_architecture-container make $*
+	$(DOCKER_COMPOSE) run --rm ya_brander-container make $*
 
 # Stop docker container and remove PG data
 .PHONY: docker-clean-data

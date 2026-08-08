@@ -2,7 +2,7 @@
 
 #include <userver/server/handlers/http_handler_base.hpp>
 
-namespace code_architecture {
+namespace ya_brander {
 
   namespace {
 
@@ -25,4 +25,4 @@ namespace code_architecture {
     component_list.Append<Check>();
   }
 
-}  // namespace code_architecture
+}  // namespace ya_brander

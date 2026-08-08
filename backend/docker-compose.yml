@@ -3,7 +3,7 @@ services:
         container_name: service-postgres
         image: postgres:18
         environment:
-          - POSTGRES_DB=code_architecture_db_1
+          - POSTGRES_DB=ya_brander_db_1
           - POSTGRES_USER=user
           - POSTGRES_PASSWORD=password
           - PGDATA=/var/lib/postgresql/data
@@ -15,22 +15,22 @@ services:
         networks:
           - postgres
 
-    code_architecture-container:
+    ya_brander-container:
         image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
         privileged: true
         environment:
-          - POSTGRES_DB=code_architecture_db_1
+          - POSTGRES_DB=ya_brander_db_1
           - POSTGRES_USER=user
           - POSTGRES_PASSWORD=password
           - PREFIX=${PREFIX:-~/.local}
-          - CCACHE_DIR=/code_architecture/.ccache
+          - CCACHE_DIR=/ya_brander/.ccache
           - CORES_DIR=/cores
         volumes:
-          - .:/code_architecture:rw
+          - .:/ya_brander:rw
           - ${TC_CORES_DIR:-./.cores}:/cores:rw
         ports:
           - 8080:8080
-        working_dir: /code_architecture
+        working_dir: /ya_brander
         entrypoint:
           - ./tests/run_as_user.sh
         depends_on:
