@@ -1,5 +1,5 @@
-import { MainPage } from '@/pages'
+import { AppRouter } from '@/app/providers'
 
 export function App() {
-  return <MainPage />
+  return <AppRouter isAuthorized={false} />
 }
