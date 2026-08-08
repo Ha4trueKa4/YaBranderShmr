@@ -9,18 +9,38 @@ import SwiftUI
 
 struct OnboardingView: View {
     var onFinish: () -> Void = {}
-    
+
+    @State private var page: Page = .logo
+
+    private enum Page: Hashable {
+        case logo
+        case howItWorks
+        case getStarted
+    }
+
     var body: some View {
-        TabView() {
-            logoPage
-            howItWorksPage
-            getStartedPage
+        TabView(selection: $page) {
+            logoPage.tag(Page.logo)
+            howItWorksPage.tag(Page.howItWorks)
+            getStartedPage.tag(Page.getStarted)
         }
         .tabViewStyle(.page)
         .ignoresSafeArea(.all)
         .background {
-            Color(.background)
-                .ignoresSafeArea(.all)
+            ZStack {
+                Color(.background)
+                LinearGradient(
+                    colors: [
+                        Color(.startGradient),
+                        Color(.endGradient)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing,
+                )
+                .opacity(page == .logo ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: page)
+            }
+            .ignoresSafeArea(.all)
         }
     }
     
@@ -32,33 +52,22 @@ struct OnboardingView: View {
                 .padding(25)
         }
         
-        return ZStack {
-            LinearGradient(
-                colors: [
-                    Color(.startGradient),
-                    Color(.endGradient)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing,
-            )
-            .ignoresSafeArea(.all)
-            VStack(spacing: 32) {
-                if #available(iOS 26.0, *) {
-                    logo
-                        .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 28, height: 28)))
-                } else {
-                    logo
-                        .alternateBackground(cornerSize: CGSize(width: 28, height: 28))
-                }
-                VStack(spacing: 12) {
-                    Text("Brandkit AI")
-                        .font(.title.bold())
-                    Text("Turn words into brand identity")
-                        .foregroundStyle(.secondary)
-                }
+        return VStack(spacing: 32) {
+            if #available(iOS 26.0, *) {
+                logo
+                    .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 28, height: 28)))
+            } else {
+                logo
+                    .alternateBackground(cornerSize: CGSize(width: 28, height: 28))
             }
-            .padding(.bottom, 50)
+            VStack(spacing: 12) {
+                Text("Brandkit AI")
+                    .font(.title.bold())
+                Text("Turn words into brand identity")
+                    .foregroundStyle(.secondary)
+            }
         }
+        .padding(.bottom, 50)
     }
     
     var howItWorksPage: some View {
