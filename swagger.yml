@@ -80,27 +80,6 @@ paths:
         '401':
           description: Неверный email или пароль
 
-  /auth/refresh:
-    post:
-      summary: Обновление access-токена
-      description: Выдает новый access-токен (и, возможно, новый refresh-токен) по действующему refresh-токену.
-      tags: [ Auth ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
-      responses:
-        '200':
-          description: Токены успешно обновлены
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Refresh-токен недействителен, истёк или отозван
-  
   /users/{id}:
     get:
       summary: Получить профиль пользователя
@@ -311,27 +290,13 @@ components:
           format: password
           example: "strongPassword123!"
 
-    RefreshRequest:
-      type: object
-      required:
-        - refresh_token
-      properties:
-        refresh_token:
-          type: string
-          description: Действующий refresh-токен
-          example: "dGhpcy1pcy1hLXJlZnJlc2gtdG9rZW4tZXhhbXBsZQ=="
-
     AuthResponse:
       type: object
       properties:
         access_token:
           type: string
-          description: JWT токен для доступа к защищенным ручкам
+          description: Долгоживущий JWT токен для доступа к API
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        refresh_token:
-          type: string
-          description: Токен для получения нового access-токена (живет долго)
-          example: "dGhpcy1pcy1hLXJlZnJlc2gtdG9rZW4tZXhhbXBsZQ=="
         token_type:
           type: string
           example: "Bearer"
