@@ -7,10 +7,6 @@ struct ProjectEditorView: View {
         VStack(spacing: 16) {
             Text("Editor")
 
-            Button("Chat") {
-                router.push(.projectChat)
-            }
-
             Button("Version history") {
                 router.push(.projectVersionHistory)
             }
