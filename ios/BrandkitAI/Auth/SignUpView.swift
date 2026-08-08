@@ -6,7 +6,8 @@
 import SwiftUI
 
 struct SignUpView: View {
-    var onSignInTap: () -> Void = {}
+    @Environment(SessionStore.self) private var session
+    @Environment(\.dismiss) private var dismiss
 
     @State private var fullName = ""
     @State private var email = ""
@@ -44,19 +45,25 @@ struct SignUpView: View {
                 )
             }
 
-            PrimaryButton(title: "Create account") {}
-                .padding(.top, 24)
+            PrimaryButton(title: "Create account") {
+                session.register(email: email, password: password, nickname: fullName)
+            }
+            .padding(.top, 24)
 
             AuthFooter(
                 question: "Already have an account?",
-                actionTitle: "Sign in",
-                action: onSignInTap
-            )
+                actionTitle: "Sign in"
+            ) {
+                dismiss()
+            }
             .padding(.top, 32)
         }
     }
 }
 
 #Preview {
-    SignUpView()
+    NavigationStack {
+        SignUpView()
+    }
+    .environment(SessionStore())
 }

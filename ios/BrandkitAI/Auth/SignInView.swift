@@ -6,10 +6,11 @@
 import SwiftUI
 
 struct SignInView: View {
-    var onRegisterTap: () -> Void = {}
+    @Environment(SessionStore.self) private var session
 
     @State private var email = ""
     @State private var password = ""
+    @State private var isShowingRegister = false
 
     var body: some View {
         AuthScreenLayout {
@@ -35,18 +36,28 @@ struct SignInView: View {
                 )
             }
 
-            PrimaryButton(title: "Sign in") {}
-                .padding(.top, 24)
+            PrimaryButton(title: "Sign in") {
+                session.signIn(email: email, password: password)
+            }
+            .padding(.top, 24)
 
             LinkButton(title: "Forgot password?") {}
                 .padding(.top, 16)
 
-            AuthFooter(question: "No account?", actionTitle: "Register", action: onRegisterTap)
-                .padding(.top, 32)
+            AuthFooter(question: "No account?", actionTitle: "Register") {
+                isShowingRegister = true
+            }
+            .padding(.top, 32)
+        }
+        .navigationDestination(isPresented: $isShowingRegister) {
+            SignUpView()
         }
     }
 }
 
 #Preview {
-    SignInView()
+    NavigationStack {
+        SignInView()
+    }
+    .environment(SessionStore())
 }

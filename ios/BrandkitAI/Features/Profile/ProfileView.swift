@@ -1,22 +1,21 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @Environment(AppRouter.self) private var appRouter
-    @Environment(Router.self) private var router
+    @Environment(SessionStore.self) private var session
 
-    let target: ProfileTarget
+    var isCurrentUser: Bool = true
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Profile")
 
-            Button("Open project") {
-                router.push(.projectEditor)
+            NavigationLink("Open project") {
+                ProjectEditorView()
             }
 
-            if target == .current {
+            if isCurrentUser {
                 Button("Sign out", role: .destructive) {
-                    appRouter.signOut()
+                    session.signOut()
                 }
             }
         }
@@ -25,6 +24,8 @@ struct ProfileView: View {
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .profile(.current))
-        .environment(AppRouter(flow: .main))
+    NavigationStack {
+        ProfileView()
+    }
+    .environment(SessionStore())
 }

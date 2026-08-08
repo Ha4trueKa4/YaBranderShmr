@@ -1,14 +1,12 @@
 import SwiftUI
 
 struct PublicProjectView: View {
-    @Environment(Router.self) private var router
-
     var body: some View {
         VStack(spacing: 16) {
             Text("Public Project")
 
-            Button("Author profile") {
-                router.push(.profile(.other))
+            NavigationLink("Author profile") {
+                ProfileView(isCurrentUser: false)
             }
         }
         .navigationTitle("Public Project")
@@ -16,6 +14,7 @@ struct PublicProjectView: View {
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .publicProject)
-        .environment(AppRouter(flow: .main))
+    NavigationStack {
+        PublicProjectView()
+    }
 }

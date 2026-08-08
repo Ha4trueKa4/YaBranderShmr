@@ -10,24 +10,32 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yandex.avatargenerator.feature.onboarding.ui.rememberHasSeenOnboarding
 import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
  * Корень UI: связывает [NavHostController], нижнюю панель ([AppBottomBar]) и
  * граф ([AppNavHost]).
  *
+ * Здесь же выбирается стартовый экран: онбординг при первом запуске, иначе
+ * лента. Флаг лежит в DataStore и читается асинхронно, поэтому до первого
+ * значения граф не строится.
+ *
  * Нижняя панель показывается только на верхнеуровневых вкладках
- * ([TopLevelDestination]); на экранах-деталях (проект, чужой профиль) она
- * скрыта, чтобы не мешать полноэкранному контенту (WebView-редактор и т.п.).
+ * ([TopLevelDestination]); на экранах-деталях (проект, чужой профиль) и на
+ * онбординге она скрыта, чтобы не мешать полноэкранному контенту.
  */
 @Composable
 fun AvatarGeneratorApp(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
+    val hasSeenOnboarding = rememberHasSeenOnboarding()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
-    val showBottomBar = currentDestination.isTopLevel() ?: true
+    // Узел ещё не определён (первый кадр либо флаг не прочитан) — ориентируемся
+    // на будущий стартовый экран: верхнеуровневый только если онбординг пройден.
+    val showBottomBar = currentDestination.isTopLevel() ?: (hasSeenOnboarding == true)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -41,10 +49,22 @@ fun AvatarGeneratorApp(
             }
         },
     ) { innerPadding ->
-        AppNavHost(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding),
-        )
+        // startDestination задаётся при создании NavHost и потом не меняется,
+        // поэтому пока флаг не прочитан (null) — держим пустой фон Scaffold,
+        // иначе стартовый экран выберется наугад.
+        val startDestination = when (hasSeenOnboarding) {
+            null -> null
+            true -> Destination.Feed.route
+            false -> Destination.Onboarding.route
+        }
+
+        if (startDestination != null) {
+            AppNavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.padding(innerPadding),
+            )
+        }
     }
 }
 

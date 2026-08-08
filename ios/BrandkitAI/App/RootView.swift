@@ -1,22 +1,34 @@
 import SwiftUI
 
 struct RootView: View {
-    @State private var appRouter = AppRouter()
+    @AppStorage("hasFinishedOnboarding") private var hasFinishedOnboarding = false
+
+    @State private var session = SessionStore()
 
     var body: some View {
         Group {
-            switch appRouter.flow {
-            case .onboarding:
-                RoutedNavigationStack(router: appRouter.onboarding, root: .onboarding)
+            if !hasFinishedOnboarding {
+                OnboardingView(onFinish: { hasFinishedOnboarding = true })
+            } else {
+                switch session.state {
+                case .unknown:
+                    ProgressView()
 
-            case .auth:
-                RoutedNavigationStack(router: appRouter.auth, root: .login)
+                case .signedOut:
+                    NavigationStack {
+                        SignInView()
+                    }
+                    .tint(.purple)
 
-            case .main:
-                MainTabView()
+                case .signedIn:
+                    MainTabView()
+                }
             }
         }
-        .environment(appRouter)
+        .environment(session)
+        .task {
+            session.restore()
+        }
     }
 }
 

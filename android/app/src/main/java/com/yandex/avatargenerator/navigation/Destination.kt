@@ -15,6 +15,12 @@ import android.net.Uri
  */
 sealed class Destination(val route: String) {
 
+    /**
+     * Онбординг. Стартовый экран при первом запуске; после прохождения в граф
+     * не возвращается — не вкладка, поэтому нижней панели на нём нет.
+     */
+    data object Onboarding : Destination("onboarding")
+
     /** Общая лента + лента подписок (вкладка). Стартовый экран. */
     data object Feed : Destination("feed")
 

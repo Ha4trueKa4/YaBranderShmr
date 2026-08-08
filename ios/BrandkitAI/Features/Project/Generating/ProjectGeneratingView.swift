@@ -1,14 +1,12 @@
 import SwiftUI
 
 struct ProjectGeneratingView: View {
-    @Environment(AppRouter.self) private var appRouter
-
     var body: some View {
         VStack(spacing: 16) {
             Text("Generating")
 
-            Button("Open editor") {
-                appRouter.openGeneratedProject()
+            NavigationLink("Open editor") {
+                ProjectEditorView()
             }
         }
         .navigationTitle("Generating")
@@ -16,6 +14,7 @@ struct ProjectGeneratingView: View {
 }
 
 #Preview {
-    RoutedNavigationStack(router: Router(), root: .projectGenerating)
-        .environment(AppRouter(flow: .main))
+    NavigationStack {
+        ProjectGeneratingView()
+    }
 }
