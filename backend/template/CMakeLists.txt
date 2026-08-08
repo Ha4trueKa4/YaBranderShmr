@@ -26,20 +26,10 @@ userver_setup_environment()
 
 # Common sources
 add_library(${PROJECT_NAME}_objs OBJECT
-    src/handlers/check/check.hpp
-    src/handlers/check/check.cpp
-    src/models/item_id.hpp
-    src/models/item_id.cpp
-    src/models/user_info.hpp
-    src/repositories/user_resolver.hpp
-    src/repositories/user_resolver.cpp
-    src/repositories/item_repository.hpp
-    src/repositories/item_repository.cpp
-    src/validation/item_validator.hpp
-    src/validation/item_validator.cpp
-    src/services/cart_checker.hpp
-    src/services/cart_checker.cpp
+        src/handlers/check/check.hpp
+        src/handlers/check/check.cpp
 )
+
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 target_include_directories(${PROJECT_NAME}_objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
