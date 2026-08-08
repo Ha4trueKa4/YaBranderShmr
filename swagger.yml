@@ -326,6 +326,8 @@ components:
           type: string
         name:
           type: string
+        description:
+          type: string
         is_public:
           type: boolean
         created_at:
