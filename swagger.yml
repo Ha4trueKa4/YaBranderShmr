@@ -17,10 +17,75 @@ tags:
     description: Создание, редактирование и генерация проектов
 
 paths:
+  /auth/register:
+    post:
+      summary: Регистрация нового пользователя
+      tags: [ Auth ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Ошибка валидации формата данных (неверный email, короткий пароль и т.д.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Конфликт данных (email или nickname уже занят)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                EmailTaken:
+                  summary: Email уже занят
+                  value:
+                    code: "EMAIL_EXISTS"
+                    message: "Пользователь с таким email уже зарегистрирован"
+                    field: "email"
+                NicknameTaken:
+                  summary: Никнейм уже занят
+                  value:
+                    code: "NICKNAME_EXISTS"
+                    message: "Этот никнейм уже занят другим пользователем"
+                    field: "nickname"
+
+  /auth/login:
+    post:
+      summary: Вход в систему (получение токена)
+      tags: [ Auth ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Неверный email или пароль
+  
   /users/{id}:
     get:
       summary: Получить профиль пользователя
       tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -49,6 +114,8 @@ paths:
     post:
       summary: Создать новый проект
       tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -69,11 +136,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Project'
+        '401':
+          description: Не авторизован
 
   /projects/{id}:
     get:
       summary: Получить проект по ID
       tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -87,10 +158,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Project'
+        '403':
+          description: Нет прав (не автор проекта)
 
     patch:
       summary: Обновить данные проекта (ручное сохранение)
       tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -111,11 +186,37 @@ paths:
       responses:
         '200':
           description: Проект успешно обновлен
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав (не автор проекта)
+
+    delete:
+      summary: Удаление проекта
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор проекта
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Проект удалён
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав (не автор проекта)
 
   /projects/{id}/generate:
     post:
       summary: Изменение/генерация проекта с помощью ИИ
       tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -139,27 +240,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProjectData'
-
-  /project/{id}:
-    delete:
-      summary: Удаление проекта
-      tags: [ Projects ]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Уникальный идентификатор проекта
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Проект удалён
+        '401':
+          description: Не авторизован
 
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
   schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - nickname
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          example: "strongPassword123!"
+        nickname:
+          type: string
+          example: "John Doe"
 
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          example: "strongPassword123!"
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT токен для доступа к защищенным ручкам
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type:
+          type: string
+          example: "Bearer"
+    
     UserProfile:
       type: object
       properties:
@@ -210,6 +347,22 @@ components:
             type: object
             description: Произвольный элемент (text, rect, path и т.д.)
             additionalProperties: true
+
+    ValidationError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Строковый код ошибки для обработки на клиенте
+          example: "NICKNAME_EXISTS"
+        message:
+          type: string
+          description: Человекочитаемое сообщение
+          example: "Этот никнейм уже занят"
+        field:
+          type: string
+          description: Название поля, в котором произошла ошибка
+          example: "nickname"
 
     Error:
       type: object
