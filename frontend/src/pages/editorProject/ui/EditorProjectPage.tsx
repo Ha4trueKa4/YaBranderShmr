@@ -13,6 +13,7 @@ export function EditorProjectPage() {
 
   return (
     <main className={styles.page}>
+      {/* Загрузить проект по projectId через query и передать данные в EditorWorkspace. */}
       <EditorWorkspace />
     </main>
   )

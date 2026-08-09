@@ -19,6 +19,8 @@ export function EditorCreatePage() {
   } = useMockCreateProjectMutation()
 
   function handleGenerate() {
+    // Сюда подставить значения формы: название и описание вместо `defaultProject`.
+    // После создания проект должен быть передан в feature генерации.
     createProject(defaultProject, {
       onSuccess: ({ id }) => navigate(`/projects/${id}`),
     })
@@ -26,6 +28,7 @@ export function EditorCreatePage() {
 
   return (
     <main className={styles.page}>
+      {/* Ошибку мутации и повторную отправку добавить рядом с этим переключением состояния. */}
       {isCreatingProjectPending ? (
         <EditorGeneratingState />
       ) : (
