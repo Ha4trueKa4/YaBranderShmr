@@ -4,7 +4,7 @@
 
 #include "jwt_service.hpp"
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 class LoginHandler final : public userver::server::handlers::HttpHandlerJsonBase {
 public:
@@ -23,4 +23,4 @@ private:
     JwtService jwt_service_;
 };
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

@@ -7,7 +7,7 @@
 
 #include "password_hasher.hpp"
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 namespace {
 
@@ -72,4 +72,4 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
     return response.ExtractValue();
 }
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

@@ -2,7 +2,7 @@
 #include <chrono>
 #include <string>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 class JwtService {
 public:
@@ -16,4 +16,4 @@ private:
     std::string secret_;
 };
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

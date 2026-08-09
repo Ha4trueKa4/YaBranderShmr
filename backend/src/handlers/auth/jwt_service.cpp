@@ -6,7 +6,7 @@
 #include <cstring>
 #include <stdexcept>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 JwtService::JwtService() {
     const char* jwt_secret = std::getenv("JWT_SECRET_KEY");
@@ -26,4 +26,4 @@ std::string JwtService::IssueToken(const std::string& user_id, std::chrono::seco
         .sign(jwt::algorithm::hs256{secret_});
 }
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

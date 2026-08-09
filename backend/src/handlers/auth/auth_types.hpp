@@ -6,7 +6,7 @@
 #include <string>
 #include <optional>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 struct RegisterRequest {
     std::string email;
@@ -52,4 +52,4 @@ inline userver::formats::json::Value SerializeAuthResponse(
     return builder.ExtractValue();
 }
 
-} // namespace ya_brender::auth
+} // namespace ya_brander::auth

@@ -16,7 +16,7 @@
 #include "handlers/projects/append_projects.h"
 
 int main(int argc, char* argv[]) {
-    userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brender::auth::CheckerFactory>();
+    userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
     auto component_list =
         userver::components::MinimalServerComponentList()
             .Append<userver::server::handlers::Ping>()
@@ -25,8 +25,8 @@ int main(int argc, char* argv[]) {
             .Append<userver::components::HttpClientCore>()
             .Append<userver::clients::http::MiddlewarePipelineComponent>()
             .Append<userver::server::handlers::TestsControl>()
-            .Append<ya_brender::auth::LoginHandler>()
-            .Append<ya_brender::auth::RegisterHandler>()
+            .Append<ya_brander::auth::LoginHandler>()
+            .Append<ya_brander::auth::RegisterHandler>()
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>();

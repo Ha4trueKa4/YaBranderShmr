@@ -6,7 +6,7 @@
 #include <jwt-cpp/jwt.h>
 #include <memory>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 class AuthCheckerJwt final : public userver::server::handlers::auth::AuthCheckerBase {
 public:
@@ -41,4 +41,4 @@ private:
     std::shared_ptr<jwt::verifier<jwt::default_clock, jwt::traits::kazuho_picojson>> verifier_;
 };
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 namespace {
 
 std::string ToHex(const unsigned char* data, size_t len) {
@@ -96,4 +96,4 @@ bool PasswordHasher::Verify(const std::string& password, const std::string& stor
     return diff == 0;
 }
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

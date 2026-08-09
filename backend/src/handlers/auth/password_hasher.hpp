@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 class PasswordHasher {
 public:
@@ -14,4 +14,4 @@ private:
     static constexpr int kHashBytes = 32;
 };
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth

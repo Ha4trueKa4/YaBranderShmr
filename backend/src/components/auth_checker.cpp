@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
-namespace ya_brender::auth {
+namespace ya_brander::auth {
 
 namespace {
     std::optional<std::string> ParseUserIdFromJwt(
@@ -101,4 +101,4 @@ userver::server::handlers::auth::AuthCheckerBasePtr CheckerFactory::MakeAuthChec
     return std::make_shared<AuthCheckerJwt>(verifier_);
 }
 
-}  // namespace ya_brender::auth
+}  // namespace ya_brander::auth
