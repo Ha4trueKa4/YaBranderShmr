@@ -5,9 +5,8 @@ namespace ya_brander::handlers {
 DeleteProjectHandler::DeleteProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
-std::string DeleteProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext&) const {
-  // ЗАГЛУШКА:
-  std::optional<std::string> user_id = "11111111-1111-1111-1111-111111111111"; // ЗАГЛУШКА, требуется реализация
+std::string DeleteProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+  std::string* user_id = context.GetDataOptional<std::string>("user_id");
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
     return {};

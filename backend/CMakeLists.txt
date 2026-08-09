@@ -38,15 +38,6 @@ userver_setup_environment()
 add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/check/check.hpp
         src/handlers/check/check.cpp
-        src/components/project_manager_component.cpp
-
-        src/handlers/projects/append_projects.cpp
-
-        src/handlers/projects/create_project.cpp
-        src/handlers/projects/get_project.cpp
-        src/handlers/projects/patch_project.cpp
-        src/handlers/projects/delete_project.cpp
-        src/handlers/projects/generate_project.cpp
         src/handlers/auth/register_handler.cpp
         src/handlers/auth/register_handler.hpp
         src/handlers/auth/jwt_service.cpp
@@ -57,6 +48,13 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/password_hasher.cpp
         src/components/auth_checker.hpp
         src/components/auth_checker.cpp
+        src/components/project_manager_component.cpp
+        src/handlers/projects/append_projects.cpp
+        src/handlers/projects/create_project.cpp
+        src/handlers/projects/get_project.cpp
+        src/handlers/projects/patch_project.cpp
+        src/handlers/projects/delete_project.cpp
+        src/handlers/projects/generate_project.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql jwt-cpp)
