@@ -51,9 +51,10 @@ feature/<имя>/
 - Экран — `<Имя>Screen.kt`, состояние — `<Имя>ViewModel.kt`
   (регистрируется в Koin-модуле фичи).
 - Переиспользуемые куски экрана — `ui/components/`.
-- Цвета берём из общей палитры `ui/theme/AppColors.kt` напрямую. Если фиче
-  нужны свои цветовые алиасы — только файлом `ui/theme/<Имя>Colors.kt` как
-  алиасы на `AppColors`, не отдельная палитра.
+- Свои цветовые алиасы — `ui/theme/<Имя>Colors.kt`, но только если там есть
+  **собственные** значения поверх `AppColors` (см. `feature/create/ui/theme/ChatsColors.kt`
+  с градиентами превью). Файл из одних алиасов на `AppColors` заводить не нужно —
+  обращаемся к `AppColors` напрямую.
 
 ## Дизайн-система
 
@@ -61,9 +62,13 @@ feature/<имя>/
 
 - `ui/theme/AppColors.kt`, `AppTypography.kt`, `AppFont.kt`, `AppShape.kt`,
   `AppSpacing.kt`
-- `ui/components/BrandButtons.kt`, `BrandTextField.kt`, `BrandAvatar.kt`,
-  `BrandBadge.kt`, `BrandCard.kt`, `BrandChatBubble.kt`, `BrandVersionRow.kt`,
-  `BrandSkeleton.kt` (переиспользуемые примитивы shimmer-плейсхолдеров)
+- `ui/components/BrandButtons.kt` (`BrandPrimaryButton` со слотом `leadingIcon`,
+  `BrandSecondaryButton`, `BrandButtonDefaults.Height` — на неё завязывают
+  отступы соседних элементов), `BrandTextField.kt`, `BrandStates.kt`
+  (`BrandEmptyState`, `BrandErrorState`), `BrandTextLink.kt` («текст + акцентное
+  кликабельное слово»), `BrandAvatar.kt`, `BrandBadge.kt`, `BrandCard.kt`,
+  `BrandChatBubble.kt`, `BrandVersionRow.kt`, `BrandSkeleton.kt`
+  (переиспользуемые примитивы shimmer-плейсхолдеров)
 
 **Правило:** в фичах не используем сырые `material3.Button`, захардкоженные
 `Color(0xFF...)`, произвольные `.sp`/`.dp` для типографики и отступов — всё
@@ -71,6 +76,19 @@ feature/<имя>/
 добавляем в дизайн-систему, а не изобретаем в фиче.
 
 Исключение — точечные значения без токена (например, размер конкретной иконки).
+
+**Не заводим в фиче свой shimmer, свою кнопку, своё empty/error-состояние.**
+Если общему компоненту не хватает параметра — добавляем параметр ему
+(так появился `leadingIcon` у `BrandPrimaryButton`), а не пишем рядом «почти
+такой же» приватный вариант: копии начинают расходиться по стилю.
+
+**Явный `Text(style = ...)` берём только из `AppTypography`.** Произвольный
+`TextStyle` **заменяет** унаследованный от `MaterialTheme` стиль, а не дополняет
+его, и вместе с ним теряется `InterFontFamily` — экран молча уезжает на системный
+шрифт. Нужна вариация — `AppTypography.body.copy(fontWeight = ...)`.
+
+**Тексты — только в `strings.xml`**, без строковых литералов в Kotlin
+(исключение — `@Preview`, туда данные можно писать прямо в коде).
 
 ## Навигация
 
@@ -92,4 +110,7 @@ feature/<имя>/
 - Файл = один публичный класс/composable того же имени.
 - Экраны: `<Имя>Screen.kt`. Usecase: `<Действие>UseCase.kt`.
 - Приватные вспомогательные composable — с префиксом фичи/экрана
-  (`LoginBrandMark`), чтобы не путать с публичным API файла в диффе.
+  (`FeedTabItem`), чтобы не путать с публичным API файла в диффе.
+  Как только такой помощник понадобился второму экрану фичи — выносим его
+  в `ui/components/` отдельным файлом с префиксом фичи (`AuthBrandMark.kt`),
+  а не копируем под новым именем.

@@ -23,8 +23,7 @@ struct ProjectsView: View {
                 .padding(.top, 16)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .brandBackground()
         .overlay(alignment: .bottomTrailing) {
             NewProjectButton {
                 onNewProject()
@@ -32,7 +31,6 @@ struct ProjectsView: View {
             .padding(16)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
         .task {
             viewModel.load()
         }

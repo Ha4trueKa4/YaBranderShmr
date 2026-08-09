@@ -1,10 +1,27 @@
 <resources>
     <string name="app_name">AvatarGenerator</string>
 
+    <!-- Дизайн-система -->
+    <string name="brand_version_restore">Restore</string>
+
     <!-- Вкладки нижней навигации -->
     <string name="nav_feed">Лента</string>
     <string name="nav_create">Создать</string>
     <string name="nav_profile">Профиль</string>
+
+    <!-- Вход и регистрация -->
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_create_account">Create account</string>
+    <string name="auth_field_full_name">Full name</string>
+    <string name="auth_field_email">Email</string>
+    <string name="auth_field_password">Password</string>
+    <string name="auth_placeholder_full_name">John Doe</string>
+    <string name="auth_placeholder_email">hello@brandkit.ai</string>
+    <string name="auth_placeholder_password">Enter your password</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_no_account">No account?</string>
+    <string name="auth_register">Register</string>
+    <string name="auth_have_account">Already have an account?</string>
 
     <!-- Onboarding: welcome -->
     <string name="onboarding_brand_title">Brandkit AI</string>
@@ -31,6 +48,25 @@
 
     <!-- Onboarding: accessibility -->
     <string name="onboarding_page_indicator_description">Page %1$d of %2$d</string>
+
+    <!-- Лента -->
+    <string name="feed_brand_name">Brandkit</string>
+    <string name="feed_brand_name_accent">AI</string>
+    <string name="feed_search_description">Поиск</string>
+
+    <string name="feed_tab_all">All</string>
+    <string name="feed_tab_subscriptions">Subscriptions</string>
+
+    <string name="feed_empty_subscriptions_title">No subscriptions yet</string>
+    <string name="feed_empty_subscriptions_subtitle">Follow creators to see their work here</string>
+    <string name="feed_empty_subscriptions_action">Explore all projects</string>
+
+    <string name="feed_empty_projects_title">No projects yet</string>
+    <string name="feed_empty_projects_subtitle">Published projects will appear here</string>
+
+    <string name="feed_error_title">Couldn\'t load feed</string>
+    <string name="feed_error_retry">Retry</string>
+    <string name="feed_append_error_retry">Failed to load. Retry</string>
 
     <!-- Чаты (таб «Создать») -->
     <string name="chats_title">Chats</string>

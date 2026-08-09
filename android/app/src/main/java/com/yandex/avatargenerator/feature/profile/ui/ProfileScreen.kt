@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.feature.profile.ui.components.ProfileHeader
 import com.yandex.avatargenerator.ui.components.BrandSecondaryButton
 import com.yandex.avatargenerator.ui.components.ProjectCard
+import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.components.masonryAspectRatio
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -94,12 +93,10 @@ private fun ProfileContent(
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
+    ProjectMasonryGrid(
         modifier = modifier.fillMaxSize(),
+        // Без верхнего отступа: обложка шапки уходит под край экрана.
         contentPadding = PaddingValues(start = AppSpacing.m, end = AppSpacing.m, bottom = AppSpacing.m),
-        horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
-        verticalItemSpacing = AppSpacing.s,
     ) {
         // Карточки отступают от краёв на AppSpacing.m (горизонтальный contentPadding
         // грида), а обложка/дивайдер шапки — доходят до краёв экрана. Через

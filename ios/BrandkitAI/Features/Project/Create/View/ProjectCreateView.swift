@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ProjectCreateView: View {
     var onBack: (() -> Void)?
+    /// Отдаёт введённое имя проекта — оно становится заголовком чата.
+    var onGenerate: (String) -> Void = { _ in }
 
     @State private var viewModel = ProjectCreateViewModel()
 
@@ -30,7 +32,8 @@ struct ProjectCreateView: View {
                     isEnabled: viewModel.canSubmit,
                     fill: AnyShapeStyle(.brand)
                 ) {
-                    viewModel.generate()
+                    guard viewModel.canSubmit else { return }
+                    onGenerate(viewModel.name)
                 }
                 .padding(.top, 8)
             }
@@ -39,18 +42,14 @@ struct ProjectCreateView: View {
             .padding(.bottom, 40)
         }
         .scrollDismissesKeyboard(.interactively)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .brandBackground()
         .navigationTitle(viewModel.title)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(onBack != nil)
         .toolbar {
             if let onBack {
                 backItem(action: onBack)
             }
-        }
-        .preferredColorScheme(.dark)
-        .navigationDestination(isPresented: $viewModel.isGenerating) {
-            ProjectGeneratingView()
         }
     }
 

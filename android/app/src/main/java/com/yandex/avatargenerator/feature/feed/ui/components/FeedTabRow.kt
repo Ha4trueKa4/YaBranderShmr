@@ -5,9 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,8 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -42,12 +44,12 @@ fun FeedTabRow(
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.l),
     ) {
         FeedTabItem(
-            title = "All",
+            title = stringResource(R.string.feed_tab_all),
             selected = selectedTab == FeedTab.ALL,
             onClick = { onTabSelected(FeedTab.ALL) },
         )
         FeedTabItem(
-            title = "Subscriptions",
+            title = stringResource(R.string.feed_tab_subscriptions),
             selected = selectedTab == FeedTab.SUBSCRIPTIONS,
             onClick = { onTabSelected(FeedTab.SUBSCRIPTIONS) },
         )
@@ -74,7 +76,7 @@ private fun FeedTabItem(
             ),
             modifier = Modifier.padding(vertical = AppSpacing.s),
         )
-        // Нижний индикатор активной вкладки.
+        // Нижний индикатор активной вкладки: 2dp — точечное значение по макету.
         Box(
             modifier = Modifier
                 .padding(bottom = AppSpacing.s)

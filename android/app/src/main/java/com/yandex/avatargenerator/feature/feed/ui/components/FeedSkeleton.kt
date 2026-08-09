@@ -82,7 +82,7 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
                     .width(110.dp)
                     .height(12.dp),
                 brush = brush,
-                shape = RoundedCornerShape(4.dp),
+                shape = RoundedCornerShape(AppShape.xs),
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
@@ -98,7 +98,7 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
                         .width(60.dp)
                         .height(10.dp),
                     brush = brush,
-                    shape = RoundedCornerShape(4.dp),
+                    shape = RoundedCornerShape(AppShape.xs),
                 )
             }
         }

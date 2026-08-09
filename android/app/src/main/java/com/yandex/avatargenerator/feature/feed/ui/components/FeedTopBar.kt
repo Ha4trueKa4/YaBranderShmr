@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +48,7 @@ fun FeedTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
+            // 6dp — точечный отступ логотипа по макету, вне шкалы AppSpacing.
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -57,8 +59,11 @@ fun FeedTopBar(
             )
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = AppColors.TextPrimary)) { append("Brandkit ") }
-                    withStyle(SpanStyle(color = AppColors.AccentCyan)) { append("AI") }
+                    append(stringResource(R.string.feed_brand_name))
+                    append(" ")
+                    withStyle(SpanStyle(color = AppColors.AccentCyan)) {
+                        append(stringResource(R.string.feed_brand_name_accent))
+                    }
                 },
                 style = AppTypography.heading3.copy(fontWeight = FontWeight.ExtraBold),
             )
@@ -74,7 +79,7 @@ fun FeedTopBar(
         ) {
             Icon(
                 imageVector = Icons.Filled.Search,
-                contentDescription = "Поиск",
+                contentDescription = stringResource(R.string.feed_search_description),
                 tint = AppColors.TextSecondary,
                 modifier = Modifier.size(16.dp),
             )

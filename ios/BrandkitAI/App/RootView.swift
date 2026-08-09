@@ -21,10 +21,13 @@ struct RootView: View {
                     .tint(.purple)
 
                 case .signedIn:
-                    MainTabView()
+                    MainShellView()
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.background).ignoresSafeArea())
+        .preferredColorScheme(.dark)
         .environment(session)
         .task {
             session.restore()

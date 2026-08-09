@@ -1,10 +1,16 @@
 package com.yandex.avatargenerator.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -24,6 +30,11 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  * Нижняя панель показывается только на верхнеуровневых вкладках
  * ([TopLevelDestination]); на экранах-деталях (проект, чужой профиль) и на
  * онбординге она скрыта, чтобы не мешать полноэкранному контенту.
+ *
+ * Инсеты системных баров экранам раздаёт `Scaffold` — кроме онбординга: тот
+ * рисуется во всё окно и отступает от баров сам. Если фича заводит собственный
+ * `windowInsetsPadding`, её маршрут нужно добавить в это исключение, иначе
+ * отступы удвоятся.
  */
 @Composable
 fun AvatarGeneratorApp(
@@ -36,10 +47,23 @@ fun AvatarGeneratorApp(
     // Узел ещё не определён (первый кадр либо флаг не прочитан) — ориентируемся
     // на будущий стартовый экран: верхнеуровневый только если онбординг пройден.
     val showBottomBar = currentDestination.isTopLevel() ?: (hasSeenOnboarding == true)
+    // Тот же приём для полноэкранного режима: до готовности бэкстека онбординг
+    // будет открыт ровно тогда, когда флаг ещё не выставлен.
+    val isFullBleed = currentDestination?.isOnRoute(Destination.Onboarding.route)
+        ?: (hasSeenOnboarding == false)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = AppColors.Background,
+        // Онбординг занимает всё окно: у него полноэкранный градиент, а отступы
+        // от системных баров каждая его страница ставит сама (windowInsetsPadding).
+        // Если те же инсеты раздаст ещё и Scaffold — сверху и снизу появится
+        // полоса containerColor, а отступы страниц удвоятся.
+        contentWindowInsets = if (isFullBleed) {
+            WindowInsets(0)
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
         bottomBar = {
             if (showBottomBar) {
                 AppBottomBar(
@@ -49,23 +73,47 @@ fun AvatarGeneratorApp(
             }
         },
     ) { innerPadding ->
-        // startDestination задаётся при создании NavHost и потом не меняется,
-        // поэтому пока флаг не прочитан (null) — держим пустой фон Scaffold,
-        // иначе стартовый экран выберется наугад.
-        val startDestination = when (hasSeenOnboarding) {
-            null -> null
-            true -> Destination.Feed.route
-            false -> Destination.Onboarding.route
-        }
+        // Пока флаг не прочитан (null) — держим пустой фон Scaffold, иначе
+        // стартовый экран выберется наугад.
+        val startDestination = rememberStartDestination(hasSeenOnboarding)
 
         if (startDestination != null) {
             AppNavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding),
+                // consumeWindowInsets обязателен вместе с padding (см. KDoc Scaffold):
+                // без него вложенный windowInsetsPadding отсчитает системные бары
+                // второй раз поверх уже добавленного отступа.
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding),
             )
         }
     }
+}
+
+/**
+ * Стартовый маршрут, зафиксированный по первому прочитанному значению флага
+ * «онбординг пройден». `null` — флаг ещё читается, граф строить рано.
+ *
+ * Пересчитывать маршрут на каждое значение флага нельзя, хотя соблазнительно:
+ * флаг меняется прямо во время сессии — его пишет сам онбординг перед тем, как
+ * уйти на регистрацию. А `NavHost` пересобирает граф на каждое новое значение
+ * `startDestination`, и `NavController.setGraph` при смене графа чистит бэкстек
+ * и уходит на новый стартовый экран. Из-за этого только что открытая регистрация
+ * схлопывалась в ленту — экран успевал мелькнуть и пропадал.
+ *
+ * `rememberSaveable`, а не `remember`: иначе поворот экрана на регистрации даёт
+ * ровно тот же вылет — граф пересоберётся уже с лентой в качестве стартовой.
+ */
+@Composable
+private fun rememberStartDestination(hasSeenOnboarding: Boolean?): String? {
+    var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
+    if (startDestination == null && hasSeenOnboarding != null) {
+        startDestination =
+            if (hasSeenOnboarding) Destination.Feed.route else Destination.Onboarding.route
+    }
+    return startDestination
 }
 
 /** Маршруты верхнеуровневых вкладок; константа — считается один раз, не на каждой рекомпозиции. */

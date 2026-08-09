@@ -1,5 +1,5 @@
 import { Button, FormField, IconButton, Input } from '@shared'
-import brandMark from '@shared/assets/brandmark.svg'
+import { Eye, EyeOff } from 'lucide-react'
 import { Controller } from 'react-hook-form'
 import { type RegisterSubmitHandler, useRegisterForm } from '../model'
 import styles from './AuthForms.module.css'
@@ -19,21 +19,30 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
   } = useRegisterForm({ onSubmit })
 
   return (
-    <section className={styles.card}>
-      <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
-      <h2 className={styles.title}>Создать аккаунт</h2>
+    <section className={styles.formSection}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Create account</h1>
+        <p className={styles.subtitle}>
+          Create your workspace in less than a minute.
+        </p>
+      </header>
       <form className={styles.form} onSubmit={submit}>
         <div className={styles.formFields}>
           <Controller
             control={form.control}
             name="nickname"
             render={({ field, fieldState }) => (
-              <FormField error={fieldState.error?.message} label="Никнейм">
+              <FormField
+                error={fieldState.error?.message}
+                label="Nickname"
+                reserveErrorSpace
+              >
                 <Input
                   {...field}
                   autoComplete="name"
+                  className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
-                  placeholder="Иван Иванов"
+                  placeholder="alexkim"
                   ref={field.ref}
                 />
               </FormField>
@@ -43,12 +52,17 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             control={form.control}
             name="email"
             render={({ field, fieldState }) => (
-              <FormField error={fieldState.error?.message} label="Email">
+              <FormField
+                error={fieldState.error?.message}
+                label="Email"
+                reserveErrorSpace
+              >
                 <Input
                   {...field}
                   autoComplete="email"
+                  className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
-                  placeholder="hello@brandkit.ai"
+                  placeholder="alex@studio.com"
                   ref={field.ref}
                   type="email"
                 />
@@ -59,16 +73,25 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <FormField error={fieldState.error?.message} label="Пароль">
+              <FormField
+                error={fieldState.error?.message}
+                label="Password"
+                reserveErrorSpace
+              >
                 <Input
                   {...field}
                   autoComplete="new-password"
+                  className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
-                  placeholder="Придумайте пароль"
+                  placeholder="Enter your password"
                   ref={field.ref}
                   trailingContent={
                     <IconButton onClick={togglePasswordVisibility} size="sm">
-                      {isPasswordVisible ? '◉' : '◌'}
+                      {isPasswordVisible ? (
+                        <EyeOff size={18} strokeWidth={1.75} />
+                      ) : (
+                        <Eye size={18} strokeWidth={1.75} />
+                      )}
                     </IconButton>
                   }
                   type={isPasswordVisible ? 'text' : 'password'}
@@ -77,18 +100,21 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             )}
           />
         </div>
-        <Button fullWidth type="submit">
-          Создать аккаунт
+        <Button fullWidth size="lg" type="submit">
+          Create account
         </Button>
         {isSubmitted && (
-          <p className={styles.success}>Форма успешно отправлена.</p>
+          <p className={styles.success}>Your account has been created.</p>
         )}
       </form>
       <p className={styles.footer}>
-        Уже есть аккаунт?{' '}
+        Already have an account?{' '}
         <button className={styles.link} onClick={onSwitchToLogin} type="button">
-          Войти
+          Sign in
         </button>
+      </p>
+      <p className={styles.legalNotice}>
+        By continuing, you agree to the Terms and Privacy Policy.
       </p>
     </section>
   )

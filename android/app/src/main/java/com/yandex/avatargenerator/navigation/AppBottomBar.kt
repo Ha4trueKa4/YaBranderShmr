@@ -37,6 +37,7 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  *    вкладки распределены `SpaceBetween`;
  *  - активная вкладка окрашена в [AppColors.Accent], неактивные — в
  *    [AppColors.TextMuted] (иконка + подпись);
+ *  - подсветки нажатия у вкладок нет — обратную связь даёт смена цвета;
  *  - снизу — область системного жеста («хват»), залитая тем же фоном.
  *
  * @param currentDestination текущий узел графа (для подсветки активной вкладки).
@@ -95,7 +96,14 @@ private fun NavItem(
     Column(
         modifier = modifier
             .width(56.dp)
-            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+            // Убрана анимация выделения таба, а то чот не красиво было
+            .selectable(
+                selected = selected,
+                interactionSource = null,
+                indication = null,
+                role = Role.Tab,
+                onClick = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
     ) {

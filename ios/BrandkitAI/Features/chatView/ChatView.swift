@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ChatView: View {
     let title: String
+    var onBack: () -> Void = {}
 
     @State private var viewModel = ChatViewModel()
     @State private var messageText = ""
@@ -18,12 +19,11 @@ struct ChatView: View {
     private let bottomAnchor = "chat-bottom"
 
     private var backButton: some View {
-        Button {
-        }
-        label: {
+        Button(action: onBack) {
             Image(systemName: "arrow.left")
                 .tint(.primary)
         }
+        .accessibilityLabel("Back")
     }
     
     var body: some View {
