@@ -1,1 +1,1 @@
-export { useProjectQuery } from './api/queries';
+export { useProjectQuery } from './api/queries'

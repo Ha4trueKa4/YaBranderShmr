@@ -1,1 +1,1 @@
-export * from "./feedPage.tsx";
+export * from './feedPage.tsx'

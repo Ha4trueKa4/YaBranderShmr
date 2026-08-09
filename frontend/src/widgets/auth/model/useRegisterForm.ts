@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { registerFormSchema } from './schemas'
 import type { RegisterFormValues, RegisterSubmitHandler } from './types'
