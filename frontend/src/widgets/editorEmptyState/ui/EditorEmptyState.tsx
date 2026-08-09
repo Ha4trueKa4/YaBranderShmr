@@ -1,12 +1,15 @@
 import { Button, Input } from '@shared/ui'
+import { useState } from 'react'
 
 import styles from './EditorEmptyState.module.css'
 
 interface EditorEmptyStateProps {
-  onGenerate: () => void
+  onGenerate: (draft: { description: string; name: string }) => void
 }
 
 export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
+  const [description, setDescription] = useState('')
+
   return (
     <section className={styles.state}>
       <div className={styles.preview}>
@@ -19,8 +22,16 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
       </div>
       <div className={styles.composer}>
         {/* Подключить контролируемое значение prompt и передать его в onGenerate. */}
-        <Input placeholder="e.g. Modern abstract technology logo with overlapping gradients…" />
-        <Button onClick={onGenerate}>Generate</Button>
+        <Input
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
+          value={description}
+        />
+        <Button
+          onClick={() => onGenerate({ description, name: 'Untitled project' })}
+        >
+          Generate
+        </Button>
       </div>
     </section>
   )

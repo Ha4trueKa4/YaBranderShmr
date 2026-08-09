@@ -5,7 +5,6 @@ import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
-import { PromptComposer } from './promptComposer/PromptComposer'
 
 /** Временные данные для вёрстки; заменить на выбранный слой из editorStore. */
 const previewSelectedLayer: EditorLayer = {
@@ -34,9 +33,6 @@ export function EditorWorkspace() {
       <aside className={styles.inspector}>
         <InspectorPanel selectedLayer={previewSelectedLayer} />
       </aside>
-      <div className={styles.composer}>
-        <PromptComposer />
-      </div>
       <div className={styles.status}>
         <EditorStatusBar />
       </div>
