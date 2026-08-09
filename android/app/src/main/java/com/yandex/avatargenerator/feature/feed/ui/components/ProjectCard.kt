@@ -4,15 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,15 +20,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
-import com.yandex.avatargenerator.feature.feed.ui.theme.FeedColors
+import com.yandex.avatargenerator.ui.components.BrandAvatar
+import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.AppShape
+import com.yandex.avatargenerator.ui.theme.AppSpacing
+import com.yandex.avatargenerator.ui.theme.AppTypography
 import kotlin.math.abs
 
 /**
  * Карточка проекта в masonry-ленте: превью (переменная высота) + название + автор.
  * Клик по карточке — [onClick], клик по строке автора — [onAuthorClick].
+ *
+ * Оформлена по дизайн-системе (оболочка как у [com.yandex.avatargenerator.ui.components.BrandCard]),
+ * но с переменной высотой превью для masonry-эффекта — поэтому не переиспользует BrandCard напрямую.
  */
 @Composable
 fun ProjectCard(
@@ -44,13 +48,14 @@ fun ProjectCard(
     val aspectRatio = remember(project.id) {
         1.0f + (abs(project.id.hashCode()) % 90) / 100f
     }
+    val shape = RoundedCornerShape(AppShape.l)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(FeedColors.Surface)
-            .border(1.dp, FeedColors.Border, RoundedCornerShape(16.dp))
+            .clip(shape)
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, shape)
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
@@ -60,20 +65,18 @@ fun ProjectCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(aspectRatio)
-                .background(FeedColors.SurfaceVariant),
+                .background(AppColors.SurfaceVariant),
         )
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(AppSpacing.s),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
         ) {
-            androidx.compose.material3.Text(
+            Text(
                 text = project.title,
-                color = FeedColors.TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+                style = AppTypography.body.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -81,45 +84,23 @@ fun ProjectCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(AppShape.s))
                     .clickable(onClick = onAuthorClick),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AuthorAvatar(
-                    url = project.author.avatarUrl,
-                    modifier = Modifier.size(24.dp),
+                BrandAvatar(
+                    size = 24.dp,
+                    imageUrl = project.author.avatarUrl,
+                    initials = project.author.displayName,
                 )
-                androidx.compose.material3.Text(
+                Text(
                     text = project.author.displayName,
-                    color = FeedColors.TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = AppTypography.caption.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-    }
-}
-
-/**
- * Аватар автора: изображение по [url] либо круг-плейсхолдер, если url отсутствует
- * (или пока грузится).
- */
-@Composable
-private fun AuthorAvatar(url: String?, modifier: Modifier = Modifier) {
-    val avatarModifier = modifier
-        .clip(CircleShape)
-        .background(FeedColors.SurfaceVariant)
-    if (url == null) {
-        Box(avatarModifier)
-    } else {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = avatarModifier,
-        )
     }
 }

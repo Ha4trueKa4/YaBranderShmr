@@ -12,7 +12,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -32,7 +31,8 @@ import com.yandex.avatargenerator.feature.feed.ui.components.FeedSkeletonGrid
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTabRow
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTopBar
 import com.yandex.avatargenerator.feature.feed.ui.components.ProjectCard
-import com.yandex.avatargenerator.feature.feed.ui.theme.FeedColors
+import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.AppSpacing
 
 /**
  * Экран ленты: хедер + вкладки «All»/«Subscriptions» + masonry-сетка проектов.
@@ -57,11 +57,11 @@ fun FeedScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(FeedColors.Background),
+            .background(AppColors.Background),
     ) {
         FeedTopBar(onSearchClick = { /* TODO: экран/боттомшит поиска */ })
         FeedTabRow(selectedTab = selectedTab, onTabSelected = viewModel::selectTab)
-        HorizontalDivider(color = FeedColors.Border)
+        HorizontalDivider(color = AppColors.Border)
 
         FeedContent(
             projects = projects,
@@ -134,9 +134,9 @@ private fun FeedGrid(
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalItemSpacing = 12.dp,
+        contentPadding = PaddingValues(AppSpacing.m),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
+        verticalItemSpacing = AppSpacing.s,
     ) {
         items(
             count = projects.itemCount,
