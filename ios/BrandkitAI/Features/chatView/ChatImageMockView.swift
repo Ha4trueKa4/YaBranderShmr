@@ -33,5 +33,7 @@ struct ChatImageMockView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 120)
         .clipShape(.rect(cornerRadius: 8))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Generated project preview")
     }
 }

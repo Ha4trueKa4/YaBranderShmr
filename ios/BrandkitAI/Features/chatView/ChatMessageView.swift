@@ -62,7 +62,8 @@ struct ChatMessageView: View {
             Text(message.text)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: true, vertical: false)
+                .multilineTextAlignment(.center)
+                .layoutPriority(1)
 
             Rectangle()
                 .fill(.secondary.opacity(0.25))
@@ -82,7 +83,8 @@ struct ChatMessageView: View {
             Text(message.text)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(Color(.endGradient))
-                .fixedSize(horizontal: true, vertical: false)
+                .multilineTextAlignment(.center)
+                .layoutPriority(1)
 
             Rectangle()
                 .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
