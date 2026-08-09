@@ -111,3 +111,13 @@ components_manager:
       path: /api/v1/projects/{id}/generate
       method: POST
       task_processor: main-task-processor
+        
+    handler-auth-register:
+      path: /auth/register
+      method: POST
+      task_processor: main-task-processor
+
+    handler-auth-login:
+      path: /auth/login
+      method: POST
+      task_processor: main-task-processor
