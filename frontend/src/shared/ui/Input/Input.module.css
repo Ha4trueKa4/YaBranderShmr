@@ -30,8 +30,14 @@
 .input::placeholder {
   color: var(--color-text-muted);
 }
+.leading,
 .trailing {
   display: inline-flex;
   flex: 0 0 auto;
+}
+.leading {
+  margin-right: var(--space-2);
+}
+.trailing {
   margin: 0 var(--space-1);
 }
