@@ -8,6 +8,7 @@ import SwiftUI
 struct PrimaryButton: View {
     let title: String
     var isEnabled: Bool = true
+    var fill: AnyShapeStyle = AnyShapeStyle(.tint)
     let action: () -> Void
 
     var body: some View {
@@ -18,16 +19,18 @@ struct PrimaryButton: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
         }
-        .buttonStyle(PrimaryButtonStyle())
+        .buttonStyle(PrimaryButtonStyle(fill: fill))
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.5)
     }
 }
 
 private struct PrimaryButtonStyle: ButtonStyle {
+    let fill: AnyShapeStyle
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(.tint, in: .rect(cornerRadius: 12))
+            .background(fill, in: .rect(cornerRadius: 12))
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)

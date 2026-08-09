@@ -1,5 +1,5 @@
 //
-//  AuthHeader.swift
+//  ScreenHeader.swift
 //  BrandkitAI
 //
 
@@ -20,7 +20,7 @@ struct LogoBadge: View {
     }
 }
 
-struct AuthHeader: View {
+struct ScreenHeader: View {
     let title: String
 
     var body: some View {
@@ -33,27 +33,8 @@ struct AuthHeader: View {
     }
 }
 
-struct AuthFooter: View {
-    let question: String
-    let actionTitle: String
-    let action: () -> Void
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Text(question)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            LinkButton(title: actionTitle, action: action)
-        }
-    }
-}
-
 #Preview {
-    VStack(spacing: 40) {
-        AuthHeader(title: "Sign in")
-        AuthFooter(question: "No account?", actionTitle: "Register") {}
-    }
+    ScreenHeader(title: "Sign in")
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(.systemBackground))
     .tint(.purple)
