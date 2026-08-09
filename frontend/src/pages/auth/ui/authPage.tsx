@@ -1,18 +1,19 @@
-import { useHealthQuery } from '@shared/api/queries';
-
+import { useState } from 'react'
+import { LoginForm, RegisterForm } from '@widgets'
 import styles from './authPage.module.css'
 
+type AuthForm = 'login' | 'register'
+
 export function AuthPage() {
-  const { data, error, isError, isPending } = useHealthQuery()
+  const [activeForm, setActiveForm] = useState<AuthForm>('login')
 
   return (
-    <div className={styles.page}>
-      <p>Страница Входа</p>
-      <p>
-        {isPending && 'Loading...'}
-        {isError && `Сервер недоступен: ${error.message}`}
-        {data && `Сервер доступен: ${data}`}
-      </p>
-    </div>
+    <main className={styles.page}>
+      {activeForm === 'login' ? (
+        <LoginForm onSwitchToRegister={() => setActiveForm('register')} />
+      ) : (
+        <RegisterForm onSwitchToLogin={() => setActiveForm('login')} />
+      )}
+    </main>
   )
 }
