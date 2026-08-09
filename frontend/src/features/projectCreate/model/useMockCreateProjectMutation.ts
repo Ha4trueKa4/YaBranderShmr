@@ -9,6 +9,10 @@ interface MockCreatedProject {
   id: string
 }
 
+interface UseMockCreateProjectMutationOptions {
+  onSuccess?: (project: MockCreatedProject) => void
+}
+
 const mockRequestDelayMs = 1500
 
 /**
@@ -27,9 +31,12 @@ function mockCreateProject({
   })
 }
 
-export function useMockCreateProjectMutation() {
+export function useMockCreateProjectMutation({
+  onSuccess,
+}: UseMockCreateProjectMutationOptions) {
   return useMutation({
     mutationKey: ['project', 'create', 'mock'],
     mutationFn: mockCreateProject,
+    onSuccess,
   })
 }
