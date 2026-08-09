@@ -24,6 +24,7 @@ workflows:
               - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
               - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
               - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
               - yes | sdkmanager --licenses > /dev/null
               - sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
               - cd android
@@ -45,6 +46,7 @@ workflows:
               - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
               - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
               - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
               - yes | sdkmanager --licenses > /dev/null
               - sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
               - cd android
