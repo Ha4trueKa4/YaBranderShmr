@@ -37,7 +37,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id, name, COALESCE(description, ''), is_private, created_at FROM projects WHERE id = $1::uuid",
+        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
         id
     );
 
