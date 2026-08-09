@@ -33,13 +33,16 @@ struct FeedView: View {
             EmptyView()
         }
         .pickerStyle(.segmented)
-        .padding(16)
+        .padding(EdgeInsets(top: 6, leading: 16, bottom: 16, trailing: 16))
     }
     
     @ViewBuilder
     private func applyingLegacyToolbarAppearance<Content: View>(to content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
+                .safeAreaBar(edge: .top) {
+                    picker
+                }
                 .safeAreaInset(edge: .bottom) {
                     LinearGradient(colors: [.black, .clear], startPoint: .bottom, endPoint: .top)
                         .ignoresSafeArea()
@@ -47,6 +50,14 @@ struct FeedView: View {
                 }
         } else {
             content
+                .safeAreaInset(edge: .top) {
+                    picker
+                        .background {
+                            EmptyView()
+                                .background(.bar)
+                                .opacity(toolbarOpacity)
+                        }
+                }
                 .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
                 .toolbarBackground(.windowBackground.opacity(tabBarOpacity), for: .tabBar)
                 .toolbarBackgroundVisibility(tabBarOpacity > 0.6 ? .hidden : .visible, for: .tabBar)
@@ -55,7 +66,6 @@ struct FeedView: View {
     
     var body: some View {
         applyingLegacyToolbarAppearance(to:
-        //        ScrollView {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
                 ForEach(FeedTab.allCases, id: \.self) { tab in
@@ -96,18 +106,6 @@ struct FeedView: View {
                 scrollPosition = tab
             }
         }
-        .safeAreaInset(edge: .top) {
-            if #available(iOS 26.0, *) {
-                picker
-            } else {
-                picker
-                    .background {
-                        EmptyView()
-                            .background(.bar)
-                            .opacity(toolbarOpacity)
-                    }
-            }
-        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -122,5 +120,7 @@ struct FeedView: View {
 }
 
 #Preview {
-    FeedView()
+    NavigationStack {
+        FeedView()
+    }
 }
