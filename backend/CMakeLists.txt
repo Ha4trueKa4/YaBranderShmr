@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.12)
 project(ya_brander CXX)
 
+include(FetchContent)
+FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+)
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+
+FetchContent_MakeAvailable(nlohmann_json)
 
 # Adding userver dependency
 find_package(userver COMPONENTS core postgresql QUIET)
@@ -28,9 +39,16 @@ userver_setup_environment()
 add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/check/check.hpp
         src/handlers/check/check.cpp
+        src/handlers/test_llm_handler/test_llm_handler.cpp
+        src/handlers/test_llm_handler/test_llm_handler.hpp
+        src/components/LLMClientComponent.hpp
+        src/components/LLMClientComponent.cpp
 )
 
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC
+        userver::postgresql
+        nlohmann_json::nlohmann_json
+)
 target_include_directories(${PROJECT_NAME}_objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # The Service

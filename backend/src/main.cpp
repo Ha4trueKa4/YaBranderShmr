@@ -10,6 +10,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include "handlers/check/check.hpp"
+#include "handlers/test_llm_handler/test_llm_handler.hpp"
 
 int main(int argc, char* argv[]) {
     auto component_list =
@@ -23,11 +24,11 @@ int main(int argc, char* argv[]) {
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>();
-
+  ya_brander::components::AppendLLMClient(component_list);
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
+    ya_brander::AppendLLM(component_list);
     // ya_brander::AppendAuth(component_list);
-    // ya_brander::AppendProjects(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);
 }
