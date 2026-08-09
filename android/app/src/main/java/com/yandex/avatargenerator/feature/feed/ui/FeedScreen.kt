@@ -1,18 +1,13 @@
 package com.yandex.avatargenerator.feature.feed.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -31,8 +26,10 @@ import com.yandex.avatargenerator.feature.feed.ui.components.FeedError
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedSkeletonGrid
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTabRow
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTopBar
-import com.yandex.avatargenerator.feature.feed.ui.components.ProjectCard
-import com.yandex.avatargenerator.feature.feed.ui.theme.FeedColors
+import com.yandex.avatargenerator.ui.components.ProjectCard
+import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
+import com.yandex.avatargenerator.ui.components.masonryAspectRatio
+import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
  * Экран ленты: хедер + вкладки «All»/«Subscriptions» + masonry-сетка проектов.
@@ -57,11 +54,11 @@ fun FeedScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(FeedColors.Background),
+            .background(AppColors.Background),
     ) {
         FeedTopBar(onSearchClick = { /* TODO: экран/боттомшит поиска */ })
         FeedTabRow(selectedTab = selectedTab, onTabSelected = viewModel::selectTab)
-        HorizontalDivider(color = FeedColors.Border)
+        HorizontalDivider(color = AppColors.Border)
 
         FeedContent(
             projects = projects,
@@ -131,13 +128,7 @@ private fun FeedGrid(
     onAuthorClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
-        modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalItemSpacing = 12.dp,
-    ) {
+    ProjectMasonryGrid(modifier = modifier) {
         items(
             count = projects.itemCount,
             key = projects.itemKey { it.id },
@@ -145,7 +136,11 @@ private fun FeedGrid(
         ) { index ->
             val project = projects[index] ?: return@items
             ProjectCard(
-                project = project,
+                title = project.title,
+                authorName = project.author.displayName,
+                previewUrl = project.previewUrl,
+                authorAvatarUrl = project.author.avatarUrl,
+                aspectRatio = masonryAspectRatio(project.id),
                 onClick = { onProjectClick(project.id) },
                 onAuthorClick = { onAuthorClick(project.author.id) },
             )

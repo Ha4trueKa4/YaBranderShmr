@@ -20,9 +20,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.yandex.avatargenerator.feature.feed.ui.theme.FeedColors
 import com.yandex.avatargenerator.ui.components.BrandSkeletonBox
 import com.yandex.avatargenerator.ui.components.rememberBrandShimmerBrush
+import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.AppShape
+import com.yandex.avatargenerator.ui.theme.AppSpacing
 
 /**
  * Скелетон ленты на время первичной загрузки: masonry-сетка карточек-заглушек
@@ -34,8 +36,8 @@ fun FeedSkeletonGrid(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(AppSpacing.m),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
     ) {
         SkeletonColumn(thumbHeights = listOf(140.dp, 90.dp, 160.dp), brush = brush, modifier = Modifier.weight(1f))
         SkeletonColumn(thumbHeights = listOf(100.dp, 150.dp, 110.dp), brush = brush, modifier = Modifier.weight(1f))
@@ -48,19 +50,20 @@ private fun SkeletonColumn(
     brush: Brush,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(AppSpacing.s)) {
         thumbHeights.forEach { height -> SkeletonCard(thumbHeight = height, brush = brush) }
     }
 }
 
 @Composable
 private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
+    val shape = RoundedCornerShape(AppShape.l)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(FeedColors.Surface)
-            .border(1.dp, FeedColors.Border, RoundedCornerShape(16.dp)),
+            .clip(shape)
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, shape),
     ) {
         BrandSkeletonBox(
             modifier = Modifier
@@ -70,7 +73,8 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
             shape = RoundedCornerShape(0.dp),
         )
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(AppSpacing.s),
+            // Точечные значения без токена (радиус/интервал плейсхолдеров) — по макету.
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             BrandSkeletonBox(
@@ -81,7 +85,7 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
                 shape = RoundedCornerShape(4.dp),
             )
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BrandSkeletonBox(
