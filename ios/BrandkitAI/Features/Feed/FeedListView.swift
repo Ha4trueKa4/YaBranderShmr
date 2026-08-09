@@ -1,15 +1,8 @@
 import SwiftUI
 
-
-// TODO: Заменить мок данные на реальные с api
 struct FeedListView: View {
-    let topInset: CGFloat
-    @Binding var isScrolled: Bool
-
     var body: some View {
         ScrollView {
-            Spacer()
-                .frame(height: topInset)
             HStack(alignment: .top, spacing: 12) {
                 LazyVStack(spacing: 12) {
                     FeedListCardView(
@@ -63,14 +56,9 @@ struct FeedListView: View {
             }
             .padding(16)
         }
-        .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top > 1
-        } action: { _, newValue in
-            isScrolled = newValue
-        }
     }
 }
 
 #Preview {
-    FeedListView(topInset: 0, isScrolled: .constant(false))
+    FeedListView()
 }

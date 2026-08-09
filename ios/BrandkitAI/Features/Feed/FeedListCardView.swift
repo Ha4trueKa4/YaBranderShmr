@@ -1,10 +1,3 @@
-//
-//  FeedListCardView.swift
-//  BrandkitAI
-//
-//  Created by Андрей Валянский on 08.08.2026.
-//
-
 import SwiftUI
 
 struct FeedListCardView: View {
