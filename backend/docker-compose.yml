@@ -26,6 +26,7 @@ services:
       - PREFIX=${PREFIX:-~/.local}
       - CCACHE_DIR=/ya_brander/.ccache
       - CORES_DIR=/cores
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     volumes:
       - .:/ya_brander:rw
       - ${TC_CORES_DIR:-./.cores}:/cores:rw

@@ -16,7 +16,7 @@ ProjectManagerComponent::ProjectManagerComponent(
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at::text AS created_at",
+        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
         author_id, name, description
     );
     
@@ -37,7 +37,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at::text AS created_at FROM projects WHERE id = $1::uuid",
+        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
         id
     );
 
