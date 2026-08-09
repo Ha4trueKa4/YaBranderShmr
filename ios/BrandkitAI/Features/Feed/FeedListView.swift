@@ -10,21 +10,21 @@ struct FeedListView: View {
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Alice",
-                        onAccountTap: {}
+                        onTap: {}
                     )
                     FeedListCardView(
                         title: "Project Gamma with a very long title that should truncate",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Charlie",
-                        onAccountTap: {}
+                        onTap: {}
                     )
                     FeedListCardView(
                         title: "Project Epsilon",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Eve",
-                        onAccountTap: {}
+                        onTap: {}
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -35,21 +35,21 @@ struct FeedListView: View {
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Bob",
-                        onAccountTap: {}
+                        onTap: {}
                     )
                     FeedListCardView(
                         title: "Project Delta",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Diana",
-                        onAccountTap: {}
+                        onTap: {}
                     )
                     FeedListCardView(
                         title: "Project Zeta",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Frank",
-                        onAccountTap: {}
+                        onTap: {}
                     )
                 }
                 .frame(maxWidth: .infinity)

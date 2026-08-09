@@ -5,9 +5,16 @@ struct FeedListCardView: View {
     let accountImage: Image
     let accountAvatar: Image
     let accountName: String
-    let onAccountTap: () -> Void
+    let onTap: () -> Void
 
     var body: some View {
+        Button(action: onTap) {
+            card
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var card: some View {
         VStack(spacing: 0) {
             accountImage
                 .resizable()
@@ -31,11 +38,11 @@ struct FeedListCardView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                .onTapGesture { onAccountTap() }
             }
             .padding(12)
         }
         .alternateBackground(cornerSize: CGSize(width: 16, height: 16))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
     }
 }
