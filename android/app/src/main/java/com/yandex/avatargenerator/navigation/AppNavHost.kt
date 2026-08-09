@@ -10,14 +10,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.yandex.avatargenerator.feature.auth.ui.LoginScreen
 import com.yandex.avatargenerator.feature.auth.ui.RegisterScreen
+import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 
 /**
  * Граф навигации приложения.
  *
- * Реальными экранами пока подключены онбординг, вход/регистрация и лента;
- * остальные узлы — [PlaceholderScreen] до готовности фич.
+ * Реальными экранами пока подключены онбординг, вход/регистрация, лента и список
+ * чатов; остальные узлы — [PlaceholderScreen] до готовности фич.
  *
  * @param navController контроллер, общий со Scaffold (для нижней панели).
  * @param startDestination стартовый маршрут: онбординг при первом запуске,
@@ -85,8 +86,15 @@ fun AppNavHost(
         }
 
         composable(Destination.Create.route) {
-            // TODO: экран создания проекта (команда «создание/редактирование»).
-            PlaceholderScreen(title = "Создание проекта")
+            ChatsScreen(
+                onChatClick = { chatId ->
+                    // Чат = проект: id строки — это projectId экрана проекта.
+                    navController.navigate(Destination.Project.createRoute(chatId))
+                },
+                // TODO: создание нового проекта (команда «создание/редактирование»).
+                onNewProject = { },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         composable(Destination.Profile.route) {
