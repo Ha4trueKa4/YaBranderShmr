@@ -11,17 +11,15 @@ RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j$(nproc) --target ya_brander
 
 # ---- стадия рантайма ----
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libstdc++6 libpq5 libssl3t64 ca-certificates \
+        libstdc++6 libpq5 libldap-2.5-0 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Бинарник
 COPY --from=build /build/build/ya_brander /usr/local/bin/ya_brander
-# Конфиги
 COPY --from=build /build/configs /etc/ya_brander
 
 EXPOSE 8080

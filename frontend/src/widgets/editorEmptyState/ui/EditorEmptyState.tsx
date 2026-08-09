@@ -1,3 +1,5 @@
+import iconGlow from '@shared/assets/iconGlow.svg'
+import sparkles from '@shared/assets/sparkles.svg'
 import { Button, Input } from '@shared/ui'
 import { useState } from 'react'
 
@@ -14,6 +16,7 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
     <section className={styles.state}>
       <div className={styles.preview}>
         <div className={styles.copy}>
+          <img alt="" className={styles.icon} src={iconGlow} />
           <h1>Paste your description and generate</h1>
           <p>
             Create customized vectors, logos, and high-fidelity marks instantly.
@@ -23,6 +26,7 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
       <div className={styles.composer}>
         {/* Подключить контролируемое значение prompt и передать его в onGenerate. */}
         <Input
+          leadingContent={<img alt="" src={sparkles} />}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
           value={description}

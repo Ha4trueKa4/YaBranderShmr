@@ -23,6 +23,13 @@
   text-align: center;
 }
 
+.icon {
+  display: block;
+  height: 6rem;
+  margin: 0 auto var(--space-6);
+  width: 6rem;
+}
+
 .copy h1 {
   margin: 0;
   color: #18181b;
