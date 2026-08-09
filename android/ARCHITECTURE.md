@@ -42,14 +42,14 @@ feature/<имя>/
   больше одной).
 
 **Направление зависимостей:** `domain/` не импортирует ничего из `data/`
-и `ui/` (никакого Android/Compose/Retrofit/DataStore) — только Kotlin/coroutines.
+и `ui/` (никакого Android/Compose/Ktor/DataStore) — только Kotlin/coroutines.
 Без модульности компилятор это не проверит, держится на код-ревью.
 `ui/` → `domain/` ← `data/`.
 
 ### ui/
 
-- Экран — `<Имя>Screen.kt`, состояние — `<Имя>ViewModel.kt` +
-  `<Имя>ViewModelFactory.kt` (DI без фреймворка, ручные фабрики).
+- Экран — `<Имя>Screen.kt`, состояние — `<Имя>ViewModel.kt`
+  (регистрируется в Koin-модуле фичи).
 - Переиспользуемые куски экрана — `ui/components/`.
 - Свои цветовые алиасы — `ui/theme/<Имя>Colors.kt`, только как алиасы на
   `AppColors` (см. `feature/feed/ui/theme/FeedColors.kt`), не отдельная палитра.
@@ -79,9 +79,9 @@ feature/<имя>/
 
 ## DI
 
-Без Hilt/Koin. ViewModel — через `ViewModelFactory`, репозитории — через
-провайдеры-синглтоны (`OnboardingRepositoryProvider`). Общее для всех фич
-(например, `DataStore<Preferences>`) — в `core/`, не дублируется
+Используем Koin: ViewModel и репозитории регистрируются в Koin-модулях,
+без ручных фабрик/провайдеров-синглтонов. Сеть — через Ktor. Общее для
+всех фич (например, `DataStore<Preferences>`) — в `core/`, не дублируется
 (см. `core/data/AppPreferences.kt`).
 
 ## Именование
