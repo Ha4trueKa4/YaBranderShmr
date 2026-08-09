@@ -1,8 +1,11 @@
+# CI/CD-сборка Android запускается только для pull request в ветку dev.
+# Сборка для main отключена до наполнения репозитория Android-проектом.
+
 on:
   pull_request:
     - workflows: build-android
       filter:
-        target_branches: ["main", "dev"]
+        target_branches: ["dev"]
 
 workflows:
   build-android:
@@ -17,3 +20,11 @@ workflows:
             artifacts:
               paths:
                 - android/app/build/outputs/apk
+
+      - name: lint-android-task
+        cubes:
+          - name: android-lint
+            image: eclipse-temurin:25-jdk
+            script:
+              - cd android
+              - ./gradlew lint
