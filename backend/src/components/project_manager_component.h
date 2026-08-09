@@ -7,7 +7,7 @@
 #include <userver/formats/json/value.hpp>
 
 #include "../models/project.hpp"
-#include "dependencies_stubs.hpp"
+#include "dependencies_stubs.h"
 
 namespace ya_brander::components {
 

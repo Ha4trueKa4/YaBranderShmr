@@ -1,25 +1,26 @@
-#include "append_projects.hpp"
+#include "append_projects.h"
 
-#include "../../components/project_manager_component.hpp"
+#include "../../components/project_manager_component.h"
+#include "../../components/mock_dependencies.h"
 
-#include "create_project.hpp"
-#include "get_project.hpp"
-#include "patch_project.hpp"
-#include "delete_project.hpp"
-#include "generate_project.hpp"
+#include "create_project.h"
+#include "get_project.h"
+#include "patch_project.h"
+#include "delete_project.h"
+#include "generate_project.h"
 
 namespace ya_brander {
 
 void AppendProjects(userver::components::ComponentList& component_list) {
   component_list
-      // 1. Регистрируем зависимости менеджера проектов (LLM, S3, RAG).
-      // ВАЖНО: Здесь должны передаваться конкретные реализации компонентов (например, моки),
-      // так как userver не умеет инстанцировать чисто абстрактные классы-интерфейсы.
-      // .Append<components::MockVersionStorageComponent>()
-      // .Append<components::MockLLMClientComponent>()
-      // .Append<components::MockPromptConstructorComponent>()
+      .Append<components::MockVersionStorageComponent>()
+      .Append<components::MockLLMClientComponent>()
+      .Append<components::MockPromptConstructorComponent>()
+
 
       .Append<components::ProjectManagerComponent>()
+
+
       .Append<handlers::CreateProjectHandler>()
       .Append<handlers::GetProjectHandler>()
       .Append<handlers::PatchProjectHandler>()

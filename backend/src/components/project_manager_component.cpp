@@ -1,4 +1,4 @@
-#include "project_manager_component.hpp"
+#include "project_manager_component.h"
 #include <userver/storages/postgres/component.hpp>
 #include <userver/formats/json/value_builder.hpp>
 

@@ -1,4 +1,4 @@
-#include "get_project.hpp"
+#include "get_project.h"
 #include <userver/formats/json/serialize.hpp>
 
 namespace ya_brander::handlers {
@@ -15,7 +15,8 @@ std::string GetProjectHandler::HandleRequestThrow(const userver::server::http::H
     return {};
   }
 
-  auto user_id = context.GetData("user_id"); // ЗАГЛУШКА, требуется реализация
+  // ЗАГЛУШКА:
+  std::optional<std::string> user_id = "11111111-1111-1111-1111-111111111111"; // ЗАГЛУШКА, требуется реализация
   if (!project->is_public) {
     if (!user_id) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);

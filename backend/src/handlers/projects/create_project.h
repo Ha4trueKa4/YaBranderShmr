@@ -1,6 +1,6 @@
 #pragma once
 #include <userver/server/handlers/http_handler_base.hpp>
-#include "../../components/project_manager_component.hpp"
+#include "../../components/project_manager_component.h"
 
 namespace ya_brander::handlers {
 class CreateProjectHandler final : public userver::server::handlers::HttpHandlerBase {
