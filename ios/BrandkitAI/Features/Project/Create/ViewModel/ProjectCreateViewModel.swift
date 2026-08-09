@@ -13,6 +13,7 @@ final class ProjectCreateViewModel {
 
     var canSubmit: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     
