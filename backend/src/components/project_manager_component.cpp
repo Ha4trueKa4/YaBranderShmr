@@ -16,7 +16,7 @@ ProjectManagerComponent::ProjectManagerComponent(
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1, $2, $3, true) RETURNING id, created_at",
+        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
         author_id, name, description
     );
     
@@ -37,7 +37,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id, author_id, name, COALESCE(description, ''), is_private, created_at FROM projects WHERE id = $1",
+        "SELECT id::text, author_id, name, COALESCE(description, ''), is_private, created_at FROM projects WHERE id = $1::uuid",
         id
     );
 
@@ -61,7 +61,7 @@ void ProjectManagerComponent::UpdateProject(const std::string& id, std::optional
     if (is_public.has_value()) {
         pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE projects SET is_private = $1, updated_at = NOW() WHERE id = $2",
+            "UPDATE projects SET is_private = $1, updated_at = NOW() WHERE id = $2::uuid",
             !is_public.value(), id
         );
     }
@@ -69,7 +69,7 @@ void ProjectManagerComponent::UpdateProject(const std::string& id, std::optional
         version_storage_.SaveVersion(id, data.value());  // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
         pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE projects SET updated_at = NOW() WHERE id = $1", id
+            "UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid", id
         );
     }
 }
@@ -77,7 +77,7 @@ void ProjectManagerComponent::UpdateProject(const std::string& id, std::optional
 void ProjectManagerComponent::DeleteProject(const std::string& id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "DELETE FROM projects WHERE id = $1", id
+        "DELETE FROM projects WHERE id = $1::uuid", id
     );
 }
 
