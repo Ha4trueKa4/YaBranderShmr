@@ -16,12 +16,20 @@ std::string TestLLMHandler::HandleRequestThrow(const userver::server::http::Http
   std::string model = body["model"].As<std::string>("yandexgpt-lite/latest");
   double temperature = body["temperature"].As<double>(0.1);
 
-  std::string response = llm_client_.SendPrompt(prompt, max_tokens, model, temperature);
-  
   userver::formats::json::ValueBuilder result;
-  result["prompt"] = prompt;
-  result["response"] = response;
-  
+
+  try {
+    std::string response = llm_client_.SendPrompt(prompt, max_tokens, model, temperature);
+    result["prompt"] = prompt;
+    result["response"] = response;
+  }catch (const std::exception& e) {
+    userver::formats::json::ValueBuilder error_result;
+    error_result["success"] = false;
+    error_result["error"] = e.what();
+
+    request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
+    return userver::formats::json::ToString(error_result.ExtractValue());
+  }
   return userver::formats::json::ToString(result.ExtractValue());
 }
 

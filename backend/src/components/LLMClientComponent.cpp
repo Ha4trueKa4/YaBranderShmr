@@ -12,14 +12,12 @@ namespace ya_brander::components {
   std::string LLMClientComponent::ExtractSVG(const std::string& text) const {
     size_t start = text.find("<svg");
     if (start == std::string::npos) {
-      LOG_ERROR() << "No SVG found in response";
-      return "";
+      throw std::runtime_error("No SVG content found in LLM response");
     }
 
     size_t end = text.find("</svg>", start);
     if (end == std::string::npos) {
-      LOG_ERROR() << "Incomplete SVG found";
-      return "";
+      throw std::runtime_error("Wrong SVG content in LLM response");
     }
     return text.substr(start, end - start + 6); // +6 для "</svg>"
   }
@@ -29,9 +27,8 @@ namespace ya_brander::components {
     const std::string& Model,
     const double& TEMPERATURE) const {
     if (prompt.empty()) {
-      return {};
+      throw std::runtime_error("Empty prompt provided");
     }
-      try {
         userver::formats::json::ValueBuilder request_body;
         request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/" + Model;
         request_body["temperature"] = TEMPERATURE;
@@ -40,15 +37,6 @@ namespace ya_brander::components {
 
         auto json_value = request_body.ExtractValue();
         std::string json_data = userver::formats::json::ToString(json_value);
-
-
-        LOG_INFO() << "Request URL: https://ai.api.cloud.yandex.net/v1/responses";
-        LOG_INFO() << "Request Method: POST";
-        LOG_INFO() << "Request Headers:";
-        LOG_INFO() << "  Authorization: Api-Key " << (api_key_.empty() ? "EMPTY!" : api_key_.substr(0, 10) + "..." + api_key_.substr(api_key_.length() - 4));
-        LOG_INFO() << "  Content-Type: application/json";
-        LOG_INFO() << "Request Body (JSON): " << json_data;
-
 
         auto request = http_client_.CreateRequest();
         request.method(userver::clients::http::HttpMethod::kPost);
@@ -60,41 +48,33 @@ namespace ya_brander::components {
 
         // Увеличиваем таймауты для SSL
         request.timeout(60000);  // 60 секунд
-        request.retry(3);      // 3 попытки
 
         request.data(json_data);
 
         auto response = request.perform();
         std::string response_body = response->body();
         if (response->status_code() != 200) {
+          std::string error_msg;
           try {
             auto error_json = nlohmann::json::parse(response_body);
-            LOG_ERROR() << "Parsed error JSON: " << error_json.dump(2);
-
             if (error_json.contains("error")) {
               auto error = error_json["error"];
-              std::string error_message = error.value("message", "Unknown error");
-              std::string error_code = error.value("code", "Unknown code");
-              LOG_ERROR() << "Yandex error code: " << error_code;
-              LOG_ERROR() << "Yandex error message: " << error_message;
-              return "Error: " + error_code + " - " + error_message;
-            }
-            if (error_json.contains("message")) {
-              return "Error: " + error_json["message"].get<std::string>();
+              error_msg = "API Error: " + error.value("code", "Unknown") +
+                         " - " + error.value("message", "Unknown error");
+            } else if (error_json.contains("message")) {
+              error_msg = "API Error: " + error_json["message"].get<std::string>();
+            } else {
+              error_msg = "HTTP Error " + std::to_string(response->status_code());
             }
           } catch (const std::exception& e) {
-            LOG_ERROR() << "Failed to parse error response: " << e.what();
+            error_msg = "HTTP Error " + std::to_string(response->status_code()) +
+                       ", body: " + response_body.substr(0, 200);
           }
-
-          return "Error: Yandex Ai Studio responded with code: " +
-                 std::to_string(response->status_code()) +
-                 ", body: " + response_body;
+          throw std::runtime_error(error_msg);
         }
         auto response_json = nlohmann::json::parse(response->body());
+
         return ExtractSVG(response_json["output"][0]["content"][0]["text"].get<std::string>());
-      } catch (const std::exception& e) {
-        return e.what();
-      }
   }
 
 userver::yaml_config::Schema LLMClientComponent::GetStaticConfigSchema() {
@@ -104,10 +84,7 @@ userver::yaml_config::Schema LLMClientComponent::GetStaticConfigSchema() {
 type: object
 description: LLM client component for Yandex AI Studio
 additionalProperties: false
-properties:
-    api-key:
-        type: string
-        description: Yandex AI API key for authentication
+properties: {}
     )");
   }
 
