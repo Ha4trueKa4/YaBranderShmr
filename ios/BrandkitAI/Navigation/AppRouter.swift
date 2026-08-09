@@ -23,6 +23,12 @@ final class AppRouter {
         paths[tab ?? selectedTab, default: []].append(route)
     }
 
+    func pop(_ tab: MainTab? = nil) {
+        let tab = tab ?? selectedTab
+        guard !(paths[tab] ?? []).isEmpty else { return }
+        paths[tab]?.removeLast()
+    }
+
     func popToRoot(_ tab: MainTab? = nil) {
         paths[tab ?? selectedTab] = []
     }

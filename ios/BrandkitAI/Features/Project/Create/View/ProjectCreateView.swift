@@ -2,7 +2,8 @@ import SwiftUI
 
 struct ProjectCreateView: View {
     var onBack: (() -> Void)?
-    var onGenerate: () -> Void = {}
+    /// Отдаёт введённое имя проекта — оно становится заголовком чата.
+    var onGenerate: (String) -> Void = { _ in }
 
     @State private var viewModel = ProjectCreateViewModel()
 
@@ -32,7 +33,7 @@ struct ProjectCreateView: View {
                     fill: AnyShapeStyle(.brand)
                 ) {
                     guard viewModel.canSubmit else { return }
-                    onGenerate()
+                    onGenerate(viewModel.name)
                 }
                 .padding(.top, 8)
             }

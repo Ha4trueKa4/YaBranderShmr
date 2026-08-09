@@ -21,13 +21,15 @@ struct AppRouteView: View {
         switch route {
         case .projectCreate:
             ProjectCreateView(
-                onGenerate: { router.push(.projectGenerating(projectID: UUID())) }
+                // Генерация открывает чат проекта: имя из формы становится
+                // его заголовком. Отдельного экрана прогресса во флоу нет.
+                onGenerate: { name in
+                    router.push(.chat(projectID: UUID(), title: name))
+                }
             )
 
-        case .projectGenerating(let projectID):
-            ProjectGeneratingView(
-                onOpenEditor: { router.push(.projectEditor(projectID: projectID)) }
-            )
+        case .chat(_, let title):
+            ChatView(title: title, onBack: { router.pop() })
 
         case .projectEditor(let projectID):
             ProjectEditorView(

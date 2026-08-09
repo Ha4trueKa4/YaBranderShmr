@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FeedListView: View {
+    var onOpenProject: () -> Void = {}
+
     var body: some View {
         ScrollView {
             HStack(alignment: .top, spacing: 12) {
@@ -10,21 +12,21 @@ struct FeedListView: View {
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Alice",
-                        onTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Gamma with a very long title that should truncate",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Charlie",
-                        onTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Epsilon",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Eve",
-                        onTap: {}
+                        onTap: onOpenProject
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -35,21 +37,21 @@ struct FeedListView: View {
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Bob",
-                        onTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Delta",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Diana",
-                        onTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Zeta",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Frank",
-                        onTap: {}
+                        onTap: onOpenProject
                     )
                 }
                 .frame(maxWidth: .infinity)

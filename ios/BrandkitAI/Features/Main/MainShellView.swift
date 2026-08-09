@@ -31,21 +31,29 @@ struct MainShellView: View {
         }
     }
 
+    /// Переключение без анимации — намеренно. Бар живёт внутри каждого стека,
+    /// поэтому при кроссфейде на экране оказываются две его полупрозрачные
+    /// копии: 0.5 поверх 0.5 дают 0.75, и сквозь бар просвечивает контент.
+    /// Мгновенная смена делает копии неразличимыми — бар выглядит одним View.
     private var tabBar: some View {
-        MainTabBarView(selected: router.selectedTab) { tab in
-            withAnimation(.easeOut(duration: 0.2)) { router.select(tab) }
-        }
+        MainTabBarView(selected: router.selectedTab, onSelect: router.select)
     }
 
     @ViewBuilder
     private func root(for tab: MainTab) -> some View {
         switch tab {
         case .feed:
-            FeedView()
+            FeedView(
+                // TODO: экрана поиска ещё нет — кнопка в шапке пока без перехода.
+                // TODO: id придёт из модели карточки, когда лента поедет на данные.
+                onOpenProject: { router.push(.publicProject(projectID: UUID()), in: .feed) }
+            )
 
         case .create:
             ProjectsView(
-                onOpenChat: { router.push(.projectEditor(projectID: $0.id), in: .create) },
+                onOpenChat: { item in
+                    router.push(.chat(projectID: item.id, title: item.title), in: .create)
+                },
                 onNewProject: { router.push(.projectCreate, in: .create) }
             )
 
