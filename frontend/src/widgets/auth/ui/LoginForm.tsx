@@ -1,15 +1,15 @@
-import { Controller } from 'react-hook-form'
-import { Link } from 'react-router-dom'
 import { Button, FormField, IconButton, Input } from '@shared'
 import brandMark from '@shared/assets/brandmark.svg'
-import { useLoginForm, type LoginSubmitHandler } from '../model'
+import { Controller } from 'react-hook-form'
+import { type LoginSubmitHandler, useLoginForm } from '../model'
 import styles from './AuthForms.module.css'
 
 interface LoginFormProps {
   onSubmit?: LoginSubmitHandler
+  onSwitchToRegister?: () => void
 }
 
-export function LoginForm({ onSubmit }: LoginFormProps) {
+export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
   const {
     form,
     isPasswordVisible,
@@ -74,7 +74,11 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       </form>
       <p className={styles.footer}>
         Нет аккаунта?{' '}
-        <Link className={styles.link} to="/auth?mode=register">
+        <button
+          className={styles.link}
+          onClick={onSwitchToRegister}
+          type="button"
+        >
           Зарегистрироваться
         </Link>
       </p>

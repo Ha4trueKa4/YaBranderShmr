@@ -31,4 +31,25 @@
 
     <!-- Onboarding: accessibility -->
     <string name="onboarding_page_indicator_description">Page %1$d of %2$d</string>
+
+    <!-- Чаты (таб «Создать») -->
+    <string name="chats_title">Chats</string>
+    <string name="chats_new_project">New project</string>
+    <string name="chats_open_chat_description">Open chat</string>
+
+    <string name="chats_empty_title">No chats yet</string>
+    <string name="chats_empty_subtitle">Start a new project to create your first avatar</string>
+
+    <string name="chats_error_title">Couldn\'t load chats</string>
+    <string name="chats_error_retry">Retry</string>
+
+    <!-- Относительное время: подписи строк чата.
+         Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->
+    <string name="chats_time_just_now">just now</string>
+    <string name="chats_time_minutes">%1$d min ago</string>
+    <string name="chats_time_hours">%1$d hr ago</string>
+    <plurals name="chats_time_days">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
 </resources>

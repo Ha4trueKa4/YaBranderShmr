@@ -1,2 +1,2 @@
-export { getProject } from './getProject';
-export { projectQueryKey, useProjectQuery } from './queries';
+export { getProject } from './getProject'
+export { projectQueryKey, useProjectQuery } from './queries'

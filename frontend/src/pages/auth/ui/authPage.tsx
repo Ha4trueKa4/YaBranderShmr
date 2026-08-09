@@ -3,6 +3,8 @@ import { LoginForm, RegisterForm } from '@widgets'
 
 import styles from './authPage.module.css'
 
+type AuthForm = 'login' | 'register'
+
 export function AuthPage() {
   const [searchParams] = useSearchParams()
   const isRegisterMode = searchParams.get('mode') === 'register'

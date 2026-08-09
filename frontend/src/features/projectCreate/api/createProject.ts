@@ -1,9 +1,9 @@
 import { api } from '@shared/api/api'
 import {
-  zPostProjectsBody,
-  zPostProjectsResponse,
   type PostProjectsData,
   type Project,
+  zPostProjectsBody,
+  zPostProjectsResponse,
 } from '@shared/api/types'
 
 type CreateProjectRequest = PostProjectsData['body']

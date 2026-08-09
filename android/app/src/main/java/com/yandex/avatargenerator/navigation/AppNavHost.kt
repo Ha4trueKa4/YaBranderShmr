@@ -8,14 +8,17 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.yandex.avatargenerator.feature.auth.ui.LoginScreen
+import com.yandex.avatargenerator.feature.auth.ui.RegisterScreen
+import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 
 /**
  * Граф навигации приложения.
  *
- * Реальными экранами пока подключены онбординг и лента; остальные узлы —
- * [PlaceholderScreen] до готовности фич.
+ * Реальными экранами пока подключены онбординг, вход/регистрация, лента и список
+ * чатов; остальные узлы — [PlaceholderScreen] до готовности фич.
  *
  * @param navController контроллер, общий со Scaffold (для нижней панели).
  * @param startDestination стартовый маршрут: онбординг при первом запуске,
@@ -34,9 +37,38 @@ fun AppNavHost(
     ) {
         composable(Destination.Onboarding.route) {
             OnboardingRoute(
-                onFinish = { navController.navigateFromOnboarding() },
-                // TODO: экрана входа ещё нет — пока ведём в ленту (команда «авторизация»).
-                onSignIn = { navController.navigateFromOnboarding() },
+                onFinish = {
+                    navController.navigate(Destination.Register.route) {
+                        popUpTo(Destination.Onboarding.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onSignIn = {
+                    navController.navigate(Destination.Login.route) {
+                        popUpTo(Destination.Onboarding.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        composable(Destination.Login.route) {
+            LoginScreen(
+                onSignInClick = { navController.navigateIntoAppAfterAuth() },
+                onNavigateToRegister = {
+                    navController.navigate(Destination.Register.route) { launchSingleTop = true }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        composable(Destination.Register.route) {
+            RegisterScreen(
+                onCreateAccountClick = { navController.navigateIntoAppAfterAuth() },
+                onNavigateToLogin = {
+                    navController.navigate(Destination.Login.route) { launchSingleTop = true }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -54,8 +86,15 @@ fun AppNavHost(
         }
 
         composable(Destination.Create.route) {
-            // TODO: экран создания проекта (команда «создание/редактирование»).
-            PlaceholderScreen(title = "Создание проекта")
+            ChatsScreen(
+                onChatClick = { chatId ->
+                    // Чат = проект: id строки — это projectId экрана проекта.
+                    navController.navigate(Destination.Project.createRoute(chatId))
+                },
+                // TODO: создание нового проекта (команда «создание/редактирование»).
+                onNewProject = { },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         composable(Destination.Profile.route) {
@@ -84,14 +123,15 @@ fun AppNavHost(
 }
 
 /**
- * Уход с онбординга в ленту.
+ * Успешный вход/регистрация → лента.
  *
- * `inclusive = true` выбрасывает онбординг из бэкстека: кнопка «назад» с ленты
- * должна закрывать приложение, а не возвращать на уже пройденный онбординг.
+ * `popUpTo(0) { inclusive = true }` полностью очищает бэкстек (онбординг,
+ * login/register, их взаимные переходы) — кнопка «назад» с ленты закрывает
+ * приложение, а не возвращает на экраны входа.
  */
-private fun NavHostController.navigateFromOnboarding() {
+private fun NavHostController.navigateIntoAppAfterAuth() {
     navigate(Destination.Feed.route) {
-        popUpTo(Destination.Onboarding.route) { inclusive = true }
+        popUpTo(0) { inclusive = true }
         launchSingleTop = true
     }
 }

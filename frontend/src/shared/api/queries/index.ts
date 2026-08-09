@@ -1,1 +1,1 @@
-export { healthQueryKey, useHealthQuery } from './health';
+export { healthQueryKey, useHealthQuery } from './health'

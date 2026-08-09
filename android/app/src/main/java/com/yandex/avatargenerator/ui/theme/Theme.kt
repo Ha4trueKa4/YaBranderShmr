@@ -1,39 +1,28 @@
 package com.yandex.avatargenerator.ui.theme
 
-import android.os.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val AppDarkColorScheme = darkColorScheme(
+    primary = AppColors.Accent,
+    onPrimary = AppColors.OnAccent,
+    secondary = AppColors.AccentCyan,
+    onSecondary = AppColors.Background,
+    background = AppColors.Background,
+    onBackground = AppColors.TextPrimary,
+    surface = AppColors.Surface,
+    onSurface = AppColors.TextPrimary,
+    surfaceVariant = AppColors.SurfaceVariant,
+    onSurfaceVariant = AppColors.TextSecondary,
+    error = AppColors.Error,
+    onError = AppColors.OnAccent,
+    outline = AppColors.Border
 )
 
 @Composable
 fun AvatarGeneratorTheme(
-    // Приложение пока всегда тёмное: весь UI (лента, навигация) свёрстан под
+    // Приложение пока всегда тёмное: весь UI (лента, навигация, онбординг) свёрстан под
     // тёмную палитру AppColors, а окно — под тёмный windowBackground. Поэтому
     // не следуем системной теме и не берём dynamic color, иначе на устройстве
     // в светлой теме Material-цвета «поплыли» бы на тёмных поверхностях.
@@ -42,18 +31,8 @@ fun AvatarGeneratorTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = AppDarkColorScheme,
         typography = Typography,
         content = content
     )

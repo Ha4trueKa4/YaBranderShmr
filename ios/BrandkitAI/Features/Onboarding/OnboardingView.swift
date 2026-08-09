@@ -29,14 +29,8 @@ struct OnboardingView: View {
         .background {
             ZStack {
                 Color(.background)
-                LinearGradient(
-                    colors: [
-                        Color(.startGradient),
-                        Color(.endGradient)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing,
-                )
+                RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: 0.35), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
+                    .ignoresSafeArea(.all)
                 .opacity(page == .logo ? 1 : 0)
                 .animation(.easeInOut(duration: 0.25), value: page)
             }
