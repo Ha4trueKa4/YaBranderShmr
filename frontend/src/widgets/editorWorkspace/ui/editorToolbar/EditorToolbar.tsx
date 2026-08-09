@@ -1,12 +1,52 @@
+import { CanvasControls } from './components/CanvasControls'
+import { ProjectActions } from './components/ProjectActions'
+import { ProjectTitle } from './components/ProjectTitle'
 import styles from './EditorToolbar.module.css'
 
-export function EditorToolbar() {
+export interface EditorToolbarProps {
+  onEditProjectName: (projectName: string) => void
+  onExport: () => void
+  onOpenProfile: () => void
+  onPanTool: () => void
+  onRedo: () => void
+  onSaveVersion: () => void
+  onSelectTool: () => void
+  onUndo: () => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  projectName: string
+}
+
+export function EditorToolbar({
+  onEditProjectName,
+  onExport,
+  onOpenProfile,
+  onPanTool,
+  onRedo,
+  onSaveVersion,
+  onSelectTool,
+  onUndo,
+  onZoomIn,
+  onZoomOut,
+  projectName,
+}: EditorToolbarProps) {
+
   return (
     <header className={styles.toolbar}>
-      {/* Здесь появятся инструменты Select/Move, Undo/Redo, Save version и Export. */}
-      <strong className={styles.brand}>Brandkit AI</strong>
-      <span className={styles.projectName}>Untitled project</span>
-      <span className={styles.actions}>Tools and export controls</span>
+      <ProjectTitle onSubmit={onEditProjectName} title={projectName} />
+      <CanvasControls
+        onPanTool={onPanTool}
+        onRedo={onRedo}
+        onSelectTool={onSelectTool}
+        onUndo={onUndo}
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+      />
+      <ProjectActions
+        onExport={onExport}
+        onOpenProfile={onOpenProfile}
+        onSaveVersion={onSaveVersion}
+      />
     </header>
   )
 }

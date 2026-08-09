@@ -3,11 +3,12 @@ import styles from './Input.module.css'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean
+  leadingContent?: ReactNode
   trailingContent?: ReactNode
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, invalid = false, trailingContent, ...props },
+  { className, invalid = false, leadingContent, trailingContent, ...props },
   ref,
 ) {
   return (
@@ -16,6 +17,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         .filter(Boolean)
         .join(' ')}
     >
+      {leadingContent && (
+        <span className={styles.leading}>{leadingContent}</span>
+      )}
       <input {...props} className={styles.input} ref={ref} />
       {trailingContent && (
         <span className={styles.trailing}>{trailingContent}</span>

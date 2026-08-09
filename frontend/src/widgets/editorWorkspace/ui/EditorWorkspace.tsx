@@ -18,11 +18,31 @@ const previewSelectedLayer: EditorLayer = {
 }
 
 export function EditorWorkspace() {
+  function handleToolbarAction() {
+    // TODO: подключить действия после реализации editorStore.
+  }
+
+  function handleProjectNameSubmit(_projectName: string) {
+    // TODO: сохранить название проекта после подключения editorStore.
+  }
+
   return (
     <section className={styles.workspace}>
       {/* Подключить editorStore: document, selectedLayerId, zoom и историю изменений. */}
       <div className={styles.toolbar}>
-        <EditorToolbar />
+        <EditorToolbar
+          onEditProjectName={handleProjectNameSubmit}
+          onExport={handleToolbarAction}
+          onOpenProfile={handleToolbarAction}
+          onPanTool={handleToolbarAction}
+          onRedo={handleToolbarAction}
+          onSaveVersion={handleToolbarAction}
+          onSelectTool={handleToolbarAction}
+          onUndo={handleToolbarAction}
+          onZoomIn={handleToolbarAction}
+          onZoomOut={handleToolbarAction}
+          projectName="Orion Labs"
+        />
       </div>
       <aside className={styles.layers}>
         <LayersPanel />
