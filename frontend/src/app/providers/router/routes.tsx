@@ -2,19 +2,23 @@ import { Navigate, type RouteObject } from 'react-router-dom'
 
 import { AuthPage } from '@pages/auth'
 import { MainPage } from '@pages/main'
-import { EditorPage } from '@pages/editor'
+import { EditorCreatePage } from '@pages/editorCreate'
+import { EditorProjectPage } from '@pages/editorProject'
 import { FeedPage } from '@pages/feed'
 import { ProfilePage } from '@pages/profile'
 
 export const AppRoute = {
-  Main: '/',
+  EditorCreate: '/',
+  EditorProject: '/projects/:projectId',
+  Main: '/main',
   Profile: '/profile',
   Auth: '/auth',
   Feed: '/feed',
-  Editor: '/editor',
 } as const
 
 const publicRoutes: RouteObject[] = [
+  { path: AppRoute.EditorCreate, element: <EditorCreatePage /> },
+  { path: AppRoute.EditorProject, element: <EditorProjectPage /> },
   { path: AppRoute.Auth, element: <AuthPage /> },
   { path: AppRoute.Main, element: <MainPage /> },
   { path: AppRoute.Profile, element: <ProfilePage /> },
@@ -23,14 +27,12 @@ const publicRoutes: RouteObject[] = [
 
 export const authorizedRoutes: RouteObject[] = [
   ...publicRoutes,
-  { path: AppRoute.Editor, element: <EditorPage /> },
-  { path: '*', element: <Navigate to={AppRoute.Main} replace /> },
+  { path: '*', element: <Navigate to={AppRoute.EditorCreate} replace /> },
 ]
 
 export const unauthorizedRoutes: RouteObject[] = [
   ...publicRoutes,
-  { path: AppRoute.Editor, element: <Navigate to={AppRoute.Auth} replace /> },
-  { path: '*', element: <Navigate to={AppRoute.Main} replace /> },
+  { path: '*', element: <Navigate to={AppRoute.EditorCreate} replace /> },
 ]
 
 export const getAuthorizedRoutes = () => authorizedRoutes

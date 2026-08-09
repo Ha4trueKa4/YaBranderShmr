@@ -1,0 +1,10 @@
+.frame {
+  display: grid;
+  width: min(100%, 37.5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  background: #fff;
+  box-shadow: var(--shadow-md);
+  color: #71717a;
+  font-size: var(--font-size-caption);
+}
