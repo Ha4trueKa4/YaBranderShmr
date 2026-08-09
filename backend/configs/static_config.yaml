@@ -128,12 +128,12 @@ components_manager:
           - jwt
   
     handler-auth-register:
-        path: /auth/register
+        path: /api/v1/auth/register
         method: POST
         task_processor: main-task-processor
 
     handler-auth-login:
-        path: /auth/login
+        path: /api/v1/auth/login
         method: POST
         task_processor: main-task-processor
 
