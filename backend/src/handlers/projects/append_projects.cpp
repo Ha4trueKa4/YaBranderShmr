@@ -14,7 +14,7 @@ namespace ya_brander {
 void AppendProjects(userver::components::ComponentList& component_list) {
   component_list
       .Append<components::MockVersionStorageComponent>()
-      .Append<components::MockLLMClientComponent>()
+      .Append<components::LLMClientComponent>()
       .Append<components::MockPromptConstructorComponent>()
 
 
