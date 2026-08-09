@@ -30,7 +30,6 @@ export function EditorToolbar({
   onZoomOut,
   projectName,
 }: EditorToolbarProps) {
-
   return (
     <header className={styles.toolbar}>
       <ProjectTitle onSubmit={onEditProjectName} title={projectName} />
