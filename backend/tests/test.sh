@@ -5,7 +5,7 @@
 
 set -uo pipefail
 
-BASE_URL="${1:-http://localhost:8080}"
+BASE_URL="${1:-http://localhost:8080/api/v1}"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
