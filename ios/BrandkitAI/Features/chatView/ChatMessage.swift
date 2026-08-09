@@ -4,6 +4,7 @@ enum ChatMessageType: Equatable {
     case user
     case assistant
     case system
+    case saveMessage
 }
 
 enum ChatMessageAttachment: Equatable {

@@ -73,6 +73,11 @@ final class ChatViewModel {
                 text: "Настроил баланс цветов и подготовил первый вариант.",
                 date: today(hour: 11, minute: 42),
                 attachment: .mockImage
+            ),
+            ChatMessage(
+                type: .saveMessage,
+                text: "VERSION 1.2 SAVED",
+                date: today(hour: 11, minute: 43)
             )
         ]
     }

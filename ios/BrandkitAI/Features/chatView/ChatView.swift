@@ -18,6 +18,7 @@ struct ChatView: View {
         }
         label: {
             Image(systemName: "arrow.left")
+                .tint(.primary)
         }
     }
     
