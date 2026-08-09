@@ -13,6 +13,7 @@ import com.yandex.avatargenerator.feature.auth.ui.RegisterScreen
 import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
+import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 
 /**
  * Граф навигации приложения.
@@ -98,8 +99,17 @@ fun AppNavHost(
         }
 
         composable(Destination.Profile.route) {
-            // TODO: свой профиль (команда «лента/профиль»).
-            PlaceholderScreen(title = "Профиль")
+            // Свой профиль (вкладка). id текущего пользователя появится из
+            // сессии/DI — пока временная заглушка "me".
+            ProfileScreen(
+                userId = "me",
+                isOwnProfile = true,
+                onProjectClick = { projectId ->
+                    navController.navigate(Destination.Project.createRoute(projectId))
+                },
+                onActionClick = { /* TODO: экран редактирования профиля */ },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         composable(
@@ -116,8 +126,15 @@ fun AppNavHost(
             arguments = listOf(navArgument(Destination.ARG_USER_ID) { type = NavType.StringType }),
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString(Destination.ARG_USER_ID).orEmpty()
-            // TODO: профиль другого пользователя (команда «лента/профиль»).
-            PlaceholderScreen(title = "Профиль пользователя", subtitle = "id: $userId")
+            ProfileScreen(
+                userId = userId,
+                isOwnProfile = false,
+                onProjectClick = { projectId ->
+                    navController.navigate(Destination.Project.createRoute(projectId))
+                },
+                onActionClick = { /* Подписка обрабатывается во ViewModel */ },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
