@@ -60,7 +60,9 @@ feature/<имя>/
 
 - `ui/theme/AppColors.kt`, `AppTypography.kt`, `AppFont.kt`, `AppShape.kt`,
   `AppSpacing.kt`
-- `ui/components/BrandButtons.kt`, `BrandTextField.kt`
+- `ui/components/BrandButtons.kt`, `BrandTextField.kt`, `BrandAvatar.kt`,
+  `BrandBadge.kt`, `BrandCard.kt`, `BrandChatBubble.kt`, `BrandVersionRow.kt`,
+  `BrandSkeleton.kt` (переиспользуемые примитивы shimmer-плейсхолдеров)
 
 **Правило:** в фичах не используем сырые `material3.Button`, захардкоженные
 `Color(0xFF...)`, произвольные `.sp`/`.dp` для типографики и отступов — всё
