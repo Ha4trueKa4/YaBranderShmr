@@ -45,6 +45,7 @@ struct ProjectCreateView: View {
         .brandBackground()
         .navigationTitle(viewModel.title)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(onBack != nil)
         .toolbar {
             if let onBack {
                 backItem(action: onBack)

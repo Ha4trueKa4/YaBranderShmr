@@ -21,8 +21,7 @@ struct AppRouteView: View {
         switch route {
         case .projectCreate:
             ProjectCreateView(
-                // Генерация открывает чат проекта: имя из формы становится
-                // его заголовком. Отдельного экрана прогресса во флоу нет.
+                onBack: { router.pop() },
                 onGenerate: { name in
                     router.push(.chat(projectID: UUID(), title: name))
                 }
