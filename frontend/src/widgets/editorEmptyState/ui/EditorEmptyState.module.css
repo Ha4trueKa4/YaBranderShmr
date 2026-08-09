@@ -3,7 +3,7 @@
   grid-template-rows: minmax(0, 1fr) auto;
   gap: var(--space-6);
   width: min(100% - 3rem, 68rem);
-  min-height: 100vh;
+  min-height: calc(100vh - 4.75rem);
   margin: 0 auto;
   padding: 5rem 0;
 }
@@ -46,6 +46,7 @@
 @media (width < 640px) {
   .state {
     width: min(100% - 2rem, 68rem);
+    min-height: calc(100vh - 4rem);
     padding: var(--space-4) 0;
   }
 
