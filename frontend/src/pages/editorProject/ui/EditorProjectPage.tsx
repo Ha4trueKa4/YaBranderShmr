@@ -1,6 +1,5 @@
-import { Navigate, useParams } from 'react-router-dom'
-
 import { EditorWorkspace } from '@widgets/editorWorkspace'
+import { Navigate, useParams } from 'react-router-dom'
 
 import styles from './EditorProjectPage.module.css'
 

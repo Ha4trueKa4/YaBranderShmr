@@ -1,16 +1,51 @@
-import { Link } from 'react-router-dom'
-
 import { AppRoute } from '@app/providers/router/routes'
+import { Link } from 'react-router-dom'
 
 import styles from './feedPage.module.css'
 
 const projects = [
-  { title: 'Команда продукта', author: 'Екатерина Петрова', palette: 'violet', initial: 'К', likes: 48 },
-  { title: 'Летняя школа дизайна', author: 'Михаил Волков', palette: 'orange', initial: 'Ш', likes: 32 },
-  { title: 'Frontend community', author: 'Алексей Смирнов', palette: 'blue', initial: 'F', likes: 67 },
-  { title: 'Волонтёры фестиваля', author: 'Дарья Ковалёва', palette: 'green', initial: 'В', likes: 24 },
-  { title: 'Creative meetup', author: 'Иван Лебедев', palette: 'pink', initial: 'C', likes: 39 },
-  { title: 'Курс по продукту', author: 'Анна Орлова', palette: 'yellow', initial: 'П', likes: 56 },
+  {
+    title: 'Команда продукта',
+    author: 'Екатерина Петрова',
+    palette: 'violet',
+    initial: 'К',
+    likes: 48,
+  },
+  {
+    title: 'Летняя школа дизайна',
+    author: 'Михаил Волков',
+    palette: 'orange',
+    initial: 'Ш',
+    likes: 32,
+  },
+  {
+    title: 'Frontend community',
+    author: 'Алексей Смирнов',
+    palette: 'blue',
+    initial: 'F',
+    likes: 67,
+  },
+  {
+    title: 'Волонтёры фестиваля',
+    author: 'Дарья Ковалёва',
+    palette: 'green',
+    initial: 'В',
+    likes: 24,
+  },
+  {
+    title: 'Creative meetup',
+    author: 'Иван Лебедев',
+    palette: 'pink',
+    initial: 'C',
+    likes: 39,
+  },
+  {
+    title: 'Курс по продукту',
+    author: 'Анна Орлова',
+    palette: 'yellow',
+    initial: 'П',
+    likes: 56,
+  },
 ]
 
 export function FeedPage() {
@@ -22,21 +57,32 @@ export function FeedPage() {
           <span>Brandkit</span>
         </Link>
         <nav className={styles.navigation}>
-          <Link className={styles.activeLink} to={AppRoute.Feed}>Лента</Link>
+          <Link className={styles.activeLink} to={AppRoute.Feed}>
+            Лента
+          </Link>
           <Link to={AppRoute.Profile}>Мои проекты</Link>
         </nav>
         <div className={styles.profileActions}>
-          <Link className={styles.newProject} to={AppRoute.EditorCreate}>Создать проект</Link>
-          <Link className={styles.avatar} to={AppRoute.Profile}>ЕК</Link>
+          <Link className={styles.newProject} to={AppRoute.EditorCreate}>
+            Создать проект
+          </Link>
+          <Link className={styles.avatar} to={AppRoute.Profile}>
+            ЕК
+          </Link>
         </div>
       </header>
 
       <main className={styles.content}>
         <section className={styles.intro}>
           <div>
-            <p className={styles.overline}>Вдохновляйтесь работами сообщества</p>
+            <p className={styles.overline}>
+              Вдохновляйтесь работами сообщества
+            </p>
             <h1>Лента проектов</h1>
-            <p>Готовые образы для команд, сообществ и событий — сохраняйте идеи для своего следующего проекта.</p>
+            <p>
+              Готовые образы для команд, сообществ и событий — сохраняйте идеи
+              для своего следующего проекта.
+            </p>
           </div>
           <label className={styles.search}>
             <span>⌕</span>
@@ -45,7 +91,9 @@ export function FeedPage() {
         </section>
 
         <nav className={styles.filters}>
-          <button className={styles.selectedFilter} type="button">Все работы</button>
+          <button className={styles.selectedFilter} type="button">
+            Все работы
+          </button>
           <button type="button">Команды</button>
           <button type="button">События</button>
           <button type="button">Сообщества</button>

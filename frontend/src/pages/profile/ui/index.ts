@@ -1,1 +1,1 @@
-export * from "./profilePage.tsx";
+export * from './profilePage.tsx'

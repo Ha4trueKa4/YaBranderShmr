@@ -1,12 +1,11 @@
 import type { EditorLayer } from '@entities/editorDocument'
 import { EditorScene } from '@widgets/editorScene'
-
+import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
 import { PromptComposer } from './promptComposer/PromptComposer'
-import styles from './EditorWorkspace.module.css'
 
 /** Временные данные для вёрстки; заменить на выбранный слой из editorStore. */
 const previewSelectedLayer: EditorLayer = {

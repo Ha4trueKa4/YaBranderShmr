@@ -15,10 +15,14 @@ const mockRequestDelayMs = 1500
  * Временная мутация для демонстрации потока создания.
  * Заменить на `useCreateProjectMutation`, когда API создания проекта станет доступен.
  */
-function mockCreateProject({ name }: MockCreateProjectInput): Promise<MockCreatedProject> {
+function mockCreateProject({
+  name,
+}: MockCreateProjectInput): Promise<MockCreatedProject> {
   return new Promise((resolve) => {
     window.setTimeout(() => {
-      resolve({ id: `${name.toLowerCase().replaceAll(' ', '-')}-${Date.now()}` })
+      resolve({
+        id: `${name.toLowerCase().replaceAll(' ', '-')}-${Date.now()}`,
+      })
     }, mockRequestDelayMs)
   })
 }

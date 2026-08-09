@@ -1,8 +1,7 @@
-import { useNavigate } from 'react-router-dom'
-
 import { useMockCreateProjectMutation } from '@features/projectCreate'
 import { EditorEmptyState } from '@widgets/editorEmptyState'
 import { EditorGeneratingState } from '@widgets/editorGeneratingState'
+import { useNavigate } from 'react-router-dom'
 
 import styles from './EditorCreatePage.module.css'
 
@@ -13,10 +12,8 @@ const defaultProject = {
 
 export function EditorCreatePage() {
   const navigate = useNavigate()
-  const {
-    isPending: isCreatingProjectPending,
-    mutate: createProject,
-  } = useMockCreateProjectMutation()
+  const { isPending: isCreatingProjectPending, mutate: createProject } =
+    useMockCreateProjectMutation()
 
   function handleGenerate() {
     // Сюда подставить значения формы: название и описание вместо `defaultProject`.

@@ -1,1 +1,1 @@
-export { useLoginMutation, useRegisterMutation } from './api/authQueries';
+export { useLoginMutation, useRegisterMutation } from './api/authQueries'

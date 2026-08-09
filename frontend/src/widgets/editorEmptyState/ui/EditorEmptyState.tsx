@@ -12,7 +12,9 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
       <div className={styles.preview}>
         <div className={styles.copy}>
           <h1>Paste your description and generate</h1>
-          <p>Create customized vectors, logos, and high-fidelity marks instantly.</p>
+          <p>
+            Create customized vectors, logos, and high-fidelity marks instantly.
+          </p>
         </div>
       </div>
       <div className={styles.composer}>

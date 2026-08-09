@@ -1,11 +1,10 @@
-import { Navigate, type RouteObject } from 'react-router-dom'
-
 import { AuthPage } from '@pages/auth'
-import { MainPage } from '@pages/main'
 import { EditorCreatePage } from '@pages/editorCreate'
 import { EditorProjectPage } from '@pages/editorProject'
 import { FeedPage } from '@pages/feed'
+import { MainPage } from '@pages/main'
 import { ProfilePage } from '@pages/profile'
+import { Navigate, type RouteObject } from 'react-router-dom'
 
 export const AppRoute = {
   EditorCreate: '/',

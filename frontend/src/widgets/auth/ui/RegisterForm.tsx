@@ -1,7 +1,7 @@
-import { Controller } from 'react-hook-form'
 import { Button, FormField, IconButton, Input } from '@shared'
 import brandMark from '@shared/assets/brandmark.svg'
-import { useRegisterForm, type RegisterSubmitHandler } from '../model'
+import { Controller } from 'react-hook-form'
+import { type RegisterSubmitHandler, useRegisterForm } from '../model'
 import styles from './AuthForms.module.css'
 
 interface RegisterFormProps {

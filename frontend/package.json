@@ -11,7 +11,7 @@
     "lint:fix": "biome lint --config-path=./biome.json --write src",
     "format": "biome format --config-path=./biome.json --write src",
     "format:check": "biome format --config-path=./biome.json src",
-    "check": "pnpm typecheck && pnpm lint",
+    "check": "pnpm typecheck && biome check --config-path=./biome.json src",
     "preview": "vite preview",
     "ts:generate": "openapi-ts"
   },

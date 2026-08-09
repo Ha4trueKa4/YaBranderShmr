@@ -1,3 +1,3 @@
-export { login } from './login';
-export { useLoginMutation, useRegisterMutation } from './authQueries.ts';
-export { register } from './register';
+export { useLoginMutation, useRegisterMutation } from './authQueries.ts'
+export { login } from './login'
+export { register } from './register'

@@ -1,11 +1,14 @@
+import type {
+  EditorLayer,
+  EditorLayerByType,
+  EditorLayerType,
+} from '@entities/editorDocument'
 import type { ComponentType } from 'react'
 
-import type { EditorLayer, EditorLayerByType, EditorLayerType } from '@entities/editorDocument'
-
 import { BackgroundProperties } from './backgroundProperties/BackgroundProperties'
+import styles from './InspectorPanel.module.css'
 import { ShapeProperties } from './shapeProperties/ShapeProperties'
 import { TextProperties } from './textProperties/TextProperties'
-import styles from './InspectorPanel.module.css'
 
 type InspectorByType = {
   [TType in EditorLayerType]: ComponentType<{

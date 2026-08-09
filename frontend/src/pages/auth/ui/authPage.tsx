@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { LoginForm, RegisterForm } from '@widgets'
+import { useState } from 'react'
 import styles from './authPage.module.css'
 
 type AuthForm = 'login' | 'register'

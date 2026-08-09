@@ -1,5 +1,5 @@
-import { SceneFrame } from './sceneFrame/SceneFrame'
 import styles from './EditorScene.module.css'
+import { SceneFrame } from './sceneFrame/SceneFrame'
 
 export function EditorScene() {
   return (
