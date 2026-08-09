@@ -1,5 +1,5 @@
 import { Button, FormField, IconButton, Input } from '@shared'
-import brandMark from '@shared/assets/brandmark.svg'
+import { Eye, EyeOff } from 'lucide-react'
 import { Controller } from 'react-hook-form'
 import { type LoginSubmitHandler, useLoginForm } from '../model'
 import styles from './AuthForms.module.css'
@@ -19,21 +19,28 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
   } = useLoginForm({ onSubmit })
 
   return (
-    <section className={styles.card}>
-      <img alt="Brandkit AI" className={styles.brand} src={brandMark} />
-      <h2 className={styles.title}>Войти</h2>
+    <section className={styles.formSection}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Welcome back</h1>
+        <p className={styles.subtitle}>Sign in to continue creating.</p>
+      </header>
       <form className={styles.form} onSubmit={submit}>
         <div className={styles.formFields}>
           <Controller
             control={form.control}
             name="email"
             render={({ field, fieldState }) => (
-              <FormField error={fieldState.error?.message} label="Email">
+              <FormField
+                error={fieldState.error?.message}
+                label="Email"
+                reserveErrorSpace
+              >
                 <Input
                   {...field}
                   autoComplete="email"
+                  className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
-                  placeholder="hello@brandkit.ai"
+                  placeholder="alex@studio.com"
                   ref={field.ref}
                   type="email"
                 />
@@ -44,16 +51,25 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <FormField error={fieldState.error?.message} label="Пароль">
+              <FormField
+                error={fieldState.error?.message}
+                label="Password"
+                reserveErrorSpace
+              >
                 <Input
                   {...field}
                   autoComplete="current-password"
+                  className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
-                  placeholder="Введите пароль"
+                  placeholder="Enter your password"
                   ref={field.ref}
                   trailingContent={
                     <IconButton onClick={togglePasswordVisibility} size="sm">
-                      {isPasswordVisible ? '◉' : '◌'}
+                      {isPasswordVisible ? (
+                        <EyeOff size={18} strokeWidth={1.75} />
+                      ) : (
+                        <Eye size={18} strokeWidth={1.75} />
+                      )}
                     </IconButton>
                   }
                   type={isPasswordVisible ? 'text' : 'password'}
@@ -62,24 +78,19 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             )}
           />
         </div>
-        <Button fullWidth type="submit">
-          Войти
+        <Button fullWidth size="lg" type="submit">
+          Sign in
         </Button>
-        <button className={styles.link} type="button">
-          Забыли пароль?
-        </button>
-        {isSubmitted && (
-          <p className={styles.success}>Форма успешно отправлена.</p>
-        )}
+        {isSubmitted && <p className={styles.success}>You are signed in.</p>}
       </form>
       <p className={styles.footer}>
-        Нет аккаунта?{' '}
+        New to Brandkit AI?{' '}
         <button
           className={styles.link}
           onClick={onSwitchToRegister}
           type="button"
         >
-          Зарегистрироваться
+          Create account
         </button>
       </p>
     </section>

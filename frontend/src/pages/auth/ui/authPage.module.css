@@ -1,7 +1,96 @@
 .page {
+  background: var(--color-auth-panel);
+  display: grid;
+  grid-template-columns: minmax(26rem, 42.25%) 1fr;
+  min-height: 100vh;
+}
+
+.promoPanel {
+  background: linear-gradient(
+    to bottom,
+    var(--color-accent-primary) 0 33.5%,
+    var(--color-auth-promo-background) 33.5% 100%
+  );
+  color: var(--color-auth-promo-text);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 5.5rem clamp(2rem, 5.1vw, 5.875rem) 9.625rem;
+}
+
+.brandName {
+  font-size: 1.875rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.promoContent {
+  align-self: center;
+  margin-top: 3.625rem;
+}
+
+.promoTitle {
+  font-size: clamp(3rem, 3.5vw, 4rem);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+  margin: 0;
+}
+
+.promoDescription {
+  font-size: 1.25rem;
+  line-height: 1.25;
+  margin: 1.25rem 0 0;
+  max-width: 32rem;
+}
+
+.brandPreview {
+  height: 15.25rem;
+  justify-self: center;
+  position: relative;
+  width: min(100%, 26.75rem);
+}
+
+.previewCanvas {
+  height: 100%;
+  inset: 0;
+  position: absolute;
+  transform: scale(1.3);
+  width: 100%;
+}
+
+.previewMark {
+  left: 50%;
+  position: absolute;
+  top: -2.5rem;
+  transform: translateX(-50%);
+  width: 9.5rem;
+}
+
+.formPanel {
   align-items: center;
   display: flex;
   justify-content: center;
-  min-height: 100vh;
-  padding: var(--space-6);
+  padding: 2rem;
+}
+
+.formContent {
+  width: min(100%, 34rem);
+}
+
+@media (max-width: 56.25rem) {
+  .page {
+    display: block;
+  }
+
+  .promoPanel {
+    display: none;
+  }
+
+  .formPanel {
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+  }
 }

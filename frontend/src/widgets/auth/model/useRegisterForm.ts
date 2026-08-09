@@ -11,7 +11,7 @@ interface UseRegisterFormOptions {
 export function useRegisterForm({ onSubmit }: UseRegisterFormOptions = {}) {
   const form = useForm<RegisterFormValues>({
     defaultValues: { email: '', nickname: '', password: '' },
-    mode: 'onBlur',
+    mode: 'onSubmit',
     resolver: zodResolver(registerFormSchema),
   })
   const [isPasswordVisible, setPasswordVisible] = useState(false)

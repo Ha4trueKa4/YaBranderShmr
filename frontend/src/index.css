@@ -13,6 +13,12 @@
   --color-error: #ef4444;
   --color-border: #27272a;
   --color-focus: #06b6d4;
+  --color-auth-panel: #f9fafb;
+  --color-auth-field: #f4f4f5;
+  --color-auth-text: #18181b;
+  --color-auth-muted: #71717a;
+  --color-auth-promo-background: #0f0f14;
+  --color-auth-promo-text: #f4f4f5;
 
   /* Gradients */
   --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
