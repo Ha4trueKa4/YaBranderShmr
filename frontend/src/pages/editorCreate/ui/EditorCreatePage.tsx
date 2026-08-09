@@ -4,13 +4,13 @@ import {
   pendingGenerationStore,
   useMockCreateProjectMutation,
 } from '@features/projectCreate'
-import { AppHeader } from '@widgets/appHeader'
-import { EditorEmptyState } from '@widgets/editorEmptyState'
-import { EditorGeneratingState } from '@widgets/editorGeneratingState'
+import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { EditorEmptyState } from './components/EditorEmptyState'
+import { EditorGeneratingState } from './components/EditorGeneratingState'
 import styles from './EditorCreatePage.module.css'
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
@@ -61,7 +61,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
   return (
     <main className={styles.page}>
-      <AppHeader />
+      <Header />
       {isCreatingProjectPending ? (
         <EditorGeneratingState />
       ) : (
