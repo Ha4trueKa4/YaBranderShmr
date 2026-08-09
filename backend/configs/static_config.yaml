@@ -67,7 +67,7 @@ components_manager:
             task_processor: main-task-processor
             throttling_enabled: false
 
-        llm-client:
+        llm-client: { }
 
         postgres-db-1:
             dbconnection: $dbconnection

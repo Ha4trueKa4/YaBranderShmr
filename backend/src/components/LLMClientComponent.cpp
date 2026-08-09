@@ -27,7 +27,7 @@ namespace ya_brander::components {
     const std::string& Model,
     const double& TEMPERATURE) const {
     if (prompt.empty()) {
-      throw std::runtime_error("Empty prompt provided");
+      throw std::invalid_argument("Empty prompt provided");
     }
         userver::formats::json::ValueBuilder request_body;
         request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/" + Model;
@@ -73,8 +73,23 @@ namespace ya_brander::components {
           throw std::runtime_error(error_msg);
         }
         auto response_json = nlohmann::json::parse(response->body());
+        if (!response_json.contains("output") || !response_json["output"].is_array() ||
+        response_json["output"].empty()) {
+          throw std::runtime_error("LLM response does not contain output");
+        }
 
-        return ExtractSVG(response_json["output"][0]["content"][0]["text"].get<std::string>());
+        const auto& first_output = response_json["output"][0];
+        if (!first_output.contains("content") || !first_output["content"].is_array() ||
+            first_output["content"].empty()) {
+          throw std::runtime_error("LLM response does not contain content");
+            }
+
+        const auto& first_content = first_output["content"][0];
+        if (!first_content.contains("text") || !first_content["text"].is_string()) {
+          throw std::runtime_error("LLM response does not contain text");
+        }
+
+        return ExtractSVG(first_content["text"].get<std::string>());
   }
 
 userver::yaml_config::Schema LLMClientComponent::GetStaticConfigSchema() {

@@ -18,15 +18,16 @@ namespace ya_brander::components {
     public:
         static constexpr std::string_view kName = "llm-client";
 
-        LLMClientComponent(const userver::components::ComponentConfig& config,
-                           const userver::components::ComponentContext& context)
-      : LoggableComponentBase(config, context),
-      http_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()) {
-          const char* key = std::getenv("YANDEX_AI_API_KEY");
-          if (key != nullptr) {
-            api_key_ = key;
-          }
+      LLMClientComponent(const userver::components::ComponentConfig& config,
+                         const userver::components::ComponentContext& context)
+          : LoggableComponentBase(config, context),
+            http_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()) {
+        const char* key = std::getenv("YANDEX_AI_API_KEY");
+        if (key == nullptr || std::string_view(key).empty()) {
+          throw std::runtime_error("YANDEX_AI_API_KEY is not set");
         }
+        api_key_ = key;
+      }
 
       static userver::yaml_config::Schema GetStaticConfigSchema();
 
