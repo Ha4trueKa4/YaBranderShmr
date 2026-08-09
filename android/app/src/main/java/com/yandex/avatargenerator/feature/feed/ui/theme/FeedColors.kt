@@ -23,7 +23,4 @@ internal object FeedColors {
 
     val Accent = AppColors.Accent
     val AccentCyan = AppColors.AccentCyan
-
-    val ShimmerBase = AppColors.ShimmerBase
-    val ShimmerHighlight = AppColors.ShimmerHighlight
 }
