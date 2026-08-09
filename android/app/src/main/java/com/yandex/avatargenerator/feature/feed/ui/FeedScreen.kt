@@ -1,12 +1,8 @@
 package com.yandex.avatargenerator.feature.feed.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -31,8 +27,8 @@ import com.yandex.avatargenerator.feature.feed.ui.components.FeedSkeletonGrid
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTabRow
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTopBar
 import com.yandex.avatargenerator.feature.feed.ui.components.ProjectCard
+import com.yandex.avatargenerator.feature.feed.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.theme.AppColors
-import com.yandex.avatargenerator.ui.theme.AppSpacing
 
 /**
  * Экран ленты: хедер + вкладки «All»/«Subscriptions» + masonry-сетка проектов.
@@ -131,13 +127,7 @@ private fun FeedGrid(
     onAuthorClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
-        modifier = modifier,
-        contentPadding = PaddingValues(AppSpacing.m),
-        horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
-        verticalItemSpacing = AppSpacing.s,
-    ) {
+    ProjectMasonryGrid(modifier = modifier) {
         items(
             count = projects.itemCount,
             key = projects.itemKey { it.id },
