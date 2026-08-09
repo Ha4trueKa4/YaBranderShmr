@@ -27,7 +27,7 @@ import com.yandex.avatargenerator.feature.feed.ui.components.FeedSkeletonGrid
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTabRow
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTopBar
 import com.yandex.avatargenerator.feature.feed.ui.components.ProjectCard
-import com.yandex.avatargenerator.feature.feed.ui.components.ProjectMasonryGrid
+import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**

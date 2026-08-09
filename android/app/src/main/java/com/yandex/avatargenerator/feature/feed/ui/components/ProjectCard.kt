@@ -92,7 +92,7 @@ fun ProjectCard(
                 BrandAvatar(
                     size = 24.dp,
                     imageUrl = project.author.avatarUrl,
-                    initials = project.author.displayName,
+                    initials = authorInitials(project.author.displayName),
                 )
                 Text(
                     text = project.author.displayName,
@@ -104,3 +104,16 @@ fun ProjectCard(
         }
     }
 }
+
+/**
+ * Инициалы автора для плейсхолдера аватара (когда нет avatarUrl): первые буквы
+ * 1–2 слов имени — «Alice Cooper» → «AC», «Brandkit» → «B». Пустое/пробельное
+ * имя → null, чтобы [BrandAvatar] показал декоративную заглушку, а не пустой круг.
+ */
+private fun authorInitials(name: String): String? =
+    name.trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+        .take(2)
+        .joinToString("") { it.first().uppercase() }
+        .takeIf { it.isNotEmpty() }

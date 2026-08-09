@@ -74,14 +74,15 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
         )
         Column(
             modifier = Modifier.padding(AppSpacing.s),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+            // Точечные значения без токена (радиус/интервал плейсхолдеров) — по макету.
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             BrandSkeletonBox(
                 modifier = Modifier
                     .width(110.dp)
                     .height(12.dp),
                 brush = brush,
-                shape = RoundedCornerShape(AppShape.xs),
+                shape = RoundedCornerShape(4.dp),
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
@@ -97,7 +98,7 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
                         .width(60.dp)
                         .height(10.dp),
                     brush = brush,
-                    shape = RoundedCornerShape(AppShape.xs),
+                    shape = RoundedCornerShape(4.dp),
                 )
             }
         }

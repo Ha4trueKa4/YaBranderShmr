@@ -44,7 +44,9 @@ fun BrandAvatar(
             .clip(shape)
             .then(
                 when {
-                    imageUrl != null -> Modifier
+                    // Фон-плейсхолдер под изображением: виден, пока Coil грузит превью
+                    // или если загрузка не удалась, вместо пустого круга.
+                    imageUrl != null -> Modifier.background(AppColors.SurfaceVariant)
                     initials != null -> Modifier.background(AppColors.Surface)
                     else -> Modifier.background(AppColors.AccentGradient)
                 }
