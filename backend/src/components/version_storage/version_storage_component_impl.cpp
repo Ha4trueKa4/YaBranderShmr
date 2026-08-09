@@ -17,17 +17,18 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
           context.FindComponent<userver::components::Postgres>("postgres-db-1")
               .GetCluster()) {}
 
-std::string VersionStorageComponentImpl::WriteFile(
-    const std::string& project_id, int version_num,
-    const std::string& data) const {
-  std::filesystem::create_directories("mock_s3");
-  auto key =
-      "mock_s3/" + project_id + "_" + std::to_string(version_num) + ".svg";
-  std::ofstream out{key};
-  out << data;
-  return key;
+    std::string WriteFile(const std::string& project_id, int version_num,
+                          const std::string& data) const
+    {
+    std::filesystem::create_directories("mock_s3");
+    auto key = "mock_s3/" + project_id + "_" + std::to_string(version_num) + ".svg";
+    std::ofstream out{key};
+    out << data;
+    if (!out) {                                    // check write succeeded
+        throw std::runtime_error("failed to write version file: " + key);
+    }
+    return key;
 }
-
 std::string VersionStorageComponentImpl::ReadFile(const std::string& key) const {
   std::ifstream f{key};
   if (!f) return "";
@@ -103,9 +104,13 @@ std::vector<models::Version> VersionStorageComponentImpl::ListVersions(
     return versions;
 }
 
-std::string VersionStorageComponentImpl::RestoreVersion(
-    const std::string& project_id, const std::string& version_id) {
-  return SaveVersion(project_id, GetVersion(project_id, version_id));
+    std::string RestoreVersion(const std::string& project_id,
+                               const std::string& version_id) {
+    auto data = GetVersion(project_id, version_id);
+    if (data.empty()) {
+        throw std::runtime_error("cannot restore: version not found");
+    }
+    return SaveVersion(project_id, data);
 }
 
 }  // namespace ya_brander::components
