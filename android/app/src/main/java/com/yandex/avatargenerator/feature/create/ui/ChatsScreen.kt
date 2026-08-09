@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yandex.avatargenerator.feature.create.data.MockChatsRepository
 import com.yandex.avatargenerator.feature.create.domain.model.Chat
 import com.yandex.avatargenerator.feature.create.ui.components.ChatRow
@@ -29,6 +28,7 @@ import com.yandex.avatargenerator.feature.create.ui.util.rememberRelativeTimeLab
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Экран вкладки «Создать»: список чатов пользователя (чат = диалог с ИИ = проект)
@@ -38,9 +38,9 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  * @param onChatClick открыть чат (он же проект) по id.
  * @param onNewProject создать новый проект.
  *
- * ViewModel создаётся дефолтной фабрикой с моком (пока без DI) — как в
- * [com.yandex.avatargenerator.feature.feed.ui.FeedScreen]. Про инсеты думать не
- * нужно: `AvatarGeneratorApp` уже отдаёт `innerPadding` в `NavHost`, а нижняя
+ * ViewModel берётся из Koin ([koinViewModel]); граф — в
+ * `feature/create/di/ChatsModule.kt`. Про инсеты думать не нужно:
+ * `AvatarGeneratorApp` уже отдаёт `innerPadding` в `NavHost`, а нижняя
  * панель сама обрабатывает `WindowInsets.navigationBars`.
  */
 @Composable
@@ -48,7 +48,7 @@ internal fun ChatsScreen(
     onChatClick: (chatId: String) -> Unit,
     onNewProject: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatsViewModel = viewModel(factory = ChatsViewModelFactory(MockChatsRepository())),
+    viewModel: ChatsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

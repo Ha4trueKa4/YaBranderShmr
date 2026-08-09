@@ -9,14 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.yandex.avatargenerator.R
-import com.yandex.avatargenerator.feature.feed.data.MockFeedRepository
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedAppendError
@@ -30,6 +28,7 @@ import com.yandex.avatargenerator.ui.components.ProjectCard
 import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.components.masonryAspectRatio
 import com.yandex.avatargenerator.ui.theme.AppColors
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Экран ленты: хедер + вкладки «All»/«Subscriptions» + masonry-сетка проектов.
@@ -38,15 +37,15 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  * @param onProjectClick открыть проект по id.
  * @param onAuthorClick открыть профиль автора по id.
  *
- * ViewModel создаётся дефолтной фабрикой с моком (пока без DI). При появлении
- * навигационного графа/DI фабрику передадут снаружи.
+ * ViewModel берётся из Koin ([koinViewModel]); граф зависимостей — в
+ * `feature/feed/di/FeedModule.kt`.
  */
 @Composable
 fun FeedScreen(
     onProjectClick: (projectId: String) -> Unit,
     onAuthorClick: (authorId: String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: FeedViewModel = viewModel(factory = FeedViewModelFactory(MockFeedRepository())),
+    viewModel: FeedViewModel = koinViewModel(),
 ) {
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
     val projects = viewModel.pagingData.collectAsLazyPagingItems()
