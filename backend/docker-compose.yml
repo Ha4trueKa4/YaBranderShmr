@@ -1,45 +1,48 @@
 services:
-    postgres:
-        container_name: service-postgres
-        image: postgres:18
-        environment:
-          - POSTGRES_DB=ya_brander_db_1
-          - POSTGRES_USER=user
-          - POSTGRES_PASSWORD=password
-          - PGDATA=/var/lib/postgresql/data
-        ports:
-          - 5432
-        volumes:
-          - ./postgresql/schemas/docker-entrypoint-initdb.d/01_db-1.sql
-          - ./postgresql/data/initial_data.sql:/docker-entrypoint-initdb.d/02_initial_data.sql
-          - pgdata:/var/lib/postgresql/data
-        networks:
-          - postgres
+  postgres:
+    container_name: service-postgres
+    image: postgres:18
+    environment:
+      - POSTGRES_DB=ya_brander_db_1
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - PGDATA=/var/lib/postgresql/data
+    ports:
+      - 5432
+    volumes:
+      - ./postgresql/schemas/db-1.sql:/docker-entrypoint-initdb.d/01_db-1.sql
+      - ./postgresql/data/initial_data.sql:/docker-entrypoint-initdb.d/02_initial_data.sql
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - postgres
 
-    ya_brander-container:
-        image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
-        privileged: true
-        environment:
-          - POSTGRES_DB=ya_brander_db_1
-          - POSTGRES_USER=user
-          - POSTGRES_PASSWORD=password
-          - PREFIX=${PREFIX:-~/.local}
-          - CCACHE_DIR=/ya_brander/.ccache
-          - CORES_DIR=/cores
-          - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-        volumes:
-          - .:/ya_brander:rw
-          - ${TC_CORES_DIR:-./.cores}:/cores:rw
-        ports:
-          - 8080:8080
-        working_dir: /ya_brander
-        entrypoint:
-          - ./tests/run_as_user.sh
-        depends_on:
-          - postgres
-        networks:
-          - postgres
+  ya_brander-container:
+    image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
+    privileged: true
+    environment:
+      - POSTGRES_DB=ya_brander_db_1
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - PREFIX=${PREFIX:-~/.local}
+      - CCACHE_DIR=/ya_brander/.ccache
+      - CORES_DIR=/cores
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/ya_brander:rw
+      - ${TC_CORES_DIR:-./.cores}:/cores:rw
+    ports:
+      - 8080:8080
+    working_dir: /ya_brander
+    entrypoint:
+      - ./tests/run_as_user.sh
+    depends_on:
+      - postgres
+    networks:
+      - postgres
 
 networks:
-    postgres:
-        driver: bridge
+  postgres:
+    driver: bridge
+
+volumes:
+  pgdata:

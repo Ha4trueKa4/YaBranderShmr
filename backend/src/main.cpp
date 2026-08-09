@@ -13,6 +13,7 @@
 #include "./handlers/auth/login_handler.hpp"
 
 #include "handlers/check/check.hpp"
+#include "handlers/projects/append_projects.h"
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brender::auth::CheckerFactory>();
@@ -33,7 +34,7 @@ int main(int argc, char* argv[]) {
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
     // ya_brander::AppendAuth(component_list);
-    // ya_brander::AppendProjects(component_list);
+    ya_brander::AppendProjects(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);
 }

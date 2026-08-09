@@ -14,7 +14,7 @@ FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
 find_package(userver COMPONENTS core postgresql QUIET)
-if(NOT userver_FOUND)  # Fallback to subdirectory usage
+if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
 
@@ -26,10 +26,10 @@ if(NOT userver_FOUND)  # Fallback to subdirectory usage
     if (EXISTS third_party/userver)
         message(STATUS "Using userver framework from third_party/userver")
         add_subdirectory(third_party/userver)
-    else()
+    else ()
         message(FATAL_ERROR "Either install the userver or provide a path to it")
-    endif()
-endif()
+    endif ()
+endif ()
 
 userver_setup_environment()
 
@@ -48,6 +48,13 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/password_hasher.cpp
         src/components/auth_checker.hpp
         src/components/auth_checker.cpp
+        src/components/project_manager_component.cpp
+        src/handlers/projects/append_projects.cpp
+        src/handlers/projects/create_project.cpp
+        src/handlers/projects/get_project.cpp
+        src/handlers/projects/patch_project.cpp
+        src/handlers/projects/delete_project.cpp
+        src/handlers/projects/generate_project.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql jwt-cpp)
@@ -66,11 +73,11 @@ userver_testsuite_add_simple()
 # Install
 include(GNUInstallDirs)
 
-if(DEFINED ENV{PREFIX})
-  message(STATUS "Set install prefix: $ENV{PREFIX}")
-  file(TO_CMAKE_PATH "$ENV{PREFIX}" PREFIX_PATH)
-  set(CMAKE_INSTALL_PREFIX ${PREFIX_PATH})
-endif()
+if (DEFINED ENV{PREFIX})
+    message(STATUS "Set install prefix: $ENV{PREFIX}")
+    file(TO_CMAKE_PATH "$ENV{PREFIX}" PREFIX_PATH)
+    set(CMAKE_INSTALL_PREFIX ${PREFIX_PATH})
+endif ()
 
 file(GLOB CONFIGS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/configs/*.yaml ${CMAKE_CURRENT_SOURCE_DIR}/configs/*.json)
 

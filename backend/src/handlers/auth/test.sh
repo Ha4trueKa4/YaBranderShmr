@@ -126,28 +126,3 @@ check "Несуществующий email -> 401" 401 "$RESP_STATUS" "$RESP_BODY
 do_request POST /auth/login \
     "{\"email\":\"${EMAIL}\",\"password\":\"\"}"
 check "Пустой пароль -> 401" 401 "$RESP_STATUS" "$RESP_BODY"
-
-echo -e "\n--- Проверка защищённого эндпоинта (пример) ---"
-echo "Поправьте PROTECTED_PATH под свой реальный маршрут (например /projects)."
-
-PROTECTED_PATH="/projects"
-
-# 11. Запрос без токена (если ваш чекер допускает анонимов — ждём 200, иначе поправьте на 401)
-do_request GET "$PROTECTED_PATH" "" ""
-echo -e "${YELLOW}[INFO]${NC} Без токена: status=$RESP_STATUS body=$RESP_BODY"
-
-# 12. Запрос с валидным токеном -> должен пройти (200/2xx)
-if [[ -n "$ACCESS_TOKEN" ]]; then
-    do_request GET "$PROTECTED_PATH" "" "$ACCESS_TOKEN"
-    echo -e "${YELLOW}[INFO]${NC} С валидным токеном: status=$RESP_STATUS body=$RESP_BODY"
-fi
-
-# 13. Запрос с битым токеном -> 403 (ваш AuthCheckerJwt отдаёт kForbidden на невалидный JWT)
-do_request GET "$PROTECTED_PATH" "" "this.is.not.a.valid.jwt"
-check "Битый токен на защищённом эндпоинте -> 403" 403 "$RESP_STATUS" "$RESP_BODY"
-
-echo -e "\n${YELLOW}== Итого: ${GREEN}${PASS} passed${NC}, ${RED}${FAIL} failed${NC} ==${NC}"
-
-if [[ "$FAIL" -gt 0 ]]; then
-    exit 1
-fi
