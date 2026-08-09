@@ -15,12 +15,12 @@ struct SignInView: View {
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        AuthScreenLayout {
-            AuthHeader(title: "Sign in")
+        FormScreenLayout {
+            ScreenHeader(title: "Sign in")
                 .padding(.bottom, 32)
 
             VStack(spacing: 16) {
-                AuthField(
+                FormTextField(
                     label: "Email",
                     placeholder: "hello@brandkit.ai",
                     text: $viewModel.email,
@@ -28,7 +28,7 @@ struct SignInView: View {
                     keyboardType: .emailAddress
                 )
 
-                AuthField(
+                FormTextField(
                     label: "Password",
                     placeholder: "Enter your password",
                     text: $viewModel.password,
@@ -46,7 +46,7 @@ struct SignInView: View {
             LinkButton(title: "Forgot password?") {}
                 .padding(.top, 16)
 
-            AuthFooter(question: "No account?", actionTitle: "Register") {
+            ScreenFooter(question: "No account?", actionTitle: "Register") {
                 viewModel.openRegister()
             }
             .padding(.top, 32)

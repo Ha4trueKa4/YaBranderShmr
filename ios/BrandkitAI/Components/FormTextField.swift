@@ -1,11 +1,11 @@
 //
-//  AuthField.swift
+//  FormTextField.swift
 //  BrandkitAI
 //
 
 import SwiftUI
 
-struct AuthField: View {
+struct FormTextField: View {
     let label: String
     let placeholder: String
     @Binding var text: String
@@ -85,8 +85,8 @@ struct AuthField: View {
     @Previewable @State var password = "supersecret"
 
     VStack(spacing: 16) {
-        AuthField(label: "Email", placeholder: "hello@brandkit.ai", text: $email)
-        AuthField(
+        FormTextField(label: "Email", placeholder: "hello@brandkit.ai", text: $email)
+        FormTextField(
             label: "Password",
             placeholder: "Enter your password",
             text: $password,
