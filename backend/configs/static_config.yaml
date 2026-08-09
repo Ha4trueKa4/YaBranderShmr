@@ -91,33 +91,49 @@ components_manager:
       path: /api/v1/projects
       method: POST
       task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
 
     handler-projects-get:
       path: /api/v1/projects/{id}
       method: GET
       task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
 
     handler-projects-patch:
       path: /api/v1/projects/{id}
       method: PATCH
       task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
 
     handler-projects-delete:
       path: /api/v1/projects/{id}
       method: DELETE
       task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
 
     handler-projects-generate:
       path: /api/v1/projects/{id}/generate
       method: POST
       task_processor: main-task-processor
-        
+      auth:
+        types:
+          - jwt
+  
     handler-auth-register:
-      path: /auth/register
-      method: POST
-      task_processor: main-task-processor
+        path: /auth/register
+        method: POST
+        task_processor: main-task-processor
 
     handler-auth-login:
-      path: /auth/login
-      method: POST
-      task_processor: main-task-processor
+        path: /auth/login
+        method: POST
+        task_processor: main-task-processor
+
