@@ -9,27 +9,21 @@ struct FormScreenLayout<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                    .frame(height: 72)
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                        .frame(height: 72)
+                content
 
-                    content
-
-                    Spacer(minLength: 40)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 24)
+                Spacer(minLength: 40)
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollDismissesKeyboard(.interactively)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
         }
-        .preferredColorScheme(.dark)
-
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.interactively)
+        .brandBackground()
         .onTapGesture {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),

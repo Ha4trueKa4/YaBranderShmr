@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProjectCreateView: View {
     var onBack: (() -> Void)?
+    var onGenerate: () -> Void = {}
 
     @State private var viewModel = ProjectCreateViewModel()
 
@@ -30,7 +31,8 @@ struct ProjectCreateView: View {
                     isEnabled: viewModel.canSubmit,
                     fill: AnyShapeStyle(.brand)
                 ) {
-                    viewModel.generate()
+                    guard viewModel.canSubmit else { return }
+                    onGenerate()
                 }
                 .padding(.top, 8)
             }
@@ -39,18 +41,13 @@ struct ProjectCreateView: View {
             .padding(.bottom, 40)
         }
         .scrollDismissesKeyboard(.interactively)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .brandBackground()
         .navigationTitle(viewModel.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let onBack {
                 backItem(action: onBack)
             }
-        }
-        .preferredColorScheme(.dark)
-        .navigationDestination(isPresented: $viewModel.isGenerating) {
-            ProjectGeneratingView()
         }
     }
 
