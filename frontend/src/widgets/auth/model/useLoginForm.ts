@@ -11,7 +11,7 @@ interface UseLoginFormOptions {
 export function useLoginForm({ onSubmit }: UseLoginFormOptions = {}) {
   const form = useForm<LoginFormValues>({
     defaultValues: { email: '', password: '' },
-    mode: 'onBlur',
+    mode: 'onSubmit',
     resolver: zodResolver(loginFormSchema),
   })
   const [isPasswordVisible, setPasswordVisible] = useState(false)

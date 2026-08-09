@@ -6,6 +6,7 @@ export interface FormFieldProps {
   error?: string
   label: string
   required?: boolean
+  reserveErrorSpace?: boolean
 }
 
 export function FormField({
@@ -13,9 +14,14 @@ export function FormField({
   error,
   label,
   required = false,
+  reserveErrorSpace = false,
 }: FormFieldProps) {
   return (
-    <div className={styles.field}>
+    <div
+      className={[styles.field, reserveErrorSpace && styles.reserveErrorSpace]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <span className={styles.label}>
         {label}
         {required && <span className={styles.required}> *</span>}
