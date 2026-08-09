@@ -8,6 +8,7 @@
 
 #include "../models/project.hpp"
 #include "dependencies_stubs.h"
+#include "LLMClientComponent.hpp"
 
 namespace ya_brander::components {
 
@@ -22,11 +23,11 @@ public:
 
   std::optional<models::Project> GetProject(const std::string& id);
 
-  void UpdateProject(const std::string& id, std::optional<bool> is_public, std::optional<userver::formats::json::Value> data);
+  void UpdateProject(const std::string& id, std::optional<bool> is_public, std::string data);
 
   void DeleteProject(const std::string& id);
 
-  userver::formats::json::Value GenerateAI(const std::string& project_id, const std::string& prompt);
+  std::string GenerateAI(const std::string& project_id, const std::string& prompt);
 
 private:
   userver::storages::postgres::ClusterPtr pg_cluster_;
