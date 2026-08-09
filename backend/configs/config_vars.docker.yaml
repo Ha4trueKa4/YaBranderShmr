@@ -4,6 +4,6 @@ logger-level: debug
 
 is-testing: false
 
-server-port: 6767
+server-port: 8080
 
 dbconnection: 'postgresql://user:password@service-postgres:5432/ya_brander_db_1'
