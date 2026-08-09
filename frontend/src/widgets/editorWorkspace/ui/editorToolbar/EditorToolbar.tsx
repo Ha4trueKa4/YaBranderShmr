@@ -2,6 +2,7 @@ import { CanvasControls } from './components/CanvasControls'
 import { ProjectActions } from './components/ProjectActions'
 import { ProjectTitle } from './components/ProjectTitle'
 import styles from './EditorToolbar.module.css'
+import {useToast} from "@shared";
 
 export interface EditorToolbarProps {
   onEditProjectName: (projectName: string) => void
@@ -30,6 +31,10 @@ export function EditorToolbar({
   onZoomOut,
   projectName,
 }: EditorToolbarProps) {
+    const toast = useToast();
+    toast.error("error")
+    toast.info("info")
+    toast.error("error")
   return (
     <header className={styles.toolbar}>
       <ProjectTitle onSubmit={onEditProjectName} title={projectName} />
