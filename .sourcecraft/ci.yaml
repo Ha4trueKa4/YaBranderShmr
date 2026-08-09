@@ -1,0 +1,19 @@
+on:
+  pull_request:
+    - workflows: build-android
+      filter:
+        target_branches: ["main", "dev"]
+
+workflows:
+  build-android:
+    tasks:
+      - name: build-android-task
+        cubes:
+          - name: assemble-debug
+            image: eclipse-temurin:25-jdk
+            script:
+              - cd android
+              - ./gradlew assembleDebug
+            artifacts:
+              paths:
+                - android/app/build/outputs/apk
