@@ -35,14 +35,14 @@ components_manager:
     testsuite-support: { }
 
     http-client:
-      load-enabled: $is-testing
+#      load-enabled: $is-testing
 
     http-client-core:
-      load-enabled: $is-testing
+#      load-enabled: $is-testing
       fs-task-processor: fs-task-processor
 
     http-client-middleware-pipeline:
-      load-enabled: $is-testing
+#      load-enabled: $is-testing
 
     tests-control:
       load-enabled: $is-testing
@@ -62,6 +62,14 @@ components_manager:
       method: GET
       task_processor: main-task-processor
 
+    handler-test-llm:
+      path: /test/llm
+      method: POST
+      task_processor: main-task-processor
+      throttling_enabled: false
+
+    llm-client: { }
+
     postgres-db-1:
       dbconnection: $dbconnection
       blocking_task_processor: fs-task-processor
@@ -76,7 +84,6 @@ components_manager:
     # Моки (Заглушки внешних сервисов)
     # ==========================================
     version-storage: { }
-    llm-client: { }
     prompt-constructor: { }
 
     # ==========================================

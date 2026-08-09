@@ -27,10 +27,10 @@ std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http:
 
   auto body = userver::formats::json::FromString(request.RequestBody());
   std::optional<bool> is_public;
-  std::optional<userver::formats::json::Value> data;
+  std::string data;
 
   if (body.HasMember("is_public")) is_public = body["is_public"].As<bool>();
-  if (body.HasMember("data")) data = body["data"];
+  if (body.HasMember("data")) data = body["data"].As<std::string>();
 
   project_manager_.UpdateProject(id, is_public, data);
 

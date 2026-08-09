@@ -22,16 +22,16 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
     
     auto row = res[0];
     
-    userver::formats::json::ValueBuilder default_data;
-    default_data["width"] = 1024;
-    default_data["height"] = 1024;
-    default_data["background"] = "#FFFFFF";
-    default_data["layers"] = userver::formats::json::MakeArray();
+  std::string default_data = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <g>
+  </g>
+</svg>)SVG";
+
 
     std::string project_id = row["id"].As<std::string>();
-    version_storage_.SaveVersion(project_id, default_data.ExtractValue()); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    version_storage_.SaveVersion(project_id, default_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
 
-    return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), default_data.ExtractValue()};
+    return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), default_data};
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
@@ -57,7 +57,7 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
     };
 }
 
-void ProjectManagerComponent::UpdateProject(const std::string& id, std::optional<bool> is_public, std::optional<userver::formats::json::Value> data) {
+void ProjectManagerComponent::UpdateProject(const std::string& id, std::optional<bool> is_public, std::string data) {
     if (is_public.has_value()) {
         pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
@@ -65,8 +65,8 @@ void ProjectManagerComponent::UpdateProject(const std::string& id, std::optional
             !is_public.value(), id
         );
     }
-    if (data.has_value()) {
-        version_storage_.SaveVersion(id, data.value());  // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    if (!data.empty()) {
+        version_storage_.SaveVersion(id, data);  // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
         pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
             "UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid", id
@@ -81,10 +81,10 @@ void ProjectManagerComponent::DeleteProject(const std::string& id) {
     );
 }
 
-userver::formats::json::Value ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
+std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
     auto current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
     std::string full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt); // ЗАГЛУШКА
-    auto new_data = llm_client_.SendPrompt(full_prompt); // ЗАГЛУШКА
+    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1); // ЗАГЛУШКА
     version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
     return new_data;
 }

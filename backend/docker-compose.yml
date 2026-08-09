@@ -26,6 +26,8 @@ services:
       - PREFIX=${PREFIX:-~/.local}
       - CCACHE_DIR=/ya_brander/.ccache
       - CORES_DIR=/cores
+      - USERVER_ENABLE_STACK_USAGE_MONITOR=0
+      - YANDEX_AI_API_KEY=${YANDEX_AI_API_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     volumes:
       - .:/ya_brander:rw
@@ -39,10 +41,12 @@ services:
       - postgres
     networks:
       - postgres
+      - default
 
 networks:
-  postgres:
-    driver: bridge
-
+    postgres:
+        driver: bridge
+    default:
+      driver: bridge
 volumes:
   pgdata:
