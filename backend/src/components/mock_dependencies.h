@@ -49,8 +49,8 @@ public:
                                    const userver::components::ComponentContext& context)
         : PromptConstructorComponent(config, context) {}
 
-    std::string BuildEditPrompt(const std::string& current_state, const std::string& user_message) override {
-        return "MOCK_PROMPT: " + user_message;
+  std::string BuildEditPrompt(const std::string& current_state, const std::string& user_message) override {
+      return user_message + "Технические требования: * Верни только чистый SVG-код в блоке разметки xml. Не пиши никаких вступлений, пояснений и заключений. * Укажи атрибуты xmlns=http://w3.org, а также viewBox=0 0 500 500 (или другой нужный размер). * Используй современные, гармоничные цвета. * Код должен быть аккуратным, сгруппированным с помощью тегов g и готовым к сохранению в svg файл.";
     }
 };
 
