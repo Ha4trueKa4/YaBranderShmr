@@ -70,3 +70,13 @@ components_manager:
 
         dns-client:
             fs-task-processor: fs-task-processor
+        
+        handler-auth-register:
+            path: /auth/register
+            method: POST
+            task_processor: main-task-processor
+
+        handler-auth-login:
+            path: /auth/login
+            method: POST
+            task_processor: main-task-processor

@@ -8,10 +8,14 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/utils/daemon_run.hpp>
+#include "./components/auth_checker.hpp"
+#include "./handlers/auth/register_handler.hpp"
+#include "./handlers/auth/login_handler.hpp"
 
 #include "handlers/check/check.hpp"
 
 int main(int argc, char* argv[]) {
+    userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brender::auth::CheckerFactory>();
     auto component_list =
         userver::components::MinimalServerComponentList()
             .Append<userver::server::handlers::Ping>()
@@ -20,6 +24,8 @@ int main(int argc, char* argv[]) {
             .Append<userver::components::HttpClientCore>()
             .Append<userver::clients::http::MiddlewarePipelineComponent>()
             .Append<userver::server::handlers::TestsControl>()
+            .Append<ya_brender::auth::LoginHandler>()
+            .Append<ya_brender::auth::RegisterHandler>()
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>();

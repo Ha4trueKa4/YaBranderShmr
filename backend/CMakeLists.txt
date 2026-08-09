@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
 project(ya_brander CXX)
 
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
+include(FetchContent)
+FetchContent_Declare(
+    jwt-cpp
+    GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
+    GIT_TAG v0.7.0
+)
+set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
 find_package(userver COMPONENTS core postgresql QUIET)
@@ -28,9 +38,19 @@ userver_setup_environment()
 add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/check/check.hpp
         src/handlers/check/check.cpp
+        src/handlers/auth/register_handler.cpp
+        src/handlers/auth/register_handler.hpp
+        src/handlers/auth/jwt_service.cpp
+        src/handlers/auth/jwt_service.hpp
+        src/handlers/auth/login_handler.hpp
+        src/handlers/auth/login_handler.cpp
+        src/handlers/auth/password_hasher.hpp
+        src/handlers/auth/password_hasher.cpp
+        src/components/auth_checker.hpp
+        src/components/auth_checker.cpp
 )
 
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql jwt-cpp)
 target_include_directories(${PROJECT_NAME}_objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # The Service
