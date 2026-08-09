@@ -11,6 +11,7 @@ struct ChatView: View {
     let title: String
 
     @State private var viewModel = ChatViewModel()
+    @State private var messageText = ""
 
     private var backButton: some View {
         Button {
@@ -52,6 +53,9 @@ struct ChatView: View {
         .task {
             viewModel.load()
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            inputBar
+        }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
@@ -75,6 +79,36 @@ struct ChatView: View {
             }
     }
 
+    private var inputBar: some View {
+        HStack(spacing: 12) {
+            TextField("Ask brand assistant...", text: $messageText, axis: .vertical)
+                .font(.subheadline)
+                .lineLimit(1...4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color(.secondarySystemBackground), in: Capsule())
+
+            Button {
+                messageText = ""
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(.tint, in: Circle())
+            }
+            .accessibilityLabel("Send message")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.background)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(.separator)
+                .frame(height: 1)
+        }
+    }
+
 }
 
 #Preview {
@@ -83,6 +117,7 @@ struct ChatView: View {
         .navigationDestination(isPresented: .constant(true)) {
             ChatView(title: "Test chat")
                 .background(Color.background)
+                .preferredColorScheme(.dark)
         }
     }
 }
