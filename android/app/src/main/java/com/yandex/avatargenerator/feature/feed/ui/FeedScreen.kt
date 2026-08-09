@@ -26,8 +26,9 @@ import com.yandex.avatargenerator.feature.feed.ui.components.FeedError
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedSkeletonGrid
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTabRow
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTopBar
-import com.yandex.avatargenerator.feature.feed.ui.components.ProjectCard
+import com.yandex.avatargenerator.ui.components.ProjectCard
 import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
+import com.yandex.avatargenerator.ui.components.masonryAspectRatio
 import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
@@ -135,7 +136,11 @@ private fun FeedGrid(
         ) { index ->
             val project = projects[index] ?: return@items
             ProjectCard(
-                project = project,
+                title = project.title,
+                authorName = project.author.displayName,
+                previewUrl = project.previewUrl,
+                authorAvatarUrl = project.author.avatarUrl,
+                aspectRatio = masonryAspectRatio(project.id),
                 onClick = { onProjectClick(project.id) },
                 onAuthorClick = { onAuthorClick(project.author.id) },
             )

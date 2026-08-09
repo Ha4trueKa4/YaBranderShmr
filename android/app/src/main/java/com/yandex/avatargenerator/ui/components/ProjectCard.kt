@@ -1,4 +1,4 @@
-package com.yandex.avatargenerator.feature.feed.ui.components
+package com.yandex.avatargenerator.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,8 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
-import com.yandex.avatargenerator.ui.components.BrandAvatar
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -30,24 +27,31 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
 import kotlin.math.abs
 
 /**
- * Карточка проекта в masonry-ленте: превью (переменная высота) + название + автор.
- * Клик по карточке — [onClick], клик по строке автора — [onAuthorClick].
+ * Карточка проекта для masonry-сеток (лента, профиль): превью переменной высоты +
+ * название + кликабельная строка автора (аватар + имя).
  *
- * Оформлена по дизайн-системе (оболочка как у [com.yandex.avatargenerator.ui.components.BrandCard]),
- * но с переменной высотой превью для masonry-эффекта — поэтому не переиспользует BrandCard напрямую.
+ * Домен-агностична — принимает примитивы, каждый экран мапит свою модель. Оболочка
+ * оформлена как у [BrandCard], но с переменной высотой превью и интерактивной строкой
+ * автора (отдельный [onAuthorClick]), которых у BrandCard нет.
+ *
+ * @param previewUrl превью проекта; null — плашка-заглушка [AppColors.SurfaceVariant].
+ * @param authorAvatarUrl аватар автора; null — инициалы по [authorName] через [BrandAvatar].
+ * @param aspectRatio пропорции превью (ширина:высота). Для masonry высоту варьируют
+ *   через [masonryAspectRatio], пока бэкенд не отдаёт реальные размеры превью.
+ * @param onClick клик по карточке (открыть проект).
+ * @param onAuthorClick клик по строке автора (открыть профиль автора).
  */
 @Composable
 fun ProjectCard(
-    project: FeedProject,
+    title: String,
+    authorName: String,
     onClick: () -> Unit,
     onAuthorClick: () -> Unit,
     modifier: Modifier = Modifier,
+    previewUrl: String? = null,
+    authorAvatarUrl: String? = null,
+    aspectRatio: Float = 1.3f,
 ) {
-    // Переменная высота превью создаёт masonry-эффект. Детерминирована по id.
-    // TODO: заменить на реальные размеры превью, когда бэкенд начнёт их отдавать.
-    val aspectRatio = remember(project.id) {
-        1.0f + (abs(project.id.hashCode()) % 90) / 100f
-    }
     val shape = RoundedCornerShape(AppShape.l)
 
     Column(
@@ -59,8 +63,8 @@ fun ProjectCard(
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
-            model = project.previewUrl,
-            contentDescription = project.title,
+            model = previewUrl,
+            contentDescription = title,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
@@ -75,7 +79,7 @@ fun ProjectCard(
             verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
         ) {
             Text(
-                text = project.title,
+                text = title,
                 style = AppTypography.body.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -91,11 +95,11 @@ fun ProjectCard(
             ) {
                 BrandAvatar(
                     size = 24.dp,
-                    imageUrl = project.author.avatarUrl,
-                    initials = authorInitials(project.author.displayName),
+                    imageUrl = authorAvatarUrl,
+                    initials = authorInitials(authorName),
                 )
                 Text(
-                    text = project.author.displayName,
+                    text = authorName,
                     style = AppTypography.caption.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -104,6 +108,12 @@ fun ProjectCard(
         }
     }
 }
+
+/**
+ * Плейсхолдерные пропорции превью для masonry-эффекта, пока бэкенд не отдаёт реальные
+ * размеры. Детерминировано по [seed] (обычно id проекта), диапазон ~1.0..1.9.
+ */
+fun masonryAspectRatio(seed: String): Float = 1.0f + (abs(seed.hashCode()) % 90) / 100f
 
 /**
  * Инициалы автора для плейсхолдера аватара (когда нет avatarUrl): первые буквы
