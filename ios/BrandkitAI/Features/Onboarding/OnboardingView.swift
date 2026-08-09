@@ -11,6 +11,7 @@ struct OnboardingView: View {
     var onFinish: () -> Void = {}
 
     @State private var page: Page = .logo
+    @State private var logoScrollFraction: CGFloat = 1.0
 
     private enum Page: Hashable {
         case logo
@@ -20,7 +21,17 @@ struct OnboardingView: View {
 
     var body: some View {
         TabView(selection: $page) {
-            logoPage.tag(Page.logo)
+            logoPage
+                .tag(Page.logo)
+                .overlay {
+                    GeometryReader { proxy in
+                        let fraction = max(0, min(1, 1 + proxy.frame(in: .global).minX / proxy.size.width))
+                        Color.clear
+                            .onChange(of: fraction) { _, newValue in
+                                logoScrollFraction = newValue
+                            }
+                    }
+                }
             howItWorksPage.tag(Page.howItWorks)
             getStartedPage.tag(Page.getStarted)
         }
@@ -31,8 +42,8 @@ struct OnboardingView: View {
                 Color(.background)
                 RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: 0.35), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
                     .ignoresSafeArea(.all)
-                .opacity(page == .logo ? 1 : 0)
-                .animation(.easeInOut(duration: 0.25), value: page)
+                .opacity(logoScrollFraction)
+                .blur(radius: (1 - logoScrollFraction) * 24)
             }
             .ignoresSafeArea(.all)
         }
