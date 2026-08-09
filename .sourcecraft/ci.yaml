@@ -1,4 +1,5 @@
-# CI/CD-сборка Android запускается только для pull request в ветку dev.
+# CI/CD-сборка Android запускается только для pull request в ветку dev
+# и только если в PR изменялись файлы Android-проекта (директория android/**).
 # Сборка для main отключена до наполнения репозитория Android-проектом.
 
 on:
@@ -6,6 +7,7 @@ on:
     - workflows: build-android
       filter:
         target_branches: ["dev"]
+        paths: ["android/**"]
 
 workflows:
   build-android:
@@ -14,8 +16,18 @@ workflows:
         cubes:
           - name: assemble-debug
             image: eclipse-temurin:25-jdk
+            env:
+              ANDROID_HOME: /opt/android-sdk
             script:
+              - apt-get update && apt-get install -y --no-install-recommends wget unzip
+              - mkdir -p "$ANDROID_HOME/cmdline-tools"
+              - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
+              - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
+              - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+              - yes | sdkmanager --licenses > /dev/null
+              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
               - cd android
+              - echo "sdk.dir=$ANDROID_HOME" > local.properties
               - ./gradlew assembleDebug
             artifacts:
               paths:
@@ -25,6 +37,16 @@ workflows:
         cubes:
           - name: android-lint
             image: eclipse-temurin:25-jdk
+            env:
+              ANDROID_HOME: /opt/android-sdk
             script:
+              - apt-get update && apt-get install -y --no-install-recommends wget unzip
+              - mkdir -p "$ANDROID_HOME/cmdline-tools"
+              - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
+              - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
+              - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+              - yes | sdkmanager --licenses > /dev/null
+              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
               - cd android
+              - echo "sdk.dir=$ANDROID_HOME" > local.properties
               - ./gradlew lint
