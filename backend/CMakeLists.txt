@@ -28,13 +28,15 @@ userver_setup_environment()
 add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/check/check.hpp
         src/handlers/check/check.cpp
+        src/components/version_storage/version_storage_component_impl.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 target_include_directories(${PROJECT_NAME}_objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # The Service
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp
+        src/components/version_storage/version_storage_component.hpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_objs)
 
 # Functional Tests

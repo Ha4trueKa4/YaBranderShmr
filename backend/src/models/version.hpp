@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <userver/storages/postgres/io/chrono.hpp>
 
 namespace ya_brander::models {
 
@@ -9,7 +10,7 @@ namespace ya_brander::models {
         std::string id;
         std::string project_id;
         std::int32_t version_num;
-        std::string created_at;
+        userver::storages::postgres::TimePointTz created_at;
         std::string s3_file_key;
     };
 
