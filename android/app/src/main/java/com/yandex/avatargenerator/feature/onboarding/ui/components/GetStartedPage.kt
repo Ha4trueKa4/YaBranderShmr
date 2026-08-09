@@ -2,11 +2,9 @@ package com.yandex.avatargenerator.feature.onboarding.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,15 +28,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
+import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
+import com.yandex.avatargenerator.ui.components.BrandTextLink
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
@@ -145,51 +138,19 @@ private fun CtaGroup(
             textAlign = TextAlign.Center,
             modifier = Modifier.semantics { heading() },
         )
-        Button(
+        BrandPrimaryButton(
+            text = stringResource(R.string.onboarding_cta_button),
             onClick = onGetStartedClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(OnboardingDefaults.CtaButtonHeight),
-            shape = RoundedCornerShape(OnboardingDefaults.CtaButtonRadius),
-            colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent),
-            contentPadding = PaddingValues(0.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.onboarding_cta_button),
-                style = OnboardingDefaults.CtaButtonLabelStyle,
-            )
-        }
-        SignInPrompt(onSignInClick = onSignInClick)
+            fullWidth = true,
+        )
+        // «Already have an account? Sign in» — кликается только целиком:
+        // отдельная кликабельная область на части текста хуже для доступности.
+        BrandTextLink(
+            text = stringResource(R.string.onboarding_sign_in_prompt),
+            actionText = stringResource(R.string.onboarding_sign_in_action),
+            onClick = onSignInClick,
+        )
     }
-}
-
-/**
- * «Already have an account? Sign in» — одна строка, кликается только целиком:
- * отдельная кликабельная область на части текста заметно хуже для доступности.
- */
-@Composable
-private fun SignInPrompt(
-    onSignInClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val prompt = stringResource(R.string.onboarding_sign_in_prompt)
-    val action = stringResource(R.string.onboarding_sign_in_action)
-    val text: AnnotatedString = buildAnnotatedString {
-        withStyle(SpanStyle(color = OnboardingDefaults.SignInPromptStyle.color)) { append(prompt) }
-        append(" ")
-        withStyle(
-            SpanStyle(
-                color = OnboardingDefaults.SignInActionStyle.color,
-                fontWeight = OnboardingDefaults.SignInActionStyle.fontWeight,
-            ),
-        ) { append(action) }
-    }
-    Text(
-        text = text,
-        style = OnboardingDefaults.SignInPromptStyle,
-        textAlign = TextAlign.Center,
-        modifier = modifier.clickable(onClick = onSignInClick),
-    )
 }
 
 @Preview(device = "id:pixel_5", showSystemUi = true)

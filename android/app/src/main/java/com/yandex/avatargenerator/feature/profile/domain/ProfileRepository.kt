@@ -7,7 +7,7 @@ import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
  * Источник данных профиля пользователя.
  *
  * Проекты профиля отдаём тем же типом [FeedProject], что и лента, — карточка
- * ([com.yandex.avatargenerator.feature.feed.ui.components.ProjectCard]) и сетка
+ * ([com.yandex.avatargenerator.ui.components.ProjectCard]) и сетка
  * переиспользуются как есть.
  */
 interface ProfileRepository {

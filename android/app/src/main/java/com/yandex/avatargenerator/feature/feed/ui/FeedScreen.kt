@@ -1,13 +1,16 @@
 package com.yandex.avatargenerator.feature.feed.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -21,11 +24,11 @@ import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedAppendError
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedAppendLoading
-import com.yandex.avatargenerator.feature.feed.ui.components.FeedEmptyState
-import com.yandex.avatargenerator.feature.feed.ui.components.FeedError
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedSkeletonGrid
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTabRow
 import com.yandex.avatargenerator.feature.feed.ui.components.FeedTopBar
+import com.yandex.avatargenerator.ui.components.BrandEmptyState
+import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.ProjectCard
 import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.components.masonryAspectRatio
@@ -82,7 +85,14 @@ private fun FeedContent(
 ) {
     when (projects.loadState.refresh) {
         is LoadState.Loading -> FeedSkeletonGrid(modifier)
-        is LoadState.Error -> FeedError(onRetry = projects::retry, modifier = modifier)
+        is LoadState.Error -> CenteredState(modifier) {
+            BrandErrorState(
+                title = stringResource(R.string.feed_error_title),
+                retryLabel = stringResource(R.string.feed_error_retry),
+                onRetry = projects::retry,
+            )
+        }
+
         is LoadState.NotLoading -> {
             if (projects.itemCount == 0) {
                 FeedEmpty(selectedTab = selectedTab, onExplore = onExplore, modifier = modifier)
@@ -100,24 +110,35 @@ private fun FeedEmpty(
     onExplore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    when (selectedTab) {
-        FeedTab.SUBSCRIPTIONS -> FeedEmptyState(
-            iconRes = R.drawable.ic_user_plus,
-            title = "No subscriptions yet",
-            subtitle = "Follow creators to see their work here",
-            actionLabel = "Explore all projects",
-            onAction = onExplore,
-            modifier = modifier,
-        )
+    CenteredState(modifier) {
+        when (selectedTab) {
+            FeedTab.SUBSCRIPTIONS -> BrandEmptyState(
+                title = stringResource(R.string.feed_empty_subscriptions_title),
+                subtitle = stringResource(R.string.feed_empty_subscriptions_subtitle),
+                iconRes = R.drawable.ic_user_plus,
+                actionLabel = stringResource(R.string.feed_empty_subscriptions_action),
+                onAction = onExplore,
+            )
 
-        FeedTab.ALL -> FeedEmptyState(
-            iconRes = null,
-            title = "No projects yet",
-            subtitle = "Published projects will appear here",
-            actionLabel = null,
-            onAction = {},
-            modifier = modifier,
-        )
+            FeedTab.ALL -> BrandEmptyState(
+                title = stringResource(R.string.feed_empty_projects_title),
+                subtitle = stringResource(R.string.feed_empty_projects_subtitle),
+            )
+        }
+    }
+}
+
+/** Центрирует состояние экрана (пустое/ошибка) на всей свободной площади ленты. */
+@Composable
+private fun CenteredState(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 

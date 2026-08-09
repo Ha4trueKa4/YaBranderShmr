@@ -18,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -90,7 +92,7 @@ fun BrandVersionRow(
 @Composable
 private fun RestoreButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Text(
-        text = "Restore",
+        text = stringResource(R.string.brand_version_restore),
         style = AppTypography.label.copy(color = AppColors.TextPrimary),
         modifier = modifier
             .clip(RoundedCornerShape(AppShape.s))
