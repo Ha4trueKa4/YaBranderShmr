@@ -28,7 +28,6 @@ userver_setup_environment()
 add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/check/check.hpp
         src/handlers/check/check.cpp
-
         src/components/project_manager_component.cpp
 
         src/handlers/projects/append_projects.cpp

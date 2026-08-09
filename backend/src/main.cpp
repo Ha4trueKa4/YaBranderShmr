@@ -10,6 +10,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include "handlers/check/check.hpp"
+#include "handlers/projects/append_projects.h"
 
 int main(int argc, char* argv[]) {
     auto component_list =
