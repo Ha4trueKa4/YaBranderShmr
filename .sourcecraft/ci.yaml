@@ -11,8 +11,18 @@ on:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [dev]
+    - workflows: [deploy-backend]
+      filter:
+        branches: ["main", "dev"]
 
 workflows:
+  deploy-backend:
+    tasks:
+      - name: build-and-deploy
+        cubes:
+          - name: run-backend-ci
+            gitlab_workflow: .sourcecraft/backend-ci.yaml
+
   deploy-frontend-dev:
     tasks:
       - name: check-build-and-deploy
