@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
 import type { PostProjectsData } from '@shared/api/types'
+import { useMutation } from '@tanstack/react-query'
 
 import { createProject } from './createProject'
 

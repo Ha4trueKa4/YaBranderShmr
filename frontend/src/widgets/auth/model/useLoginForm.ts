@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { loginFormSchema } from './schemas'
 import type { LoginFormValues, LoginSubmitHandler } from './types'
@@ -11,7 +11,7 @@ interface UseLoginFormOptions {
 export function useLoginForm({ onSubmit }: UseLoginFormOptions = {}) {
   const form = useForm<LoginFormValues>({
     defaultValues: { email: '', password: '' },
-    mode: 'onBlur',
+    mode: 'onSubmit',
     resolver: zodResolver(loginFormSchema),
   })
   const [isPasswordVisible, setPasswordVisible] = useState(false)

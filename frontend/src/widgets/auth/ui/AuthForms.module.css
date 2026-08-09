@@ -1,49 +1,90 @@
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  display: grid;
-  gap: var(--space-6);
-  padding: 1.5rem;
-  width: min(100%, 22rem);
+.formSection {
+  --color-border: transparent;
+  --color-focus: var(--color-accent-primary);
+  --color-surface-elevated: var(--color-auth-field);
+  --color-text-muted: var(--color-auth-muted);
+  --color-text-primary: var(--color-auth-text);
+  --color-text-secondary: var(--color-auth-text);
+  --control-height: 3.75rem;
+  --radius-sm: var(--radius-md);
+
+  color: var(--color-auth-text);
 }
-.brand {
-  height: 3.5rem;
-  justify-self: center;
-  width: 3.5rem;
+
+.header {
+  margin-bottom: 4rem;
 }
+
 .title {
-  color: var(--color-text-primary);
-  font-size: 1.5rem;
-  margin: 0 auto;
+  font-size: 2.5rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  margin: 0;
 }
+
+.subtitle {
+  color: var(--color-auth-muted);
+  font-size: 1.25rem;
+  margin: 0.25rem 0 0;
+}
+
 .form {
   display: grid;
   gap: var(--space-4);
 }
+
 .formFields {
   display: grid;
-  gap: var(--space-3);
+  gap: 0.5rem;
 }
+
+.inputControl {
+  min-height: var(--control-height);
+}
+
 .footer,
+.legalNotice,
 .success {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-label);
+  color: var(--color-auth-muted);
   margin: 0;
-  text-align: center;
 }
+
+.footer {
+  font-size: 1.125rem;
+  margin-top: 2.25rem;
+}
+
+.legalNotice {
+  font-size: var(--font-size-label);
+  margin-top: 3.25rem;
+}
+
 .link {
   background: transparent;
   border: 0;
   color: var(--color-accent-primary);
   cursor: pointer;
   font: inherit;
+  font-weight: var(--font-weight-semibold);
   padding: 0;
 }
+
 .link:hover {
   text-decoration: underline;
 }
+
 .success {
   color: var(--color-success);
+  font-size: var(--font-size-label);
+}
+
+@media (max-width: 34rem) {
+  .header {
+    margin-bottom: 2.5rem;
+  }
+
+  .title {
+    font-size: 2.125rem;
+  }
 }

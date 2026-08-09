@@ -1,0 +1,24 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 100%;
+  padding: 0 var(--space-4);
+  color: #18181b;
+}
+
+.brand {
+  color: var(--color-accent-primary);
+}
+
+.projectName {
+  padding-left: var(--space-4);
+  border-left: 1px solid #e4e4e7;
+  font-weight: var(--font-weight-semibold);
+}
+
+.actions {
+  margin-left: auto;
+  color: #71717a;
+  font-size: var(--font-size-caption);
+}

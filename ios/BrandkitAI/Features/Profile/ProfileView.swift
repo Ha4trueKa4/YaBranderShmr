@@ -4,14 +4,13 @@ struct ProfileView: View {
     @Environment(SessionStore.self) private var session
 
     var isCurrentUser: Bool = true
+    var onOpenProject: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Profile")
 
-            NavigationLink("Open project") {
-                ProjectEditorView()
-            }
+            Button("Open project", action: onOpenProject)
 
             if isCurrentUser {
                 Button("Sign out", role: .destructive) {

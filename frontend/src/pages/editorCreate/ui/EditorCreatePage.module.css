@@ -1,0 +1,12 @@
+.page {
+  min-height: 100vh;
+  background: #f9fafb;
+  color: #18181b;
+  --color-bg: #f9fafb;
+  --color-surface: #fff;
+  --color-surface-elevated: #fafafa;
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+  --color-border: #e4e4e7;
+}

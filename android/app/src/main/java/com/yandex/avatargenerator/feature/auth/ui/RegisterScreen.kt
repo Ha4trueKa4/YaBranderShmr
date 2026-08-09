@@ -1,24 +1,13 @@
 package com.yandex.avatargenerator.feature.auth.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.HighlightOff
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,21 +16,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.yandex.avatargenerator.R
+import com.yandex.avatargenerator.feature.auth.ui.components.AuthBrandMark
+import com.yandex.avatargenerator.feature.auth.ui.components.AuthPasswordVisibilityToggle
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTextField
+import com.yandex.avatargenerator.ui.components.BrandTextLink
 import com.yandex.avatargenerator.ui.theme.AppColors
-import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
@@ -73,10 +60,10 @@ fun RegisterScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            RegisterBrandMark()
+            AuthBrandMark()
 
             Text(
-                text = "Create account",
+                text = stringResource(R.string.auth_create_account),
                 style = AppTypography.heading2,
                 modifier = Modifier.padding(top = AppSpacing.l)
             )
@@ -88,109 +75,54 @@ fun RegisterScreen(
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.m)
             ) {
                 BrandTextField(
-                    label = "Full name",
+                    label = stringResource(R.string.auth_field_full_name),
                     value = fullName,
                     onValueChange = { fullName = it },
-                    placeholder = "John Doe",
+                    placeholder = stringResource(R.string.auth_placeholder_full_name),
                     height = 48.dp
                 )
                 BrandTextField(
-                    label = "Email",
+                    label = stringResource(R.string.auth_field_email),
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = "hello@brandkit.ai",
+                    placeholder = stringResource(R.string.auth_placeholder_email),
                     height = 48.dp,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                 )
                 BrandTextField(
-                    label = "Password",
+                    label = stringResource(R.string.auth_field_password),
                     value = password,
                     onValueChange = { password = it },
-                    placeholder = "Enter your password",
+                    placeholder = stringResource(R.string.auth_placeholder_password),
                     height = 48.dp,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        RegisterPasswordVisibilityToggle(visible = passwordVisible, onToggle = { passwordVisible = !passwordVisible })
+                        AuthPasswordVisibilityToggle(
+                            visible = passwordVisible,
+                            onToggle = { passwordVisible = !passwordVisible }
+                        )
                     }
                 )
             }
 
             BrandPrimaryButton(
-                text = "Create account",
+                text = stringResource(R.string.auth_create_account),
                 onClick = onCreateAccountClick,
                 fullWidth = true,
                 modifier = Modifier.padding(top = AppSpacing.l)
             )
 
-            RegisterFooterSwitch(
-                plainText = "Already have an account?",
-                actionText = "Sign in",
-                onActionClick = onNavigateToLogin,
-                modifier = Modifier.padding(top = AppSpacing.l)
+            BrandTextLink(
+                text = stringResource(R.string.auth_have_account),
+                actionText = stringResource(R.string.auth_sign_in),
+                onClick = onNavigateToLogin,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = AppSpacing.l)
             )
         }
     }
-}
-
-/** Небольшой квадратный значок бренда над заголовком формы (см. "small-logo" в макете Figma). */
-@Composable
-private fun RegisterBrandMark(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .size(40.dp)
-            .background(AppColors.Surface, RoundedCornerShape(AppShape.s))
-            .border(1.dp, AppColors.Border, RoundedCornerShape(AppShape.s)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.HighlightOff,
-            contentDescription = null,
-            tint = AppColors.Accent,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}
-
-/** Переключатель видимости пароля — иконка "eye" из макета. */
-@Composable
-private fun RegisterPasswordVisibilityToggle(visible: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
-    IconButton(onClick = onToggle, modifier = modifier.size(20.dp)) {
-        Icon(
-            imageVector = if (visible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-            contentDescription = null,
-            tint = AppColors.TextMuted
-        )
-    }
-}
-
-/** Нижняя строка-переключатель на экран входа, с акцентным кликабельным словом. */
-@Composable
-private fun RegisterFooterSwitch(
-    plainText: String,
-    actionText: String,
-    onActionClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val annotated = buildAnnotatedString {
-        append("$plainText ")
-        withStyle(SpanStyle(color = AppColors.Accent, fontWeight = FontWeight.SemiBold)) {
-            append(actionText)
-        }
-    }
-    Text(
-        text = annotated,
-        color = AppColors.TextSecondary,
-        fontSize = 14.sp,
-        textAlign = TextAlign.Center,
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onActionClick
-            )
-    )
 }
 
 @Preview(showBackground = true, heightDp = 844, widthDp = 393)

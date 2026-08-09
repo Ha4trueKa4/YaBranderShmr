@@ -1,7 +1,8 @@
-import { api } from '../api/instance.ts';
+import { api } from '../api/instance.ts'
 
-const HEALTH_URL = import.meta.env.VITE_HEALTH_URL ?? 'http://51.250.38.122:8080';
+const HEALTH_URL =
+  import.meta.env.VITE_HEALTH_URL ?? 'http://158.160.187.118:8080'
 
 export function getHealth(): Promise<string> {
-    return api(HEALTH_URL);
+  return api(HEALTH_URL)
 }

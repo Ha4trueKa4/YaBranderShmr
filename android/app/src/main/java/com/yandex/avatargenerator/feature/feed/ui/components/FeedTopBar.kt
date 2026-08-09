@@ -19,16 +19,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.yandex.avatargenerator.R
-import com.yandex.avatargenerator.feature.feed.ui.theme.FeedColors
+import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.AppSpacing
+import com.yandex.avatargenerator.ui.theme.AppTypography
 
 /**
  * Верхняя панель ленты: лого «Brandkit AI» слева и круглая кнопка поиска справа.
@@ -42,11 +43,12 @@ fun FeedTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = AppSpacing.m, vertical = AppSpacing.s),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
+            // 6dp — точечный отступ логотипа по макету, вне шкалы AppSpacing.
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -57,11 +59,13 @@ fun FeedTopBar(
             )
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = Color.White)) { append("Brandkit ") }
-                    withStyle(SpanStyle(color = FeedColors.AccentCyan)) { append("AI") }
+                    append(stringResource(R.string.feed_brand_name))
+                    append(" ")
+                    withStyle(SpanStyle(color = AppColors.AccentCyan)) {
+                        append(stringResource(R.string.feed_brand_name_accent))
+                    }
                 },
-                fontSize = 18.sp,
-                fontWeight = FontWeight.ExtraBold,
+                style = AppTypography.heading3.copy(fontWeight = FontWeight.ExtraBold),
             )
         }
 
@@ -69,14 +73,14 @@ fun FeedTopBar(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(FeedColors.SurfaceVariant)
+                .background(AppColors.SurfaceVariant)
                 .clickable(onClick = onSearchClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Filled.Search,
-                contentDescription = "Поиск",
-                tint = FeedColors.TextSecondary,
+                contentDescription = stringResource(R.string.feed_search_description),
+                tint = AppColors.TextSecondary,
                 modifier = Modifier.size(16.dp),
             )
         }

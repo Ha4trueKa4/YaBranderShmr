@@ -1,15 +1,10 @@
 import SwiftUI
 
-
-// TODO: Заменить мок данные на реальные с api
 struct FeedListView: View {
-    let topInset: CGFloat
-    @Binding var isScrolled: Bool
+    var onOpenProject: () -> Void = {}
 
     var body: some View {
         ScrollView {
-            Spacer()
-                .frame(height: topInset)
             HStack(alignment: .top, spacing: 12) {
                 LazyVStack(spacing: 12) {
                     FeedListCardView(
@@ -17,21 +12,21 @@ struct FeedListView: View {
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Alice",
-                        onAccountTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Gamma with a very long title that should truncate",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Charlie",
-                        onAccountTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Epsilon",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Eve",
-                        onAccountTap: {}
+                        onTap: onOpenProject
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -42,35 +37,30 @@ struct FeedListView: View {
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Bob",
-                        onAccountTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Delta",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Diana",
-                        onAccountTap: {}
+                        onTap: onOpenProject
                     )
                     FeedListCardView(
                         title: "Project Zeta",
                         accountImage: Image("image.placeholder"),
                         accountAvatar: Image("image.placeholder"),
                         accountName: "Frank",
-                        onAccountTap: {}
+                        onTap: onOpenProject
                     )
                 }
                 .frame(maxWidth: .infinity)
             }
             .padding(16)
         }
-        .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top > 1
-        } action: { _, newValue in
-            isScrolled = newValue
-        }
     }
 }
 
 #Preview {
-    FeedListView(topInset: 0, isScrolled: .constant(false))
+    FeedListView()
 }

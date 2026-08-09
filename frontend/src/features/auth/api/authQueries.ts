@@ -1,19 +1,19 @@
-import { useMutation } from '@tanstack/react-query';
-import type { LoginRequest, RegisterRequest } from '@shared/api/types';
+import type { LoginRequest, RegisterRequest } from '@shared/api/types'
+import { useMutation } from '@tanstack/react-query'
 
-import { login } from './login';
-import { register } from './register';
+import { login } from './login'
+import { register } from './register'
 
 export function useLoginMutation() {
-    return useMutation({
-        mutationKey: ['auth', 'login'],
-        mutationFn: (body: LoginRequest) => login(body),
-    });
+  return useMutation({
+    mutationKey: ['auth', 'login'],
+    mutationFn: (body: LoginRequest) => login(body),
+  })
 }
 
 export function useRegisterMutation() {
-    return useMutation({
-        mutationKey: ['auth', 'register'],
-        mutationFn: (body: RegisterRequest) => register(body),
-    });
+  return useMutation({
+    mutationKey: ['auth', 'register'],
+    mutationFn: (body: RegisterRequest) => register(body),
+  })
 }

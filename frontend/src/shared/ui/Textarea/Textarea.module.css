@@ -8,10 +8,22 @@
   outline: 0;
   padding: var(--space-3);
   resize: vertical;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
   width: 100%;
 }
-.textarea::placeholder { color: var(--color-text-muted); }
-.textarea:focus { border-color: var(--color-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 22%, transparent); }
-.textarea:disabled { cursor: not-allowed; opacity: .55; }
-.invalid { border-color: var(--color-error); }
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+.textarea:focus {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 22%, transparent);
+}
+.textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.invalid {
+  border-color: var(--color-error);
+}

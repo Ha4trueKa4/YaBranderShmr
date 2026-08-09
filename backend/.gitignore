@@ -17,3 +17,4 @@ Testing/
 .DS_Store
 Makefile.local
 *.bak
+.env

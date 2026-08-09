@@ -5,9 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,11 +18,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
-import com.yandex.avatargenerator.feature.feed.ui.theme.FeedColors
+import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.AppSpacing
+import com.yandex.avatargenerator.ui.theme.AppTypography
 
 /**
  * Переключатель вкладок ленты: «All» / «Subscriptions».
@@ -37,16 +40,16 @@ fun FeedTabRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
+            .padding(horizontal = AppSpacing.m),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.l),
     ) {
         FeedTabItem(
-            title = "All",
+            title = stringResource(R.string.feed_tab_all),
             selected = selectedTab == FeedTab.ALL,
             onClick = { onTabSelected(FeedTab.ALL) },
         )
         FeedTabItem(
-            title = "Subscriptions",
+            title = stringResource(R.string.feed_tab_subscriptions),
             selected = selectedTab == FeedTab.SUBSCRIPTIONS,
             onClick = { onTabSelected(FeedTab.SUBSCRIPTIONS) },
         )
@@ -67,19 +70,20 @@ private fun FeedTabItem(
     ) {
         Text(
             text = title,
-            color = if (selected) FeedColors.TextPrimary else FeedColors.TextMuted,
-            fontSize = 15.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            modifier = Modifier.padding(vertical = 12.dp),
+            style = AppTypography.body.copy(
+                color = if (selected) AppColors.TextPrimary else AppColors.TextMuted,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            ),
+            modifier = Modifier.padding(vertical = AppSpacing.s),
         )
-        // Нижний индикатор активной вкладки.
+        // Нижний индикатор активной вкладки: 2dp — точечное значение по макету.
         Box(
             modifier = Modifier
-                .padding(bottom = 12.dp)
+                .padding(bottom = AppSpacing.s)
                 .height(2.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(1.dp))
-                .background(if (selected) FeedColors.Accent else Color.Transparent),
+                .background(if (selected) AppColors.Accent else Color.Transparent),
         )
     }
 }
