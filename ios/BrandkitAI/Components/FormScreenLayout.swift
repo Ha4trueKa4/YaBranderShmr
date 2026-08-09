@@ -1,11 +1,11 @@
 //
-//  AuthScreenLayout.swift
+//  FormScreenLayout.swift
 //  BrandkitAI
 //
 
 import SwiftUI
 
-struct AuthScreenLayout<Content: View>: View {
+struct FormScreenLayout<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
