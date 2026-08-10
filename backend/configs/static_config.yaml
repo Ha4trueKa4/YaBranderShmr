@@ -35,14 +35,14 @@ components_manager:
     testsuite-support: { }
 
     http-client:
-#      load-enabled: $is-testing
+    #      load-enabled: $is-testing
 
     http-client-core:
-#      load-enabled: $is-testing
+      #      load-enabled: $is-testing
       fs-task-processor: fs-task-processor
 
     http-client-middleware-pipeline:
-#      load-enabled: $is-testing
+    #      load-enabled: $is-testing
 
     tests-control:
       load-enabled: $is-testing
@@ -84,12 +84,14 @@ components_manager:
     # Моки (Заглушки внешних сервисов)
     # ==========================================
     version-storage: { }
-    prompt-constructor: { }
+    vector-search: { }
 
     # ==========================================
     # Слой бизнес-логики (Service Layer)
     # ==========================================
     project-manager: { }
+    prompt-constructor: { }
+
 
     # ==========================================
     # HTTP Хендлеры (Контроллеры проектов)
@@ -133,14 +135,14 @@ components_manager:
       auth:
         types:
           - jwt
-  
+
     handler-auth-register:
-        path: /api/v1/auth/register
-        method: POST
-        task_processor: main-task-processor
+      path: /api/v1/auth/register
+      method: POST
+      task_processor: main-task-processor
 
     handler-auth-login:
-        path: /api/v1/auth/login
-        method: POST
-        task_processor: main-task-processor
+      path: /api/v1/auth/login
+      method: POST
+      task_processor: main-task-processor
 

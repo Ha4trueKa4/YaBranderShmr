@@ -2,6 +2,7 @@
 
 #include "dependencies_stubs.h"
 #include "LLMClientComponent.hpp"
+#include "vector_search_component.h"
 #include <userver/formats/json/serialize.hpp>
 
 namespace ya_brander::components {
@@ -43,15 +44,15 @@ public:
 };
 
 
-class MockPromptConstructorComponent final : public PromptConstructorComponent {
+class MockVectorSearchComponent final : public VectorSearchComponent {
 public:
-    MockPromptConstructorComponent(const userver::components::ComponentConfig& config,
-                                   const userver::components::ComponentContext& context)
-        : PromptConstructorComponent(config, context) {}
+  MockVectorSearchComponent(const userver::components::ComponentConfig& config,
+                            const userver::components::ComponentContext& context)
+      : VectorSearchComponent(config, context) {}
 
-  std::string BuildEditPrompt(const std::string& current_state, const std::string& user_message) override {
-      return user_message + "Технические требования: * Верни только чистый SVG-код в блоке разметки xml. Не пиши никаких вступлений, пояснений и заключений. * Укажи атрибуты xmlns=http://w3.org, а также viewBox=0 0 500 500 (или другой нужный размер). * Используй современные, гармоничные цвета. * Код должен быть аккуратным, сгруппированным с помощью тегов g и готовым к сохранению в svg файл.";
-    }
+  std::vector<std::string> FindSimilar(const std::string& /*description*/, int /*limit*/) const override {
+    return {};
+  }
 };
 
 } // namespace ya_brander::components

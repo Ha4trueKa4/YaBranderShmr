@@ -9,6 +9,7 @@
 #include "../models/project.hpp"
 #include "dependencies_stubs.h"
 #include "LLMClientComponent.hpp"
+#include "prompt_constructor_component.h"
 
 namespace ya_brander::components {
 
