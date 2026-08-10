@@ -81,9 +81,10 @@ components_manager:
       fs-task-processor: fs-task-processor
 
     # ==========================================
-    # Моки (Заглушки внешних сервисов)
+    # Внешние сервисы (или их моки)
     # ==========================================
-    version-storage: { }
+    object-storage: {}
+    version-storage: {}
     prompt-constructor: { }
 
     # ==========================================

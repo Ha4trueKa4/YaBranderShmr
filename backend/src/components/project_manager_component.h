@@ -8,6 +8,7 @@
 
 #include "../models/project.hpp"
 #include "dependencies_stubs.h"
+#include "version_storage/version_storage_component_impl.hpp"
 #include "LLMClientComponent.hpp"
 
 namespace ya_brander::components {
@@ -31,7 +32,7 @@ public:
 
 private:
   userver::storages::postgres::ClusterPtr pg_cluster_;
-  VersionStorageComponent& version_storage_;
+  VersionStorageComponentImpl& version_storage_;
   LLMClientComponent& llm_client_;
   PromptConstructorComponent& prompt_constructor_;
 };

@@ -5,6 +5,7 @@
 #include <userver/storages/postgres/cluster.hpp>
 #include "version_storage_component.hpp"
 #include "../../models/version.hpp"
+#include "../object_storage/object_storage_component.hpp"
 
 namespace ya_brander::components {
 
@@ -32,12 +33,10 @@ namespace ya_brander::components {
         std::string GetLatestVersionData(const std::string& project_id) override;
 
     private:
-        static constexpr std::string_view kStorageDir = "mock_s3";
-        std::string ReadFile(const std::string& key) const;
-        std::string WriteFile(const std::string& project_id, int version_num,
-                              const std::string& data) const;
+        std::string MakeKey(const std::string& project_id, int version_num) const;
 
         userver::storages::postgres::ClusterPtr pg_cluster_;
+        ObjectStorageComponent& storage_;   // injected — was ReadFile/WriteFile
     };
 
 }  // namespace ya_brander::components
