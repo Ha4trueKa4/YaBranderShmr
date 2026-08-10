@@ -3,6 +3,7 @@
 #include <string_view>
 #include "object_storage_component.hpp"
 
+
 namespace ya_brander::components {
 
     /// @brief Локальная файловая реализация объектного хранилища.
@@ -23,7 +24,9 @@ namespace ya_brander::components {
 
     private:
         static constexpr std::string_view kStorageDir = "mock_s3";
-     static std::string FullPath(const std::string& key);
+        static std::string FullPath(const std::string& key);
+        userver::engine::TaskProcessor& fs_task_processor_;
+
     };
 
 }  // namespace ya_brander::components
