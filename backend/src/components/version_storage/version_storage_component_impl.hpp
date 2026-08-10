@@ -32,6 +32,7 @@ namespace ya_brander::components {
         std::string GetLatestVersionData(const std::string& project_id) override;
 
     private:
+        static constexpr std::string_view kStorageDir = "mock_s3";
         std::string ReadFile(const std::string& key) const;
         std::string WriteFile(const std::string& project_id, int version_num,
                               const std::string& data) const;

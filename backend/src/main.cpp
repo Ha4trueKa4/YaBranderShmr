@@ -15,6 +15,7 @@
 #include "handlers/check/check.hpp"
 #include "handlers/projects/append_projects.h"
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
+#include "components/version_storage/version_storage_component_impl.hpp"
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
@@ -30,7 +31,9 @@ int main(int argc, char* argv[]) {
             .Append<ya_brander::auth::RegisterHandler>()
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-db-1")
-            .Append<userver::clients::dns::Component>();
+            .Append<userver::clients::dns::Component>()
+            .Append<ya_brander::components::VersionStorageComponentImpl>();
+
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);

@@ -10,8 +10,8 @@ namespace ya_brander::components {
 /// @details Определяет контракт для сохранения, чтения, перечисления и
 ///          восстановления версий. Данные версии передаются как строка (SVG).
 ///          Метаинформация хранится в таблице project_versions, сами данные
-///          в объектном хранилище. Конкретная реализация регистрируется в
-///          списке компонентов.
+///          в объектном хранилище (S3), и последняя версия в таблице projects.
+///          Конкретная реализация регистрируется в списке компонентов.
 class VersionStorageComponent : public userver::components::LoggableComponentBase {
  public:
   static constexpr std::string_view kName = "version-storage";

@@ -15,98 +15,112 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
     : VersionStorageComponent(config, context),
       pg_cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-db-1")
-              .GetCluster()) {}
+              .GetCluster()) {
+    std::filesystem::create_directories(kStorageDir);
+}
 
-    std::string WriteFile(const std::string& project_id, int version_num,
+    std::string VersionStorageComponentImpl::WriteFile(const std::string& project_id, int version_num,
                           const std::string& data) const
     {
-    std::filesystem::create_directories("mock_s3");
-    auto key = "mock_s3/" + project_id + "_" + std::to_string(version_num) + ".svg";
-    std::ofstream out{key};
-    out << data;
-    if (!out) {                                    // check write succeeded
-        throw std::runtime_error("failed to write version file: " + key);
+        auto key =  std::string{kStorageDir} + "/" + project_id + "_" + std::to_string(version_num) + ".svg";
+        std::ofstream out{key};
+        out << data;
+        if (!out) {                                    // check write succeeded
+            throw std::runtime_error("failed to write version file: " + key);
+        }
+        return key;
     }
-    return key;
-}
-std::string VersionStorageComponentImpl::ReadFile(const std::string& key) const {
-  std::ifstream f{key};
-  if (!f) return "";
-  return std::string{std::istreambuf_iterator<char>(f),
-                     std::istreambuf_iterator<char>()};
-}
 
-std::string VersionStorageComponentImpl::SaveVersion(
-    const std::string& project_id, const std::string& data) {
-  // Следующий номер версии для проекта. Ограничение UNIQUE(project_id,
-  // version_num) защищает от коллизий при одновременных записях.
-  auto num_res = pg_cluster_->Execute(
-      pg::ClusterHostType::kMaster,
-      "SELECT COALESCE(MAX(version_num), 0) + 1 FROM project_versions "
-      "WHERE project_id = $1",
-      project_id);
-  const auto version_num = num_res[0][0].As<int>();
-
-  const auto key = WriteFile(project_id, version_num, data);
-
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kMaster,
-      "INSERT INTO project_versions (project_id, version_num, s3_file_key) "
-      "VALUES ($1, $2, $3) RETURNING id",
-      project_id, version_num, key);
-
-  return res[0]["id"].As<std::string>();
-}
-
-std::string VersionStorageComponentImpl::GetVersion(
-    const std::string& project_id, const std::string& version_id) {
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kSlave,
-      "SELECT s3_file_key FROM project_versions "
-      "WHERE id = $1 AND project_id = $2",
-      version_id, project_id);
-  if (res.IsEmpty()) return "";
-  return ReadFile(res[0]["s3_file_key"].As<std::string>());
-}
-
-std::string VersionStorageComponentImpl::GetLatestVersionData(
-    const std::string& project_id) {
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kSlave,
-      "SELECT s3_file_key FROM project_versions "
-      "WHERE project_id = $1 ORDER BY version_num DESC LIMIT 1",
-      project_id);
-  if (res.IsEmpty()) return "";
-  return ReadFile(res[0]["s3_file_key"].As<std::string>());
-}
-
-std::vector<models::Version> VersionStorageComponentImpl::ListVersions(
-    const std::string& project_id) {
-    
-    auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kSlave,
-      "SELECT id, project_id, version_num, created_at, s3_file_key "  // no ::text now
-      "FROM project_versions WHERE project_id = $1 "
-      "ORDER BY version_num DESC",
-      project_id);
-
-    std::vector<models::Version> versions;
-    versions.reserve(res.Size());
-    for (const auto& row : res) {
-        versions.push_back(models::Version{
-            row["id"].As<std::string>(),
-            row["project_id"].As<std::string>(),
-            row["version_num"].As<std::int32_t>(),
-            row["created_at"].As<userver::storages::postgres::TimePointTz>(),
-            row["s3_file_key"].As<std::string>(),
-        });
+    std::string VersionStorageComponentImpl::ReadFile(const std::string& key) const
+    {
+      std::ifstream f{key};
+      if (!f) return "";
+      return std::string{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
     }
-    return versions;
-}
 
-    std::string RestoreVersion(const std::string& project_id,
+    std::string VersionStorageComponentImpl::SaveVersion(
+        const std::string& project_id, const std::string& data) {
+      auto txn = pg_cluster_->Begin(pg::ClusterHostType::kMaster,
+                                    pg::Transaction::RW);
+
+      auto const num_res = txn.Execute(
+          "SELECT COALESCE(MAX(version_num), 0) + 1 FROM project_versions "
+          "WHERE project_id = $1",
+          project_id);
+      const auto version_num = num_res[0][0].As<int>();
+
+      const auto key = WriteFile(project_id, version_num, data);
+
+      const auto res = txn.Execute(
+          "INSERT INTO project_versions (project_id, version_num, s3_file_key) "
+          "VALUES ($1, $2, $3) RETURNING id",
+          project_id, version_num, key);
+      auto id = res[0]["id"].As<std::string>();
+
+      txn.Execute(
+          "UPDATE projects SET last_version_key = $2, updated_at = NOW() "
+          "WHERE id = $1",
+          project_id, key);
+
+      txn.Commit();
+      return id;
+    }
+
+    std::string VersionStorageComponentImpl::GetVersion(
+        const std::string& project_id, const std::string& version_id) {
+      const auto res = pg_cluster_->Execute(
+          pg::ClusterHostType::kSlave,
+          "SELECT s3_file_key FROM project_versions "
+          "WHERE id = $1 AND project_id = $2",
+          version_id, project_id);
+      if (res.IsEmpty()) return "";
+      return ReadFile(res[0]["s3_file_key"].As<std::string>());
+    }
+
+    std::string VersionStorageComponentImpl::GetLatestVersionData(
+    const std::string& project_id) {
+
+      const auto res = pg_cluster_->Execute(
+          pg::ClusterHostType::kSlave,
+          "SELECT last_version_key FROM projects WHERE id = $1",
+          project_id);
+
+      if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) {
+        return "";
+      }
+
+      return ReadFile(res[0]["last_version_key"].As<std::string>());
+    }
+
+    std::vector<models::Version> VersionStorageComponentImpl::ListVersions(
+        const std::string& project_id) {
+
+      const auto res = pg_cluster_->Execute(
+          pg::ClusterHostType::kSlave,
+          "SELECT id, project_id, version_num, created_at, s3_file_key "  // no ::text now
+          "FROM project_versions WHERE project_id = $1 "
+          "ORDER BY version_num DESC",
+          project_id);
+
+        std::vector<models::Version> versions;
+        versions.reserve(res.Size());
+
+        for (const auto& row : res) {
+            versions.push_back(models::Version{
+                row["id"].As<std::string>(),
+                row["project_id"].As<std::string>(),
+                row["version_num"].As<std::int32_t>(),
+                row["created_at"].As<userver::storages::postgres::TimePointTz>(),
+                row["s3_file_key"].As<std::string>(),
+            });
+        }
+
+        return versions;
+    }
+
+    std::string VersionStorageComponentImpl::RestoreVersion(const std::string& project_id,
                                const std::string& version_id) {
-    auto data = GetVersion(project_id, version_id);
+      const auto data = GetVersion(project_id, version_id);
     if (data.empty()) {
         throw std::runtime_error("cannot restore: version not found");
     }
