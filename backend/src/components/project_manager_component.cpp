@@ -4,6 +4,11 @@
 
 namespace ya_brander::components {
 
+const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <g>
+  </g>
+</svg>)SVG";
+
 ProjectManagerComponent::ProjectManagerComponent(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -19,19 +24,14 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
         "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
         author_id, name, description
     );
-    
+
     auto row = res[0];
-    
-  std::string default_data = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-  <g>
-  </g>
-</svg>)SVG";
 
 
     std::string project_id = row["id"].As<std::string>();
-    version_storage_.SaveVersion(project_id, default_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    version_storage_.SaveVersion(project_id, kDefaultSvg); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
 
-    return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), default_data};
+    return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), kDefaultSvg};
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
@@ -82,8 +82,14 @@ void ProjectManagerComponent::DeleteProject(const std::string& id) {
 }
 
 std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
-    auto current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
-    std::string full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt); // ЗАГЛУШКА
+    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+    std::string full_prompt;
+
+    if (current_state.empty() || current_state == kDefaultSvg) {
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(prompt);
+    }else {
+        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt);
+    }
     auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1); // ЗАГЛУШКА
     version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
     return new_data;
