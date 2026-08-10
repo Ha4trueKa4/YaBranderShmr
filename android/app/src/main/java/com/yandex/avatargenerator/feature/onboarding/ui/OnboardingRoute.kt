@@ -2,13 +2,10 @@ package com.yandex.avatargenerator.feature.onboarding.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yandex.avatargenerator.feature.onboarding.data.onboardingRepository
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Единственный публичный вход в фичу онбординга.
@@ -25,14 +22,11 @@ fun OnboardingRoute(
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val factory = remember(context) { OnboardingViewModelFactory(onboardingRepository(context)) }
-
     OnboardingRoute(
         onFinish = onFinish,
         onSignIn = onSignIn,
         modifier = modifier,
-        viewModel = viewModel(factory = factory),
+        viewModel = koinViewModel(),
     )
 }
 
