@@ -73,6 +73,10 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/generate_project.cpp
         src/components/version_storage/version_storage_component_impl.cpp
         src/components/object_storage/local_file_storage.cpp
+        src/handlers/users/append_users.hpp
+        src/handlers/users/append_users.cpp
+        src/handlers/users/subscription_handlers.hpp
+        src/handlers/users/subscription_handlers.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
