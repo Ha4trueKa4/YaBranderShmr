@@ -1,24 +1,26 @@
 import sparkles from '@shared/assets/sparkles.svg'
 import { Button, Input } from '@shared/ui'
-import { useState } from 'react'
 
 import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 
 interface EditorEmptyStateProps {
+  description: string
+  onDescriptionChange: (description: string) => void
   onGenerate: (draft: { description: string; name: string }) => void
 }
 
-export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
-  const [description, setDescription] = useState('')
-
+export function EditorEmptyState({
+  description,
+  onDescriptionChange,
+  onGenerate,
+}: EditorEmptyStateProps) {
   return (
     <EditorCreateStateLayout
       composer={
         <>
-          {/* Подключить контролируемое значение prompt и передать его в onGenerate. */}
           <Input
             leadingContent={<img alt="" src={sparkles} />}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) => onDescriptionChange(event.target.value)}
             placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
             value={description}
           />

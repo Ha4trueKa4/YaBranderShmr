@@ -2,12 +2,18 @@ import { Button, Input } from '@shared/ui'
 
 import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 
-export function EditorGeneratingState() {
+interface EditorGeneratingStateProps {
+  description: string
+}
+
+export function EditorGeneratingState({
+  description,
+}: EditorGeneratingStateProps) {
   return (
     <EditorCreateStateLayout
       composer={
         <>
-          <Input disabled placeholder="Generating your brand identity…" />
+          <Input disabled value={description} />
           <Button disabled loading>
             {null}
           </Button>

@@ -6,7 +6,7 @@ import {
 } from '@features/projectCreate'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { EditorEmptyState } from './components/EditorEmptyState'
@@ -16,6 +16,7 @@ import styles from './EditorCreatePage.module.css'
 export const EditorCreatePage = observer(function EditorCreatePage() {
   const navigate = useNavigate()
   const isAuthorized = authStore.isAuthorized
+  const [description, setDescription] = useState('')
 
   const handleProjectCreated = useCallback(
     ({ id }: { id: string }) => {
@@ -30,6 +31,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
   const startGeneration = useCallback(
     (draft: ProjectDraft) => {
+      setDescription(draft.description)
       createProject(draft)
     },
     [createProject],
@@ -63,9 +65,13 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     <main className={styles.page}>
       <Header />
       {isCreatingProjectPending ? (
-        <EditorGeneratingState />
+        <EditorGeneratingState description={description} />
       ) : (
-        <EditorEmptyState onGenerate={handleGenerate} />
+        <EditorEmptyState
+          description={description}
+          onDescriptionChange={setDescription}
+          onGenerate={handleGenerate}
+        />
       )}
     </main>
   )
