@@ -4,14 +4,32 @@
 #   YC_S3_SECRET_ACCESS_KEY — static secret access key of the deploy service account
 #   VITE_API_URL_DEV         — public HTTPS API URL, including /api/v1
 #   VITE_HEALTH_URL_DEV      — public HTTPS health-check URL
+#
+# CI/CD-сборка Android запускается только для pull request в ветку dev
+# и только если в изменениях затрагивались файлы Android-проекта (директория android/**).
 
 on:
+  pull_request:
+    - workflows: build-android
+      filter:
+        target_branches: ["dev"]
+        paths: ["android/**"]
   push:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [dev]
+    - workflows: [deploy-backend]
+      filter:
+        branches: ["main", "dev"]
 
 workflows:
+  deploy-backend:
+    tasks:
+      - name: build-and-deploy
+        cubes:
+          - name: run-backend-ci
+            gitlab_workflow: .sourcecraft/backend-ci.yaml
+
   deploy-frontend-dev:
     tasks:
       - name: check-build-and-deploy
@@ -42,3 +60,50 @@ workflows:
               - cd frontend
               - aws s3 sync dist "s3://$YC_S3_BUCKET" --delete --no-progress --exclude "index.html" --cache-control "public, max-age=31536000, immutable" --endpoint-url https://storage.yandexcloud.net
               - aws s3 cp dist/index.html "s3://$YC_S3_BUCKET/index.html" --no-progress --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html; charset=utf-8" --endpoint-url https://storage.yandexcloud.net
+
+  build-android:
+    tasks:
+      - name: build-android-task
+        cubes:
+          - name: assemble-debug
+            image: eclipse-temurin:25-jdk
+            env:
+              ANDROID_HOME: /opt/android-sdk
+              ANDROID_SDK_ROOT: /opt/android-sdk
+            script:
+              - apt-get update && apt-get install -y --no-install-recommends wget unzip
+              - mkdir -p "$ANDROID_HOME/cmdline-tools"
+              - wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -O /tmp/cmdtools.zip
+              - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
+              - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+              - export ANDROID_SDK_ROOT="$ANDROID_HOME"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/37.0.0"
+              - yes | sdkmanager --licenses > /dev/null
+              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+              - cd android
+              - echo "sdk.dir=$ANDROID_HOME" > local.properties
+              - ./gradlew assembleDebug
+            artifacts:
+              paths:
+                - android/app/build/outputs/apk
+
+      - name: lint-android-task
+        cubes:
+          - name: android-lint
+            image: eclipse-temurin:25-jdk
+            env:
+              ANDROID_HOME: /opt/android-sdk
+              ANDROID_SDK_ROOT: /opt/android-sdk
+            script:
+              - apt-get update && apt-get install -y --no-install-recommends wget unzip
+              - mkdir -p "$ANDROID_HOME/cmdline-tools"
+              - wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -O /tmp/cmdtools.zip
+              - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
+              - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+              - export ANDROID_SDK_ROOT="$ANDROID_HOME"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/37.0.0"
+              - yes | sdkmanager --licenses > /dev/null
+              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+              - cd android
+              - echo "sdk.dir=$ANDROID_HOME" > local.properties
+              - ./gradlew lint

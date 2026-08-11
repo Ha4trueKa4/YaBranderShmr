@@ -2,6 +2,7 @@
 
 #include "../../components/project_manager_component.h"
 #include "../../components/mock_dependencies.h"
+#include "../../components/version_storage/version_storage_component_impl.hpp"
 
 #include "create_project.h"
 #include "get_project.h"
@@ -13,9 +14,10 @@ namespace ya_brander {
 
 void AppendProjects(userver::components::ComponentList& component_list) {
   component_list
-      .Append<components::MockVersionStorageComponent>()
-      .Append<components::MockLLMClientComponent>()
-      .Append<components::MockPromptConstructorComponent>()
+      // .Append<components::VersionStorageComponentImpl>()
+      .Append<components::LLMClientComponent>()
+      .Append<components::PromptConstructorComponent>()
+      .Append<components::MockVectorSearchComponent>()
 
 
       .Append<components::ProjectManagerComponent>()

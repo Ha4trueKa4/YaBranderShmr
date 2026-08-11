@@ -35,14 +35,14 @@ components_manager:
     testsuite-support: { }
 
     http-client:
-      load-enabled: $is-testing
+    #      load-enabled: $is-testing
 
     http-client-core:
-      load-enabled: $is-testing
+      #      load-enabled: $is-testing
       fs-task-processor: fs-task-processor
 
     http-client-middleware-pipeline:
-      load-enabled: $is-testing
+    #      load-enabled: $is-testing
 
     tests-control:
       load-enabled: $is-testing
@@ -62,6 +62,14 @@ components_manager:
       method: GET
       task_processor: main-task-processor
 
+    handler-test-llm:
+      path: /test/llm
+      method: POST
+      task_processor: main-task-processor
+      throttling_enabled: false
+
+    llm-client: { }
+
     postgres-db-1:
       dbconnection: $dbconnection
       blocking_task_processor: fs-task-processor
@@ -73,16 +81,18 @@ components_manager:
       fs-task-processor: fs-task-processor
 
     # ==========================================
-    # Моки (Заглушки внешних сервисов)
+    # Внешние сервисы (или их моки)
     # ==========================================
     version-storage: { }
-    llm-client: { }
-    prompt-constructor: { }
+    vector-search: { }
+    object-storage: { }
 
     # ==========================================
     # Слой бизнес-логики (Service Layer)
     # ==========================================
     project-manager: { }
+    prompt-constructor: { }
+
 
     # ==========================================
     # HTTP Хендлеры (Контроллеры проектов)
@@ -126,14 +136,14 @@ components_manager:
       auth:
         types:
           - jwt
-  
+
     handler-auth-register:
-        path: /api/v1/auth/register
-        method: POST
-        task_processor: main-task-processor
+      path: /api/v1/auth/register
+      method: POST
+      task_processor: main-task-processor
 
     handler-auth-login:
-        path: /api/v1/auth/login
-        method: POST
-        task_processor: main-task-processor
+      path: /api/v1/auth/login
+      method: POST
+      task_processor: main-task-processor
 

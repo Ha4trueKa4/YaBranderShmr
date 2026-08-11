@@ -14,7 +14,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
@@ -22,8 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yandex.avatargenerator.feature.profile.data.MockProfileRepository
 import com.yandex.avatargenerator.feature.profile.ui.components.ProfileHeader
 import com.yandex.avatargenerator.ui.components.BrandSecondaryButton
 import com.yandex.avatargenerator.ui.components.ProjectCard
@@ -32,6 +29,8 @@ import com.yandex.avatargenerator.ui.components.masonryAspectRatio
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 /**
  * Экран профиля пользователя (свой/чужой). Отличие своего профиля от чужого —
@@ -40,8 +39,9 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
  * Скроллится весь контент (обложка тоже уезжает): шапка — первый full-line
  * элемент той же masonry-сетки, что и в ленте (переиспользуется [ProjectCard]).
  *
- * Навигация отдана наружу коллбэками; ViewModel создаётся дефолтной фабрикой с
- * моком (пока без DI) — при появлении навигационного графа/DI фабрику передадут.
+ * Навигация отдана наружу коллбэками; ViewModel берётся из Koin ([koinViewModel]).
+ * `userId`/`isOwnProfile` известны только при открытии экрана — передаём их
+ * параметрами ([parametersOf]); граф — в `feature/profile/di/ProfileModule.kt`.
  *
  * @param onProjectClick открыть проект по id.
  * @param onActionClick клик по кнопке шапки (Follow / Edit profile).
@@ -53,11 +53,7 @@ fun ProfileScreen(
     onProjectClick: (projectId: String) -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ProfileViewModel = viewModel(
-        factory = remember(userId, isOwnProfile) {
-            ProfileViewModelFactory(MockProfileRepository(), userId, isOwnProfile)
-        },
-    ),
+    viewModel: ProfileViewModel = koinViewModel { parametersOf(userId, isOwnProfile) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 

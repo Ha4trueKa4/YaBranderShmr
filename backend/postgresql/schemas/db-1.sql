@@ -18,6 +18,7 @@ CREATE TABLE projects
     description  TEXT,
     chat_history JSONB        NOT NULL    DEFAULT '[]'::jsonb,
     is_private   BOOLEAN      NOT NULL    DEFAULT TRUE,
+    last_version_key VARCHAR(256),
     created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

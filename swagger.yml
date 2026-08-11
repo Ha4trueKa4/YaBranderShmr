@@ -204,7 +204,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: Уникальный иден��ификатор проекта
+          description: Уникальный идентификатор проекта
           schema:
             type: string
       responses:
@@ -292,6 +292,10 @@ components:
 
     AuthResponse:
       type: object
+      required:
+        - access_token
+        - token_type
+        - user
       properties:
         access_token:
           type: string
@@ -300,7 +304,26 @@ components:
         token_type:
           type: string
           example: "Bearer"
-    
+        user:
+          type: object
+          description: Данные авторизованного пользователя
+          required:
+            - id
+            - email
+            - nickname
+          properties:
+            id:
+              type: string
+              description: Уникальный идентификатор авторизованного пользователя
+              example: "123e4567-e89b-12d3-a456-426614174000"
+            email:
+              type: string
+              format: email
+              example: "user@example.com"
+            nickname:
+              type: string
+              example: "John Doe"
+
     UserProfile:
       type: object
       properties:
@@ -326,6 +349,8 @@ components:
           type: string
         name:
           type: string
+        description:
+          type: string
         is_public:
           type: boolean
         created_at:
@@ -346,11 +371,8 @@ components:
           type: string
           example: "#FFFFFF"
         layers:
-          type: array
-          items:
-            type: object
-            description: Произвольный элемент (text, rect, path и т.д.)
-            additionalProperties: true
+          type: string
+          description: SVG-разметка проекта в виде одной строки
 
     ValidationError:
       type: object

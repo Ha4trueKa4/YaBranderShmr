@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct PublicProjectView: View {
+    var onOpenAuthor: () -> Void = {}
+
     var body: some View {
         VStack(spacing: 16) {
             Text("Public Project")
 
-            NavigationLink("Author profile") {
-                ProfileView(isCurrentUser: false)
-            }
+            Button("Author profile", action: onOpenAuthor)
         }
         .navigationTitle("Public Project")
     }

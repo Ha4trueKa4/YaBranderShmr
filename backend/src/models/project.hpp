@@ -11,7 +11,7 @@ struct Project {
   std::string description;
   bool is_public;
   std::string created_at;
-  userver::formats::json::Value data;
+  std::string data;
 };
 
 } // namespace ya_brander::models

@@ -5,11 +5,21 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 include(FetchContent)
 FetchContent_Declare(
-    jwt-cpp
-    GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
-    GIT_TAG v0.7.0
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
 )
+
+FetchContent_Declare(
+        jwt-cpp
+        GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
+        GIT_TAG v0.7.0
+)
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
 set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
@@ -50,14 +60,26 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/auth_checker.cpp
         src/components/project_manager_component.cpp
         src/handlers/projects/append_projects.cpp
+        src/handlers/test_llm_handler/test_llm_handler.cpp
+        src/handlers/test_llm_handler/test_llm_handler.hpp
+        src/components/LLMClientComponent.hpp
+        src/components/LLMClientComponent.cpp
+        src/components/prompt_constructor_component.cpp
+        src/components/vector_search_component.h
         src/handlers/projects/create_project.cpp
         src/handlers/projects/get_project.cpp
         src/handlers/projects/patch_project.cpp
         src/handlers/projects/delete_project.cpp
         src/handlers/projects/generate_project.cpp
+        src/components/version_storage/version_storage_component_impl.cpp
+        src/components/object_storage/local_file_storage.cpp
 )
 
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql jwt-cpp)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC
+        userver::postgresql
+        nlohmann_json::nlohmann_json
+        jwt-cpp
+)
 target_include_directories(${PROJECT_NAME}_objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # The Service

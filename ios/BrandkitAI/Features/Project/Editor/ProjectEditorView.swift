@@ -1,15 +1,15 @@
 import SwiftUI
 
 struct ProjectEditorView: View {
+    var onOpenVersionHistory: () -> Void = {}
+
     @State private var isShowingVisibility = false
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Editor")
 
-            NavigationLink("Version history") {
-                ProjectVersionHistoryView()
-            }
+            Button("Version history", action: onOpenVersionHistory)
 
             Button("Visibility") {
                 isShowingVisibility = true
