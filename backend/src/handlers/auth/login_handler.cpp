@@ -2,7 +2,7 @@
 
 #include <userver/components/component.hpp>
 #include <userver/formats/json.hpp>
-#include <userver/server/handlers/exceptions.hpp>
+#include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 
 #include "password_hasher.hpp"
@@ -11,11 +11,11 @@ namespace ya_brander::auth {
 
 namespace {
 
-std::string MakeErrorBody(std::string_view code, std::string_view message) {
+userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message) {
     userver::formats::json::ValueBuilder builder;
     builder["code"] = std::string(code);
     builder["message"] = std::string(message);
-    return userver::formats::json::ToString(builder.ExtractValue());
+    return builder.ExtractValue();
 }
 
 }  // namespace
@@ -27,21 +27,17 @@ LoginHandler::LoginHandler(const userver::components::ComponentConfig& config,
                       .GetCluster()) {}
 
 userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
-    const userver::server::http::HttpRequest&,
+    const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value& request_json,
     userver::server::request::RequestContext&) const {
-    using userver::server::handlers::Unauthorized;
 
     const auto email = request_json["email"].As<std::string>("");
     const auto password = request_json["password"].As<std::string>("");
 
-    const auto Reject = [] {
-        throw Unauthorized(
-            Unauthorized::ExternalBody{MakeErrorBody("INVALID_CREDENTIALS", "Invalid email or password")});
-    };
 
     if (email.empty() || password.empty()) {
-        Reject();
+        request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return MakeErrorJson("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     auto result = pg_cluster_->Execute(
@@ -49,7 +45,8 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
         "SELECT id::text, login, password_hash FROM users WHERE email = $1", email);
 
     if (result.Size() == 0) {
-        Reject();
+        request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return MakeErrorJson("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     const auto row = result.Front();
@@ -58,7 +55,8 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
     const auto password_hash = row[2].As<std::string>();
 
     if (!PasswordHasher::Verify(password, password_hash)) {
-        Reject();
+        request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return MakeErrorJson("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     const auto token = jwt_service_.IssueToken(user_id);

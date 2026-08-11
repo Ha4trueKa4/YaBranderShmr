@@ -4,7 +4,6 @@ import pytest
 
 from testsuite.databases.pgsql import discover
 
-
 pytest_plugins = ['pytest_userver.plugins.postgresql']
 
 
@@ -26,7 +25,7 @@ def initial_data_path(service_source_dir):
 def pgsql_local(service_source_dir, pgsql_local_create):
     """Create schemas databases for tests"""
     databases = discover.find_schemas(
-        'pg_service_template',  # service name that goes to the DB connection
+        'postgres-db-1',  # service name that goes to the DB connection
         [service_source_dir.joinpath('postgresql/schemas')],
     )
     return pgsql_local_create(list(databases.values()))
