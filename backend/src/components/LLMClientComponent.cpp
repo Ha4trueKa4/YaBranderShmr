@@ -40,7 +40,7 @@ namespace ya_brander::components {
 
         auto request = http_client_.CreateRequest();
         request.method(userver::clients::http::HttpMethod::kPost);
-        request.url("https://ai.api.cloud.yandex.net/v1/responses");
+        request.url(api_url_);
         request.headers({
           {"Authorization", "Api-Key " + api_key_},
           {"Content-Type", "application/json"}
@@ -98,7 +98,13 @@ userver::yaml_config::Schema LLMClientComponent::GetStaticConfigSchema() {
 type: object
 description: LLM client component for Yandex AI Studio
 additionalProperties: false
-properties: {}
+properties:
+    api-url:
+        type: string
+        description: URL for Yandex GPT API
+    api-key:
+        type: string
+        description: API Key
     )");
   }
 

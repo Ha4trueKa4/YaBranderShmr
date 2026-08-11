@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <chrono>
 #include <userver/formats/json/value.hpp>
 
 namespace ya_brander::models {
@@ -10,7 +11,7 @@ struct Project {
   std::string name;
   std::string description;
   bool is_public;
-  std::string created_at;
+  std::chrono::system_clock::time_point created_at;
   std::string data;
 };
 
