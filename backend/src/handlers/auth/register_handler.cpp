@@ -4,8 +4,8 @@
 #include <regex>
 
 #include <userver/components/component.hpp>
+#include <userver/server/http/http_status.hpp>
 #include <userver/formats/json.hpp>
-#include <userver/server/handlers/exceptions.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
@@ -36,11 +36,14 @@ bool IsValidNickname(const std::string& nickname) {
     return nickname.size() >= 3 && nickname.size() <= 64;
 }
 
-std::string MakeErrorBody(std::string_view code, std::string_view message) {
+userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message, std::string_view field = "") {
     userver::formats::json::ValueBuilder builder;
     builder["code"] = std::string(code);
     builder["message"] = std::string(message);
-    return userver::formats::json::ToString(builder.ExtractValue());
+    if (!field.empty()) {
+        builder["field"] = std::string(field);
+    }
+    return builder.ExtractValue();
 }
 
 }  // namespace
@@ -52,26 +55,25 @@ RegisterHandler::RegisterHandler(const userver::components::ComponentConfig& con
                       .GetCluster()) {}
 
 userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
-    const userver::server::http::HttpRequest&,
+    const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value& request_json,
     userver::server::request::RequestContext&) const {
-    using userver::server::handlers::ClientError;
-    using userver::server::handlers::ConflictError;
 
     const auto email = request_json["email"].As<std::string>("");
     const auto password = request_json["password"].As<std::string>("");
     const auto nickname = request_json["nickname"].As<std::string>("");
 
     if (!IsValidEmail(email)) {
-        throw ClientError(ClientError::ExternalBody{MakeErrorBody("INVALID_EMAIL", "Email is invalid")});
+        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+        return MakeErrorJson("INVALID_EMAIL", "Email is invalid", "email");
     }
     if (!IsValidPassword(password)) {
-        throw ClientError(ClientError::ExternalBody{MakeErrorBody(
-            "INVALID_PASSWORD", "Password must be 8-128 chars and contain letters and digits")});
+        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+        return MakeErrorJson("INVALID_PASSWORD", "Password must be 8-128 chars and contain letters and digits", "password");
     }
     if (!IsValidNickname(nickname)) {
-        throw ClientError(
-            ClientError::ExternalBody{MakeErrorBody("INVALID_NICKNAME", "Nickname must be 3-64 chars")});
+        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+        return MakeErrorJson("INVALID_NICKNAME", "Nickname must be 3-64 chars", "nickname");
     }
 
     const auto password_hash = PasswordHasher::Hash(password);
@@ -85,6 +87,8 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
         const auto user_id = result.Front()[0].As<std::string>();
         const auto token = jwt_service_.IssueToken(user_id);
 
+        request.SetResponseStatus(userver::server::http::HttpStatus::kCreated);
+
         userver::formats::json::ValueBuilder response;
         response["access_token"] = token;
         response["token_type"] = "Bearer";
@@ -94,13 +98,12 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
         return response.ExtractValue();
 
     } catch (const userver::storages::postgres::UniqueViolation& ex) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
         const auto constraint = ex.GetConstraint();
         if (constraint.find("login") != std::string::npos) {
-            throw ConflictError(
-                ConflictError::ExternalBody{MakeErrorBody("NICKNAME_EXISTS", "Nickname is already taken")});
+            return MakeErrorJson("NICKNAME_EXISTS", "Nickname is already taken", "nickname");
         }
-        throw ConflictError(
-            ConflictError::ExternalBody{MakeErrorBody("EMAIL_EXISTS", "Email is already registered")});
+        return MakeErrorJson("EMAIL_EXISTS", "Email is already registered", "email");
     }
 }
 

@@ -85,6 +85,7 @@ components_manager:
     # ==========================================
     version-storage: { }
     vector-search: { }
+    object-storage: { }
 
     # ==========================================
     # Слой бизнес-логики (Service Layer)
