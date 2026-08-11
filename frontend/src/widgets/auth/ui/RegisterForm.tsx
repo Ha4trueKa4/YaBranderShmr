@@ -1,5 +1,6 @@
 import { Button, FormField, IconButton, Input } from '@shared'
 import { Eye, EyeOff } from 'lucide-react'
+import { useId } from 'react'
 import { Controller } from 'react-hook-form'
 import { type RegisterSubmitHandler, useRegisterForm } from '../model'
 import styles from './AuthForms.module.css'
@@ -10,6 +11,9 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
+  const nicknameInputId = useId()
+  const emailInputId = useId()
+  const passwordInputId = useId()
   const {
     form,
     isPasswordVisible,
@@ -34,6 +38,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={nicknameInputId}
                 label="Nickname"
                 reserveErrorSpace
               >
@@ -42,6 +47,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
                   autoComplete="name"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={nicknameInputId}
                   placeholder="alexkim"
                   ref={field.ref}
                 />
@@ -54,6 +60,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={emailInputId}
                 label="Email"
                 reserveErrorSpace
               >
@@ -62,6 +69,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
                   autoComplete="email"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={emailInputId}
                   placeholder="alex@studio.com"
                   ref={field.ref}
                   type="email"
@@ -75,6 +83,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={passwordInputId}
                 label="Password"
                 reserveErrorSpace
               >
@@ -83,6 +92,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
                   autoComplete="new-password"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={passwordInputId}
                   placeholder="Enter your password"
                   ref={field.ref}
                   trailingContent={

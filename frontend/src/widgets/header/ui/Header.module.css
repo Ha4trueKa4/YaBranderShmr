@@ -34,6 +34,8 @@
 }
 
 .avatar {
+  border: 0;
+  cursor: pointer;
   display: grid;
   width: 2.25rem;
   height: 2.25rem;
@@ -43,6 +45,7 @@
   color: #fff;
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-semibold);
+  padding: 0;
 }
 
 @media (width < 640px) {

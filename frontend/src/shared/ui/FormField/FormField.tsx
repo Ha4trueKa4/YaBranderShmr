@@ -4,6 +4,7 @@ import styles from './FormField.module.css'
 export interface FormFieldProps {
   children: ReactNode
   error?: string
+  htmlFor: string
   label: string
   required?: boolean
   reserveErrorSpace?: boolean
@@ -12,6 +13,7 @@ export interface FormFieldProps {
 export function FormField({
   children,
   error,
+  htmlFor,
   label,
   required = false,
   reserveErrorSpace = false,
@@ -22,10 +24,10 @@ export function FormField({
         .filter(Boolean)
         .join(' ')}
     >
-      <span className={styles.label}>
+      <label className={styles.label} htmlFor={htmlFor}>
         {label}
         {required && <span className={styles.required}> *</span>}
-      </span>
+      </label>
       {children}
       {error && <span className={styles.error}>{error}</span>}
     </div>

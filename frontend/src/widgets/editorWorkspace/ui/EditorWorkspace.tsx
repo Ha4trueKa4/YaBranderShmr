@@ -1,5 +1,7 @@
+import { AppRoute } from '@app/providers/router/routes'
 import type { EditorLayer } from '@entities/editorDocument'
 import { EditorScene } from '@widgets/editorScene'
+import { useNavigate } from 'react-router-dom'
 import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
@@ -18,6 +20,8 @@ const previewSelectedLayer: EditorLayer = {
 }
 
 export function EditorWorkspace() {
+  const navigate = useNavigate()
+
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
   }
@@ -33,7 +37,7 @@ export function EditorWorkspace() {
         <EditorToolbar
           onEditProjectName={handleProjectNameSubmit}
           onExport={handleToolbarAction}
-          onOpenProfile={handleToolbarAction}
+          onOpenProfile={() => navigate(AppRoute.Profile)}
           onPanTool={handleToolbarAction}
           onRedo={handleToolbarAction}
           onSaveVersion={handleToolbarAction}

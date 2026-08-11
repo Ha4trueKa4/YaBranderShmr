@@ -1,5 +1,6 @@
 import { Button, FormField, IconButton, Input } from '@shared'
 import { Eye, EyeOff } from 'lucide-react'
+import { useId } from 'react'
 import { Controller } from 'react-hook-form'
 import { type LoginSubmitHandler, useLoginForm } from '../model'
 import styles from './AuthForms.module.css'
@@ -10,6 +11,8 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
+  const emailInputId = useId()
+  const passwordInputId = useId()
   const {
     form,
     isPasswordVisible,
@@ -32,6 +35,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={emailInputId}
                 label="Email"
                 reserveErrorSpace
               >
@@ -40,6 +44,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
                   autoComplete="email"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={emailInputId}
                   placeholder="alex@studio.com"
                   ref={field.ref}
                   type="email"
@@ -53,6 +58,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={passwordInputId}
                 label="Password"
                 reserveErrorSpace
               >
@@ -61,6 +67,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
                   autoComplete="current-password"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={passwordInputId}
                   placeholder="Enter your password"
                   ref={field.ref}
                   trailingContent={
