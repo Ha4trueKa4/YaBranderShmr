@@ -3,7 +3,7 @@
   height: 4rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-4);
   border-bottom: 1px solid #e4e4e7;
   background: #fff;
 }
