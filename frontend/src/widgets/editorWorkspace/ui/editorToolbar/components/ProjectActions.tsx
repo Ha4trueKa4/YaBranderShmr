@@ -1,3 +1,4 @@
+import { Button } from '@shared/ui'
 import chevronDown from '../assets/chevronDown.svg'
 import styles from '../EditorToolbar.module.css'
 
@@ -14,17 +15,17 @@ export function ProjectActions({
 }: ProjectActionsProps) {
   return (
     <div className={styles.projectActions}>
-      <button
+      <Button
         className={styles.saveVersion}
         onClick={onSaveVersion}
-        type="button"
+        variant="secondary"
       >
         Save version
-      </button>
-      <button className={styles.export} onClick={onExport} type="button">
+      </Button>
+      <Button onClick={onExport}>
         Export
         <img alt="" src={chevronDown} />
-      </button>
+      </Button>
       <button className={styles.avatar} onClick={onOpenProfile} type="button">
         OL
       </button>
