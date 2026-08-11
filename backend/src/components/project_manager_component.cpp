@@ -29,6 +29,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 
 
     std::string project_id = row["id"].As<std::string>();
+    LOG_INFO() << "Created project with ID: " << project_id;
     version_storage_.SaveVersion(project_id, kDefaultSvg); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
 
     return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), kDefaultSvg};
