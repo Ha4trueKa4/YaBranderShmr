@@ -16,7 +16,8 @@ void AppendProjects(userver::components::ComponentList& component_list) {
   component_list
       // .Append<components::VersionStorageComponentImpl>()
       .Append<components::LLMClientComponent>()
-      .Append<components::MockPromptConstructorComponent>()
+      .Append<components::PromptConstructorComponent>()
+      .Append<components::MockVectorSearchComponent>()
 
 
       .Append<components::ProjectManagerComponent>()

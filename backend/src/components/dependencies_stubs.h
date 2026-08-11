@@ -24,19 +24,5 @@ namespace ya_brander::components {
 //     virtual std::string GetLatestVersionData(const std::string& project_id) = 0;
 // };
 
-// ==========================================================
-// Компонент для формирования промптов (включая RAG) ЗАГЛУШКА ДЛЯ project_manager_component
-// ==========================================================
-class PromptConstructorComponent : public userver::components::LoggableComponentBase {
-public:
-    static constexpr std::string_view kName = "prompt-constructor";
-
-    PromptConstructorComponent(const userver::components::ComponentConfig& config,
-                               const userver::components::ComponentContext& context)
-        : LoggableComponentBase(config, context) {}
-
-    // Формирует итоговый промпт на основе текущего графа проекта и нового запроса пользователя
-    virtual std::string BuildEditPrompt(const std::string& current_state, const std::string& user_message) = 0;
-};
 
 } // namespace ya_brander::components

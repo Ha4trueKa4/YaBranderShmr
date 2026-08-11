@@ -64,6 +64,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/test_llm_handler/test_llm_handler.hpp
         src/components/LLMClientComponent.hpp
         src/components/LLMClientComponent.cpp
+        src/components/prompt_constructor_component.cpp
+        src/components/vector_search_component.h
         src/handlers/projects/create_project.cpp
         src/handlers/projects/get_project.cpp
         src/handlers/projects/patch_project.cpp

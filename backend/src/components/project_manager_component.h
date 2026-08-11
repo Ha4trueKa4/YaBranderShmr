@@ -10,6 +10,7 @@
 #include "dependencies_stubs.h"
 #include "version_storage/version_storage_component_impl.hpp"
 #include "LLMClientComponent.hpp"
+#include "prompt_constructor_component.h"
 
 namespace ya_brander::components {
 
