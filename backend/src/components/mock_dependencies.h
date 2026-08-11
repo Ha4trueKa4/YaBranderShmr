@@ -6,23 +6,6 @@
 
 namespace ya_brander::components {
 
-
-class MockVersionStorageComponent final : public VersionStorageComponent {
-public:
-    MockVersionStorageComponent(const userver::components::ComponentConfig& config,
-                                const userver::components::ComponentContext& context)
-        : VersionStorageComponent(config, context) {}
-
-    std::string SaveVersion(const std::string& project_id, const std::string& data) override {
-        return "s3://fake-bucket/projects/" + project_id + "/latest.json";
-    }
-
-    std::string GetLatestVersionData(const std::string& project_id) override {
-        return R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-</svg>)SVG";
-    }
-};
-
 class MockLLMClientComponent final : public LLMClientComponent {
 public:
     MockLLMClientComponent(const userver::components::ComponentConfig& config,

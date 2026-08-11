@@ -69,6 +69,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/patch_project.cpp
         src/handlers/projects/delete_project.cpp
         src/handlers/projects/generate_project.cpp
+        src/components/version_storage/version_storage_component_impl.cpp
+        src/components/object_storage/local_file_storage.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

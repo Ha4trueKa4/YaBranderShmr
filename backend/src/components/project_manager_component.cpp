@@ -9,7 +9,7 @@ ProjectManagerComponent::ProjectManagerComponent(
     const userver::components::ComponentContext& context)
     : LoggableComponentBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()),
-      version_storage_(context.FindComponent<VersionStorageComponent>()),
+      version_storage_(context.FindComponent<VersionStorageComponentImpl>()),
       llm_client_(context.FindComponent<LLMClientComponent>()),
       prompt_constructor_(context.FindComponent<PromptConstructorComponent>()) {}
 
@@ -29,6 +29,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 
 
     std::string project_id = row["id"].As<std::string>();
+    LOG_INFO() << "Created project with ID: " << project_id;
     version_storage_.SaveVersion(project_id, default_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
 
     return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), default_data};
@@ -37,7 +38,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
+        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at::text FROM projects WHERE id = $1::uuid",
         id
     );
 
