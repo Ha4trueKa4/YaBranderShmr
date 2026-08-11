@@ -1,11 +1,9 @@
 package com.yandex.avatargenerator.feature.onboarding.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.yandex.avatargenerator.feature.onboarding.data.onboardingRepository
 import com.yandex.avatargenerator.feature.onboarding.domain.HasSeenOnboardingUseCase
+import org.koin.compose.koinInject
 
 /**
  * Показывали ли онбординг раньше — нужно навигации, чтобы выбрать стартовый экран.
@@ -16,9 +14,6 @@ import com.yandex.avatargenerator.feature.onboarding.domain.HasSeenOnboardingUse
  */
 @Composable
 fun rememberHasSeenOnboarding(): Boolean? {
-    val context = LocalContext.current
-    val hasSeenOnboarding = remember(context) {
-        HasSeenOnboardingUseCase(onboardingRepository(context))
-    }
+    val hasSeenOnboarding = koinInject<HasSeenOnboardingUseCase>()
     return hasSeenOnboarding().collectAsStateWithLifecycle(initialValue = null).value
 }
