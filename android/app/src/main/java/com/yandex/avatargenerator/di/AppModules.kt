@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.di
 
 import com.yandex.avatargenerator.core.di.coreModule
 import com.yandex.avatargenerator.feature.create.di.chatsModule
+import com.yandex.avatargenerator.feature.createproject.di.createProjectModule
 import com.yandex.avatargenerator.feature.feed.di.feedModule
 import com.yandex.avatargenerator.feature.onboarding.di.onboardingModule
 import com.yandex.avatargenerator.feature.profile.di.profileModule
@@ -15,5 +16,6 @@ val appModules = listOf(
     onboardingModule,
     feedModule,
     chatsModule,
+    createProjectModule,
     profileModule,
 )
