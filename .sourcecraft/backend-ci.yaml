@@ -32,8 +32,7 @@ deploy:
     # Собираем .env в base64 на раннере — это избавляет от проблем с экранированием
     # спецсимволов (JWT_SECRET_KEY содержит & * #) при передаче через SSH/heredoc.
     - >
-      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY"
-      | base64 -w0 > /tmp/env_b64
+      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" | base64 -w0 > /tmp/env_b64
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
       "mkdir -p ~/$REMOTE_APP_DIR/backend &&
@@ -43,7 +42,7 @@ deploy:
         docker stop ya-brander || true &&
         docker rm ya-brander || true &&
         docker network create ya-brander-net || true &&
-        docker network connect ya-brander-net service-postgres || true &&
+        docker inspect service-postgres >/dev/null 2>&1 && docker network connect ya-brander-net service-postgres || true &&
         docker run -d --name ya-brander --restart unless-stopped \
           --network ya-brander-net \
           -p 8080:8080 \
