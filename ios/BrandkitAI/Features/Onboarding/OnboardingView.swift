@@ -23,6 +23,7 @@ struct OnboardingView: View {
         TabView(selection: $page) {
             logoPage
                 .tag(Page.logo)
+                .frame(maxWidth: .infinity)
                 .overlay {
                     GeometryReader { proxy in
                         let fraction = max(0, min(1, 1 + proxy.frame(in: .global).minX / proxy.size.width))
@@ -43,7 +44,8 @@ struct OnboardingView: View {
                 RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: 0.35), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
                     .ignoresSafeArea(.all)
                 .opacity(logoScrollFraction)
-                .blur(radius: (1 - logoScrollFraction) * 24)
+                .blur(radius: (1 - logoScrollFraction) * 20)
+                .grayscale(1 - logoScrollFraction)
             }
             .ignoresSafeArea(.all)
         }
