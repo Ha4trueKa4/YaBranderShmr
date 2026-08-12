@@ -45,7 +45,8 @@ struct OnboardingView: View {
         .background {
             ZStack {
                 Color(.background)
-                RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: 0.35 * (logoScrollFractionIverted * 2 + 1)), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
+                let gradientStopLocation = min(0.999, 0.35 * (logoScrollFractionIverted * 2 + 1))
+                RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: gradientStopLocation), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
                     .opacity(logoScrollFraction)
                     .blur(radius: logoScrollFractionIverted * 20)
                     .grayscale(logoScrollFractionIverted)
