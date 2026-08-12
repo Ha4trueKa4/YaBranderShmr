@@ -1,5 +1,6 @@
-  #include "patch_project.h"
+#include "patch_project.h"
 #include <userver/formats/json/serialize.hpp>
+#include <userver/utils/datetime.hpp>
 
 namespace ya_brander::handlers {
 
@@ -42,7 +43,7 @@ std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http:
   res["name"] = updated->name;
   res["description"] = updated->description;
   res["is_public"] = updated->is_public;
-  res["created_at"] = updated->created_at;
+  res["created_at"] = userver::utils::datetime::Timestring(updated->created_at);
   res["data"] = updated->data;
 
   return userver::formats::json::ToString(res.ExtractValue());

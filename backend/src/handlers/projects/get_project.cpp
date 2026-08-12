@@ -1,5 +1,6 @@
 #include "get_project.h"
 #include <userver/formats/json/serialize.hpp>
+#include <userver/utils/datetime.hpp>
 
 namespace ya_brander::handlers {
 
@@ -33,7 +34,7 @@ std::string GetProjectHandler::HandleRequestThrow(const userver::server::http::H
   res["name"] = project->name;
   res["description"] = project->description;
   res["is_public"] = project->is_public;
-  res["created_at"] = project->created_at;
+  res["created_at"] = userver::utils::datetime::Timestring(project->created_at);
   res["data"] = project->data;
 
   return userver::formats::json::ToString(res.ExtractValue());
