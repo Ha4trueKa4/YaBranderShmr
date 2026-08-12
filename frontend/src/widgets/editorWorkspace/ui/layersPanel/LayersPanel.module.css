@@ -1,0 +1,17 @@
+.panel {
+  height: 100%;
+  padding: var(--space-4);
+  color: #18181b;
+}
+
+.panel h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-label);
+  text-transform: uppercase;
+}
+
+.panel p {
+  margin: 0;
+  color: #71717a;
+  font-size: var(--font-size-caption);
+}

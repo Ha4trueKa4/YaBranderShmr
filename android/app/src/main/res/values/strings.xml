@@ -1,0 +1,91 @@
+<resources>
+    <string name="app_name">AvatarGenerator</string>
+
+    <!-- Дизайн-система -->
+    <string name="brand_version_restore">Restore</string>
+
+    <!-- Вкладки нижней навигации -->
+    <string name="nav_feed">Лента</string>
+    <string name="nav_create">Создать</string>
+    <string name="nav_profile">Профиль</string>
+
+    <!-- Вход и регистрация -->
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_create_account">Create account</string>
+    <string name="auth_field_full_name">Full name</string>
+    <string name="auth_field_email">Email</string>
+    <string name="auth_field_password">Password</string>
+    <string name="auth_placeholder_full_name">John Doe</string>
+    <string name="auth_placeholder_email">hello@brandkit.ai</string>
+    <string name="auth_placeholder_password">Enter your password</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_no_account">No account?</string>
+    <string name="auth_register">Register</string>
+    <string name="auth_have_account">Already have an account?</string>
+
+    <!-- Onboarding: welcome -->
+    <string name="onboarding_brand_title">Brandkit AI</string>
+    <string name="onboarding_brand_subtitle">Turn words into brand identity</string>
+
+    <!-- Onboarding: how it works -->
+    <string name="onboarding_how_it_works_title">How it works</string>
+    <string name="onboarding_step_describe_title">Describe</string>
+    <string name="onboarding_step_describe_subtitle">Write what you need</string>
+    <string name="onboarding_step_generate_title">Generate</string>
+    <string name="onboarding_step_generate_subtitle">AI creates vector graphics</string>
+    <string name="onboarding_step_edit_title">Edit</string>
+    <string name="onboarding_step_edit_subtitle">Refine in the visual editor</string>
+    <string name="onboarding_step_publish_title">Publish</string>
+    <string name="onboarding_step_publish_subtitle">Share with the world</string>
+
+    <!-- Onboarding: get started -->
+    <string name="onboarding_mockup_brand_name">NEXUS</string>
+    <string name="onboarding_mockup_brand_tagline">BRAND DESIGN</string>
+    <string name="onboarding_cta_title">Start creating for free</string>
+    <string name="onboarding_cta_button">Get Started</string>
+    <string name="onboarding_sign_in_prompt">Already have an account?</string>
+    <string name="onboarding_sign_in_action">Sign in</string>
+
+    <!-- Onboarding: accessibility -->
+    <string name="onboarding_page_indicator_description">Page %1$d of %2$d</string>
+
+    <!-- Лента -->
+    <string name="feed_brand_name">Brandkit</string>
+    <string name="feed_brand_name_accent">AI</string>
+    <string name="feed_search_description">Поиск</string>
+
+    <string name="feed_tab_all">All</string>
+    <string name="feed_tab_subscriptions">Subscriptions</string>
+
+    <string name="feed_empty_subscriptions_title">No subscriptions yet</string>
+    <string name="feed_empty_subscriptions_subtitle">Follow creators to see their work here</string>
+    <string name="feed_empty_subscriptions_action">Explore all projects</string>
+
+    <string name="feed_empty_projects_title">No projects yet</string>
+    <string name="feed_empty_projects_subtitle">Published projects will appear here</string>
+
+    <string name="feed_error_title">Couldn\'t load feed</string>
+    <string name="feed_error_retry">Retry</string>
+    <string name="feed_append_error_retry">Failed to load. Retry</string>
+
+    <!-- Чаты (таб «Создать») -->
+    <string name="chats_title">Chats</string>
+    <string name="chats_new_project">New project</string>
+    <string name="chats_open_chat_description">Open chat</string>
+
+    <string name="chats_empty_title">No chats yet</string>
+    <string name="chats_empty_subtitle">Start a new project to create your first avatar</string>
+
+    <string name="chats_error_title">Couldn\'t load chats</string>
+    <string name="chats_error_retry">Retry</string>
+
+    <!-- Относительное время: подписи строк чата.
+         Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->
+    <string name="chats_time_just_now">just now</string>
+    <string name="chats_time_minutes">%1$d min ago</string>
+    <string name="chats_time_hours">%1$d hr ago</string>
+    <plurals name="chats_time_days">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+</resources>

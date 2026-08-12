@@ -1,3 +1,10 @@
+# Required SourceCraft repository secrets:
+#   YC_S3_BUCKET            — Object Storage bucket name for the dev site
+#   YC_S3_ACCESS_KEY_ID     — static access key ID of the deploy service account
+#   YC_S3_SECRET_ACCESS_KEY — static secret access key of the deploy service account
+#   VITE_API_URL_DEV         — public HTTPS API URL, including /api/v1
+#   VITE_HEALTH_URL_DEV      — public HTTPS health-check URL
+#
 # CI/CD-сборка Android запускается только для pull request в ветку dev
 # и только если в изменениях затрагивались файлы Android-проекта (директория android/**).
 
