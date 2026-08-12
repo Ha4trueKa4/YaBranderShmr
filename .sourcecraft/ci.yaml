@@ -29,6 +29,13 @@ workflows:
         cubes:
           - name: run-backend-ci
             gitlab_workflow: .sourcecraft/backend-ci.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
+              YC_SERVER_IP: ${{ secrets.YC_SERVER_IP }}
+              YC_SERVER_USER: ${{ secrets.YC_SERVER_USER }}
+              YC_SSH_PRIVATE_KEY: ${{ secrets.YC_SSH_PRIVATE_KEY }}
+              JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+              YANDEX_AI_API_KEY: ${{ secrets.YANDEX_AI_API_KEY }}
 
   deploy-frontend-dev:
     tasks:
