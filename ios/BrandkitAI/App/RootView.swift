@@ -47,7 +47,7 @@ struct RootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.background).ignoresSafeArea())
+        .background(Color(coverFlow == .onboarding ? .clear : .background).ignoresSafeArea())
         .preferredColorScheme(.dark)
         .environment(session)
         .task {
