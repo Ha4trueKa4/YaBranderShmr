@@ -1,13 +1,14 @@
 import { IconButton } from '@shared/ui'
-import iconHand from '../assets/iconHand.svg'
-import iconMousePointer from '../assets/iconMousePointer.svg'
 import iconRotateLeft from '../assets/iconRotateLeft.svg'
 import iconRotateRight from '../assets/iconRotateRight.svg'
 import iconSearchMinus from '../assets/iconSearchMinus.svg'
 import iconSearchPlus from '../assets/iconSearchPlus.svg'
 import styles from '../EditorToolbar.module.css'
 
+export type CanvasTool = 'select' | 'pan'
+
 interface CanvasControlsProps {
+  activeTool: CanvasTool
   onPanTool: () => void
   onRedo: () => void
   onSelectTool: () => void
@@ -17,6 +18,7 @@ interface CanvasControlsProps {
 }
 
 export function CanvasControls({
+  activeTool,
   onPanTool,
   onRedo,
   onSelectTool,
@@ -27,14 +29,18 @@ export function CanvasControls({
   return (
     <div className={styles.canvasControls}>
       <IconButton
-        className={styles.activeTool}
+        className={activeTool === 'select' ? styles.activeTool : undefined}
         onClick={onSelectTool}
         size="sm"
       >
-        <img alt="" src={iconMousePointer} />
+        <span className={`${styles.toolIcon} ${styles.selectTool}`} />
       </IconButton>
-      <IconButton onClick={onPanTool} size="sm">
-        <img alt="" src={iconHand} />
+      <IconButton
+        className={activeTool === 'pan' ? styles.activeTool : undefined}
+        onClick={onPanTool}
+        size="sm"
+      >
+        <span className={`${styles.toolIcon} ${styles.panTool}`} />
       </IconButton>
       <span className={styles.divider} />
       <IconButton onClick={onZoomIn} size="sm">

@@ -3,7 +3,7 @@
   grid-template-rows: minmax(0, 1fr) auto;
   gap: var(--space-6);
   width: min(100% - 3rem, 68rem);
-  min-height: calc(100vh - 4.75rem);
+  min-height: calc(100vh - 4rem);
   margin: 0 auto;
   padding: 5rem 0;
 }
@@ -17,9 +17,14 @@
   background: #fff;
 }
 
-.copy {
+.copy,
+.copyWidthLimited {
   padding: var(--space-6);
   text-align: center;
+}
+
+.copyWidthLimited {
+  max-width: 34rem;
 }
 
 .icon {
@@ -29,13 +34,15 @@
   width: 6rem;
 }
 
-.copy h1 {
+.copy h1,
+.copyWidthLimited h1 {
   margin: 0;
   color: #18181b;
   font-size: var(--font-size-h2);
 }
 
-.copy p {
+.copy p,
+.copyWidthLimited p {
   margin: var(--space-2) 0 0;
   color: #71717a;
 }
@@ -52,7 +59,6 @@
 @media (width < 640px) {
   .state {
     width: min(100% - 2rem, 68rem);
-    min-height: calc(100vh - 4rem);
     padding: var(--space-4) 0;
   }
 

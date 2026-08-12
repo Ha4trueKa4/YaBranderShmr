@@ -5,22 +5,22 @@
 #   VITE_API_URL_DEV         — public HTTPS API URL, including /api/v1
 #   VITE_HEALTH_URL_DEV      — public HTTPS health-check URL
 #
-# CI/CD-сборка Android запускается только для pull request в ветку main
+# CI/CD-сборка Android запускается только для pull request в ветку dev
 # и только если в изменениях затрагивались файлы Android-проекта (директория android/**).
 
 on:
   pull_request:
     - workflows: build-android
       filter:
-        target_branches: ["main"]
+        target_branches: ["dev"]
         paths: ["android/**"]
   push:
     - workflows: [deploy-frontend-dev]
       filter:
-        branches: [main]
+        branches: [dev]
     - workflows: [deploy-backend]
       filter:
-        branches: ["main"]
+        branches: ["main", "dev"]
 
 workflows:
   deploy-backend:
@@ -29,13 +29,6 @@ workflows:
         cubes:
           - name: run-backend-ci
             gitlab_workflow: .sourcecraft/backend-ci.yaml
-            env:
-              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
-              YC_SERVER_IP: ${{ secrets.YC_SERVER_IP }}
-              YC_SERVER_USER: ${{ secrets.YC_SERVER_USER }}
-              YC_SSH_PRIVATE_KEY: ${{ secrets.YC_SSH_PRIVATE_KEY }}
-              JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-              YANDEX_AI_API_KEY: ${{ secrets.YANDEX_AI_API_KEY }}
 
   deploy-frontend-dev:
     tasks:

@@ -1,9 +1,9 @@
 import { AuthPage } from '@pages/auth'
 import { EditorCreatePage } from '@pages/editorCreate'
 import { EditorProjectPage } from '@pages/editorProject'
+import { ProfilePage } from '@pages/profile'
 // import { FeedPage } from '@pages/feed'
 // import { MainPage } from '@pages/main'
-// import { ProfilePage } from '@pages/profile'
 import { Navigate, type RouteObject } from 'react-router-dom'
 
 export const AppRoute = {
@@ -25,6 +25,7 @@ const publicRoutes: RouteObject[] = [
 export const authorizedRoutes: RouteObject[] = [
   ...publicRoutes,
   { path: AppRoute.EditorProject, element: <EditorProjectPage /> },
+  { path: AppRoute.Profile, element: <ProfilePage /> },
   { path: '*', element: <Navigate to={AppRoute.EditorCreate} replace /> },
 ]
 

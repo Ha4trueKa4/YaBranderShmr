@@ -1,12 +1,13 @@
 import { authStore } from '@app/providers/auth'
+import { AppRoute } from '@app/providers/router/routes'
 import brandMark from '@shared/assets/brandmark.svg'
 import { Button } from '@shared/ui'
 import { observer } from 'mobx-react-lite'
 import { useNavigate } from 'react-router-dom'
 
-import styles from './AppHeader.module.css'
+import styles from './Header.module.css'
 
-export const AppHeader = observer(function AppHeader() {
+export const Header = observer(function Header() {
   const navigate = useNavigate()
 
   return (
@@ -20,7 +21,13 @@ export const AppHeader = observer(function AppHeader() {
         <span>Brandkit AI</span>
       </button>
       {authStore.isAuthorized ? (
-        <div className={styles.avatar}>OL</div>
+        <button
+          className={styles.avatar}
+          onClick={() => navigate(AppRoute.Profile)}
+          type="button"
+        >
+          OL
+        </button>
       ) : (
         <div className={styles.actions}>
           <Button onClick={() => navigate('/auth')} variant="ghost">

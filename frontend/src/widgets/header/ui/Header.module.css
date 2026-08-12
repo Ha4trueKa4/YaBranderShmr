@@ -1,9 +1,9 @@
 .header {
   display: flex;
-  height: 4.75rem;
+  height: 4rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-4);
   border-bottom: 1px solid #e4e4e7;
   background: #fff;
 }
@@ -19,6 +19,7 @@
   font: inherit;
   font-size: 1.125rem;
   font-weight: var(--font-weight-bold);
+  padding: 0;
 }
 
 .brand img {
@@ -33,6 +34,8 @@
 }
 
 .avatar {
+  border: 0;
+  cursor: pointer;
   display: grid;
   width: 2.25rem;
   height: 2.25rem;
@@ -42,6 +45,7 @@
   color: #fff;
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-semibold);
+  padding: 0;
 }
 
 @media (width < 640px) {

@@ -2,8 +2,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { App } from '@app/app/App.tsx'
-import { QueryProvider } from '@app/providers'
-import { ToastProvider } from '@shared/ui'
 
 const rootElement = document.getElementById('root')
 
@@ -13,10 +11,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryProvider>
-      <ToastProvider>
-        <App />
-      </ToastProvider>
-    </QueryProvider>
+    <App />
   </StrictMode>,
 )
