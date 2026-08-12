@@ -1,12 +1,51 @@
 codereview:
+  ignore_self_ship: true
+  ignore_non_reviewers_block: false
   auto_assign: true
   rules:
+    # Backend (ШБР C++) — 2 ревьюера из команды
+    - patterns:
+        - "backend/**"
+      reviewers:
+        usernames:
+          - "artem1jp"
+          - "vladimir9802"
+          - "skvortsovmichael2"
+          - "miraziz013"
+          - "hikmatilloh"
+          - "mgr2425"
+          - "igororekhow"
+        assign: 2
+        need_ships: 1
+
+    # Android (ШМР) — 2 ревьюера из команды
     - patterns:
         - "android/**"
       reviewers:
         usernames:
-          - "pigin-pawel"
           - "antvg05"
           - "kelemandean"
+          - "pigin-pawel"
+        assign: 2
+        need_ships: 1
+
+    # iOS (ШМР) — 2 ревьюера из команды
+    - patterns:
+        - "ios/**"
+      reviewers:
+        usernames:
+          - "valyanskiyandrey"
+          - "f0x5erg"
+          - "rinsper"
+        assign: 2
+        need_ships: 1
+
+    # Frontend (ШРИ) — 1 ревьюер (мало людей)
+    - patterns:
+        - "frontend/**"
+      reviewers:
+        usernames:
+          - "amikerin7"
+          - "baymuratova-alina"
         assign: 1
         need_ships: 1
