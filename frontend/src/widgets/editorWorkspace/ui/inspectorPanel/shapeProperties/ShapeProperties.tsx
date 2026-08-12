@@ -1,6 +1,8 @@
 import type { ShapeLayer } from '@entities/editorDocument'
-import { Input } from '@shared/ui'
 
+import { FillProperty } from '../components/FillProperty'
+import { PropertyField } from '../components/PropertyField'
+import { StrokeProperty } from '../components/StrokeProperty'
 import styles from '../Properties.module.css'
 
 interface ShapePropertiesProps {
@@ -13,23 +15,11 @@ export function ShapeProperties({ layer }: ShapePropertiesProps) {
       {/* Подключить изменение координат, fill и stroke через feature editorEditProperties. */}
       <p className={styles.sectionTitle}>Shape</p>
       <div className={styles.fieldGrid}>
-        <div className={styles.field}>
-          X
-          <Input readOnly value={layer.x} />
-        </div>
-        <div className={styles.field}>
-          Y
-          <Input readOnly value={layer.y} />
-        </div>
+        <PropertyField label="X" value={layer.x} />
+        <PropertyField label="Y" value={layer.y} />
       </div>
-      <div className={styles.field}>
-        Fill
-        <Input readOnly value={layer.fill} />
-      </div>
-      <div className={styles.field}>
-        Stroke
-        <Input readOnly value={layer.stroke ?? 'None'} />
-      </div>
+      <FillProperty fill={layer.fill} />
+      <StrokeProperty stroke={layer.stroke} />
     </div>
   )
 }

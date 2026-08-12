@@ -1,6 +1,6 @@
 import type { BackgroundLayer } from '@entities/editorDocument'
-import { Input } from '@shared/ui'
 
+import { FillProperty } from '../components/FillProperty'
 import styles from '../Properties.module.css'
 
 interface BackgroundPropertiesProps {
@@ -12,10 +12,7 @@ export function BackgroundProperties({ layer }: BackgroundPropertiesProps) {
     <div className={styles.properties}>
       {/* Подключить изменение fill через feature editorChangeBackground. */}
       <p className={styles.sectionTitle}>Background</p>
-      <div className={styles.field}>
-        Fill
-        <Input readOnly value={layer.fill} />
-      </div>
+      <FillProperty fill={layer.fill} />
     </div>
   )
 }
