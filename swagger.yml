@@ -186,7 +186,9 @@ paths:
                 is_public:
                   type: boolean
                 data:
-                  $ref: '#/components/schemas/ProjectData'
+                  type: string
+                  description: "Чистая SVG-разметка проекта"
+                  example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><g></g></svg>'
       responses:
         '200':
           description: Проект успешно обновлен
@@ -239,14 +241,18 @@ paths:
                   example: "Добавь логотип с изображением кружки"
       responses:
         '200':
-          description: Сгенерированный JSON-граф элементов
+          description: Сгенерированный SVG-код проекта
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectData'
+                type: object
+                properties:
+                  data:
+                    type: string
+                    description: "Результат работы нейросети в виде SVG-строки"
+                    example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100" fill="#FF0000"/></svg>'
         '401':
           description: Не авторизован
-
 
 components:
   securitySchemes:
@@ -338,7 +344,9 @@ components:
         - type: object
           properties:
             data:
-              $ref: '#/components/schemas/ProjectData'
+              type: string
+              description: "Чистая SVG-разметка проекта"
+              example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><g></g></svg>'
 
     ProjectDescription:
       type: object
@@ -356,23 +364,6 @@ components:
         created_at:
           type: string
           format: date-time
-
-
-    ProjectData:
-      type: object
-      properties:
-        width:
-          type: integer
-          example: 1024
-        height:
-          type: integer
-          example: 1024
-        background:
-          type: string
-          example: "#FFFFFF"
-        layers:
-          type: string
-          description: SVG-разметка проекта в виде одной строки
 
     ValidationError:
       type: object
