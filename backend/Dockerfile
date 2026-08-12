@@ -4,7 +4,7 @@ FROM ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0 AS build
 WORKDIR /build
 
 # Копируем весь backend (src/, CMakeLists.txt, конфиги)
-COPY backend/ .
+COPY . .
 
 # Собираем Release-версию бинарника ya_brander
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
