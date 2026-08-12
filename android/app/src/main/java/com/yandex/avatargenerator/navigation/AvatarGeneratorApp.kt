@@ -1,8 +1,10 @@
 package com.yandex.avatargenerator.navigation
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -31,10 +33,13 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  * ([TopLevelDestination]); на экранах-деталях (проект, чужой профиль) и на
  * онбординге она скрыта, чтобы не мешать полноэкранному контенту.
  *
- * Инсеты системных баров экранам раздаёт `Scaffold` — кроме онбординга: тот
- * рисуется во всё окно и отступает от баров сам. Если фича заводит собственный
- * `windowInsetsPadding`, её маршрут нужно добавить в это исключение, иначе
- * отступы удвоятся.
+ * Инсеты системных баров экранам раздаёт `Scaffold`, но с двумя исключениями:
+ *  - онбординг рисуется во всё окно и отступает от баров сам;
+ *  - экран проекта получает только верхний инсет — низ он «пробивает» сам, чтобы
+ *    фон поля ввода уходил под системную навигацию.
+ *
+ * Если фича заводит собственный `windowInsetsPadding`, её маршрут нужно добавить
+ * в соответствующее исключение, иначе отступы удвоятся.
  */
 @Composable
 fun AvatarGeneratorApp(
@@ -51,6 +56,10 @@ fun AvatarGeneratorApp(
     // будет открыт ровно тогда, когда флаг ещё не выставлен.
     val isFullBleed = currentDestination?.isOnRoute(Destination.Onboarding.route)
         ?: (hasSeenOnboarding == false)
+    // Экран проекта уходит под системную навигацию: фон поля ввода должен
+    // доходить до нижнего края экрана (безрамочный низ). Нижний инсет он
+    // обрабатывает сам — Scaffold отдаёт ему только верхний.
+    val isBottomFullBleed = currentDestination.isOnRoute(Destination.Project.route)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -59,10 +68,10 @@ fun AvatarGeneratorApp(
         // от системных баров каждая его страница ставит сама (windowInsetsPadding).
         // Если те же инсеты раздаст ещё и Scaffold — сверху и снизу появится
         // полоса containerColor, а отступы страниц удвоятся.
-        contentWindowInsets = if (isFullBleed) {
-            WindowInsets(0)
-        } else {
-            ScaffoldDefaults.contentWindowInsets
+        contentWindowInsets = when {
+            isFullBleed -> WindowInsets(0)
+            isBottomFullBleed -> ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top)
+            else -> ScaffoldDefaults.contentWindowInsets
         },
         bottomBar = {
             if (showBottomBar) {
