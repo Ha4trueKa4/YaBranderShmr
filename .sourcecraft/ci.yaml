@@ -5,22 +5,22 @@
 #   VITE_API_URL_DEV         — public HTTPS API URL, including /api/v1
 #   VITE_HEALTH_URL_DEV      — public HTTPS health-check URL
 #
-# CI/CD-сборка Android запускается только для pull request в ветку dev
+# CI/CD-сборка Android запускается только для pull request в ветку main
 # и только если в изменениях затрагивались файлы Android-проекта (директория android/**).
 
 on:
   pull_request:
     - workflows: build-android
       filter:
-        target_branches: ["dev"]
+        target_branches: ["main"]
         paths: ["android/**"]
   push:
     - workflows: [deploy-frontend-dev]
       filter:
-        branches: [dev]
+        branches: [main]
     - workflows: [deploy-backend]
       filter:
-        branches: ["main", "dev"]
+        branches: ["main"]
 
 workflows:
   deploy-backend:
