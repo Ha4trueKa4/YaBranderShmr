@@ -7,23 +7,24 @@
 
 import Foundation
 
-enum HTTPMethod: String {
+enum HTTPMethod: String, Sendable {
     case get = "GET"
     case post = "POST"
+    case patch = "PATCH"
     case put = "PUT"
     case delete = "DELETE"
 }
 
-nonisolated protocol NetworkClientProtocol {
-    func request<Response: Decodable>(
+nonisolated protocol NetworkClientProtocol: Sendable {
+    func request<Response: Decodable & Sendable>(
         _ method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws -> Response
 
     func request(
         _ method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws
 }

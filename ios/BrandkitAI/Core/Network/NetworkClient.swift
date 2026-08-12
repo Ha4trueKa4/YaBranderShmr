@@ -7,41 +7,37 @@
 
 import Foundation
 
-nonisolated final class NetworkClient: NetworkClientProtocol {
+nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     private let baseURL: String
-    private let token: String
+    private let tokenStore: TokenStore
     private let session: URLSession
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
 
-    init(baseURL: String, token: String, timeout: TimeInterval = 15) {
+    init(baseURL: String, tokenStore: TokenStore = TokenStore(), timeout: TimeInterval = 15) {
         self.baseURL = baseURL
-        self.token = token
+        self.tokenStore = tokenStore
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout
         self.session = URLSession(configuration: config)
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
     }
 
-    func request<Response: Decodable>(
+    func request<Response: Decodable & Sendable>(
         _ method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws -> Response {
         let data = try await execute(method: method, path: path, body: body)
         do {
-            return try decoder.decode(Response.self, from: data)
+            return try JSONDecoder().decode(Response.self, from: data)
         } catch {
-            throw NetworkError.decodingError(error)
+            throw NetworkError.decodingError
         }
     }
 
     func request(
         _ method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws {
         _ = try await execute(method: method, path: path, body: body)
     }
@@ -51,7 +47,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol {
     private func execute(
         method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws -> Data {
         let shouldRetry = method == .get
         if !shouldRetry {
@@ -63,7 +59,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol {
     private func rawRequest(
         method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws -> Data {
         guard let url = URL(string: baseURL + path) else {
             throw NetworkError.invalidURL
@@ -71,14 +67,19 @@ nonisolated final class NetworkClient: NetworkClientProtocol {
 
         var urlRequest = URLRequest(url: url, timeoutInterval: session.configuration.timeoutIntervalForRequest)
         urlRequest.httpMethod = method.rawValue
-        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        if requiresAuthorization(for: path) {
+            guard let token = tokenStore.accessToken, !token.isEmpty else {
+                throw NetworkError.missingAccessToken
+            }
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         if let body {
             do {
-                urlRequest.httpBody = try encoder.encode(body)
+                urlRequest.httpBody = try JSONEncoder().encode(body)
             } catch {
-                throw NetworkError.encodingError(error)
+                throw NetworkError.encodingError
             }
         }
 
@@ -89,12 +90,14 @@ nonisolated final class NetworkClient: NetworkClientProtocol {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            let bodyString = String(data: data, encoding: .utf8) ?? "<non-utf8>"
-            print("[NetworkClient] HTTP \(httpResponse.statusCode) for \(method.rawValue) \(path): \(bodyString)")
             throw NetworkError.httpError(statusCode: httpResponse.statusCode)
         }
 
         return data
+    }
+
+    private func requiresAuthorization(for path: String) -> Bool {
+        path != "/auth/login" && path != "/auth/register"
     }
 
     // MARK: - Retry (GET only)
@@ -109,7 +112,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol {
     private func rawRequestWithRetry(
         method: HTTPMethod,
         path: String,
-        body: (some Encodable)?
+        body: (some Encodable & Sendable)?
     ) async throws -> Data {
         var attempt = 0
         var delayNs = Self.minDelay
@@ -128,4 +131,35 @@ nonisolated final class NetworkClient: NetworkClientProtocol {
             }
         }
     }
+}
+
+// MARK: - Auth DTOs
+
+nonisolated struct LoginRequest: Encodable, Sendable {
+    let email: String
+    let password: String
+}
+
+nonisolated struct RegisterRequest: Encodable, Sendable {
+    let email: String
+    let password: String
+    let nickname: String
+}
+
+nonisolated struct AuthResponse: Decodable, Sendable {
+    let accessToken: String
+    let tokenType: String
+    let user: AuthUser
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case tokenType = "token_type"
+        case user
+    }
+}
+
+nonisolated struct AuthUser: Decodable, Sendable {
+    let id: String
+    let email: String
+    let nickname: String
 }

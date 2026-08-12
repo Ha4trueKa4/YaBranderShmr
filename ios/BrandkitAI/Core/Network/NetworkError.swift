@@ -7,10 +7,12 @@
 
 import Foundation
 
-enum NetworkError: Error {
+enum NetworkError: Error, Sendable {
     case invalidURL
     case invalidResponse
+    case missingAccessToken
+    case tokenStorageError
     case httpError(statusCode: Int)
-    case decodingError(Error)
-    case encodingError(Error)
+    case decodingError
+    case encodingError
 }
