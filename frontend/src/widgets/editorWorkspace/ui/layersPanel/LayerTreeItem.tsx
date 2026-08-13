@@ -36,39 +36,33 @@ export function LayerTreeItem({
 
   return (
     <div className={styles.treeItem}>
-      <div
+      <button
         className={isSelected ? styles.selected : styles.layer}
+        onClick={() =>
+          isGroup ? onToggleGroup(node.id) : onSelectLayer(node.id)
+        }
         style={{
           paddingInlineStart: `calc(var(--space-4) + ${depth} * var(--space-5))`,
         }}
+        type="button"
       >
         {isGroup ? (
-          <button
-            className={styles.chevronButton}
-            onClick={() => onToggleGroup(node.id)}
-            type="button"
-          >
+          <span className={styles.chevronButton}>
             <img
               alt=""
               className={isExpanded ? styles.chevronExpanded : styles.icon}
               src={chevronRight}
             />
-          </button>
+          </span>
         ) : (
           <span className={styles.chevronPlaceholder} />
         )}
-        <button
-          className={styles.itemButton}
-          onClick={() =>
-            isGroup ? onToggleGroup(node.id) : onSelectLayer(node.id)
-          }
-          type="button"
-        >
+        <span className={styles.itemButton}>
           <LayerIcon className={styles.icon} size={16} strokeWidth={2} />
           {node.name}
-        </button>
+        </span>
         <Eye className={styles.visibilityIcon} size={16} strokeWidth={2} />
-      </div>
+      </button>
       {isGroup && isExpanded && (
         <div className={styles.children}>
           {node.children.map((child: EditorNode) => (
