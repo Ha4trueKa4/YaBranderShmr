@@ -1,45 +1,44 @@
-import type { FeedProject } from '@entities/project/model/types'
 import { Avatar } from '@shared/ui'
-import { Link } from 'react-router-dom'
 
-import { ProjectPreview } from '../projectPreview'
+import { ProjectPreview } from '../ProjectPreview'
 import styles from './FeedProjectCard.module.css'
 
 export interface FeedProjectCardProps {
-  project: FeedProject
+  authorInitials: string
+  authorName: string
+  authorTone?: 'accent' | 'cyan' | 'green' | 'rose'
+  publishedAt: string
+  title: string
 }
 
-export function FeedProjectCard({ project }: FeedProjectCardProps) {
-  const authorInitials = getInitials(project.author.name)
-
+export function FeedProjectCard({
+  authorInitials,
+  authorName,
+  authorTone = 'accent',
+  publishedAt,
+  title,
+}: FeedProjectCardProps) {
   return (
     <article className={styles.card}>
-      <ProjectPreview imageUrl={project.previewUrl} title={project.name} />
+      <ProjectPreview title={title} />
       <div className={styles.content}>
-        <h3>{project.name}</h3>
+        <h3>{title}</h3>
         <div className={styles.meta}>
           <div className={styles.author}>
-            <Link
-              className={styles.avatarLink}
-              to={`/users/${project.author.id}`}
-            >
-              <Avatar initials={authorInitials} size="sm" />
-            </Link>
-            <span>{project.author.name}</span>
+            <Avatar
+              className={styles[`avatar${capitalize(authorTone)}`]}
+              initials={authorInitials}
+              size="sm"
+            />
+            <span>{authorName}</span>
           </div>
-          <time>{project.publishedAt}</time>
+          <time>{publishedAt}</time>
         </div>
       </div>
     </article>
   )
 }
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
+function capitalize(value: string) {
+  return `${value[0].toUpperCase()}${value.slice(1)}`
 }

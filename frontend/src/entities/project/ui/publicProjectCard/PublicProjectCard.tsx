@@ -1,24 +1,25 @@
-import type { PublicProfileProject } from '@entities/project/model/types'
 import { ExternalLink } from 'lucide-react'
 
-import { ProjectPreview } from '../projectPreview'
+import { ProjectPreview } from '../ProjectPreview'
 import styles from './PublicProjectCard.module.css'
 
 export interface PublicProjectCardProps {
+  description: string
   onOpenClick?: () => void
-  project: PublicProfileProject
+  title: string
 }
 
 export function PublicProjectCard({
+  description,
   onOpenClick,
-  project,
+  title,
 }: PublicProjectCardProps) {
   return (
     <article className={styles.card}>
-      <ProjectPreview imageUrl={project.previewUrl} title={project.name} />
+      <ProjectPreview title={title} />
       <div className={styles.content}>
         <div className={styles.titleRow}>
-          <h3>{project.name}</h3>
+          <h3>{title}</h3>
           <button
             className={styles.openButton}
             onClick={onOpenClick}
@@ -27,7 +28,7 @@ export function PublicProjectCard({
             <ExternalLink size={18} />
           </button>
         </div>
-        <p>{project.description}</p>
+        <p>{description}</p>
       </div>
     </article>
   )

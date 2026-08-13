@@ -6,7 +6,6 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  cursor: pointer;
 }
 
 .content {
