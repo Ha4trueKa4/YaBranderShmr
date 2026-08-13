@@ -1,1 +1,8 @@
 export { useProjectQuery } from './api/queries'
+export type { FeedProjectCardProps } from './ui/FeedProjectCard'
+export { FeedProjectCard } from './ui/FeedProjectCard'
+export type { OwnProjectCardProps } from './ui/OwnProjectCard'
+export { OwnProjectCard } from './ui/OwnProjectCard'
+export { ProjectPreview } from './ui/ProjectPreview'
+export type { PublicProjectCardProps } from './ui/PublicProjectCard'
+export { PublicProjectCard } from './ui/PublicProjectCard'
