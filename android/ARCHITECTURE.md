@@ -105,6 +105,33 @@ feature/<имя>/
 всех фич (например, `DataStore<Preferences>`) — в `core/`, не дублируется
 (см. `core/data/AppPreferences.kt`).
 
+## Сеть
+
+Контракт API, реализованные ручки и известные расхождения — в `API.md`.
+
+Основа — в `core/network/`, один `HttpClient` (Ktor + OkHttp) на приложение,
+регистрируется в `core/di/NetworkModule.kt`:
+
+- `ApiConfig.kt` — базовый URL (из `BuildConfig.API_BASE_URL`) и таймауты.
+- `HttpClientFactory.kt` — сборка клиента: `ContentNegotiation` + `ApiJson`,
+  таймауты, ретраи на 5xx и обрывы связи, `Bearer`-заголовок, логирование
+  только в debug.
+- `ApiJson.kt` — общая настройка `Json` (`ignoreUnknownKeys` обязателен).
+- `AuthTokenProvider.kt` / `AuthTokenStore.kt` — чтение и запись токена;
+  клиент спрашивает его на каждом запросе, поэтому смена токена не требует
+  пересоздания клиента.
+- `ApiCall.kt` — `apiCall { }`, маппинг исключений Ktor в `NetworkException`.
+- `dto/` — общие DTO (`ApiErrorDto`).
+
+**Правила:**
+
+- Репозиторий фичи инъектит готовый `HttpClient`, свой не собирает.
+- Каждый вызов API заворачивается в `apiCall { }`, чтобы наружу летела только
+  доменная `core/domain/NetworkException` — `domain/` и `ui/` не знают ни про
+  Ktor, ни про HTTP-коды.
+- DTO — в `feature/<имя>/data/dto/`, с суффиксом `Dto` и `@Serializable`.
+  В `domain/` они не попадают: маппинг `Dto → доменная модель` живёт в `data/`.
+
 ## Именование
 
 - Файл = один публичный класс/composable того же имени.

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -17,9 +18,22 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Слэш на конце обязателен: без него Ktor заменит сегмент v1.
+        // Локальный бэкенд поднимают через -PapiBaseUrl=... (на эмуляторе
+        // машина разработчика — это 10.0.2.2, а не localhost).
+        val apiBaseUrl = providers.gradleProperty("apiBaseUrl")
+            .getOrElse("http://158.160.187.118:8080/api/v1/")
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+
+        // Значение по умолчанию здесь, иначе новый build type уронит компиляцию
+        buildConfigField("boolean", "NETWORK_LOGGING", "false")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "NETWORK_LOGGING", "true")
+        }
         release {
             optimization {
                 enable = false
@@ -32,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -55,8 +70,15 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
