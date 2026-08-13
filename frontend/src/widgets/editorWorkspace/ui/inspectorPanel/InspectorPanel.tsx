@@ -30,8 +30,12 @@ export function InspectorPanel({ selectedLayer }: InspectorPanelProps) {
   if (!selectedLayer) {
     return (
       <section className={styles.panel}>
-        <h2>Inspector</h2>
-        <p>Select a layer to edit its properties.</p>
+        <div className={styles.header}>
+          <h2>Inspector</h2>
+        </div>
+        <div className={styles.content}>
+          <p>Select a layer to edit its properties.</p>
+        </div>
       </section>
     )
   }
@@ -42,9 +46,13 @@ export function InspectorPanel({ selectedLayer }: InspectorPanelProps) {
 
   return (
     <section className={styles.panel}>
-      <h2>Inspector</h2>
-      {/* Поля свойств должны вызывать feature обновления слоя, а не менять layer напрямую. */}
-      <Properties layer={selectedLayer} />
+      <div className={styles.header}>
+        <h2>Inspector</h2>
+      </div>
+      <div className={styles.content}>
+        {/* Поля свойств должны вызывать feature обновления слоя, а не менять layer напрямую. */}
+        <Properties layer={selectedLayer} />
+      </div>
     </section>
   )
 }

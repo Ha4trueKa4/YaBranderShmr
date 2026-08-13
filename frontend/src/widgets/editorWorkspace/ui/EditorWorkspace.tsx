@@ -1,26 +1,23 @@
 import { AppRoute } from '@app/providers/router/routes'
-import type { EditorLayer } from '@entities/editorDocument'
+import { EditorStore } from '@entities/editorDocument'
 import { EditorScene } from '@widgets/editorScene'
+import { observer } from 'mobx-react-lite'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { editorFixture } from '../model/editorFixture'
 import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
 
-/** Временные данные для вёрстки; заменить на выбранный слой из editorStore. */
-const previewSelectedLayer: EditorLayer = {
-  fill: '#7C3AED',
-  id: 'preview-icon-shape',
-  name: 'Icon shape',
-  stroke: '#06B6D4',
-  type: 'shape',
-  x: 120,
-  y: 140,
-}
-
-export function EditorWorkspace() {
+export const EditorWorkspace = observer(function EditorWorkspace() {
   const navigate = useNavigate()
+  // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
+  // Сейчас editorFixture временно заменяет ответ API, чтобы можно было проверять UI.
+  const [editorStore] = useState(
+    () => new EditorStore(editorFixture, 'icon-shape', ['logo']),
+  )
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
@@ -32,7 +29,6 @@ export function EditorWorkspace() {
 
   return (
     <section className={styles.workspace}>
-      {/* Подключить editorStore: document, selectedLayerId, zoom и историю изменений. */}
       <div className={styles.toolbar}>
         <EditorToolbar
           onEditProjectName={handleProjectNameSubmit}
@@ -45,21 +41,28 @@ export function EditorWorkspace() {
           onUndo={handleToolbarAction}
           onZoomIn={handleToolbarAction}
           onZoomOut={handleToolbarAction}
+          // TODO: передавать название загруженного Project вместо временного значения.
           projectName="Orion Labs"
         />
       </div>
       <aside className={styles.layers}>
-        <LayersPanel />
+        <LayersPanel
+          expandedGroupIds={editorStore.expandedGroupIds}
+          nodes={editorStore.document.layers}
+          onSelectLayer={editorStore.setSelectedLayer}
+          onToggleGroup={editorStore.toggleGroup}
+          selectedLayerId={editorStore.selectedLayerId}
+        />
       </aside>
       <div className={styles.scene}>
         <EditorScene />
       </div>
       <aside className={styles.inspector}>
-        <InspectorPanel selectedLayer={previewSelectedLayer} />
+        <InspectorPanel selectedLayer={editorStore.selectedLayer} />
       </aside>
       <div className={styles.status}>
         <EditorStatusBar />
       </div>
     </section>
   )
-}
+})
