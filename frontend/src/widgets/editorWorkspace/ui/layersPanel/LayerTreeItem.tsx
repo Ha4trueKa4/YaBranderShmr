@@ -33,27 +33,20 @@ export function LayerTreeItem({
   const isExpanded = isGroup && expandedGroupIds.has(node.id)
   const isSelected = node.id === selectedLayerId
   const LayerIcon = iconByType[node.type]
+  const indentation = `calc(var(--space-4) + ${depth} * var(--space-5))`
 
   return (
     <div className={styles.treeItem}>
       <button
         className={isSelected ? styles.selected : styles.layer}
-        onClick={() =>
-          isGroup ? onToggleGroup(node.id) : onSelectLayer(node.id)
-        }
+        onClick={() => onSelectLayer(node.id)}
         style={{
-          paddingInlineStart: `calc(var(--space-4) + ${depth} * var(--space-5))`,
+          paddingInlineStart: indentation,
         }}
         type="button"
       >
         {isGroup ? (
-          <span className={styles.chevronButton}>
-            <img
-              alt=""
-              className={isExpanded ? styles.chevronExpanded : styles.icon}
-              src={chevronRight}
-            />
-          </span>
+          <span className={styles.chevronPlaceholder} />
         ) : (
           <span className={styles.chevronPlaceholder} />
         )}
@@ -63,6 +56,20 @@ export function LayerTreeItem({
         </span>
         <Eye className={styles.visibilityIcon} size={16} strokeWidth={2} />
       </button>
+      {isGroup && (
+        <button
+          className={styles.chevronButton}
+          onClick={() => onToggleGroup(node.id)}
+          style={{ insetInlineStart: indentation }}
+          type="button"
+        >
+          <img
+            alt=""
+            className={isExpanded ? styles.chevronExpanded : styles.icon}
+            src={chevronRight}
+          />
+        </button>
+      )}
       {isGroup && isExpanded && (
         <div className={styles.children}>
           {node.children.map((child: EditorNode) => (
