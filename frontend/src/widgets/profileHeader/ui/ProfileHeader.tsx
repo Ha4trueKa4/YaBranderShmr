@@ -1,35 +1,29 @@
-import type { UserProfile } from '@shared/api/types'
-import { Avatar, Button } from '@shared/ui'
+import { Avatar } from '@shared/ui'
+import type { ReactNode } from 'react'
 
 import styles from './ProfileHeader.module.css'
 
 export interface ProfileHeaderProps {
-  onEditClick?: () => void
-  onLogoutClick?: () => void
-  user: UserProfile
+  actions?: ReactNode
+  profile: ProfileHeaderProfile
 }
 
-export function ProfileHeader({
-  user,
-  onEditClick,
-  onLogoutClick,
-}: ProfileHeaderProps) {
-  const name = user.name ?? 'Oliver Lee'
-  const initials = name
+export interface ProfileHeaderProfile {
+  bio: string
+  followersCount: number
+  followingCount: number
+  name: string
+  projectsCount: number
+  username: string
+}
+
+export function ProfileHeader({ actions, profile }: ProfileHeaderProps) {
+  const initials = profile.name
     .split(' ')
     .map((part) => part[0])
     .join('')
     .slice(0, 2)
     .toUpperCase()
-
-  // TODO: Replace temporary profile details when the API returns them.
-  const profileDetails = {
-    bio: 'Building ideas into brands. Product designer and creative technologist.',
-    followersCount: 340,
-    followingCount: 28,
-    projectsCount: 12,
-    username: 'oliverlee',
-  }
 
   return (
     <section className={styles.profile}>
@@ -37,37 +31,26 @@ export function ProfileHeader({
       <div className={styles.content}>
         <Avatar className={styles.avatar} initials={initials} />
         <div className={styles.identity}>
-          <h1>{name}</h1>
-          <p className={styles.username}>@{profileDetails.username}</p>
-          <p className={styles.bio}>{profileDetails.bio}</p>
+          <h1>{profile.name}</h1>
+          <p className={styles.username}>@{profile.username}</p>
+          <p className={styles.bio}>{profile.bio}</p>
         </div>
         <div className={styles.actions}>
           <dl className={styles.stats}>
             <div>
-              <dt>{profileDetails.projectsCount}</dt>
+              <dt>{profile.projectsCount}</dt>
               <dd>projects</dd>
             </div>
             <div>
-              <dt>{profileDetails.followersCount}</dt>
+              <dt>{profile.followersCount}</dt>
               <dd>followers</dd>
             </div>
             <div>
-              <dt>{profileDetails.followingCount}</dt>
+              <dt>{profile.followingCount}</dt>
               <dd>following</dd>
             </div>
           </dl>
-          <div className={styles.profileActions}>
-            <Button onClick={onLogoutClick} variant="ghost">
-              Log out
-            </Button>
-            <Button
-              className={styles.editButton}
-              onClick={onEditClick}
-              variant="secondary"
-            >
-              Edit profile
-            </Button>
-          </div>
+          {actions && <div className={styles.profileActions}>{actions}</div>}
         </div>
       </div>
     </section>
