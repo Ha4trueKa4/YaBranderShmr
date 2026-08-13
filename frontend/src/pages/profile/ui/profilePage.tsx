@@ -1,8 +1,12 @@
 import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
 import { useProjectsQuery } from '@entities/project'
-import type { UserProfile } from '@shared/api/types'
-import { OwnProjectsSection, ProfileHeader } from '@widgets'
+import { Button } from '@shared/ui'
+import {
+  OwnProjectsSection,
+  ProfileHeader,
+  type ProfileHeaderProfile,
+} from '@widgets'
 import { Header } from '@widgets/header'
 import { useNavigate } from 'react-router-dom'
 
@@ -11,9 +15,14 @@ import styles from './profilePage.module.css'
 export function ProfilePage() {
   const navigate = useNavigate()
   const { data: projects = [] } = useProjectsQuery()
-  const user: UserProfile = {
-    id: authStore.session?.userId,
+  // TODO: Replace temporary profile details when the API returns them.
+  const profile: ProfileHeaderProfile = {
+    bio: 'Building ideas into brands. Product designer and creative technologist.',
+    followersCount: 340,
+    followingCount: 28,
     name: 'Oliver Lee',
+    projectsCount: 12,
+    username: 'oliverlee',
   }
 
   function handleLogout() {
@@ -25,7 +34,17 @@ export function ProfilePage() {
     <div className={styles.page}>
       <Header />
       <main className={styles.content}>
-        <ProfileHeader onLogoutClick={handleLogout} user={user} />
+        <ProfileHeader
+          actions={
+            <>
+              <Button onClick={handleLogout} variant="ghost">
+                Log out
+              </Button>
+              <Button variant="secondary">Edit profile</Button>
+            </>
+          }
+          profile={profile}
+        />
         <OwnProjectsSection projects={projects} />
       </main>
     </div>

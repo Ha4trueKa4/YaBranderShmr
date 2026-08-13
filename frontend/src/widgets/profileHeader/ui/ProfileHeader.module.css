@@ -88,17 +88,6 @@
   color: var(--color-text-secondary);
 }
 
-.editButton {
-  border-color: var(--color-accent-primary);
-  color: var(--color-accent-primary);
-}
-
-.editButton:hover:not(:disabled) {
-  border-color: var(--color-accent-primary-hover);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-primary-hover);
-}
-
 .profileActions {
   display: flex;
   justify-content: end;
