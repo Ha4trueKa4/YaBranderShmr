@@ -83,8 +83,5 @@ std::vector<UserShortProfile> SubscriptionStorageComponent::GetSubscriptions(con
   return result;
 }
 
-void AppendSubscriptionStorage(userver::components::ComponentList& component_list) {
-  component_list.Append<SubscriptionStorageComponent>();
-}
 
 }  // namespace ya_brander::components

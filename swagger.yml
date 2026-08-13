@@ -39,7 +39,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                InvalidEmail:
+                  summary: Невалидный email
+                  value:
+                    code: "INVALID_EMAIL"
+                    message: "Некорректный формат email"
+                WeakPassword:
+                  summary: Слабый пароль
+                  value:
+                    code: "INVALID_PASSWORD"
+                    message: "Пароль слишком простой"
+                ShortNickname:
+                  summary: Короткий никнейм
+                  value:
+                    code: "INVALID_NICKNAME"
+                    message: "Никнейм должен содержать минимум 3 символа"
         '409':
           description: Конфликт данных (email или nickname уже занят)
           content:
@@ -78,7 +94,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Неверный email или пароль
+          description: Неверные учетные данные или пустой пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "INVALID_CREDENTIALS"
+                message: "Неверный email или пароль"
 
   /users/{id}:
     get:
@@ -108,8 +131,24 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/ProjectDescription'
+        '400':
+          description: Некорректный UUID пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "INVALID_UUID"
+                message: "Некорректный формат ID пользователя"
         '404':
           description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "Пользователь не найден"
 
   /users/{id}/subscribe:
     post:
@@ -154,6 +193,74 @@ paths:
         '401':
           description: Не авторизован
 
+  /users/{id}/subscribers:
+    get:
+      summary: Получить список всех подписчиков пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+        - { }
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список пользователей-подписчиков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "123e4567-e89b-12d3-a456-426614174000"
+                    name:
+                      type: string
+                      example: "John Doe"
+        '400':
+          description: Некорректный формат ID
+        '404':
+          description: Пользователь не найден
+
+  /users/{id}/subscriptions:
+    get:
+      summary: Получить список всех подписок пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+        - { }
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список профилей пользователей, на которых подписан текущий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "123e4567-e89b-12d3-a456-426614174000"
+                    name:
+                      type: string
+                      example: "John Doe"
+        '400':
+          description: Некорректный формат ID
+        '404':
+          description: Пользователь не найден
+
   /projects:
     post:
       summary: Создать новый проект
@@ -166,6 +273,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - name
               properties:
                 name:
                   type: string
@@ -258,7 +367,9 @@ paths:
         '401':
           description: Не авторизован
         '403':
-          description: Нет прав (не автор проекта)
+          description: Нет прав на удаление чужого проекта
+        '404':
+          description: Проект не найден
 
   /projects/{id}/generate:
     post:
@@ -278,6 +389,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - prompt
               properties:
                 prompt:
                   type: string
@@ -296,6 +409,8 @@ paths:
                     example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100" fill="#FF0000"/></svg>'
         '401':
           description: Не авторизован
+        '403':
+          description: Нет прав на генерацию в чужом проекте
 
 components:
   securitySchemes:
@@ -319,7 +434,7 @@ components:
         password:
           type: string
           format: password
-          example: "strongPassword123!"
+          example: "StrongPassword123!"
         nickname:
           type: string
           example: "John Doe"
@@ -337,7 +452,7 @@ components:
         password:
           type: string
           format: password
-          example: "strongPassword123!"
+          example: "StrongPassword123!"
 
     AuthResponse:
       type: object
@@ -348,14 +463,12 @@ components:
       properties:
         access_token:
           type: string
-          description: Долгоживущий JWT токен для доступа к API
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         token_type:
           type: string
           example: "Bearer"
         user:
           type: object
-          description: Данные авторизованного пользователя
           required:
             - id
             - email
@@ -363,7 +476,6 @@ components:
           properties:
             id:
               type: string
-              description: Уникальный идентификатор авторизованного пользователя
               example: "123e4567-e89b-12d3-a456-426614174000"
             email:
               type: string
@@ -384,12 +496,10 @@ components:
           example: "John Doe"
         subscribers_count:
           type: integer
-          description: "Количество пользователей, подписанных на этого пользователя"
-          example: 150
+          example: 2
         subscriptions_count:
           type: integer
-          description: "Количество подписок (на скольких подписан этот пользователь)"
-          example: 42
+          example: 1
 
     Project:
       allOf:
@@ -398,22 +508,26 @@ components:
           properties:
             data:
               type: string
-              description: "Чистая SVG-разметка проекта"
-              example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><g></g></svg>'
+              example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100"/></svg>'
 
     ProjectDescription:
       type: object
       properties:
         id:
           type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
         author_id:
           type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
         name:
           type: string
+          example: "Бренд кофейни"
         description:
           type: string
+          example: "Минималистичный стиль"
         is_public:
           type: boolean
+          example: false
         created_at:
           type: string
           format: date-time
@@ -423,21 +537,20 @@ components:
       properties:
         code:
           type: string
-          description: Строковый код ошибки для обработки на клиенте
-          example: "NICKNAME_EXISTS"
+          example: "EMAIL_EXISTS"
         message:
           type: string
-          description: Человекочитаемое сообщение
-          example: "Этот никнейм уже занят"
+          example: "Пользователь с таким email уже зарегистрирован"
         field:
           type: string
-          description: Название поля, в котором произошла ошибка
-          example: "nickname"
+          example: "email"
 
     Error:
       type: object
       properties:
         code:
-          type: integer
+          type: string
+          example: "INVALID_CREDENTIALS"
         message:
           type: string
+          example: "Неверный email или пароль"

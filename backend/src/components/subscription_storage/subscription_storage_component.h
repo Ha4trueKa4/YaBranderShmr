@@ -36,6 +36,4 @@ private:
   userver::storages::postgres::ClusterPtr pg_cluster_;
 };
 
-void AppendSubscriptionStorage(userver::components::ComponentList& component_list);
-
 }  // namespace ya_brander::components

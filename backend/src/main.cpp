@@ -36,11 +36,11 @@ int main(int argc, char* argv[]) {
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-            .Append<ya_brander::components::LocalFileStorage>();
+            .Append<ya_brander::components::LocalFileStorage>()
+            .Append<ya_brander::components::SubscriptionStorageComponent>();
     
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
-    ya_brander::components::AppendSubscriptionStorage(component_list);
     ya_brander::AppendLLM(component_list);
     // ya_brander::AppendAuth(component_list);
     ya_brander::AppendProjects(component_list);
