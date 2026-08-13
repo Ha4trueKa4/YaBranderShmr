@@ -37,5 +37,7 @@ WORKDIR /app
 COPY --from=build /build/build/ya_brander /usr/local/bin/ya_brander
 COPY --from=build /build/configs /etc/ya_brander
 
+RUN ldd /usr/local/bin/ya_brander | grep "not found" && exit 1 || echo "All dependencies satisfied"
+
 EXPOSE 8080
 CMD ["ya_brander", "--config", "/etc/ya_brander/static_config.yaml", "--config_vars", "/etc/ya_brander/config_vars.docker.yaml"]
