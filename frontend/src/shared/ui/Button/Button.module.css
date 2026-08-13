@@ -42,7 +42,7 @@
 }
 .primary {
   background: var(--color-accent-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 .primary:hover:not(:disabled) {
   background: var(--color-accent-primary-hover);
@@ -65,7 +65,7 @@
 }
 .danger {
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 .spinner {
   animation: spin 0.7s linear infinite;

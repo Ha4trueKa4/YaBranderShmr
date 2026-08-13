@@ -1,0 +1,1 @@
+export { GenerateIcon } from './GenerateIcon'
