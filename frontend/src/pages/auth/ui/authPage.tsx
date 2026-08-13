@@ -17,10 +17,6 @@ type AuthForm = 'login' | 'register'
 export function AuthPage() {
   const navigate = useNavigate()
   const [activeForm, setActiveForm] = useState<AuthForm>('login')
-  // const { isPending: isLoggingInPending, mutateAsync: login } =
-  //   useLoginMutation()
-  // const { isPending: isRegisteringPending, mutateAsync: register } =
-  //   useRegisterMutation()
 
   function signIn(accessToken: string, userId: string) {
     authStore.signIn({

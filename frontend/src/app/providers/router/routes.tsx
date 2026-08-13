@@ -3,7 +3,6 @@ import { EditorCreatePage } from '@pages/editorCreate'
 import { EditorProjectPage } from '@pages/editorProject'
 import { FeedPage } from '@pages/feed'
 import { ProfilePage } from '@pages/profile'
-import { PublicProfilePage } from '@pages/publicProfile'
 // import { MainPage } from '@pages/main'
 import { Navigate, type RouteObject } from 'react-router-dom'
 
@@ -20,7 +19,6 @@ export const AppRoute = {
 const publicRoutes: RouteObject[] = [
   { path: AppRoute.EditorCreate, element: <EditorCreatePage /> },
   { path: AppRoute.Feed, element: <FeedPage /> },
-  { path: AppRoute.PublicProfile, element: <PublicProfilePage /> },
   // { path: AppRoute.Main, element: <MainPage /> },
   // { path: AppRoute.Profile, element: <ProfilePage /> },
 ]
