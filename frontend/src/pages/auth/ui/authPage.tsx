@@ -1,4 +1,11 @@
 import { authStore } from '@app/providers/auth'
+import {
+  getAuthErrorMessage,
+  useLoginMutation,
+  useRegisterMutation,
+} from '@features/auth'
+import type { LoginRequest, RegisterRequest } from '@shared/api/types'
+import { useToast } from '@shared/ui'
 import { LoginForm, RegisterForm } from '@widgets'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -10,14 +17,45 @@ type AuthForm = 'login' | 'register'
 
 export function AuthPage() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [activeForm, setActiveForm] = useState<AuthForm>('login')
+  const { isPending: isLoggingInPending, mutateAsync: login } =
+    useLoginMutation()
+  const { isPending: isRegisteringPending, mutateAsync: register } =
+    useRegisterMutation()
 
-  function handleMockAuthorization() {
+  function handleAuthError(error: Error) {
+    toast.error(getAuthErrorMessage(error))
+  }
+
+  function signIn(accessToken: string, userId: string) {
     authStore.signIn({
-      accessToken: 'mock-access-token',
-      userId: 'mock-user-id',
+      accessToken,
+      userId,
     })
     navigate('/', { replace: true })
+  }
+
+  async function handleLogin({ email, password }: LoginRequest) {
+    const response = await login(
+      { email, password },
+      { onError: handleAuthError },
+    )
+
+    signIn(response.access_token, response.user.id)
+  }
+
+  async function handleRegister({
+    nickname,
+    email,
+    password,
+  }: RegisterRequest) {
+    const response = await register(
+      { email, nickname, password },
+      { onError: handleAuthError },
+    )
+
+    signIn(response.access_token, response.user.id)
   }
 
   return (
@@ -44,12 +82,14 @@ export function AuthPage() {
         <div className={styles.formContent}>
           {activeForm === 'login' ? (
             <LoginForm
-              onSubmit={handleMockAuthorization}
+              isPending={isLoggingInPending}
+              onSubmit={handleLogin}
               onSwitchToRegister={() => setActiveForm('register')}
             />
           ) : (
             <RegisterForm
-              onSubmit={handleMockAuthorization}
+              isPending={isRegisteringPending}
+              onSubmit={handleRegister}
               onSwitchToLogin={() => setActiveForm('login')}
             />
           )}

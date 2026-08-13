@@ -46,6 +46,7 @@
 }
 
 .treeItem {
+  position: relative;
   width: 100%;
   min-width: 0;
 }
@@ -104,6 +105,11 @@
   place-items: center;
   width: 1rem;
   height: 1rem;
+}
+
+.chevronButton {
+  position: absolute;
+  top: 0.5rem;
 }
 
 .itemButton {
