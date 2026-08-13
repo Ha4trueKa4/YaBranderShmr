@@ -39,11 +39,7 @@ export function LayerTreeItem({
         }}
         type="button"
       >
-        {isGroup ? (
-          <span className={styles.chevronPlaceholder} />
-        ) : (
-          <span className={styles.chevronPlaceholder} />
-        )}
+        <span className={styles.chevronPlaceholder} />
         <span className={styles.itemButton}>
           <LayerIcon className={styles.icon} size={16} strokeWidth={2} />
           {node.name}
@@ -51,20 +47,6 @@ export function LayerTreeItem({
         <Eye className={styles.visibilityIcon} size={16} strokeWidth={2} />
       </button>
       {isGroup && (
-        <button
-          className={styles.chevronButton}
-          onClick={() => onToggleGroup(node.id)}
-          style={{ insetInlineStart: indentation }}
-          type="button"
-        >
-          <img
-            alt=""
-            className={isExpanded ? styles.chevronExpanded : styles.icon}
-            src={chevronRight}
-          />
-        </button>
-      )}
-      {isGroup && isExpanded && (
         <div className={styles.children}>
           {node.children.map((child: EditorNode) => (
             <LayerTreeItem
