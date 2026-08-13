@@ -1,4 +1,4 @@
-export { useProjectQuery } from './api/queries'
+export { useProjectQuery, useProjectsQuery } from './api/queries'
 export type { FeedProjectCardProps } from './ui/feedProjectCard'
 export { FeedProjectCard } from './ui/feedProjectCard'
 export type { OwnProjectCardProps } from './ui/ownProjectCard'
