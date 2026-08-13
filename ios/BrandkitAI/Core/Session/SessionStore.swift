@@ -62,6 +62,7 @@ final class SessionStore {
                 let response: AuthResponse = try await client.request(
                     .post,
                     path: path,
+                    authorization: .none,
                     body: body
                 )
                 guard !response.accessToken.isEmpty else {

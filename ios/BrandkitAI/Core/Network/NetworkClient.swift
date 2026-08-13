@@ -24,9 +24,15 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     func request<Response: Decodable & Sendable>(
         _ method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws -> Response {
-        let data = try await execute(method: method, path: path, body: body)
+        let data = try await execute(
+            method: method,
+            path: path,
+            authorization: authorization,
+            body: body
+        )
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
@@ -37,9 +43,15 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     func request(
         _ method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws {
-        _ = try await execute(method: method, path: path, body: body)
+        _ = try await execute(
+            method: method,
+            path: path,
+            authorization: authorization,
+            body: body
+        )
     }
 
     // MARK: - Private
@@ -47,18 +59,30 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     private func execute(
         method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws -> Data {
         let shouldRetry = method == .get
         if !shouldRetry {
-            return try await rawRequest(method: method, path: path, body: body)
+            return try await rawRequest(
+                method: method,
+                path: path,
+                authorization: authorization,
+                body: body
+            )
         }
-        return try await rawRequestWithRetry(method: method, path: path, body: body)
+        return try await rawRequestWithRetry(
+            method: method,
+            path: path,
+            authorization: authorization,
+            body: body
+        )
     }
 
     private func rawRequest(
         method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws -> Data {
         guard let url = URL(string: baseURL + path) else {
@@ -67,7 +91,16 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
 
         var urlRequest = URLRequest(url: url, timeoutInterval: session.configuration.timeoutIntervalForRequest)
         urlRequest.httpMethod = method.rawValue
-        if requiresAuthorization(for: path) {
+        switch authorization {
+        case .none:
+            break
+
+        case .optional:
+            if let token = tokenStore.accessToken, !token.isEmpty {
+                urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+
+        case .required:
             guard let token = tokenStore.accessToken, !token.isEmpty else {
                 throw NetworkError.missingAccessToken
             }
@@ -96,10 +129,6 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         return data
     }
 
-    private func requiresAuthorization(for path: String) -> Bool {
-        path != "/auth/login" && path != "/auth/register"
-    }
-
     // MARK: - Retry (GET only)
 
     private static let retryableStatusCodes: Set<Int> = [408, 429, 500, 502, 503, 504]
@@ -112,13 +141,19 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     private func rawRequestWithRetry(
         method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws -> Data {
         var attempt = 0
         var delayNs = Self.minDelay
         while true {
             do {
-                return try await rawRequest(method: method, path: path, body: body)
+                return try await rawRequest(
+                    method: method,
+                    path: path,
+                    authorization: authorization,
+                    body: body
+                )
             } catch NetworkError.httpError(let code) where Self.retryableStatusCodes.contains(code) {
                 if attempt >= Self.maxAttempts {
                     throw NetworkError.httpError(statusCode: code)

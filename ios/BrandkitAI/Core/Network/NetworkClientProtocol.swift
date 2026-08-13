@@ -15,16 +15,24 @@ enum HTTPMethod: String, Sendable {
     case delete = "DELETE"
 }
 
+enum AuthorizationRequirement: Sendable {
+    case none
+    case optional
+    case required
+}
+
 nonisolated protocol NetworkClientProtocol: Sendable {
     func request<Response: Decodable & Sendable>(
         _ method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws -> Response
 
     func request(
         _ method: HTTPMethod,
         path: String,
+        authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws
 }
