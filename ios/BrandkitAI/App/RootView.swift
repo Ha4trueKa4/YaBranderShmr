@@ -77,8 +77,20 @@ struct RootView: View {
             .interactiveDismissDisabled()
         }
         .onChange(of: session.state) { _, state in
-            guard state == .signedIn, coverFlow == .signIn else { return }
-            coverFlow = .none
+            switch state {
+            case .signedIn:
+                if coverFlow == .signIn {
+                    coverFlow = .none
+                }
+
+            case .signedOut:
+                if hasFinishedOnboarding {
+                    coverFlow = .signIn
+                }
+
+            case .unknown:
+                break
+            }
         }
     }
 
