@@ -6,18 +6,14 @@ import styles from './LayersPanel.module.css'
 import { LayerTreeItem } from './LayerTreeItem'
 
 interface LayersPanelProps {
-  expandedGroupIds: Set<string>
   nodes: EditorNode[]
   onSelectLayer: (layerId: string) => void
-  onToggleGroup: (groupId: string) => void
   selectedLayerId: string | null
 }
 
 export const LayersPanel = observer(function LayersPanel({
-  expandedGroupIds,
   nodes,
   onSelectLayer,
-  onToggleGroup,
   selectedLayerId,
 }: LayersPanelProps) {
   return (
@@ -33,11 +29,9 @@ export const LayersPanel = observer(function LayersPanel({
         {nodes.map((node) => (
           <LayerTreeItem
             depth={0}
-            expandedGroupIds={expandedGroupIds}
             key={node.id}
             node={node}
             onSelectLayer={onSelectLayer}
-            onToggleGroup={onToggleGroup}
             selectedLayerId={selectedLayerId}
           />
         ))}
