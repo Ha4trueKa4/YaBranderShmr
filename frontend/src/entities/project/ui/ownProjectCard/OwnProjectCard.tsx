@@ -1,7 +1,7 @@
 import { Button, IconButton } from '@shared/ui'
 import { MoreHorizontal } from 'lucide-react'
 
-import { ProjectPreview } from '../ProjectPreview'
+import { ProjectPreview } from '../projectPreview'
 import styles from './OwnProjectCard.module.css'
 
 export interface OwnProjectCardProps {

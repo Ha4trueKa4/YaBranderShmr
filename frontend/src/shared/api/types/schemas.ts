@@ -19,7 +19,6 @@ export {
   zPostProjectsByIdGenerateResponse,
   zPostProjectsResponse,
   zProject,
-  zProjectData,
   zProjectDescription,
   zRegisterRequest,
   zUserProfile,
