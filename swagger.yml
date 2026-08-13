@@ -378,8 +378,18 @@ components:
       properties:
         id:
           type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
         name:
           type: string
+          example: "John Doe"
+        subscribers_count:
+          type: integer
+          description: "Количество пользователей, подписанных на этого пользователя"
+          example: 150
+        subscriptions_count:
+          type: integer
+          description: "Количество подписок (на скольких подписан этот пользователь)"
+          example: 42
 
     Project:
       allOf:

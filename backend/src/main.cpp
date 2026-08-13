@@ -17,6 +17,7 @@
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "components/version_storage/version_storage_component_impl.hpp"
 #include "components/object_storage/local_file_storage.hpp"
+#include "components/subscription_storage/subscription_storage_component.h"
 #include "./handlers/users/append_users.hpp"
 
 int main(int argc, char* argv[]) {
@@ -39,6 +40,7 @@ int main(int argc, char* argv[]) {
     
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
+    ya_brander::components::AppendSubscriptionStorage(component_list);
     ya_brander::AppendLLM(component_list);
     // ya_brander::AppendAuth(component_list);
     ya_brander::AppendProjects(component_list);

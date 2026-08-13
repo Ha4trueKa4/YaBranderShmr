@@ -93,6 +93,7 @@ components_manager:
     # ==========================================
     project-manager: { }
     prompt-constructor: { }
+    subscription-storage: { }
 
 
     # ==========================================
@@ -159,6 +160,14 @@ components_manager:
     handler-users-unsubscribe:
       path: /api/v1/users/{id}/subscribe
       method: DELETE
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-users-get:
+      path: /api/v1/users/{id}
+      method: GET
       task_processor: main-task-processor
       auth:
         types:

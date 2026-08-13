@@ -47,7 +47,9 @@ async def test_subscribe_unauthorized(service_client):
     """2. Подписка без авторизации -> 401"""
     target = await register(service_client, "target")
 
-    response = await service_client.post(f"/api/v1/users/{target['id']}/subscribe")
+    response = await service_client.post(
+        f"/api/v1/users/{target['id']}/subscribe"
+    )
     assert response.status == 401
 
 
@@ -116,7 +118,9 @@ async def test_unsubscribe_unauthorized(service_client):
     """7. Отписка без авторизации -> 401"""
     target = await register(service_client, "target")
 
-    response = await service_client.delete(f"/api/v1/users/{target['id']}/subscribe")
+    response = await service_client.delete(
+        f"/api/v1/users/{target['id']}/subscribe"
+    )
     assert response.status == 401
 
 

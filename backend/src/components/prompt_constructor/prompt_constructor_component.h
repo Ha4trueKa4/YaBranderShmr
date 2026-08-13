@@ -5,7 +5,7 @@
 #include <userver/components/loggable_component_base.hpp>
 #include <userver/formats/json/value.hpp>
 
-#include "vector_search_component.h"
+#include "../vector_search_component.h"
 
 namespace ya_brander::components {
 
