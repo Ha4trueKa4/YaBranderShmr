@@ -105,6 +105,11 @@
   height: 1rem;
 }
 
+.chevronButton {
+  position: absolute;
+  top: 0.5rem;
+}
+
 .itemButton {
   display: flex;
   align-items: center;
