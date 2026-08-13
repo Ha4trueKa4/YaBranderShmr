@@ -10,7 +10,7 @@ type AuthForm = 'login' | 'register'
 
 export function AuthPage() {
   const navigate = useNavigate()
-  const [activeForm, setActiveForm] = useState<AuthForm>('register')
+  const [activeForm, setActiveForm] = useState<AuthForm>('login')
 
   function handleMockAuthorization() {
     authStore.signIn({

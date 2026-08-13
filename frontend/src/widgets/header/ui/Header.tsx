@@ -1,14 +1,16 @@
 import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
 import brandMark from '@shared/assets/brandmark.svg'
-import { Button } from '@shared/ui'
+import { cn } from '@shared/lib'
+import { Avatar, Button } from '@shared/ui'
 import { observer } from 'mobx-react-lite'
-import { useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 import styles from './Header.module.css'
 
 export const Header = observer(function Header() {
   const navigate = useNavigate()
+  const isAuthorized = authStore.isAuthorized
 
   return (
     <header className={styles.header}>
@@ -20,13 +22,42 @@ export const Header = observer(function Header() {
         <img alt="" src={brandMark} />
         <span>Brandkit AI</span>
       </button>
-      {authStore.isAuthorized ? (
+      <nav className={styles.navigation}>
+        <NavLink
+          className={({ isActive }) =>
+            cn(styles.navigationLink, isActive && styles.navigationLinkActive)
+          }
+          to={AppRoute.EditorCreate}
+        >
+          Generate
+          <span className={styles.generateIcon} />
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            cn(styles.navigationLink, isActive && styles.navigationLinkActive)
+          }
+          to={AppRoute.Feed}
+        >
+          Feed
+        </NavLink>
+        {isAuthorized && (
+          <NavLink
+            className={({ isActive }) =>
+              cn(styles.navigationLink, isActive && styles.navigationLinkActive)
+            }
+            to={AppRoute.Profile}
+          >
+            My projects
+          </NavLink>
+        )}
+      </nav>
+      {isAuthorized ? (
         <button
           className={styles.avatar}
           onClick={() => navigate(AppRoute.Profile)}
           type="button"
         >
-          OL
+          <Avatar initials="OL" />
         </button>
       ) : (
         <div className={styles.actions}>

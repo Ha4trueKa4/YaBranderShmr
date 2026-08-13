@@ -1,3 +1,5 @@
+export type { AvatarProps } from './Avatar'
+export { Avatar } from './Avatar'
 export type { ButtonProps } from './Button'
 export { Button } from './Button'
 export type { ColorPickerProps } from './ColorPicker'
