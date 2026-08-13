@@ -20,6 +20,9 @@ final class SignUpViewModel {
             && !password.isEmpty
     }
 
+    var isLoading: Bool { session.isLoading }
+    var errorMessage: String? { session.errorMessage }
+
     func register() {
         guard canSubmit else { return }
         session.register(email: email, password: password, nickname: fullName)

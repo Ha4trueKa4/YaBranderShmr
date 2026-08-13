@@ -21,6 +21,9 @@ final class SignInViewModel {
         !email.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty
     }
 
+    var isLoading: Bool { session.isLoading }
+    var errorMessage: String? { session.errorMessage }
+
     func signIn() {
         guard canSubmit else { return }
         session.signIn(email: email, password: password)
