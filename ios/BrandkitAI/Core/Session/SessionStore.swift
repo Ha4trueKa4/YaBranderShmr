@@ -24,7 +24,7 @@ final class SessionStore {
     private var authenticationTask: Task<Void, Never>?
     private var authenticationRequestID = UUID()
 
-    init(baseURL: String = "http://localhost:8080/api/v1") {
+    init(baseURL: String = "http://158.160.187.118:8080/api/v1") {
         networkClient = NetworkClient(baseURL: baseURL, tokenStore: tokenStore)
     }
 
