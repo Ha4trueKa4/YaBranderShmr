@@ -5,7 +5,7 @@
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
   gap: var(--space-2);
   justify-content: center;
   line-height: 1.25;
@@ -45,7 +45,7 @@
   color: #fff;
 }
 .primary:hover:not(:disabled) {
-  background: #6d28d9;
+  background: var(--color-accent-primary-hover);
 }
 .secondary {
   background: var(--color-surface);
