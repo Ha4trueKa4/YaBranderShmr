@@ -18,14 +18,14 @@ export function OwnProjectsSection({ projects }: OwnProjectsSectionProps) {
         <span>{projects.length} projects</span>
       </div>
       <div className={styles.projectsGrid}>
-        {projects.map((project) =>
-            <OwnProjectCard
-              isPrivate={!project.is_public}
-              key={project.id}
-              title={project.name ?? 'Untitled project'}
-              updatedAt={project.is_public ? 'published 2 days ago' : 'draft'}
-            />
-        )}
+        {projects.map((project) => (
+          <OwnProjectCard
+            isPrivate={!project.is_public}
+            key={project.id}
+            title={project.name ?? 'Untitled project'}
+            updatedAt={project.is_public ? 'published 2 days ago' : 'draft'}
+          />
+        ))}
       </div>
     </section>
   )
