@@ -3,8 +3,8 @@
   place-items: center;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #a78bfa;
-  color: #fff;
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
   font-weight: var(--font-weight-semibold);
   line-height: 1;
 }

@@ -1,7 +1,7 @@
 .page {
   min-height: 100vh;
-  background: #f7f7fb;
-  color: #24242c;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
 }
 .content {
   margin: 0 auto;
@@ -15,7 +15,7 @@
   margin-bottom: 34px;
 }
 .overline {
-  color: #6552df;
+  color: var(--color-accent-primary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -29,14 +29,14 @@
   margin: 0;
 }
 .intro p:not(.overline) {
-  color: #777682;
+  color: var(--color-text-secondary);
   margin: 13px 0 0;
   max-width: 590px;
 }
 .search {
   align-items: center;
-  background: #fff;
-  border: 1px solid #e0dfe8;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 9px;
   display: flex;
   gap: 9px;
@@ -44,14 +44,14 @@
   width: 250px;
 }
 .search span {
-  color: #928fa0;
+  color: var(--color-text-muted);
   font-size: 23px;
   line-height: 1;
   transform: rotate(-20deg);
 }
 .search input {
   border: 0;
-  color: #24242c;
+  color: var(--color-text-primary);
   font: inherit;
   height: 42px;
   outline: 0;
@@ -64,17 +64,17 @@
 }
 .filters button {
   background: transparent;
-  border: 1px solid #dedde7;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  color: #686775;
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: 600 13px / 1 var(--font-family-base);
   padding: 10px 16px;
 }
 .filters .selectedFilter {
-  background: #26242f;
-  border-color: #26242f;
-  color: #fff;
+  background: var(--color-text-primary);
+  border-color: var(--color-text-primary);
+  color: var(--color-bg);
 }
 .grid {
   display: grid;
@@ -82,17 +82,17 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .card {
-  background: #fff;
-  border: 1px solid #ecebf2;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
-  box-shadow: 0 3px 12px rgb(39 31 91 / 4%);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease;
 }
 .card:hover {
-  box-shadow: 0 12px 28px rgb(39 31 91 / 12%);
+  box-shadow: var(--shadow-md);
   transform: translateY(-3px);
 }
 .preview {
@@ -164,12 +164,12 @@
   margin: 0 0 5px;
 }
 .cardBody p {
-  color: #8b8995;
+  color: var(--color-text-muted);
   font-size: 13px;
   margin: 0;
 }
 .likes {
-  color: #74717f;
+  color: var(--color-text-secondary);
   font-size: 13px;
   white-space: nowrap;
 }
