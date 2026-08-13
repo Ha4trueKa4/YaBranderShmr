@@ -15,6 +15,21 @@ FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libstdc++6 libpq5 libldap-2.5-0 ca-certificates \
+        libboost-atomic1.74.0 \
+        libboost-iostreams1.74.0 \
+        libboost-filesystem1.74.0 \
+        libboost-program-options1.74.0 \
+        libboost-stacktrace1.74.0 \
+        libcurl4 \
+        libc-ares2 \
+        libev4 \
+        libnghttp2-14 \
+        libcrypto++8 \
+        libjemalloc2 \
+        libre2-9 \
+        libfmt8 \
+        libcctz2 \
+        libyaml-cpp0.7 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
