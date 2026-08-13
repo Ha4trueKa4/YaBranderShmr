@@ -14,11 +14,14 @@ GetUserSubscribersHandler::GetUserSubscribersHandler(
 
 std::string GetUserSubscribersHandler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request,
-    userver::server::request::RequestContext&) const {
+    userver::server::request::RequestContext& req_context) const {
   const auto& target_id = request.GetPathArg("id");
 
+  std::string* auth_user_id_ptr = req_context.GetDataOptional<std::string>("user_id");
+  std::string auth_user_id = auth_user_id_ptr ? *auth_user_id_ptr : "";
+
   try {
-    auto subscribers = subscription_storage_.GetSubscribers(target_id);
+    auto subscribers = subscription_storage_.GetSubscribers(target_id, auth_user_id);
 
     if (subscribers.empty() && !subscription_storage_.IsUserExists(target_id)) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -30,6 +33,11 @@ std::string GetUserSubscribersHandler::HandleRequestThrow(
       userver::formats::json::ValueBuilder user_obj;
       user_obj["id"] = user.id;
       user_obj["name"] = user.name;
+
+      if (user.is_subscribed.has_value()) {
+        user_obj["is_subscribed"] = *user.is_subscribed;
+      }
+
       response_array.PushBack(std::move(user_obj));
     }
 
@@ -50,11 +58,14 @@ GetUserSubscriptionsHandler::GetUserSubscriptionsHandler(
 
 std::string GetUserSubscriptionsHandler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request,
-    userver::server::request::RequestContext&) const {
+    userver::server::request::RequestContext& req_context) const {
   const auto& target_id = request.GetPathArg("id");
 
+  std::string* auth_user_id_ptr = req_context.GetDataOptional<std::string>("user_id");
+  std::string auth_user_id = auth_user_id_ptr ? *auth_user_id_ptr : "";
+
   try {
-    auto subscriptions = subscription_storage_.GetSubscriptions(target_id);
+    auto subscriptions = subscription_storage_.GetSubscriptions(target_id, auth_user_id);
 
     if (subscriptions.empty() && !subscription_storage_.IsUserExists(target_id)) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -66,6 +77,11 @@ std::string GetUserSubscriptionsHandler::HandleRequestThrow(
       userver::formats::json::ValueBuilder user_obj;
       user_obj["id"] = user.id;
       user_obj["name"] = user.name;
+
+      if (user.is_subscribed.has_value()) {
+        user_obj["is_subscribed"] = *user.is_subscribed;
+      }
+
       response_array.PushBack(std::move(user_obj));
     }
 

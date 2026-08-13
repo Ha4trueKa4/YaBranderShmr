@@ -222,6 +222,10 @@ paths:
                     name:
                       type: string
                       example: "John Doe"
+                    is_subscribed:
+                      type: boolean
+                      description: "Подписан ли авторизованный пользователь на этого человека"
+                      example: false
         '400':
           description: Некорректный формат ID
         '404':
@@ -256,6 +260,10 @@ paths:
                     name:
                       type: string
                       example: "John Doe"
+                    is_subscribed:
+                      type: boolean
+                      description: "Подписан ли авторизованный пользователь на этого человека"
+                      example: false
         '400':
           description: Некорректный формат ID
         '404':
@@ -500,6 +508,10 @@ components:
         subscriptions_count:
           type: integer
           example: 1
+        is_subscribed:
+          type: boolean
+          description: "Подписан ли текущий авторизованный пользователь на этого пользователя. Отсутствует при запросе собственного профиля."
+          example: true
 
     Project:
       allOf:

@@ -226,3 +226,49 @@ async def test_get_profile_counters_after_unsubscribe(service_client):
     )
     assert resp_follower_after.status == 200
     assert resp_follower_after.json()["subscriptions_count"] == 0
+
+
+async def test_get_profile_is_subscribed_field(service_client):
+    """Проверка опционального поля is_subscribed при разных условиях -> 200"""
+    target = await register(service_client, "target_field")
+    subscriber = await register(service_client, "sub_field")
+    stranger = await register(service_client, "stranger_field")
+
+    # Оформляем подписку (subscriber подписывается на target)
+    await service_client.post(
+        f"/api/v1/users/{target['id']}/subscribe",
+        headers=auth_headers(subscriber["token"]),
+    )
+
+    # Кейс 1: Пользователь запрашивает СВОЙ профиль
+    # Ожидание: поля is_subscribed нет
+    resp_self = await service_client.get(
+        f"/api/v1/users/{target['id']}",
+        headers=auth_headers(target["token"]),
+    )
+    assert resp_self.status == 200
+    assert "is_subscribed" not in resp_self.json()
+
+    # Кейс 2: Подписчик запрашивает профиль
+    # Ожидание: is_subscribed == True
+    resp_sub = await service_client.get(
+        f"/api/v1/users/{target['id']}",
+        headers=auth_headers(subscriber["token"]),
+    )
+    assert resp_sub.status == 200
+    assert resp_sub.json().get("is_subscribed") is True
+
+    # Кейс 3: Авторизованный пользователь (не подписчик) запрашивает профиль
+    # Ожидание: is_subscribed == False
+    resp_stranger = await service_client.get(
+        f"/api/v1/users/{target['id']}",
+        headers=auth_headers(stranger["token"]),
+    )
+    assert resp_stranger.status == 200
+    assert resp_stranger.json().get("is_subscribed") is False
+
+    # Кейс 4: Неавторизованный гость (без токена) запрашивает профиль
+    # Ожидание: поля is_subscribed нет, так как неизвестно, кто запрашивает
+    resp_unauth = await service_client.get(f"/api/v1/users/{target['id']}")
+    assert resp_unauth.status == 200
+    assert "is_subscribed" not in resp_unauth.json()

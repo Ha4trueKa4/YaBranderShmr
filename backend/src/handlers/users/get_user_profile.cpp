@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <optional>
 
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/json/value_builder.hpp>
@@ -46,6 +47,11 @@ std::string GetUserProfileHandler::HandleRequestThrow(
 
     bool is_self = (auth_user_id == target_id);
 
+    std::optional<bool> is_subscribed = std::nullopt;
+    if (!is_self && !auth_user_id.empty()) {
+      is_subscribed = subscription_storage_.IsSubscribed(auth_user_id, target_id);
+    }
+
     auto proj_res = is_self
         ? pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
@@ -65,6 +71,10 @@ std::string GetUserProfileHandler::HandleRequestThrow(
     builder["name"] = login;
     builder["subscribers_count"] = subscribers_count;
     builder["subscriptions_count"] = subscriptions_count;
+
+    if (is_subscribed.has_value()) {
+      builder["is_subscribed"] = *is_subscribed;
+    }
 
     userver::formats::json::ValueBuilder projects_array(userver::formats::common::Type::kArray);
     for (const auto& row : proj_res) {

@@ -272,3 +272,91 @@ async def test_get_subscriptions_invalid_uuid(service_client):
         headers=auth_headers(user["token"]),
     )
     assert response.status == 400
+
+
+# ==============================================================
+# ПРОВЕРКА ПОЛЯ is_subscribed В СПИСКАХ
+# СЦЕНАРИИ 17-18
+# ==============================================================
+async def test_get_subscribers_is_subscribed_field(service_client):
+    """17. Поле is_subscribed в списке подписчиков -> 200"""
+    target = await register(service_client, "target")
+    sub1 = await register(service_client, "sub1")
+    sub2 = await register(service_client, "sub2")
+    viewer = await register(service_client, "viewer")
+
+    # sub1 и sub2 подписываются на target
+    await service_client.post(
+        f"/api/v1/users/{target['id']}/subscribe",
+        headers=auth_headers(sub1["token"]),
+    )
+    await service_client.post(
+        f"/api/v1/users/{target['id']}/subscribe",
+        headers=auth_headers(sub2["token"]),
+    )
+
+    # viewer подписывается только на sub1
+    await service_client.post(
+        f"/api/v1/users/{sub1['id']}/subscribe",
+        headers=auth_headers(viewer["token"]),
+    )
+
+    # viewer смотрит подписчиков target
+    resp = await service_client.get(
+        f"/api/v1/users/{target['id']}/subscribers",
+        headers=auth_headers(viewer["token"]),
+    )
+    assert resp.status == 200
+    data = resp.json()
+
+    # Находим sub1 и sub2 в ответе
+    sub1_data = next(u for u in data if u["id"] == sub1["id"])
+    sub2_data = next(u for u in data if u["id"] == sub2["id"])
+
+    assert sub1_data.get("is_subscribed") is True
+    assert sub2_data.get("is_subscribed") is False
+
+    # Анонимный запрос (без токена) - поля быть не должно
+    resp_anon = await service_client.get(
+        f"/api/v1/users/{target['id']}/subscribers"
+    )
+    assert resp_anon.status == 200
+    assert "is_subscribed" not in resp_anon.json()[0]
+
+
+async def test_get_subscriptions_is_subscribed_field(service_client):
+    """18. Поле is_subscribed в списке подписок -> 200"""
+    source = await register(service_client, "source")
+    target1 = await register(service_client, "target1")
+    target2 = await register(service_client, "target2")
+    viewer = await register(service_client, "viewer")
+
+    # source подписывается на target1 и target2
+    await service_client.post(
+        f"/api/v1/users/{target1['id']}/subscribe",
+        headers=auth_headers(source["token"]),
+    )
+    await service_client.post(
+        f"/api/v1/users/{target2['id']}/subscribe",
+        headers=auth_headers(source["token"]),
+    )
+
+    # viewer подписывается только на target2
+    await service_client.post(
+        f"/api/v1/users/{target2['id']}/subscribe",
+        headers=auth_headers(viewer["token"]),
+    )
+
+    # viewer смотрит подписки source
+    resp = await service_client.get(
+        f"/api/v1/users/{source['id']}/subscriptions",
+        headers=auth_headers(viewer["token"]),
+    )
+    assert resp.status == 200
+    data = resp.json()
+
+    target1_data = next(u for u in data if u["id"] == target1["id"])
+    target2_data = next(u for u in data if u["id"] == target2["id"])
+
+    assert target1_data.get("is_subscribed") is False
+    assert target2_data.get("is_subscribed") is True

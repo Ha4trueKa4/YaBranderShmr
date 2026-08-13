@@ -15,6 +15,7 @@ namespace ya_brander::components {
 struct UserShortProfile {
   std::string id;
   std::string name;
+  std::optional<bool> is_subscribed;
 };
 
 class SubscriptionStorageComponent final : public userver::components::LoggableComponentBase {
@@ -26,11 +27,13 @@ public:
 
   bool IsUserExists(const std::string& user_id) const;
 
+  bool IsSubscribed(const std::string& subscriber_id, const std::string& target_id) const;
+
   size_t GetSubscribersCount(const std::string& user_id) const;
   size_t GetSubscriptionsCount(const std::string& user_id) const;
 
-  std::vector<UserShortProfile> GetSubscribers(const std::string& user_id) const;
-  std::vector<UserShortProfile> GetSubscriptions(const std::string& user_id) const;
+  std::vector<UserShortProfile> GetSubscribers(const std::string& user_id, const std::string& auth_user_id) const;
+  std::vector<UserShortProfile> GetSubscriptions(const std::string& user_id, const std::string& auth_user_id) const;
 
 private:
   userver::storages::postgres::ClusterPtr pg_cluster_;
