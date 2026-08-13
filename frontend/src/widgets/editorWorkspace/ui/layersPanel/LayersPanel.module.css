@@ -88,7 +88,6 @@
   color: var(--color-accent-primary);
 }
 
-.chevronButton,
 .itemButton {
   padding: 0;
   border: 0;
@@ -98,18 +97,12 @@
   cursor: pointer;
 }
 
-.chevronButton,
 .chevronPlaceholder {
   display: grid;
   flex: 0 0 1rem;
   place-items: center;
   width: 1rem;
   height: 1rem;
-}
-
-.chevronButton {
-  position: absolute;
-  top: 0.5rem;
 }
 
 .itemButton {
