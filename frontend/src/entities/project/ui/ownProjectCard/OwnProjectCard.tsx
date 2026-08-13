@@ -1,3 +1,4 @@
+import type { Project } from '@shared/api/types'
 import { Button, IconButton } from '@shared/ui'
 import { MoreHorizontal } from 'lucide-react'
 
@@ -5,21 +6,20 @@ import { ProjectPreview } from '../projectPreview'
 import styles from './OwnProjectCard.module.css'
 
 export interface OwnProjectCardProps {
-  isPrivate: boolean
   onMenuClick?: () => void
   onOpenClick?: () => void
-  title: string
-  updatedAt: string
+  project: Project
 }
 
 export function OwnProjectCard({
-  isPrivate,
   onMenuClick,
   onOpenClick,
-  title,
-  updatedAt,
+  project,
 }: OwnProjectCardProps) {
+  const isPrivate = !project.is_public
   const actionLabel = isPrivate ? 'Manage private project' : 'Open project'
+  const title = project.name ?? 'Untitled project'
+  const updatedAt = getProjectStatus(project)
   const visibility = isPrivate ? 'Private' : 'Public'
 
   return (
@@ -50,4 +50,19 @@ export function OwnProjectCard({
       </div>
     </article>
   )
+}
+
+function getProjectStatus(project: Project) {
+  if (!project.is_public) {
+    return 'Draft'
+  }
+
+  if (!project.created_at) {
+    return 'Published'
+  }
+
+  return `Published ${new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(project.created_at))}`
 }

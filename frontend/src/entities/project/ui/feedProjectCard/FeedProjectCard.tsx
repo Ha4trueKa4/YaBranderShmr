@@ -1,44 +1,45 @@
+import type { FeedProject } from '@entities/project/model/types'
 import { Avatar } from '@shared/ui'
+import { Link } from 'react-router-dom'
 
 import { ProjectPreview } from '../projectPreview'
 import styles from './FeedProjectCard.module.css'
 
 export interface FeedProjectCardProps {
-  authorInitials: string
-  authorName: string
-  authorTone?: 'accent' | 'cyan' | 'green' | 'rose'
-  publishedAt: string
-  title: string
+  project: FeedProject
 }
 
-export function FeedProjectCard({
-  authorInitials,
-  authorName,
-  authorTone = 'accent',
-  publishedAt,
-  title,
-}: FeedProjectCardProps) {
+export function FeedProjectCard({ project }: FeedProjectCardProps) {
+  const authorInitials = getInitials(project.author.name)
+
   return (
     <article className={styles.card}>
-      <ProjectPreview title={title} />
+      <ProjectPreview imageUrl={project.previewUrl} title={project.name} />
       <div className={styles.content}>
-        <h3>{title}</h3>
+        <h3>{project.name}</h3>
         <div className={styles.meta}>
           <div className={styles.author}>
-            <Avatar
-              className={styles[`avatar${capitalize(authorTone)}`]}
-              initials={authorInitials}
-              size="sm"
-            />
-            <span>{authorName}</span>
+            <Link
+              className={styles.avatarLink}
+              to={`/users/${project.author.id}`}
+            >
+              <Avatar initials={authorInitials} size="sm" />
+            </Link>
+            <span>{project.author.name}</span>
           </div>
-          <time>{publishedAt}</time>
+          <time>{project.publishedAt}</time>
         </div>
       </div>
     </article>
   )
 }
 
-function capitalize(value: string) {
-  return `${value[0].toUpperCase()}${value.slice(1)}`
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
 }
