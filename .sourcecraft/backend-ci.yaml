@@ -28,27 +28,20 @@ deploy:
   before_script:
     - apk add --no-cache openssh-client
   script:
-    - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key && ssh-keygen -lf /tmp/deploy_key
-    # Собираем .env в base64 на раннере — это избавляет от проблем с экранированием
-    # спецсимволов (JWT_SECRET_KEY содержит & * #). Значение НЕ выводится в лог.
+    - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key
     - >
       printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY"
       | base64 -w0 > /tmp/env_b64
-    # base64 передаётся через stdin, а не через подстановку $(...) внутри
-    # двойных кавычек — так безопаснее и не зависит от содержимого строки.
     - >
       cat /tmp/env_b64 | ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
       "mkdir -p ~/$REMOTE_APP_DIR/backend && base64 -d > ~/$REMOTE_APP_DIR/backend/.env"
     - rm -f /tmp/env_b64
-    - ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
+    - >
+      ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
+        echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex &&
         docker pull $REGISTRY/$IMAGE:latest &&
-        docker stop ya-brander || true &&
-        docker rm ya-brander || true &&
+        docker rm -f ya-brander || true &&
         docker network create ya-brander-net || true &&
-        docker inspect service-postgres >/dev/null 2>&1 && docker network connect ya-brander-net service-postgres || true &&
-        docker run -d --name ya-brander --restart unless-stopped \
-          --network ya-brander-net \
-          -p 8080:8080 \
-          --env-file ~/$REMOTE_APP_DIR/backend/.env \
-          $REGISTRY/$IMAGE:latest
+        (docker inspect service-postgres >/dev/null 2>&1 && docker network connect ya-brander-net service-postgres || true) &&
+        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
       "
