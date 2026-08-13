@@ -111,6 +111,49 @@ paths:
         '404':
           description: Пользователь не найден
 
+  /users/{id}/subscribe:
+    post:
+      summary: Подписаться на пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор пользователя, на которого оформляется подписка
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Подписка успешно оформлена
+        '400':
+          description: Нельзя подписаться на самого себя
+        '401':
+          description: Не авторизован
+        '404':
+          description: Пользователь не найден
+
+    delete:
+      summary: Отписаться от пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор пользователя, от которого отписываются
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Подписка успешно отменена
+        '401':
+          description: Не авторизован
+
   /projects:
     post:
       summary: Создать новый проект

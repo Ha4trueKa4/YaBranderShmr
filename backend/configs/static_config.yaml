@@ -148,3 +148,19 @@ components_manager:
       method: POST
       task_processor: main-task-processor
 
+    handler-users-subscribe:
+      path: /api/v1/users/{id}/subscribe
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-users-unsubscribe:
+      path: /api/v1/users/{id}/subscribe
+      method: DELETE
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
