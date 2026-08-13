@@ -1,11 +1,10 @@
 import { authStore } from '@app/providers/auth'
-import {
-  getAuthErrorMessage,
-  useLoginMutation,
-  useRegisterMutation,
-} from '@features/auth'
+// import {
+//   getAuthErrorMessage,
+//   useLoginMutation,
+//   useRegisterMutation,
+// } from '@features/auth'
 import type { LoginRequest, RegisterRequest } from '@shared/api/types'
-import { useToast } from '@shared/ui'
 import { LoginForm, RegisterForm } from '@widgets'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -17,16 +16,11 @@ type AuthForm = 'login' | 'register'
 
 export function AuthPage() {
   const navigate = useNavigate()
-  const toast = useToast()
   const [activeForm, setActiveForm] = useState<AuthForm>('login')
-  const { isPending: isLoggingInPending, mutateAsync: login } =
-    useLoginMutation()
-  const { isPending: isRegisteringPending, mutateAsync: register } =
-    useRegisterMutation()
-
-  function handleAuthError(error: Error) {
-    toast.error(getAuthErrorMessage(error))
-  }
+  // const { isPending: isLoggingInPending, mutateAsync: login } =
+  //   useLoginMutation()
+  // const { isPending: isRegisteringPending, mutateAsync: register } =
+  //   useRegisterMutation()
 
   function signIn(accessToken: string, userId: string) {
     authStore.signIn({
@@ -36,26 +30,16 @@ export function AuthPage() {
     navigate('/', { replace: true })
   }
 
-  async function handleLogin({ email, password }: LoginRequest) {
-    const response = await login(
-      { email, password },
-      { onError: handleAuthError },
-    )
-
-    signIn(response.access_token, response.user.id)
+  function handleLogin(_values: LoginRequest) {
+    // const response = await login(_values, { onError: handleAuthError })
+    // signIn(response.access_token, response.user.id)
+    signIn('mock-access-token', 'mock-user-id')
   }
 
-  async function handleRegister({
-    nickname,
-    email,
-    password,
-  }: RegisterRequest) {
-    const response = await register(
-      { email, nickname, password },
-      { onError: handleAuthError },
-    )
-
-    signIn(response.access_token, response.user.id)
+  function handleRegister(_values: RegisterRequest) {
+    // const response = await register(_values, { onError: handleAuthError })
+    // signIn(response.access_token, response.user.id)
+    signIn('mock-access-token', 'mock-user-id')
   }
 
   return (
@@ -82,13 +66,11 @@ export function AuthPage() {
         <div className={styles.formContent}>
           {activeForm === 'login' ? (
             <LoginForm
-              isPending={isLoggingInPending}
               onSubmit={handleLogin}
               onSwitchToRegister={() => setActiveForm('register')}
             />
           ) : (
             <RegisterForm
-              isPending={isRegisteringPending}
               onSubmit={handleRegister}
               onSwitchToLogin={() => setActiveForm('login')}
             />
