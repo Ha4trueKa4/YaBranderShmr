@@ -5,10 +5,15 @@ import styles from './ProfileHeader.module.css'
 
 export interface ProfileHeaderProps {
   onEditClick?: () => void
+  onLogoutClick?: () => void
   user: UserProfile
 }
 
-export function ProfileHeader({ user, onEditClick }: ProfileHeaderProps) {
+export function ProfileHeader({
+  user,
+  onEditClick,
+  onLogoutClick,
+}: ProfileHeaderProps) {
   const name = user.name ?? 'Oliver Lee'
   const initials = name
     .split(' ')
@@ -51,13 +56,18 @@ export function ProfileHeader({ user, onEditClick }: ProfileHeaderProps) {
               <dd>following</dd>
             </div>
           </dl>
-          <Button
-            className={styles.editButton}
-            onClick={onEditClick}
-            variant="secondary"
-          >
-            Edit profile
-          </Button>
+          <div className={styles.profileActions}>
+            <Button onClick={onLogoutClick} variant="ghost">
+              Log out
+            </Button>
+            <Button
+              className={styles.editButton}
+              onClick={onEditClick}
+              variant="secondary"
+            >
+              Edit profile
+            </Button>
+          </div>
         </div>
       </div>
     </section>
