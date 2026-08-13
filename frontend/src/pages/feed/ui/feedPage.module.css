@@ -6,7 +6,8 @@
 .content {
   width: min(100% - 3rem, var(--content-max-width));
   margin: 0 auto;
-  padding: 4rem 0 5rem;
+  max-width: var(--content-max-width);
+  padding: 64px 32px 80px;
 }
 
 .intro {

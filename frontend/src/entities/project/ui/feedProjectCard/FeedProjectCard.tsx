@@ -1,6 +1,6 @@
 import { Avatar } from '@shared/ui'
 
-import { ProjectPreview } from '../ProjectPreview'
+import { ProjectPreview } from '../projectPreview'
 import styles from './FeedProjectCard.module.css'
 
 export interface FeedProjectCardProps {

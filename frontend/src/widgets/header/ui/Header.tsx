@@ -20,50 +20,14 @@ export const Header = observer(function Header({
 
   return (
     <header className={styles.header}>
-      <button
-        className={styles.brand}
-        onClick={() => navigate('/')}
-        type="button"
-      >
-        <img alt="" src={brandMark} />
-        <span>Brandkit AI</span>
-      </button>
-      <nav className={styles.navigation}>
-        <NavLink
-          className={({ isActive }) =>
-            cn(styles.navigationLink, isActive && styles.navigationLinkActive)
-          }
-          to={AppRoute.EditorCreate}
-        >
-          Generate
-          <span className={styles.generateIcon} />
-        </NavLink>
-        <NavLink
-          className={({ isActive }) =>
-            cn(styles.navigationLink, isActive && styles.navigationLinkActive)
-          }
-          to={AppRoute.Feed}
-        >
-          Feed
-        </NavLink>
-        {isAuthorized && (
-          <NavLink
-            className={({ isActive }) =>
-              cn(styles.navigationLink, isActive && styles.navigationLinkActive)
-            }
-            to={AppRoute.Profile}
-          >
-            My projects
-          </NavLink>
-        )}
-      </nav>
-      {isAuthorized ? (
+      <div className={cn(styles.content, fullWidth && styles.contentFullWidth)}>
         <button
           className={styles.brand}
           onClick={() => navigate('/')}
           type="button"
         >
-          <Avatar initials="OL" />
+          <img alt="" src={brandMark} />
+          <span>Brandkit AI</span>
         </button>
         <nav className={styles.navigation}>
           <NavLink

@@ -1,6 +1,3 @@
 export * from './auth'
-export { Feed } from './feed'
-export { OwnProjectsSection } from './ownProjectsSection'
-export type { ProfileHeaderProfile, ProfileHeaderProps } from './profileHeader'
+export type { ProfileHeaderProps } from './profileHeader'
 export { ProfileHeader } from './profileHeader'
-export { PublicProjectsSection } from './publicProjectsSection'

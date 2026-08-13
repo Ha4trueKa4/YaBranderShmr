@@ -88,10 +88,17 @@
   color: var(--color-text-secondary);
 }
 
-.profileActions {
-  display: flex;
-  justify-content: end;
-  gap: var(--space-2);
+.editButton {
+  width: min(100%, 13.75rem);
+  justify-self: end;
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+.editButton:hover:not(:disabled) {
+  border-color: var(--color-accent-primary-hover);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-primary-hover);
 }
 
 @media (width < 760px) {
@@ -107,9 +114,5 @@
 
   .actions {
     min-width: 0;
-  }
-
-  .profileActions {
-    justify-content: start;
   }
 }
