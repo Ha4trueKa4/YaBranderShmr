@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react'
 
-import { ProjectPreview } from '../ProjectPreview'
+import { ProjectPreview } from '../projectPreview'
 import styles from './PublicProjectCard.module.css'
 
 export interface PublicProjectCardProps {

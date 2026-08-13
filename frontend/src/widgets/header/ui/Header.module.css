@@ -1,12 +1,22 @@
 .header {
-  position: relative;
-  display: flex;
   height: 4rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+.content {
+  position: relative;
+  display: flex;
+  width: min(100% - 3rem, var(--content-max-width));
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+}
+
+.contentFullWidth {
+  width: 100%;
+  padding: 0 var(--space-4);
 }
 
 .brand {
@@ -97,7 +107,10 @@
 @media (width < 640px) {
   .header {
     height: 4rem;
-    padding: 0 var(--space-4);
+  }
+
+  .content {
+    width: min(100% - 2rem, var(--content-max-width));
   }
 
   .brand span {
