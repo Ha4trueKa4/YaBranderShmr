@@ -173,3 +173,19 @@ components_manager:
         types:
           - jwt
 
+    handler-users-subscribers-get:
+      path: /api/v1/users/{id}/subscribers
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-users-subscriptions-get:
+      path: /api/v1/users/{id}/subscriptions
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+

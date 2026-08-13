@@ -134,3 +134,141 @@ async def test_unsubscribe_when_not_subscribed(service_client):
         headers=auth_headers(subscriber["token"]),
     )
     assert response.status == 200
+
+
+# ==============================================================
+# ПОЛУЧЕНИЕ ПОДПИСЧИКОВ
+# СЦЕНАРИИ 9-12
+# GET /users/{id}/subscribers
+# ==============================================================
+async def test_get_subscribers_success(service_client):
+    """9. Получение списка подписчиков -> 200"""
+    target = await register(service_client, "target")
+    sub1 = await register(service_client, "sub1")
+    sub2 = await register(service_client, "sub2")
+
+    await service_client.post(
+        f"/api/v1/users/{target['id']}/subscribe",
+        headers=auth_headers(sub1["token"]),
+    )
+    await service_client.post(
+        f"/api/v1/users/{target['id']}/subscribe",
+        headers=auth_headers(sub2["token"]),
+    )
+
+    response = await service_client.get(
+        f"/api/v1/users/{target['id']}/subscribers",
+        headers=auth_headers(target["token"]),
+    )
+    assert response.status == 200
+    data = response.json()
+    assert len(data) == 2
+
+    subscriber_ids = [u["id"] for u in data]
+    assert sub1["id"] in subscriber_ids
+    assert sub2["id"] in subscriber_ids
+    assert "name" in data[0]
+
+
+async def test_get_subscribers_empty(service_client):
+    """10. Пустой список подписчиков -> 200 и пустой массив"""
+    target = await register(service_client, "target")
+
+    response = await service_client.get(
+        f"/api/v1/users/{target['id']}/subscribers",
+        headers=auth_headers(target["token"]),
+    )
+    assert response.status == 200
+    assert response.json() == []
+
+
+async def test_get_subscribers_not_found(service_client):
+    """11. Запрос подписчиков несуществующего юзера -> 404"""
+    user = await register(service_client, "user")
+    fake_id = str(uuid.uuid4())
+
+    response = await service_client.get(
+        f"/api/v1/users/{fake_id}/subscribers",
+        headers=auth_headers(user["token"]),
+    )
+    assert response.status == 404
+
+
+async def test_get_subscribers_invalid_uuid(service_client):
+    """12. Запрос подписчиков с невалидным UUID -> 400"""
+    user = await register(service_client, "user")
+
+    response = await service_client.get(
+        "/api/v1/users/bad-uuid/subscribers",
+        headers=auth_headers(user["token"]),
+    )
+    assert response.status == 400
+
+
+# ==============================================================
+# ПОЛУЧЕНИЕ ПОДПИСОК
+# СЦЕНАРИИ 13-16
+# GET /users/{id}/subscriptions
+# ==============================================================
+async def test_get_subscriptions_success(service_client):
+    """13. Получение списка подписок (на кого подписан) -> 200"""
+    subscriber = await register(service_client, "subscriber")
+    target1 = await register(service_client, "target1")
+    target2 = await register(service_client, "target2")
+
+    await service_client.post(
+        f"/api/v1/users/{target1['id']}/subscribe",
+        headers=auth_headers(subscriber["token"]),
+    )
+    await service_client.post(
+        f"/api/v1/users/{target2['id']}/subscribe",
+        headers=auth_headers(subscriber["token"]),
+    )
+
+    response = await service_client.get(
+        f"/api/v1/users/{subscriber['id']}/subscriptions",
+        headers=auth_headers(subscriber["token"]),
+    )
+    assert response.status == 200
+    data = response.json()
+    assert len(data) == 2
+
+    subscription_ids = [u["id"] for u in data]
+    assert target1["id"] in subscription_ids
+    assert target2["id"] in subscription_ids
+    assert "name" in data[0]
+
+
+async def test_get_subscriptions_empty(service_client):
+    """14. Пустой список подписок -> 200 и пустой массив"""
+    subscriber = await register(service_client, "subscriber")
+
+    response = await service_client.get(
+        f"/api/v1/users/{subscriber['id']}/subscriptions",
+        headers=auth_headers(subscriber["token"]),
+    )
+    assert response.status == 200
+    assert response.json() == []
+
+
+async def test_get_subscriptions_not_found(service_client):
+    """15. Запрос подписок несуществующего юзера -> 404"""
+    user = await register(service_client, "user")
+    fake_id = str(uuid.uuid4())
+
+    response = await service_client.get(
+        f"/api/v1/users/{fake_id}/subscriptions",
+        headers=auth_headers(user["token"]),
+    )
+    assert response.status == 404
+
+
+async def test_get_subscriptions_invalid_uuid(service_client):
+    """16. Запрос подписок с невалидным UUID -> 400"""
+    user = await register(service_client, "user")
+
+    response = await service_client.get(
+        "/api/v1/users/bad-uuid/subscriptions",
+        headers=auth_headers(user["token"]),
+    )
+    assert response.status == 400

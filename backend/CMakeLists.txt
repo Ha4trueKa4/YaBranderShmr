@@ -79,6 +79,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/subscription_handlers.cpp
         src/components/subscription_storage/subscription_storage_component.cpp
         src/handlers/users/get_user_profile.cpp
+        src/handlers/users/user_subscriptions_handlers.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
