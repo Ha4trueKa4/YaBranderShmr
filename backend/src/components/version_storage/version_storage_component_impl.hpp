@@ -32,8 +32,13 @@ namespace ya_brander::components {
         std::string RestoreVersion(const std::string& project_id,
                                    const std::string& version_id) override;
         std::string GetLatestVersionData(const std::string& project_id) override;
-        std::unordered_map<std::string, std::string> GetVersionUrls(
+        std::string GetLatestVersionUrl(const std::string& project_id) override;
+        std::string GetVersionUrl(const std::string& project_id,
+                                  const std::string& version_id) override;
+        std::unordered_map<std::string, std::string> GetManyUrls(
             const std::vector<std::string>& keys, bool is_public) override;
+        void SetLatestAcl(const std::string& project_id, bool make_public) override;
+        void DeleteAllVersions(const std::string& project_id) override;
 
     private:
         std::string MakeKey(const std::string& project_id, int version_num) const;

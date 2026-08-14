@@ -100,7 +100,7 @@ std::string GetFeedHandler::HandleRequestThrow(const userver::server::http::Http
     auto key = res[i]["last_version_key"].As<std::string>();
     if (!key.empty()) keys.push_back(key);
   }
-  const auto urls = version_storage_.GetVersionUrls(keys, true);
+  const auto urls = version_storage_.GetManyUrls(keys, true);
 
   userver::formats::json::ValueBuilder items_builder{userver::formats::json::Type::kArray};
   for (std::size_t i = 0; i < items_count; ++i) {
