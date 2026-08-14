@@ -1,7 +1,12 @@
 services:
   postgres:
     container_name: service-postgres
-    image: pgvector/pgvector:pg16
+    image: postgres:18
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d ya_brander_db_1"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
     environment:
       - POSTGRES_DB=ya_brander_db_1
       - POSTGRES_USER=user
@@ -15,7 +20,25 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - postgres
-
+  vector-postgres:                         
+    container_name: service-vector-postgres
+    image: pgvector/pgvector:pg18
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d vector_db"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    environment:
+      - POSTGRES_DB=vector_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - ./postgresql/schemas/vector-db.sql:/docker-entrypoint-initdb.d/01_vector_db.sql
+      - ./postgresql/data/vector_initial_data.sql:/docker-entrypoint-initdb.d/02_vector_initial_data.sql
+      - pgvector_data:/var/lib/postgresql/data
+    networks:
+      - postgres
   ya_brander-container:
     image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
     privileged: true
@@ -38,7 +61,10 @@ services:
     entrypoint:
       - ./tests/run_as_user.sh
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      vector-postgres:
+        condition: service_healthy
     networks:
       - postgres
       - default
@@ -50,3 +76,4 @@ networks:
       driver: bridge
 volumes:
   pgdata:
+  pgvector_data:

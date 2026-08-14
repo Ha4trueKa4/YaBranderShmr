@@ -1,6 +1,6 @@
 CREATE
 EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE users
 (
     id            UUID PRIMARY KEY         DEFAULT uuid_generate_v4(),
@@ -43,14 +43,7 @@ CREATE TABLE subscriptions
     CHECK (subscriber_id <> target_user_id)
 );
 
-CREATE TABLE vector_examples
-(
-    id          UUID PRIMARY KEY         DEFAULT uuid_generate_v4(),
-    description TEXT            NOT NULL,
-    embedding   vector(256)     NOT NULL,
-    svg_data    TEXT            NOT NULL,
-    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+
 
 CREATE INDEX idx_projects_author_id ON projects (author_id);
 CREATE INDEX idx_projects_public ON projects (created_at DESC) WHERE is_private = FALSE;
@@ -58,5 +51,3 @@ CREATE INDEX idx_projects_public ON projects (created_at DESC) WHERE is_private 
 CREATE INDEX idx_project_versions_list ON project_versions (project_id, version_num DESC);
 
 CREATE INDEX idx_subscriptions_target ON subscriptions (target_user_id);
-
-CREATE INDEX idx_vector_examples_embedding ON vector_examples USING hnsw (embedding vector_cosine_ops);

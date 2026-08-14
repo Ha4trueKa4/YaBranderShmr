@@ -28,14 +28,18 @@ VectorSearchComponent::VectorSearchComponent(
 
     const char* key = std::getenv("YANDEX_AI_API_KEY");
     if (key == nullptr || std::string_view(key).empty()) {
-        throw std::runtime_error("YANDEX_AI_API_KEY is not set");
+        api_key_.clear();
+    } else {
+        api_key_ = key;
     }
-    api_key_ = key;
-
 }
 
 std::vector<std::string> VectorSearchComponent::FindSimilar(
     const std::string& description, int limit) const {
+
+    if (api_key_.empty()) {
+        return {};
+    }
 
     std::vector<double> embedding;
     try {
@@ -69,16 +73,16 @@ std::vector<double> VectorSearchComponent::GetEmbedding(const std::string& text)
     request.timeout(15000);
     request.data(userver::formats::json::ToString(payload.ExtractValue()));
 
-    auto response = request.perform();
-
-    if (response->status_code() != 200) {
-        throw std::runtime_error("Embedding API error " +
-                                 std::to_string(response->status_code()) +
-                                 ": " + response->body().substr(0, 200));
+    try {
+        auto response = request.perform();
+        if (response->status_code() != 200) {
+            return {};
+        }
+        auto json_body = userver::formats::json::FromString(response->body());
+        return json_body["embedding"].As<std::vector<double>>();
+    } catch (const std::exception& e) {
+        return {};
     }
-
-    auto json_body = userver::formats::json::FromString(response->body());
-    return json_body["embedding"].As<std::vector<double>>();
 }
 
 std::vector<std::string> VectorSearchComponent::SearchInDb(
@@ -93,7 +97,7 @@ std::vector<std::string> VectorSearchComponent::SearchInDb(
             db_table_);
 
         auto result = pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
+            userver::storages::postgres::ClusterHostType::kMaster,
             query, vec_str, limit, max_distance);
 
         std::vector<std::string> svgs;

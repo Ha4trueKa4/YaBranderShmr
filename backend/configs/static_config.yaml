@@ -83,6 +83,13 @@ components_manager:
       sync-start: false
       connlimit_mode: manual
 
+    postgres-vector-db:
+      dbconnection: $dbconnection-vector
+      blocking_task_processor: fs-task-processor
+      dns_resolver: async
+      sync-start: false
+      connlimit_mode: manual
+
     dns-client:
       fs-task-processor: fs-task-processor
 
@@ -92,7 +99,7 @@ components_manager:
     version-storage: { }
     vector-search: 
       embedding-url: $yandex-embedding-url
-      pg-component-name: postgres-db-1
+      pg-component-name: postgres-vector-db
       db-table: vector_examples
       embedding-model: text-embeddings-v2-query
     object-storage: { }

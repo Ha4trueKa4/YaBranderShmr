@@ -7,5 +7,6 @@ is-testing: false
 server-port: 8080
 
 dbconnection: 'postgresql://user:password@service-postgres:5432/ya_brander_db_1'
+dbconnection-vector: 'postgresql://user:password@service-vector-postgres:5432/vector_db'
 yandex-gpt-url: 'https://ai.api.cloud.yandex.net/v1/responses'
 yandex-embedding-url: 'https://llm.api.cloud.yandex.net/foundationModels/v1/textEmbedding'

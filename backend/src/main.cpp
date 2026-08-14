@@ -34,6 +34,7 @@ int main(int argc, char* argv[]) {
             .Append<ya_brander::auth::LoginHandler>()
             .Append<ya_brander::auth::RegisterHandler>()
             // --- shared infrastructure: used by all feature modules ---
+            .Append<userver::components::Postgres>("postgres-vector-db")
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
