@@ -77,6 +77,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/append_users.cpp
         src/handlers/users/subscription_handlers.hpp
         src/handlers/users/subscription_handlers.cpp
+        src/handlers/feed/get_feed.h
+        src/handlers/feed/get_feed.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

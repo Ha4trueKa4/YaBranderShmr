@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <userver/components/loggable_component_base.hpp>
 #include "models/version.hpp"
@@ -55,6 +56,21 @@ class VersionStorageComponent : public userver::components::LoggableComponentBas
   /// @param project_id Идентификатор проекта.
   /// @return Данные последней версии в виде строки (SVG) или пустая строка.
   virtual std::string GetLatestVersionData(const std::string& project_id) = 0;
+
+  /// @brief Батч-версия получения ссылок на превью по уже известным ключам
+  ///        (например, projects.last_version_key), собранным вызывающим кодом
+  ///        за один SQL-запрос. Нужна для списков (лента, профиль), чтобы не
+  ///        делать по одному обращению к хранилищу на каждую карточку.
+  /// @details Все переданные ключи должны быть одного типа доступа. Для
+  ///          списков со смешанными публичными и приватными проектами
+  ///          (например, "мои проекты") вызывающий код обязан разбить ключи
+  ///          на две группы по is_private и вызвать метод дважды.
+  /// @param keys Ключи хранилища последних версий (не project_id).
+  /// @param is_public Публичный тип ссылки (прямая) или приватный (временная).
+  /// @return Отображение key -> URL превью. Ключи, для которых объект не
+  ///         найден, в результате отсутствуют.
+  virtual std::unordered_map<std::string, std::string> GetVersionUrls(
+      const std::vector<std::string>& keys, bool is_public) = 0;
 };
 
 }  // namespace ya_brander::components

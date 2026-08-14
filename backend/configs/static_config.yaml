@@ -164,3 +164,11 @@ components_manager:
         types:
           - jwt
 
+    handler-feed:
+      path: /api/v1/feed
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
