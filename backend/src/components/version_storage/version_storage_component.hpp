@@ -99,6 +99,23 @@ class VersionStorageComponent : public userver::components::LoggableComponentBas
     virtual std::string GetVersionUrl(const std::string& project_id,
                                       const std::string& version_id) = 0;
 
+    /// @brief Батч-конструирование ссылок по уже готовым ключам объектов.
+    /// @details НЕ обращается к БД: ключи и видимость передаёт вызывающий (обычно
+    ///          он уже получил last_version_key при выборке ленты/профиля). Тип
+    ///          ссылки один на весь вызов, поэтому вызывающий группирует ключи по
+    ///          видимости и делает не более двух вызовов: один для публичных
+    ///          (is_public=true), один для приватных (is_public=false).
+    ///          ВНИМАНИЕ: is_public обязан совпадать с реальной видимостью объекта;
+    ///          неверное значение даст нерабочую ссылку (для публичного ключа с
+    ///          is_public=false будет presigned, что валидно; для приватного ключа
+    ///          с is_public=true будет постоянная ссылка -> 403). Разделение
+    ///          по видимости это ответственность вызывающего этот метод.
+    /// @param keys Ключи объектов.
+    /// @param is_public true -> постоянные прямые ссылки, false -> presigned.
+    /// @return Отображение key -> URL.
+    virtual std::unordered_map<std::string, std::string> GetManyUrls(
+        const std::vector<std::string>& keys, bool is_public) = 0;
+
     /// @brief Устанавливает ACL объекта текущей версии проекта.
     /// @details МЕХАНИЗМ смены видимости, НЕ самостоятельная операция. Меняет ACL
     ///          ровно одного объекта (last_version_key). ОБЯЗАН вызываться в паре
