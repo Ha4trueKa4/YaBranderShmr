@@ -14,8 +14,12 @@ on:
       filter:
         target_branches: ["main"]
         paths: ["android/**"]
+    - workflows: check-frontend
+      filter:
+        target_branches: ["main"]
+        paths: ["frontend/**", ".sourcecraft/ci.yaml"]
   push:
-    - workflows: [deploy-frontend-dev]
+    - workflows: [deploy-frontend-main]
       filter:
         branches: [main]
     - workflows: [deploy-backend]
@@ -37,9 +41,23 @@ workflows:
               JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
               YANDEX_AI_API_KEY: ${{ secrets.YANDEX_AI_API_KEY }}
 
-  deploy-frontend-dev:
+  check-frontend:
     tasks:
-      - name: check-build-and-deploy
+      - name: check-and-build
+        cubes:
+          - name: install-check-and-build
+            image: docker.io/library/node:22-bookworm
+            script:
+              - cd frontend
+              - corepack enable
+              - corepack prepare pnpm@11.16.0 --activate
+              - pnpm install --frozen-lockfile
+              - pnpm check
+              - pnpm build
+
+  deploy-frontend-main:
+    tasks:
+      - name: build-and-deploy
         env:
           YC_S3_BUCKET: ${{ secrets.YC_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.YC_S3_ACCESS_KEY_ID }}
