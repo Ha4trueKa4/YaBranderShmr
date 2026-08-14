@@ -98,6 +98,12 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
         return versions;
     }
 
+    std::unordered_map<std::string, std::string> VersionStorageComponentImpl::GetVersionUrls(
+        const std::vector<std::string>& /*keys*/, bool /*is_public*/) {
+      // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+      return {};
+    }
+
     std::string VersionStorageComponentImpl::RestoreVersion(const std::string& project_id,
                                const std::string& version_id) {
       const auto data = GetVersion(project_id, version_id);
