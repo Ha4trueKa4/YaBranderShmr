@@ -68,6 +68,11 @@ components_manager:
       task_processor: main-task-processor
       throttling_enabled: false
 
+    handler-test-vector-search:
+      path: /test/vector-search
+      method: GET
+      task_processor: main-task-processor
+      
     llm-client:
       api-url: $yandex-gpt-url
 
@@ -85,7 +90,11 @@ components_manager:
     # Внешние сервисы (или их моки)
     # ==========================================
     version-storage: { }
-    vector-search: { }
+    vector-search: 
+      embedding-url: $yandex-embedding-url
+      pg-component-name: postgres-db-1
+      db-table: vector_examples
+      embedding-model: text-embeddings-v2-query
     object-storage: { }
 
     # ==========================================

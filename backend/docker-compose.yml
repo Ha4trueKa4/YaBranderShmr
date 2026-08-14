@@ -1,7 +1,7 @@
 services:
   postgres:
     container_name: service-postgres
-    image: postgres:18
+    image: pgvector/pgvector:pg16
     environment:
       - POSTGRES_DB=ya_brander_db_1
       - POSTGRES_USER=user
