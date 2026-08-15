@@ -1,4 +1,10 @@
 import { authStore } from '@app/providers/auth'
+// import {
+//   getAuthErrorMessage,
+//   useLoginMutation,
+//   useRegisterMutation,
+// } from '@features/auth'
+import type { LoginRequest, RegisterRequest } from '@shared/api/types'
 import { LoginForm, RegisterForm } from '@widgets'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -10,14 +16,30 @@ type AuthForm = 'login' | 'register'
 
 export function AuthPage() {
   const navigate = useNavigate()
-  const [activeForm, setActiveForm] = useState<AuthForm>('register')
+  const [activeForm, setActiveForm] = useState<AuthForm>('login')
+  // const { isPending: isLoggingInPending, mutateAsync: login } =
+  //   useLoginMutation()
+  // const { isPending: isRegisteringPending, mutateAsync: register } =
+  //   useRegisterMutation()
 
-  function handleMockAuthorization() {
+  function signIn(accessToken: string, userId: string) {
     authStore.signIn({
-      accessToken: 'mock-access-token',
-      userId: 'mock-user-id',
+      accessToken,
+      userId,
     })
     navigate('/', { replace: true })
+  }
+
+  function handleLogin(_values: LoginRequest) {
+    // const response = await login(_values, { onError: handleAuthError })
+    // signIn(response.access_token, response.user.id)
+    signIn('mock-access-token', 'mock-user-id')
+  }
+
+  function handleRegister(_values: RegisterRequest) {
+    // const response = await register(_values, { onError: handleAuthError })
+    // signIn(response.access_token, response.user.id)
+    signIn('mock-access-token', 'mock-user-id')
   }
 
   return (
@@ -44,12 +66,12 @@ export function AuthPage() {
         <div className={styles.formContent}>
           {activeForm === 'login' ? (
             <LoginForm
-              onSubmit={handleMockAuthorization}
+              onSubmit={handleLogin}
               onSwitchToRegister={() => setActiveForm('register')}
             />
           ) : (
             <RegisterForm
-              onSubmit={handleMockAuthorization}
+              onSubmit={handleRegister}
               onSwitchToLogin={() => setActiveForm('login')}
             />
           )}

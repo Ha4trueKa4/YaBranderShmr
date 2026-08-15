@@ -5,7 +5,7 @@
 
 .sectionTitle {
   margin: 0;
-  color: #71717a;
+  color: var(--color-text-muted);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
@@ -14,7 +14,7 @@
 .field {
   display: grid;
   gap: var(--space-1);
-  color: #52525b;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-caption);
 }
 

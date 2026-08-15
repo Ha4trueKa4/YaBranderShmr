@@ -14,12 +14,8 @@ on:
       filter:
         target_branches: ["main"]
         paths: ["android/**"]
-    - workflows: check-frontend
-      filter:
-        target_branches: ["main"]
-        paths: ["frontend/**", ".sourcecraft/ci.yaml"]
   push:
-    - workflows: [deploy-frontend-main]
+    - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
     - workflows: [deploy-backend]
@@ -41,23 +37,9 @@ workflows:
               JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
               YANDEX_AI_API_KEY: ${{ secrets.YANDEX_AI_API_KEY }}
 
-  check-frontend:
+  deploy-frontend-dev:
     tasks:
-      - name: check-and-build
-        cubes:
-          - name: install-check-and-build
-            image: docker.io/library/node:22-bookworm
-            script:
-              - cd frontend
-              - corepack enable
-              - corepack prepare pnpm@11.16.0 --activate
-              - pnpm install --frozen-lockfile
-              - pnpm check
-              - pnpm build
-
-  deploy-frontend-main:
-    tasks:
-      - name: build-and-deploy
+      - name: check-build-and-deploy
         env:
           YC_S3_BUCKET: ${{ secrets.YC_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.YC_S3_ACCESS_KEY_ID }}
@@ -102,9 +84,9 @@ workflows:
               - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
               - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
               - export ANDROID_SDK_ROOT="$ANDROID_HOME"
-              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/37.0.0"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0"
               - yes | sdkmanager --licenses > /dev/null
-              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+              - sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
               - cd android
               - echo "sdk.dir=$ANDROID_HOME" > local.properties
               - ./gradlew assembleDebug
@@ -126,9 +108,9 @@ workflows:
               - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
               - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
               - export ANDROID_SDK_ROOT="$ANDROID_HOME"
-              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/37.0.0"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0"
               - yes | sdkmanager --licenses > /dev/null
-              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+              - sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
               - cd android
               - echo "sdk.dir=$ANDROID_HOME" > local.properties
               - ./gradlew lint

@@ -1,52 +1,105 @@
-export type EditorLayerType = 'background' | 'shape' | 'text'
-export type EditorNodeType = EditorLayerType | 'group'
+export type Paint =
+  | { type: 'color'; value: string }
+  | { type: 'gradient'; gradientId: string }
+  | { type: 'none' }
 
-interface EditorLayerBase {
-  id: string
-  isVisible: boolean
-  name: string
-}
-
-export type BackgroundLayer = EditorLayerBase & {
-  fill: string
-  type: 'background'
-}
-
-export type ShapeLayer = EditorLayerBase & {
-  fill: string
-  stroke?: string
-  type: 'shape'
+export type Transform = {
+  rotation: number
+  scaleX: number
+  scaleY: number
   x: number
   y: number
 }
 
-export type TextLayer = EditorLayerBase & {
-  fontFamily: string
-  fontSize: number
-  text: string
-  type: 'text'
+export type ShapeStyle = {
+  fill: Paint
+  fillOpacity: number
+  stroke: Paint
+  strokeLineCap?: 'butt' | 'round' | 'square'
+  strokeLineJoin?: 'bevel' | 'miter' | 'round'
+  strokeOpacity: number
+  strokeWidth: number
 }
 
-/**
- * Дискриминируемый набор слоёв документа.
- * При добавлении нового слоя дополнить этот union и inspectorByType.
- */
-export type EditorLayer = BackgroundLayer | ShapeLayer | TextLayer
+export type TextStyle = {
+  fill: Paint
+  fontFamily: string
+  fontSize: number
+  fontStyle?: 'italic' | 'normal'
+  fontWeight?: number
+  textAnchor?: 'end' | 'middle' | 'start'
+}
 
-export type EditorGroup = EditorLayerBase & {
+export type RectGeometry = {
+  height: number
+  rx?: number
+  ry?: number
+  type: 'rect'
+  width: number
+  x: number
+  y: number
+}
+
+export type CircleGeometry = {
+  cx: number
+  cy: number
+  r: number
+  type: 'circle'
+}
+
+export type PathGeometry = {
+  d: string
+  type: 'path'
+}
+
+export type ShapeGeometry = RectGeometry | CircleGeometry | PathGeometry
+export type EditorShapeType = ShapeGeometry['type']
+export type EditorElementType = 'shape' | 'text'
+export type EditorNodeType = EditorElementType | 'group'
+
+export type EditorElementBase = {
+  id: string
+  isLocked: boolean
+  isVisible: boolean
+  name: string
+  opacity: number
+  role?: 'background' | 'content'
+  transform: Transform
+}
+
+export type EditorShape = EditorElementBase & {
+  style: ShapeStyle
+  type: 'shape'
+} & (
+    | { geometry: RectGeometry; shapeType: 'rect' }
+    | { geometry: CircleGeometry; shapeType: 'circle' }
+    | { geometry: PathGeometry; shapeType: 'path' }
+  )
+
+export type EditorText = EditorElementBase & {
+  style: TextStyle
+  text: string
+  type: 'text'
+  x: number
+  y: number
+}
+
+export type EditorElement = EditorShape | EditorText
+
+export type EditorGroup = EditorElementBase & {
   children: EditorNode[]
   type: 'group'
 }
 
-export type EditorNode = EditorGroup | EditorLayer
+export type EditorNode = EditorGroup | EditorElement
 
-export type EditorLayerByType<TType extends EditorLayerType> = Extract<
-  EditorLayer,
+export type EditorElementByType<TType extends EditorElementType> = Extract<
+  EditorElement,
   { type: TType }
 >
 
 export interface EditorDocument {
+  width: number
   height: number
   layers: EditorNode[]
-  width: number
 }

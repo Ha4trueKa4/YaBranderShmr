@@ -70,6 +70,7 @@ format:
 # Internal hidden targets that are used only in docker environment
 --in-docker-start-debug --in-docker-start-release: --in-docker-start-%: install-%
 	psql 'postgresql://user:password@service-postgres:5432/ya_brander_db_1' -f ./postgresql/data/initial_data.sql
+	psql 'postgresql://user:password@service-vector-postgres:5432/vector_db' -f ./postgresql/data/vector_initial_data.sql
 	/home/user/.local/bin/ya_brander \
 		--config /home/user/.local/etc/ya_brander/static_config.yaml \
 		--config_vars /home/user/.local/etc/ya_brander/config_vars.docker.yaml

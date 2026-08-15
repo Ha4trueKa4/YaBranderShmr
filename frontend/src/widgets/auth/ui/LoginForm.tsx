@@ -6,11 +6,16 @@ import { type LoginSubmitHandler, useLoginForm } from '../model'
 import styles from './AuthForms.module.css'
 
 interface LoginFormProps {
+  isPending?: boolean
   onSubmit?: LoginSubmitHandler
   onSwitchToRegister?: () => void
 }
 
-export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({
+  isPending = false,
+  onSubmit,
+  onSwitchToRegister,
+}: LoginFormProps) {
   const emailInputId = useId()
   const passwordInputId = useId()
   const {
@@ -85,7 +90,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             )}
           />
         </div>
-        <Button fullWidth size="lg" type="submit">
+        <Button fullWidth loading={isPending} size="lg" type="submit">
           Sign in
         </Button>
         {isSubmitted && <p className={styles.success}>You are signed in.</p>}

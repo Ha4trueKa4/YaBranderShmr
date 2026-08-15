@@ -47,10 +47,8 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
       </div>
       <aside className={styles.layers}>
         <LayersPanel
-          expandedGroupIds={editorStore.expandedGroupIds}
           nodes={editorStore.document.layers}
           onSelectLayer={editorStore.setSelectedLayer}
-          onToggleGroup={editorStore.toggleGroup}
           selectedLayerId={editorStore.selectedLayerId}
         />
       </aside>

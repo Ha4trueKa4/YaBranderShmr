@@ -33,6 +33,12 @@ sealed class Destination(val route: String) {
     /** Создание нового проекта (вкладка). Зона команды «создание/редактирование». */
     data object Create : Destination("create")
 
+    /**
+     * Форма создания нового проекта (название, описание, запуск генерации).
+     * Открывается поверх вкладки «Создать», без нижней панели.
+     */
+    data object CreateProject : Destination("create/new")
+
     /** Свой профиль (вкладка). Зона команды «лента/профиль». */
     data object Profile : Destination("profile")
 
