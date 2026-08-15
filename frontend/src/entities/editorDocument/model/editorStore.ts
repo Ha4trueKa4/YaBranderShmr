@@ -32,6 +32,22 @@ export class EditorStore {
     this.selectedNodeId = nodeId
   }
 
+  setNodeVisibility(nodeId: string, isVisible: boolean) {
+    const node = findEditorNode(this.document.layers, nodeId)
+
+    if (node) {
+      node.isVisible = isVisible
+    }
+  }
+
+  toggleNodeVisibility(nodeId: string) {
+    const node = findEditorNode(this.document.layers, nodeId)
+
+    if (node) {
+      this.setNodeVisibility(nodeId, !node.isVisible)
+    }
+  }
+
   isGroupExpanded(groupId: string): boolean {
     return this.expandedGroupIds.has(groupId)
   }

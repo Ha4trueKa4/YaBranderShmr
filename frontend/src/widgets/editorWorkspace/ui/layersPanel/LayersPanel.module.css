@@ -70,6 +70,10 @@
     color 160ms ease;
 }
 
+.hidden {
+  color: var(--color-text-muted);
+}
+
 .layer:hover {
   background: var(--color-surface-elevated);
 }
@@ -152,11 +156,21 @@
   margin-left: auto;
 }
 
-.visibilityIcon {
+.visibilityButton {
+  display: grid;
+  flex: 0 0 1rem;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--color-text-muted);
+  cursor: pointer;
 }
 
 .selected .icon,
-.selected .visibilityIcon {
+.selected .visibilityButton {
   color: var(--color-accent-primary);
 }
