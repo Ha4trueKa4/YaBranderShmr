@@ -72,11 +72,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       {isCreatingProjectPending ? (
         <EditorGeneratingState description={description} />
       ) : (
-        <EditorEmptyState
-          description={description}
-          onDescriptionChange={setDescription}
-          onGenerate={handleGenerate}
-        />
+        <EditorEmptyState onGenerate={handleGenerate} />
       )}
     </main>
   )
