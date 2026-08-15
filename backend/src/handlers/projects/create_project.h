@@ -1,13 +1,16 @@
 #pragma once
-#include <userver/server/handlers/http_handler_base.hpp>
+#include <userver/server/handlers/http_handler_json_base.hpp>
 #include "../../components/project_manager_component.h"
 
 namespace ya_brander::handlers {
-class CreateProjectHandler final : public userver::server::handlers::HttpHandlerBase {
+class CreateProjectHandler final : public userver::server::handlers::HttpHandlerJsonBase {
 public:
   static constexpr std::string_view kName = "handler-projects-create";
   CreateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context);
-  std::string HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext&) const override;
+  userver::formats::json::Value HandleRequestJsonThrow(
+      const userver::server::http::HttpRequest& request,
+      const userver::formats::json::Value& request_json,
+      userver::server::request::RequestContext&) const override;
 private:
   components::ProjectManagerComponent& project_manager_;
 };
