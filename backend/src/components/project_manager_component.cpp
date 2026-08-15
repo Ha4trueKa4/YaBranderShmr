@@ -53,7 +53,7 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
         row["name"].As<std::string>(),
         row["description"].As<std::string>(),
         is_public,
-        row["created_at"].As<std::string>(),
+        row["created_at"].As<std::chrono::system_clock::time_point>(),
         data
     };
 }
