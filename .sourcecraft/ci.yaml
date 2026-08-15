@@ -23,11 +23,7 @@ on:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
-    - workflows: [build-backend]
-      filter:
-        branches: ["main"]
-        paths: ["backend/**"]
-    - workflows: [deploy-backend]
+    - workflows: [build-and-deploy-backend]
       filter:
         branches: ["main"]
         paths: ["backend/**"]
@@ -42,18 +38,14 @@ workflows:
           - name: run-build-backend-check
             gitlab_workflow: .sourcecraft/build-backend-check.yaml
 
-  # Сборка + публикация образа в registry на push в main (перед деплоем).
-  build-backend:
+  build-and-deploy-backend:
     tasks:
       - name: build
-        cubes:
-          - name: run-build-backend
-            gitlab_workflow: .sourcecraft/build-backend.yaml
-            env:
-              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
-
-  deploy-backend:
-    tasks:
+          cubes:
+            - name: run-build-backend
+              gitlab_workflow: .sourcecraft/build-backend.yaml
+              env:
+                YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
       - name: deploy
         cubes:
           - name: run-deploy-backend
