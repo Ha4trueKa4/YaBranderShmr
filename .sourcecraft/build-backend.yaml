@@ -20,3 +20,7 @@ build:
     - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
     - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
     - docker push $REGISTRY/$IMAGE:latest
+    # Чистим локальный образ с тегом по SHA в раннере, чтобы не копить слои
+    # на диске. Примечание: в самом Yandex CR тег по SHA остаётся (для откатов),
+    # удаление именно из реестра делается вручную/по API.
+    - docker rmi $REGISTRY/$IMAGE:$CI_COMMIT_SHA

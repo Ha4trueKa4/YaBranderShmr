@@ -22,6 +22,7 @@ deploy:
     - rm -f /tmp/env_b64
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
+        docker system prune -af --filter \"until=24h\" &&
         echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex &&
         docker pull $REGISTRY/$IMAGE:latest &&
         docker rm -f ya-brander || true &&
