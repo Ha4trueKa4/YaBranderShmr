@@ -4,13 +4,16 @@
 
 ## Что нужно добавить в API
 
-Сначала стоит сверить этот список с фактическими ответами backend: существующее поле или endpoint не нужно переименовывать, если оно передаёт те же данные и подходит для UI. Добавлять нужно только данные, для которых нет совместимого аналога.
+Список сверяется только со `swagger.yml` и сгенерированными из него типами. Поле или endpoint считается добавленным лишь после явного описания в OpenAPI: наличие такого значения в фактическом ответе backend само по себе не закрывает пункт.
 
-- В `GET /users/{id}` → `UserProfile`: если их ещё нет в эквивалентной форме, добавить `username`, `bio`, `avatar_url`, `cover_url` (или согласованный вариант темы), `followers_count`, `following_count`, `is_following`.
-- В ответы с проектом (`ProjectDescription`): если их ещё нет в эквивалентной форме, добавить `updated_at`, статус (`draft` или `published`), `preview_url`, `published_at`; в публичных ответах — `author` с `id`, `name`, `username`, `avatar_url`.
-- Для списка собственных проектов: использовать имеющийся endpoint, если он уже возвращает список с пагинацией, сортировкой и фильтрами видимости/статуса; иначе добавить `GET /projects`.
-- Для публичной ленты: использовать существующий совместимый endpoint, если он возвращает проекты с query-параметрами `cursor` и `limit`, ответом `{ items, next_cursor }` и полями элемента `id`, `name`, `preview_url`, `published_at`, `author`; иначе добавить `GET /feed/projects`.
-- Для публичного профиля: определить, отдаёт ли `GET /users/{id}` гостю только публичные проекты; если нет совместимого endpoint, добавить `GET /users/{id}/projects?visibility=public`.
+Поля, необходимые карточкам и шапке профиля, нужно добавить в `required`. Если значение может отсутствовать, его следует возвращать как `null` (`nullable: true` в OpenAPI 3.0), а не опускать поле из ответа.
+
+- В `GET /users/{id}` → `UserProfile` добавить поля: `username: string`, `bio: string | null`, `avatar_url: string | null` с форматом `uri`, `cover_url: string | null` с форматом `uri`, `followers_count: integer` (минимум `0`), `following_count: integer` (минимум `0`), `is_following: boolean`.
+- В `ProjectDescription` добавить: `updated_at: string` с форматом `date-time`, `status: "draft" | "published"`, `preview_url: string | null` с форматом `uri`, `published_at: string | null` с форматом `date-time`.
+- Для публичных проектов описать схему автора, например `PublicProjectAuthor`: `id: string`, `name: string`, `username: string`, `avatar_url: string | null` с форматом `uri`; добавить `author: PublicProjectAuthor` в ответ с публичным проектом.
+- Добавить `GET /projects` со схемой query-параметров: `cursor?: string`, `limit?: integer`, `visibility?: "public" | "private"`, `status?: "draft" | "published"`; ответ `ProjectListResponse`: `items: ProjectDescription[]`, `next_cursor: string | null`.
+- Добавить `GET /feed/projects` с query-параметрами `cursor?: string`, `limit?: integer`; ответ `FeedProjectsResponse`: `items: FeedProject[]`, `next_cursor: string | null`. В `FeedProject` явно описать `id: string`, `name: string`, `preview_url: string | null` (`uri`), `published_at: string` (`date-time`), `author: PublicProjectAuthor`.
+- Для публичного профиля явно описать один вариант в OpenAPI: либо `GET /users/{id}` возвращает гостю только публичные `projects`, либо добавить `GET /users/{id}/projects?visibility=public` с ответом `ProjectListResponse`.
 
 `AuthResponse` менять не нужно: он уже возвращает обязательные `access_token`, `token_type` и `user` (`id`, `email`, `nickname`).
 
