@@ -9,20 +9,26 @@ import SwiftUI
 
 struct OnboardingView: View {
     var onFinish: () -> Void = {}
-
+    
+    private let onboardingOpenAnimationDuration: Double = 1.5
+    
     @State private var page: Page = .logo
     @State private var logoScrollFraction: CGFloat = 1.0
-
+    private var logoScrollFractionIverted: CGFloat { 1.0 - logoScrollFraction }
+    @State private var onboardingOpenAnimation: CGFloat = -1.0
+    @State private var generateFeedback: Bool = false
+    
     private enum Page: Hashable {
         case logo
         case howItWorks
         case getStarted
     }
-
+    
     var body: some View {
         TabView(selection: $page) {
             logoPage
                 .tag(Page.logo)
+                .frame(maxWidth: .infinity)
                 .overlay {
                     GeometryReader { proxy in
                         let fraction = max(0, min(1, 1 + proxy.frame(in: .global).minX / proxy.size.width))
@@ -36,16 +42,36 @@ struct OnboardingView: View {
             getStartedPage.tag(Page.getStarted)
         }
         .tabViewStyle(.page)
-        .ignoresSafeArea(.all)
         .background {
             ZStack {
                 Color(.background)
-                RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: 0.35), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
-                    .ignoresSafeArea(.all)
-                .opacity(logoScrollFraction)
-                .blur(radius: (1 - logoScrollFraction) * 24)
+                let gradientStopLocation = min(0.999, 0.35 * (logoScrollFractionIverted * 2 + 1))
+                RadialGradient(stops: [.init(color: .clear, location: 0), .init(color: .startGradient, location: gradientStopLocation), .init(color: .clear, location: 1)], center: .center, startRadius: 0, endRadius: 500)
+                    .opacity(logoScrollFraction)
+                    .blur(radius: logoScrollFractionIverted * 20)
+                    .grayscale(logoScrollFractionIverted)
             }
             .ignoresSafeArea(.all)
+        }
+        .brightness(onboardingOpenAnimation)
+        .sensoryFeedback(.impact(weight: .light), trigger: generateFeedback)
+        .onAppear {
+            let duration = onboardingOpenAnimationDuration / 2
+            Task {
+                try await Task.sleep(for: .seconds(0.4))
+                await MainActor.run {
+                    withAnimation(.easeIn(duration: duration)) {
+                        onboardingOpenAnimation = 0.18
+                    }
+                }
+                try await Task.sleep(for: .seconds(duration))
+                await MainActor.run {
+                    generateFeedback.toggle()
+                    withAnimation(.easeOut(duration: duration)) {
+                        onboardingOpenAnimation = 0
+                    }
+                }
+            }
         }
     }
     
@@ -180,5 +206,8 @@ struct OnboardingView: View {
 }
 
 #Preview {
-    OnboardingView()
+    Color.clear
+        .fullScreenCover(isPresented: .constant(true)) {
+            OnboardingView()
+        }
 }

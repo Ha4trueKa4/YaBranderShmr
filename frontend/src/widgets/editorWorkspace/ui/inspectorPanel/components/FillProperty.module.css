@@ -1,0 +1,56 @@
+.property {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.colorValue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.colorControl {
+  position: relative;
+}
+
+.colorPickerPopover {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + var(--space-2));
+  left: 0;
+}
+
+.hex,
+.colorName {
+  margin: 0;
+}
+
+.hex {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.colorName,
+.opacityHeader {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.opacityHeader {
+  display: flex;
+  justify-content: space-between;
+}
+
+.opacityHeader strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}

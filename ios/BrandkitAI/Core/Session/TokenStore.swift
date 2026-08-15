@@ -5,7 +5,7 @@ import Security
 ///
 /// Keychain, а не UserDefaults: токен — секрет, и он не должен утекать
 /// в бэкапы и логи вместе с обычными настройками.
-struct TokenStore {
+nonisolated struct TokenStore: Sendable {
     private let service = "ai.brandkit.auth"
     private let account = "accessToken"
 
@@ -46,6 +46,12 @@ struct TokenStore {
 
             SecItemAdd(attributes as CFDictionary, nil)
         }
+    }
+
+    @discardableResult
+    func save(_ token: String) -> Bool {
+        accessToken = token
+        return accessToken == token
     }
 
     func clear() {

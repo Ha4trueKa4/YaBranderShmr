@@ -11,7 +11,6 @@ namespace ya_brander::models {
         std::string project_id;
         std::int32_t version_num;
         userver::storages::postgres::TimePointTz created_at;
-        std::string s3_file_key;
     };
 
 }  // namespace ya_brander::models

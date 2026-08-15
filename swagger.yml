@@ -15,6 +15,8 @@ tags:
     description: Пользователи и профили
   - name: Projects
     description: Создание, редактирование и генерация проектов
+  - name: Feed
+    description: Лента публичных проектов
 
 paths:
   /auth/register:
@@ -110,6 +112,49 @@ paths:
                           $ref: '#/components/schemas/ProjectDescription'
         '404':
           description: Пользователь не найден
+
+  /users/{id}/subscribe:
+    post:
+      summary: Подписаться на пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор пользователя, на которого оформляется подписка
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Подписка успешно оформлена
+        '400':
+          description: Нельзя подписаться на самого себя
+        '401':
+          description: Не авторизован
+        '404':
+          description: Пользователь не найден
+
+    delete:
+      summary: Отписаться от пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор пользователя, от которого отписываются
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Подписка успешно отменена
+        '401':
+          description: Не авторизован
 
   /projects:
     post:
@@ -254,6 +299,61 @@ paths:
         '401':
           description: Не авторизован
 
+  /feed:
+    get:
+      summary: Лента публичных проектов
+      description: >
+        Возвращает страницу публичных проектов, отсортированных по дате создания
+        (сначала новые). Курсорная пагинация — для следующей страницы нужно
+        передать next_cursor из предыдущего ответа, а не увеличивать offset.
+      tags: [ Feed ]
+      security:
+        - BearerAuth: [ ]
+        - { }
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          description: >
+            discover — все публичные проекты всех пользователей.
+            following — только проекты авторов, на которых подписан текущий
+            пользователь (требует авторизации).
+          schema:
+            type: string
+            enum: [ discover, following ]
+            default: discover
+        - name: cursor
+          in: query
+          required: false
+          description: Значение next_cursor из предыдущего ответа. Если не передан — отдаётся первая страница.
+          schema:
+            type: string
+            example: "2026-08-14T10:00:00.123456+00:00|3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        - name: limit
+          in: query
+          required: false
+          description: Размер страницы. Значения вне диапазона обрезаются сервером.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Страница ленты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedResponse'
+        '400':
+          description: Некорректное значение scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: scope=following без авторизации
+
 components:
   securitySchemes:
     BearerAuth:
@@ -364,6 +464,37 @@ components:
         created_at:
           type: string
           format: date-time
+
+    FeedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedItem'
+        next_cursor:
+          type: string
+          description: Курсор для запроса следующей страницы. Отсутствует, если страница последняя.
+          example: "2026-08-14T10:00:00.123456+00:00|3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+    FeedItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Идентификатор проекта
+        author_id:
+          type: string
+        author_login:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        preview_url:
+          type: string
+          description: Ссылка на превью последней версии проекта. Пустая строка, если превью ещё не сгенерировано.
 
     ValidationError:
       type: object

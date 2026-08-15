@@ -1,17 +1,28 @@
 .panel {
   height: 100%;
-  padding: var(--space-4);
-  color: #18181b;
+  color: var(--color-text-primary);
 }
 
-.panel h2 {
-  margin: 0 0 var(--space-2);
+.header {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header h2 {
+  margin: 0;
   font-size: var(--font-size-label);
   text-transform: uppercase;
 }
 
-.panel p {
+.content {
+  padding: var(--space-4);
+}
+
+.content p {
   margin: 0;
-  color: #71717a;
+  color: var(--color-text-muted);
   font-size: var(--font-size-caption);
 }

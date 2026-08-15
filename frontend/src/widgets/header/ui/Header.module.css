@@ -1,0 +1,139 @@
+.header {
+  height: 4rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.content {
+  position: relative;
+  display: flex;
+  width: min(100% - 3rem, var(--content-max-width));
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+}
+
+.contentFullWidth {
+  width: 100%;
+  padding: 0 var(--space-4);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-bold);
+  padding: 0;
+}
+
+.brand img {
+  width: 2rem;
+  height: 2rem;
+}
+
+.navigation {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  gap: var(--space-6);
+  transform: translateX(-50%);
+}
+
+.navigationLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.generateIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+  background: currentcolor;
+  mask: url("../../../shared/assets/sparkles.svg") center / contain no-repeat;
+  -webkit-mask:
+    url("../../../shared/assets/sparkles.svg") center / contain no-repeat;
+}
+
+.navigationLink:hover {
+  color: var(--color-accent-primary);
+}
+
+.navigationLinkActive {
+  color: var(--color-accent-primary);
+}
+
+.navigationLinkActive::after {
+  position: absolute;
+  right: 0;
+  bottom: 0.625rem;
+  left: 0;
+  height: 0.125rem;
+  border-radius: var(--radius-pill);
+  background: currentcolor;
+  content: "";
+}
+
+.navigationLinkActive:hover {
+  color: var(--color-accent-primary-hover);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avatar {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+@media (width < 640px) {
+  .header {
+    height: 4rem;
+  }
+
+  .content {
+    width: min(100% - 2rem, var(--content-max-width));
+  }
+
+  .brand span {
+    display: none;
+  }
+
+  .actions > :first-child {
+    display: none;
+  }
+
+  .navigation {
+    position: static;
+    margin-left: auto;
+    margin-right: var(--space-3);
+    gap: var(--space-3);
+    transform: none;
+  }
+
+  .navigationLink {
+    font-size: var(--font-size-caption);
+  }
+
+  .navigationLinkActive::after {
+    display: none;
+  }
+}

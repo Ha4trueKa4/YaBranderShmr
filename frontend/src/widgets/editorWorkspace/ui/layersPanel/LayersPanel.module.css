@@ -1,17 +1,147 @@
 .panel {
   height: 100%;
-  padding: var(--space-4);
-  color: #18181b;
+  color: var(--color-text-primary);
 }
 
-.panel h2 {
-  margin: 0 0 var(--space-2);
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header h2 {
+  margin: 0;
   font-size: var(--font-size-label);
   text-transform: uppercase;
 }
 
-.panel p {
-  margin: 0;
-  color: #71717a;
-  font-size: var(--font-size-caption);
+.addButton {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.addButton img {
+  width: 1rem;
+  height: 1rem;
+}
+
+.layerList {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 11rem;
+  padding: var(--space-2) 0;
+}
+
+.children {
+  width: 100%;
+}
+
+.treeItem {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.layer,
+.selected {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 2rem;
+  padding-inline-end: var(--space-4);
+  border: 0;
+  gap: var(--space-2);
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.layer:hover {
+  background: var(--color-surface-elevated);
+}
+
+.layer {
+  background: transparent;
+}
+
+.selected {
+  background: color-mix(
+    in srgb,
+    var(--color-accent-primary) 8%,
+    var(--color-surface)
+  );
+  color: var(--color-accent-primary);
+}
+
+.itemButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chevronPlaceholder {
+  display: grid;
+  flex: 0 0 1rem;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+}
+
+.itemButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+  flex: 1;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon,
+.visibilityIcon,
+.chevronExpanded {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+}
+
+.icon {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+}
+
+.chevronExpanded {
+  transform: rotate(90deg);
+}
+
+.visibilityIcon {
+  margin-left: auto;
+}
+
+.visibilityIcon {
+  color: var(--color-text-muted);
+}
+
+.selected .icon,
+.selected .visibilityIcon {
+  color: var(--color-accent-primary);
 }

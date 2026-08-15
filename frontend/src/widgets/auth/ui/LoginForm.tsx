@@ -1,15 +1,23 @@
 import { Button, FormField, IconButton, Input } from '@shared'
 import { Eye, EyeOff } from 'lucide-react'
+import { useId } from 'react'
 import { Controller } from 'react-hook-form'
 import { type LoginSubmitHandler, useLoginForm } from '../model'
 import styles from './AuthForms.module.css'
 
 interface LoginFormProps {
+  isPending?: boolean
   onSubmit?: LoginSubmitHandler
   onSwitchToRegister?: () => void
 }
 
-export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({
+  isPending = false,
+  onSubmit,
+  onSwitchToRegister,
+}: LoginFormProps) {
+  const emailInputId = useId()
+  const passwordInputId = useId()
   const {
     form,
     isPasswordVisible,
@@ -32,6 +40,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={emailInputId}
                 label="Email"
                 reserveErrorSpace
               >
@@ -40,6 +49,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
                   autoComplete="email"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={emailInputId}
                   placeholder="alex@studio.com"
                   ref={field.ref}
                   type="email"
@@ -53,6 +63,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             render={({ field, fieldState }) => (
               <FormField
                 error={fieldState.error?.message}
+                htmlFor={passwordInputId}
                 label="Password"
                 reserveErrorSpace
               >
@@ -61,6 +72,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
                   autoComplete="current-password"
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
+                  id={passwordInputId}
                   placeholder="Enter your password"
                   ref={field.ref}
                   trailingContent={
@@ -78,7 +90,7 @@ export function LoginForm({ onSubmit, onSwitchToRegister }: LoginFormProps) {
             )}
           />
         </div>
-        <Button fullWidth size="lg" type="submit">
+        <Button fullWidth loading={isPending} size="lg" type="submit">
           Sign in
         </Button>
         {isSubmitted && <p className={styles.success}>You are signed in.</p>}

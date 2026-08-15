@@ -1,4 +1,5 @@
-import { CanvasControls } from './components/CanvasControls'
+import { useState } from 'react'
+import { CanvasControls, type CanvasTool } from './components/CanvasControls'
 import { ProjectActions } from './components/ProjectActions'
 import { ProjectTitle } from './components/ProjectTitle'
 import styles from './EditorToolbar.module.css'
@@ -30,13 +31,26 @@ export function EditorToolbar({
   onZoomOut,
   projectName,
 }: EditorToolbarProps) {
+  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+
+  function handleSelectTool() {
+    setActiveTool('select')
+    onSelectTool()
+  }
+
+  function handlePanTool() {
+    setActiveTool('pan')
+    onPanTool()
+  }
+
   return (
     <header className={styles.toolbar}>
       <ProjectTitle onSubmit={onEditProjectName} title={projectName} />
       <CanvasControls
-        onPanTool={onPanTool}
+        activeTool={activeTool}
+        onPanTool={handlePanTool}
         onRedo={onRedo}
-        onSelectTool={onSelectTool}
+        onSelectTool={handleSelectTool}
         onUndo={onUndo}
         onZoomIn={onZoomIn}
         onZoomOut={onZoomOut}

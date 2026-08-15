@@ -1,11 +1,41 @@
-import styles from './LayersPanel.module.css'
+import type { EditorNode } from '@entities/editorDocument'
+import { observer } from 'mobx-react-lite'
 
-export function LayersPanel() {
+import plus from './assets/plus.svg'
+import styles from './LayersPanel.module.css'
+import { LayerTreeItem } from './LayerTreeItem'
+
+interface LayersPanelProps {
+  nodes: EditorNode[]
+  onSelectLayer: (layerId: string) => void
+  selectedLayerId: string | null
+}
+
+export const LayersPanel = observer(function LayersPanel({
+  nodes,
+  onSelectLayer,
+  selectedLayerId,
+}: LayersPanelProps) {
   return (
     <section className={styles.panel}>
-      {/* Рендерить дерево document.layers и вызывать feature выбора слоя по клику. */}
-      <h2>Layers</h2>
-      <p>The layer tree will appear here.</p>
+      <div className={styles.header}>
+        <h2>Layers</h2>
+        {/* TODO: открыть feature добавления нового слоя. */}
+        <button className={styles.addButton} type="button">
+          <img alt="" src={plus} />
+        </button>
+      </div>
+      <div className={styles.layerList}>
+        {nodes.map((node) => (
+          <LayerTreeItem
+            depth={0}
+            key={node.id}
+            node={node}
+            onSelectLayer={onSelectLayer}
+            selectedLayerId={selectedLayerId}
+          />
+        ))}
+      </div>
     </section>
   )
-}
+})

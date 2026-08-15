@@ -1,10 +1,10 @@
-import type { TextLayer } from '@entities/editorDocument'
-import { Input } from '@shared/ui'
+import type { EditorText } from '@entities/editorDocument'
 
+import { PropertyField } from '../components/PropertyField'
 import styles from '../Properties.module.css'
 
 interface TextPropertiesProps {
-  layer: TextLayer
+  layer: EditorText
 }
 
 export function TextProperties({ layer }: TextPropertiesProps) {
@@ -12,18 +12,9 @@ export function TextProperties({ layer }: TextPropertiesProps) {
     <div className={styles.properties}>
       {/* Подключить изменение текста, шрифта и размера через feature editorEditText. */}
       <p className={styles.sectionTitle}>Text</p>
-      <div className={styles.field}>
-        Content
-        <Input readOnly value={layer.text} />
-      </div>
-      <div className={styles.field}>
-        Font family
-        <Input readOnly value={layer.fontFamily} />
-      </div>
-      <div className={styles.field}>
-        Font size
-        <Input readOnly value={layer.fontSize} />
-      </div>
+      <PropertyField label="Content" value={layer.text} />
+      <PropertyField label="Font family" value={layer.style.fontFamily} />
+      <PropertyField label="Font size" value={layer.style.fontSize} />
     </div>
   )
 }
