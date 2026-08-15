@@ -1,7 +1,7 @@
 import type { EditorNode } from '@entities/editorDocument'
-import type { LucideIcon } from 'lucide-react'
-import { Eye, Feather, Folder, Type } from 'lucide-react'
+import { Eye } from 'lucide-react'
 
+import { getLayerPresentation } from '../layerPresentation'
 import styles from './LayersPanel.module.css'
 
 interface LayerTreeItemProps {
@@ -9,12 +9,6 @@ interface LayerTreeItemProps {
   node: EditorNode
   onSelectNode: (nodeId: string) => void
   selectedNodeId: string | null
-}
-
-const iconByType: Record<EditorNode['type'], LucideIcon> = {
-  group: Folder,
-  shape: Feather,
-  text: Type,
 }
 
 export function LayerTreeItem({
@@ -25,7 +19,8 @@ export function LayerTreeItem({
 }: LayerTreeItemProps) {
   const isGroup = node.type === 'group'
   const isSelected = node.id === selectedNodeId
-  const LayerIcon = iconByType[node.type]
+  const presentation = getLayerPresentation(node)
+  const LayerIcon = presentation.icon
   const indentation = `calc(var(--space-4) + ${depth} * var(--space-5))`
 
   return (
@@ -41,7 +36,7 @@ export function LayerTreeItem({
         <span className={styles.chevronPlaceholder} />
         <span className={styles.itemButton}>
           <LayerIcon className={styles.icon} size={16} strokeWidth={2} />
-          {node.name}
+          <span className={styles.layerName}>{node.name}</span>
         </span>
         <Eye className={styles.visibilityIcon} size={16} strokeWidth={2} />
       </button>
