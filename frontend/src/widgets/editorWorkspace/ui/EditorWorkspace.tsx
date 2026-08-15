@@ -53,15 +53,15 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
       <aside className={styles.layers}>
         <LayersPanel
           nodes={editorStore.document.layers}
-          onSelectLayer={editorStore.setSelectedLayer}
-          selectedLayerId={editorStore.selectedLayerId}
+          onSelectNode={editorStore.setSelectedNode}
+          selectedNodeId={editorStore.selectedNodeId}
         />
       </aside>
       <div className={styles.scene}>
         <EditorScene document={editorStore.document} />
       </div>
       <aside className={styles.inspector}>
-        <InspectorPanel selectedLayer={editorStore.selectedLayer} />
+        <InspectorPanel selectedNode={editorStore.selectedNode} />
       </aside>
       <div className={styles.status}>
         <EditorStatusBar />

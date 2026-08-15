@@ -7,14 +7,14 @@ import { LayerTreeItem } from './LayerTreeItem'
 
 interface LayersPanelProps {
   nodes: EditorNode[]
-  onSelectLayer: (layerId: string) => void
-  selectedLayerId: string | null
+  onSelectNode: (nodeId: string) => void
+  selectedNodeId: string | null
 }
 
 export const LayersPanel = observer(function LayersPanel({
   nodes,
-  onSelectLayer,
-  selectedLayerId,
+  onSelectNode,
+  selectedNodeId,
 }: LayersPanelProps) {
   return (
     <section className={styles.panel}>
@@ -31,8 +31,8 @@ export const LayersPanel = observer(function LayersPanel({
             depth={0}
             key={node.id}
             node={node}
-            onSelectLayer={onSelectLayer}
-            selectedLayerId={selectedLayerId}
+            onSelectNode={onSelectNode}
+            selectedNodeId={selectedNodeId}
           />
         ))}
       </div>

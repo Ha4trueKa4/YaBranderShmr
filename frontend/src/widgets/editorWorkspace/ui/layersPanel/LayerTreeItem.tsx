@@ -7,8 +7,8 @@ import styles from './LayersPanel.module.css'
 interface LayerTreeItemProps {
   depth: number
   node: EditorNode
-  onSelectLayer: (layerId: string) => void
-  selectedLayerId: string | null
+  onSelectNode: (nodeId: string) => void
+  selectedNodeId: string | null
 }
 
 const iconByType: Record<EditorNode['type'], LucideIcon> = {
@@ -20,11 +20,11 @@ const iconByType: Record<EditorNode['type'], LucideIcon> = {
 export function LayerTreeItem({
   depth,
   node,
-  onSelectLayer,
-  selectedLayerId,
+  onSelectNode,
+  selectedNodeId,
 }: LayerTreeItemProps) {
   const isGroup = node.type === 'group'
-  const isSelected = node.id === selectedLayerId
+  const isSelected = node.id === selectedNodeId
   const LayerIcon = iconByType[node.type]
   const indentation = `calc(var(--space-4) + ${depth} * var(--space-5))`
 
@@ -32,7 +32,7 @@ export function LayerTreeItem({
     <div className={styles.treeItem}>
       <button
         className={isSelected ? styles.selected : styles.layer}
-        onClick={() => onSelectLayer(node.id)}
+        onClick={() => onSelectNode(node.id)}
         style={{
           paddingInlineStart: indentation,
         }}
@@ -52,8 +52,8 @@ export function LayerTreeItem({
               depth={depth + 1}
               key={child.id}
               node={child}
-              onSelectLayer={onSelectLayer}
-              selectedLayerId={selectedLayerId}
+              onSelectNode={onSelectNode}
+              selectedNodeId={selectedNodeId}
             />
           ))}
         </div>
