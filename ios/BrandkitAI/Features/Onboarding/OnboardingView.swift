@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    var onFinish: () -> Void = {}
+    var onSignUp: () -> Void = {}
+    var onSignIn: () -> Void = {}
     
     private let onboardingOpenAnimationDuration: Double = 1.5
     
@@ -55,22 +56,25 @@ struct OnboardingView: View {
         }
         .brightness(onboardingOpenAnimation)
         .sensoryFeedback(.impact(weight: .light), trigger: generateFeedback)
-        .onAppear {
+        .task {
             let duration = onboardingOpenAnimationDuration / 2
-            Task {
+            do {
                 try await Task.sleep(for: .seconds(0.4))
-                await MainActor.run {
-                    withAnimation(.easeIn(duration: duration)) {
-                        onboardingOpenAnimation = 0.18
-                    }
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeIn(duration: duration)) {
+                    onboardingOpenAnimation = 0.18
                 }
+
                 try await Task.sleep(for: .seconds(duration))
-                await MainActor.run {
-                    generateFeedback.toggle()
-                    withAnimation(.easeOut(duration: duration)) {
-                        onboardingOpenAnimation = 0
-                    }
+                guard !Task.isCancelled else { return }
+                generateFeedback.toggle()
+                withAnimation(.easeOut(duration: duration)) {
+                    onboardingOpenAnimation = 0
                 }
+            } catch is CancellationError {
+                return
+            } catch {
+                return
             }
         }
     }
@@ -182,7 +186,7 @@ struct OnboardingView: View {
                 Text("Start creating for free")
                     .font(.title.bold())
                 Button {
-                    onFinish()
+                    onSignUp()
                 } label: {
                     Text("Get Started")
                         .bold()
@@ -195,7 +199,7 @@ struct OnboardingView: View {
                 Text("Already have an account?")
                     .foregroundStyle(.secondary)
                 Button {
-                    
+                    onSignIn()
                 } label: {
                     Text("Sign in")
                 }

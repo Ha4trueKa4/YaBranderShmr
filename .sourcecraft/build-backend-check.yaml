@@ -1,0 +1,17 @@
+stages:
+  - build
+
+variables:
+  REGISTRY: cr.yandex/crpso93aahtuvujb7jlk
+  IMAGE: ya-brander
+  REMOTE_APP_DIR: team-05-project-konstruktor-avatarok-dlya-rabochikh-chatov-vizitok-i-profilei
+
+build-check:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    # Только проверка сборки: компилируем образ, НЕ публикуем в registry.
+    # Не трогаем тег latest — прод-образ не затирается незамерженным кодом.
+    - docker build --provenance=false --sbom=false -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/

@@ -123,6 +123,14 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            let serverError = try? JSONDecoder().decode(ServerErrorResponse.self, from: data)
+            if serverError?.code != nil || serverError?.field != nil {
+                throw NetworkError.serverValidation(
+                    statusCode: httpResponse.statusCode,
+                    code: serverError?.code,
+                    field: serverError?.field
+                )
+            }
             throw NetworkError.httpError(statusCode: httpResponse.statusCode)
         }
 
@@ -197,4 +205,9 @@ nonisolated struct AuthUser: Decodable, Sendable {
     let id: String
     let email: String
     let nickname: String
+}
+
+nonisolated private struct ServerErrorResponse: Decodable, Sendable {
+    let code: String?
+    let field: String?
 }

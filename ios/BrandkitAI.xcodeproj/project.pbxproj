@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F0A1B2C1302E100000BCF3F3 /* SVGView in Frameworks */ = {isa = PBXBuildFile; productRef = F0A1B2C3302E100000BCF3F3 /* SVGView */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		934BA49330271DF100E90FD1 /* BrandkitAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BrandkitAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F0A1B2C1302E100000BCF3F3 /* SVGView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = BrandkitAI;
 			packageProductDependencies = (
+				F0A1B2C3302E100000BCF3F3 /* SVGView */,
 			);
 			productName = BrandkitAI;
 			productReference = 934BA49330271DF100E90FD1 /* BrandkitAI.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = 934BA48A30271DF100E90FD1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F0A1B2C2302E100000BCF3F3 /* XCRemoteSwiftPackageReference "SVGView" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 934BA49430271DF100E90FD1 /* Products */;
 			projectDirPath = "";
@@ -264,6 +273,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FBM24VVDN6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BrandkitAI/Info.plist;
@@ -278,7 +288,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yandexSHMR2026IOSDev.BrandkitAI;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yandexSHMR2026IOS.BrandkitAI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -301,6 +311,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FBM24VVDN6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BrandkitAI/Info.plist;
@@ -315,7 +326,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yandexSHMR2026IOSDev.BrandkitAI;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yandexSHMR2026IOS.BrandkitAI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -353,6 +364,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F0A1B2C2302E100000BCF3F3 /* XCRemoteSwiftPackageReference "SVGView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/exyte/SVGView.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F0A1B2C3302E100000BCF3F3 /* SVGView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F0A1B2C2302E100000BCF3F3 /* XCRemoteSwiftPackageReference "SVGView" */;
+			productName = SVGView;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 934BA48B30271DF100E90FD1 /* Project object */;
 }

@@ -6,12 +6,12 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @Environment(\.dismiss) private var dismiss
-
+    let onSignIn: () -> Void
     @State private var viewModel: SignUpViewModel
 
-    init(viewModel: SignUpViewModel) {
-        _viewModel = State(initialValue: viewModel)
+    init(session: SessionStore, onSignIn: @escaping () -> Void = {}) {
+        self.onSignIn = onSignIn
+        _viewModel = State(initialValue: SignUpViewModel(session: session))
     }
 
     var body: some View {
@@ -27,7 +27,8 @@ struct SignUpView: View {
                     placeholder: "John Doe",
                     text: $viewModel.fullName,
                     textContentType: .name,
-                    autocapitalization: .words
+                    autocapitalization: .words,
+                    errorMessage: viewModel.fullNameError
                 )
 
                 FormTextField(
@@ -35,7 +36,8 @@ struct SignUpView: View {
                     placeholder: "hello@brandkit.ai",
                     text: $viewModel.email,
                     textContentType: .emailAddress,
-                    keyboardType: .emailAddress
+                    keyboardType: .emailAddress,
+                    errorMessage: viewModel.emailError
                 )
 
                 FormTextField(
@@ -44,35 +46,48 @@ struct SignUpView: View {
                     text: $viewModel.password,
                     isSecure: true,
                     textContentType: .newPassword,
-                    submitLabel: .go
+                    submitLabel: .go,
+                    errorMessage: viewModel.passwordError,
+                    onSubmit: { viewModel.register() }
                 )
             }
 
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
+            if viewModel.shouldShowGeneralError, let errorMessage = viewModel.errorMessage {
+                FormErrorView(message: errorMessage)
+                    .padding(.top, 16)
             }
 
-            PrimaryButton(title: "Create account") {
+            PrimaryButton(
+                title: "Create account",
+                isEnabled: !viewModel.isLoading,
+                isLoading: viewModel.isLoading
+            ) {
                 viewModel.register()
             }
             .padding(.top, 24)
-            .disabled(viewModel.isLoading)
 
             ScreenFooter(
                 question: "Already have an account?",
                 actionTitle: "Sign in"
             ) {
-                dismiss()
+                viewModel.clearError()
+                onSignIn()
             }
             .padding(.top, 32)
         }
+        .onChange(of: viewModel.fullName) { viewModel.clearError() }
+        .onChange(of: viewModel.email) { viewModel.clearError() }
+        .onChange(of: viewModel.password) { viewModel.clearError() }
+        .animation(.easeOut(duration: 0.2), value: viewModel.errorMessage)
+        .sensoryFeedback(.error, trigger: viewModel.validationTrigger)
+        .sensoryFeedback(.error, trigger: viewModel.errorMessage)
+        .sensoryFeedback(.success, trigger: viewModel.didSucceed)
     }
 }
 
 #Preview {
     NavigationStack {
-        SignUpView(viewModel: SignUpViewModel(session: SessionStore()))
+        SignUpView(session: SessionStore())
     }
+    .tint(Color.accentColor)
 }

@@ -6,9 +6,11 @@
 import SwiftUI
 
 struct SignInView: View {
+    let onSignUp: () -> Void
     @State private var viewModel: SignInViewModel
 
-    init(session: SessionStore) {
+    init(session: SessionStore, onSignUp: @escaping () -> Void = {}) {
+        self.onSignUp = onSignUp
         _viewModel = State(initialValue: SignInViewModel(session: session))
     }
 
@@ -25,7 +27,8 @@ struct SignInView: View {
                     placeholder: "hello@brandkit.ai",
                     text: $viewModel.email,
                     textContentType: .emailAddress,
-                    keyboardType: .emailAddress
+                    keyboardType: .emailAddress,
+                    errorMessage: viewModel.emailError
                 )
 
                 FormTextField(
@@ -34,33 +37,38 @@ struct SignInView: View {
                     text: $viewModel.password,
                     isSecure: true,
                     textContentType: .password,
-                    submitLabel: .go
+                    submitLabel: .go,
+                    errorMessage: viewModel.passwordError,
+                    onSubmit: { viewModel.signIn() }
                 )
             }
 
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
+            if viewModel.shouldShowGeneralError, let errorMessage = viewModel.errorMessage {
+                FormErrorView(message: errorMessage)
+                    .padding(.top, 16)
             }
 
-            PrimaryButton(title: "Sign in") {
+            PrimaryButton(
+                title: "Sign in",
+                isEnabled: !viewModel.isLoading,
+                isLoading: viewModel.isLoading
+            ) {
                 viewModel.signIn()
             }
             .padding(.top, 24)
-            .disabled(viewModel.isLoading)
-
-            LinkButton(title: "Forgot password?") {}
-                .padding(.top, 16)
 
             ScreenFooter(question: "No account?", actionTitle: "Register") {
-                viewModel.openRegister()
+                viewModel.clearError()
+                onSignUp()
             }
             .padding(.top, 32)
         }
-        .navigationDestination(isPresented: $viewModel.isShowingRegister) {
-            SignUpView(viewModel: viewModel.makeSignUpViewModel())
-        }
+        .onChange(of: viewModel.email) { viewModel.clearError() }
+        .onChange(of: viewModel.password) { viewModel.clearError() }
+        .animation(.easeOut(duration: 0.2), value: viewModel.errorMessage)
+        .sensoryFeedback(.error, trigger: viewModel.validationTrigger)
+        .sensoryFeedback(.error, trigger: viewModel.errorMessage)
+        .sensoryFeedback(.success, trigger: viewModel.didSucceed)
     }
 }
 
@@ -68,4 +76,5 @@ struct SignInView: View {
     NavigationStack {
         SignInView(session: SessionStore())
     }
+    .tint(Color.accentColor)
 }

@@ -1,26 +1,10 @@
 stages:
-  - build
   - deploy
 
 variables:
   REGISTRY: cr.yandex/crpso93aahtuvujb7jlk
   IMAGE: ya-brander
   REMOTE_APP_DIR: team-05-project-konstruktor-avatarok-dlya-rabochikh-chatov-vizitok-i-profilei
-
-build:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    # контекст сборки - папка backend, Dockerfile - backend/Dockerfile
-    # --provenance=false --sbom=false ОБЯЗАТЕЛЬНЫ: без них Yandex CR отклоняет пуш
-    # с ошибкой "Cannot read manifest data" (attestation-манифесты Docker/BuildKit)
-    - docker build --provenance=false --sbom=false -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
-    - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
-    - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
-    - docker push $REGISTRY/$IMAGE:latest
 
 deploy:
   stage: deploy
@@ -30,7 +14,7 @@ deploy:
   script:
     - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key
     - >
-      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY"
+      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY"
       | base64 -w0 > /tmp/env_b64
     - >
       cat /tmp/env_b64 | ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
@@ -38,6 +22,7 @@ deploy:
     - rm -f /tmp/env_b64
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
+        docker system prune -af --filter \"until=24h\" &&
         echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex &&
         docker pull $REGISTRY/$IMAGE:latest &&
         docker rm -f ya-brander || true &&

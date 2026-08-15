@@ -64,7 +64,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/test_llm_handler/test_llm_handler.hpp
         src/components/LLMClientComponent.hpp
         src/components/LLMClientComponent.cpp
-        src/components/prompt_constructor_component.cpp
+        src/components/prompt_constructor/prompt_constructor_component.cpp
         src/components/vector_search_component.h
         src/handlers/projects/create_project.cpp
         src/handlers/projects/get_project.cpp
@@ -72,11 +72,20 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/delete_project.cpp
         src/handlers/projects/generate_project.cpp
         src/components/version_storage/version_storage_component_impl.cpp
-        src/components/object_storage/local_file_storage.cpp
         src/handlers/users/append_users.hpp
         src/handlers/users/append_users.cpp
         src/handlers/users/subscription_handlers.hpp
         src/handlers/users/subscription_handlers.cpp
+
+        src/components/vector_search_component.cpp
+        src/handlers/test_vector_search/test_vector_search_handler.hpp
+        src/handlers/test_vector_search/test_vector_search_handler.cpp
+        src/handlers/feed/get_feed.h
+        src/handlers/feed/get_feed.cpp
+        src/components/object_storage/s3_object_storage_component.cpp
+        src/components/subscription_storage/subscription_storage_component.cpp
+        src/handlers/users/get_user_profile.cpp
+        src/handlers/users/user_subscriptions_handlers.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

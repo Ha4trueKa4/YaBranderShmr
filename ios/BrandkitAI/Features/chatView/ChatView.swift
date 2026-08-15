@@ -18,14 +18,6 @@ struct ChatView: View {
 
     private let bottomAnchor = "chat-bottom"
 
-    private var backButton: some View {
-        Button(action: onBack) {
-            Image(systemName: "arrow.left")
-                .tint(.primary)
-        }
-        .accessibilityLabel("Back")
-    }
-    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -80,26 +72,12 @@ struct ChatView: View {
                 inputBar(using: proxy)
             }
         }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
+            .customNavigationBar(title: title, onBack: onBack)
             .safeAreaInset(edge: .top) {
                 Rectangle()
                     .foregroundStyle(.border)
                     .frame(height: 1)
                     .background(Color.background)
-            }
-            .toolbar {
-                if #available(iOS 26.0, *) {
-                    ToolbarItem(placement: .topBarLeading) {
-                        backButton
-                    }
-                    .sharedBackgroundVisibility(.hidden)
-                } else {
-                    ToolbarItem(placement: .topBarLeading) {
-                        backButton
-                    }
-                }
             }
     }
 

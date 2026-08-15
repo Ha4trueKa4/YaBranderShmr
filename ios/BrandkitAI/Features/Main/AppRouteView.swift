@@ -32,20 +32,23 @@ struct AppRouteView: View {
 
         case .projectEditor(let projectID):
             ProjectEditorView(
+                onBack: { router.pop() },
                 onOpenVersionHistory: { router.push(.versionHistory(projectID: projectID)) }
             )
 
         case .versionHistory:
-            ProjectVersionHistoryView()
+            ProjectVersionHistoryView(onBack: { router.pop() })
 
         case .publicProject:
             PublicProjectView(
+                onBack: { router.pop() },
                 onOpenAuthor: { router.push(.profile(userID: UUID())) }
             )
 
         case .profile:
             ProfileView(
                 isCurrentUser: false,
+                onBack: { router.pop() },
                 onOpenProject: { router.push(.projectEditor(projectID: UUID())) }
             )
         }

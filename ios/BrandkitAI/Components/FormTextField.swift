@@ -15,6 +15,8 @@ struct FormTextField: View {
     var keyboardType: UIKeyboardType = .default
     var autocapitalization: TextInputAutocapitalization = .never
     var submitLabel: SubmitLabel = .next
+    var errorMessage: String?
+    var onSubmit: (() -> Void)?
 
     @State private var isRevealed = false
     @FocusState private var isFocused: Bool
@@ -23,7 +25,7 @@ struct FormTextField: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(errorMessage == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
 
             HStack(spacing: 12) {
                 inputField
@@ -37,13 +39,22 @@ struct FormTextField: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(
-                        isFocused ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.separator)),
+                        errorMessage != nil
+                            ? AnyShapeStyle(.red)
+                            : isFocused ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.separator)),
                         lineWidth: 1
                     )
             }
             .animation(.easeOut(duration: 0.15), value: isFocused)
             .contentShape(.rect)
             .onTapGesture { isFocused = true }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .accessibilityElement(children: .combine)
+            }
         }
     }
 
@@ -62,6 +73,7 @@ struct FormTextField: View {
         .submitLabel(submitLabel)
         .textInputAutocapitalization(autocapitalization)
         .autocorrectionDisabled()
+        .onSubmit { onSubmit?() }
     }
 
     private var revealButton: some View {
@@ -96,6 +108,6 @@ struct FormTextField: View {
     .padding(24)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(.systemBackground))
-    .tint(.purple)
+    .tint(Color.accentColor)
     .preferredColorScheme(.dark)
 }
