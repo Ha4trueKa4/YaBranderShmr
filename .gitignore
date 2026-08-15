@@ -10,3 +10,10 @@ Thumbs.db
 
 # editor swap
 *.swp
+
+# env secret files
+.env
+
+# json secret file
+secdist.json
+/etc/ya-brander/secdist.json

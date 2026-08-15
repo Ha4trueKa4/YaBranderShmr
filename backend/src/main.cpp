@@ -16,9 +16,9 @@
 
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "components/version_storage/version_storage_component_impl.hpp"
-#include "components/object_storage/local_file_storage.hpp"
 #include "components/subscription_storage/subscription_storage_component.h"
 #include "./handlers/users/append_users.hpp"
+#include "components/object_storage/s3_object_storage_component.hpp"
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
@@ -35,11 +35,10 @@ int main(int argc, char* argv[]) {
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>()
+            .Append<ya_brander::components::S3ObjectStorageComponent>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-            .Append<ya_brander::components::LocalFileStorage>()
-            .Append<ya_brander::components::SubscriptionStorageComponent>();
-    
-    // Регистрация модулей когда будут готовы
+			.Append<ya_brander::components::SubscriptionStorageComponent>();
+
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);
     // ya_brander::AppendAuth(component_list);
