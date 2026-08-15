@@ -50,13 +50,12 @@ components_manager:
     testsuite-support: { }
 
     http-client:
-    #      load-enabled: $is-testing
 
     http-client-core:
       #      load-enabled: $is-testing
       fs-task-processor: fs-task-processor
 
-    http-client-middleware-pipeline:
+    http-client-middleware-pipeline: {}
     #      load-enabled: $is-testing
 
     tests-control:
@@ -83,11 +82,23 @@ components_manager:
       task_processor: main-task-processor
       throttling_enabled: false
 
+    handler-test-vector-search:
+      path: /test/vector-search
+      method: GET
+      task_processor: main-task-processor
+      
     llm-client:
       api-url: $yandex-gpt-url
 
     postgres-db-1:
       dbconnection: $dbconnection
+      blocking_task_processor: fs-task-processor
+      dns_resolver: async
+      sync-start: false
+      connlimit_mode: manual
+
+    postgres-vector-db:
+      dbconnection: $dbconnection-vector
       blocking_task_processor: fs-task-processor
       dns_resolver: async
       sync-start: false
@@ -100,14 +111,24 @@ components_manager:
     # Внешние сервисы (или их моки)
     # ==========================================
     version-storage: { }
-    vector-search: { }
-    object-storage: { }
+    vector-search: 
+      embedding-url: $yandex-embedding-url
+      pg-component-name: postgres-vector-db
+      db-table: vector_examples
+      embedding-model: text-embeddings-v2-query
+      
+    object-storage:
+      bucket: ya-brander-svg
+      endpoint: storage.yandexcloud.net
+      region: ru-central1
+      presigned-url-ttl-seconds: 3600   # ссылки на один час для приватных объектов
 
     # ==========================================
     # Слой бизнес-логики (Service Layer)
     # ==========================================
     project-manager: { }
     prompt-constructor: { }
+    subscription-storage: { }
 
 
     # ==========================================
@@ -174,6 +195,37 @@ components_manager:
     handler-users-unsubscribe:
       path: /api/v1/users/{id}/subscribe
       method: DELETE
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-feed:
+      path: /api/v1/feed
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+    handler-users-get:
+      path: /api/v1/users/{id}
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-users-subscribers-get:
+      path: /api/v1/users/{id}/subscribers
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-users-subscriptions-get:
+      path: /api/v1/users/{id}/subscriptions
+      method: GET
       task_processor: main-task-processor
       auth:
         types:

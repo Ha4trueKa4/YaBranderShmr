@@ -1,6 +1,6 @@
 import type { EditorNode } from '@entities/editorDocument'
 import type { LucideIcon } from 'lucide-react'
-import { Eye, Feather, Folder, Square, Type } from 'lucide-react'
+import { Eye, Feather, Folder, Type } from 'lucide-react'
 
 import styles from './LayersPanel.module.css'
 
@@ -12,7 +12,6 @@ interface LayerTreeItemProps {
 }
 
 const iconByType: Record<EditorNode['type'], LucideIcon> = {
-  background: Square,
   group: Folder,
   shape: Feather,
   text: Type,

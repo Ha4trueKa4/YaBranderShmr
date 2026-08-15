@@ -5,20 +5,30 @@ struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
 
     var isCurrentUser: Bool = true
+    var onBack: (() -> Void)?
     var onEditProfile: () -> Void = {}
     var onOpenProject: () -> Void = {}
 
+    @ViewBuilder
     var body: some View {
+        if let onBack {
+            profileContent
+                .customNavigationBar(title: "Profile", onBack: onBack)
+        } else {
+            profileContent
+                .ignoresSafeArea(edges: .top)
+                .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var profileContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 profileHeader
                 projectsSection
             }
         }
-        .ignoresSafeArea(edges: .top)
         .scrollIndicators(.hidden)
-        .navigationTitle("Profile")
-        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var profileHeader: some View {

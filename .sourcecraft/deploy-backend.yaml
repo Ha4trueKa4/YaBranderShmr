@@ -1,26 +1,10 @@
 stages:
-  - build
   - deploy
 
 variables:
   REGISTRY: cr.yandex/crpso93aahtuvujb7jlk
   IMAGE: ya-brander
   REMOTE_APP_DIR: team-05-project-konstruktor-avatarok-dlya-rabochikh-chatov-vizitok-i-profilei
-
-build:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    # контекст сборки - папка backend, Dockerfile - backend/Dockerfile
-    # --provenance=false --sbom=false ОБЯЗАТЕЛЬНЫ: без них Yandex CR отклоняет пуш
-    # с ошибкой "Cannot read manifest data" (attestation-манифесты Docker/BuildKit)
-    - docker build --provenance=false --sbom=false -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
-    - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
-    - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
-    - docker push $REGISTRY/$IMAGE:latest
 
 deploy:
   stage: deploy

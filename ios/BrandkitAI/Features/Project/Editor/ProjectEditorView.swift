@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProjectEditorView: View {
+    var onBack: (() -> Void)?
     var onOpenVersionHistory: () -> Void = {}
 
     @State private var isShowingVisibility = false
@@ -15,7 +16,7 @@ struct ProjectEditorView: View {
                 isShowingVisibility = true
             }
         }
-        .navigationTitle("Editor")
+        .customNavigationBar(title: "Editor", onBack: onBack)
         .sheet(isPresented: $isShowingVisibility) {
             ProjectVisibilityView()
         }

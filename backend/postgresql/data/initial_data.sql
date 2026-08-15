@@ -31,3 +31,4 @@ VALUES ('33333333-3333-3333-3333-333333333333', 1, 'mock_s3/coffee_v1_draft.json
 -- У проекта Ивана пока только первая версия
 INSERT INTO project_versions (project_id, version_num, s3_file_key)
 VALUES ('44444444-4444-4444-4444-444444444444', 1, 'mock_s3/crypto_v1.json');
+

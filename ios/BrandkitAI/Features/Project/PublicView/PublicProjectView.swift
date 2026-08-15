@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PublicProjectView: View {
+    var onBack: (() -> Void)?
     var onOpenAuthor: () -> Void = {}
 
     var body: some View {
@@ -9,7 +10,7 @@ struct PublicProjectView: View {
 
             Button("Author profile", action: onOpenAuthor)
         }
-        .navigationTitle("Public Project")
+        .customNavigationBar(title: "Public Project", onBack: onBack)
     }
 }
 

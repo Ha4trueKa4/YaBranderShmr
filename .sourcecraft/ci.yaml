@@ -14,21 +14,50 @@ on:
       filter:
         target_branches: ["main"]
         paths: ["android/**"]
+    - workflows: build-backend-check
+      filter:
+        target_branches: ["main"]
+        paths: ["backend/**"]
+
   push:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
+    - workflows: [build-backend]
+      filter:
+        branches: ["main"]
+        paths: ["backend/**"]
     - workflows: [deploy-backend]
       filter:
         branches: ["main"]
+        paths: ["backend/**"]
 
 workflows:
+  # Проверка компиляции backend на этапе pull request:
+  # только docker build (без публикации образа и без затирания тега latest).
+  build-backend-check:
+    tasks:
+      - name: build
+        cubes:
+          - name: run-build-backend-check
+            gitlab_workflow: .sourcecraft/build-backend-check.yaml
+
+  # Сборка + публикация образа в registry на push в main (перед деплоем).
+  build-backend:
+    tasks:
+      - name: build
+        cubes:
+          - name: run-build-backend
+            gitlab_workflow: .sourcecraft/build-backend.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
+
   deploy-backend:
     tasks:
-      - name: build-and-deploy
+      - name: deploy
         cubes:
-          - name: run-backend-ci
-            gitlab_workflow: .sourcecraft/backend-ci.yaml
+          - name: run-deploy-backend
+            gitlab_workflow: .sourcecraft/deploy-backend.yaml
             env:
               YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
               YC_SERVER_IP: ${{ secrets.YC_SERVER_IP }}
@@ -36,6 +65,8 @@ workflows:
               YC_SSH_PRIVATE_KEY: ${{ secrets.YC_SSH_PRIVATE_KEY }}
               JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
               YANDEX_AI_API_KEY: ${{ secrets.YANDEX_AI_API_KEY }}
+              S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+              S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
 
   deploy-frontend-dev:
     tasks:
@@ -84,9 +115,9 @@ workflows:
               - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
               - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
               - export ANDROID_SDK_ROOT="$ANDROID_HOME"
-              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/37.0.0"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0"
               - yes | sdkmanager --licenses > /dev/null
-              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+              - sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
               - cd android
               - echo "sdk.dir=$ANDROID_HOME" > local.properties
               - ./gradlew assembleDebug
@@ -108,9 +139,9 @@ workflows:
               - unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
               - mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
               - export ANDROID_SDK_ROOT="$ANDROID_HOME"
-              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/37.0.0"
+              - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0"
               - yes | sdkmanager --licenses > /dev/null
-              - sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+              - sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
               - cd android
               - echo "sdk.dir=$ANDROID_HOME" > local.properties
               - ./gradlew lint

@@ -37,6 +37,6 @@ struct ScreenHeader: View {
     ScreenHeader(title: "Sign in")
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(.systemBackground))
-    .tint(.purple)
+    .tint(Color.accentColor)
     .preferredColorScheme(.dark)
 }
