@@ -2,8 +2,9 @@ import { authStore } from '@app/providers/auth'
 import {
   type ProjectDraft,
   pendingGenerationStore,
-  useMockCreateProjectMutation,
+  useCreateProjectMutation,
 } from '@features/projectCreate'
+import type { Project } from '@shared/api/types'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useEffect, useState } from 'react'
@@ -19,22 +20,26 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const [description, setDescription] = useState('')
 
   const handleProjectCreated = useCallback(
-    ({ id }: { id: string }) => {
+    (project: Project) => {
+      if (!project.id) {
+        return
+      }
+
       // TODO: после создания вызывать feature генерации, а затем открывать проект.
-      navigate(`/projects/${id}`, { viewTransition: true })
+      navigate(`/projects/${project.id}`, { viewTransition: true })
     },
     [navigate],
   )
 
   const { isPending: isCreatingProjectPending, mutate: createProject } =
-    useMockCreateProjectMutation({ onSuccess: handleProjectCreated })
+    useCreateProjectMutation()
 
   const startGeneration = useCallback(
     (draft: ProjectDraft) => {
       setDescription(draft.description)
-      createProject(draft)
+      createProject(draft, { onSuccess: handleProjectCreated })
     },
-    [createProject],
+    [createProject, handleProjectCreated],
   )
 
   function handleGenerate(draft: ProjectDraft) {

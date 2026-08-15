@@ -1,4 +1,4 @@
-import { api } from '@shared/api/api'
+import { api, parseApiResponse } from '@shared/api/api'
 import {
   type GetUsersByIdResponse,
   zGetUsersByIdResponse,
@@ -9,5 +9,5 @@ export async function getUserProfile(
 ): Promise<GetUsersByIdResponse> {
   const response = await api<unknown>(`/users/${encodeURIComponent(userId)}`)
 
-  return zGetUsersByIdResponse.parse(response)
+  return parseApiResponse(zGetUsersByIdResponse, response, `/users/${userId}`)
 }
