@@ -1,12 +1,15 @@
 #include "restore_version.hpp"
-#include <userver/formats/json/serialize.hpp>
+#include <userver/formats/json/value_builder.hpp>
 
 namespace ya_brander::handlers {
 
     RestoreVersionHandler::RestoreVersionHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-        : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+        : HttpHandlerJsonBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
-    std::string RestoreVersionHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+    userver::formats::json::Value RestoreVersionHandler::HandleRequestJsonThrow(
+        const userver::server::http::HttpRequest& request,
+        const userver::formats::json::Value& /*request_json*/,
+        userver::server::request::RequestContext& context) const {
         std::string* user_id = context.GetDataOptional<std::string>("user_id");
         if (!user_id) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -20,7 +23,7 @@ namespace ya_brander::handlers {
             request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
             return {};
         }
-        // Только автор может делать роллбэк в своем проекте
+        // Только автор может сделать роллбэк своего проекта.
         if (project->author_id != *user_id) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
             return {};
@@ -38,7 +41,7 @@ namespace ya_brander::handlers {
         userver::formats::json::ValueBuilder res;
         res["version_id"] = new_version_id;
         res["url"] = url;
-        return userver::formats::json::ToString(res.ExtractValue());
+        return res.ExtractValue();
     }
 
 }
