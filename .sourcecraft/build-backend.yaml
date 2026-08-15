@@ -22,10 +22,9 @@ build:
     # Персистентный BuildKit-кэш через реестр: --cache-from подтягивает прошлые слои,
     # --cache-to пишет обновлённый кэш под тегом :cache (mode=max сохраняет весь граф).
     # Это устраняет холодные сборки между запусками.
-    - docker build --provenance=false --sbom=false \
-        --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache \
-        --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max \
-        -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    # ВАЖНО: команда на ОДНОЙ строке — в этом раннере "\"-переносы строк ломают
+    # разбор аргументов docker build ("docker buildx build requires 1 argument").
+    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
     - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
     - docker push $REGISTRY/$IMAGE:latest

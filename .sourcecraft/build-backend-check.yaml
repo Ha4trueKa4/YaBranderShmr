@@ -17,6 +17,6 @@ build-check:
     #
     # --cache-from (read-only): подтягиваем BuildKit-кэш из реестра, чтобы PR-проверка
     # не собиралась с нуля. БЕЗ --cache-to: PR-кэш не должен перезаписывать кэш main.
-    - docker build --provenance=false --sbom=false \
-        --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache \
-        -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    # ВАЖНО: команда на ОДНОЙ строке — в этом раннере "\"-переносы строк ломают
+    # разбор аргументов docker build ("docker buildx build requires 1 argument").
+    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
