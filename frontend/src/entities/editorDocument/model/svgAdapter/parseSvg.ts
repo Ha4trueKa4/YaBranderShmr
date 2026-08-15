@@ -1,6 +1,7 @@
 import type { EditorDocument } from '../types'
 
 import { SvgParseError } from './errors'
+import { parseDefinitions } from './parsers/parseDefinitions'
 import { parseRoot } from './parseRoot'
 import { validateSvgElements } from './validateSvg'
 
@@ -14,6 +15,7 @@ export function parseSvg(svg: string): EditorDocument {
 
   const canvas = parseRoot(xml.documentElement)
   validateSvgElements(xml.documentElement)
+  const definitions = parseDefinitions(xml.documentElement)
 
-  return { ...canvas, layers: [] }
+  return { ...canvas, ...(definitions ? { definitions } : {}), layers: [] }
 }
