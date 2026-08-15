@@ -98,9 +98,15 @@
 }
 
 .avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   background: transparent;
   border: 0;
+  color: var(--color-text-primary);
   cursor: pointer;
+  font: inherit;
+  font-weight: var(--font-weight-medium);
   padding: 0;
 }
 
