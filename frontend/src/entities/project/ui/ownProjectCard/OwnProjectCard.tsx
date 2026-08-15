@@ -49,7 +49,7 @@ export function OwnProjectCard({
       onKeyDown={handleCardKeyDown}
     >
       <div className={styles.previewWrap}>
-        <ProjectPreview title={title} />
+        <ProjectPreview imageUrl={project.url ?? null} title={title} />
         {isPrivate && <span className={styles.visibility}>{visibility}</span>}
       </div>
       <div className={styles.content}>
