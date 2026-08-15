@@ -1,7 +1,6 @@
 #include "append_projects.h"
 
 #include "../../components/project_manager_component.h"
-#include "../../components/mock_dependencies.h"
 #include "../../components/version_storage/version_storage_component_impl.hpp"
 
 #include "create_project.h"

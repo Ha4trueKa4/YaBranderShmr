@@ -1,4 +1,5 @@
 #include "version_storage_component_impl.hpp"
+#include "../svg_validator.hpp"
 
 #include <cstdint>
 #include <stdexcept>

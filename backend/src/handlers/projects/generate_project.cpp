@@ -1,4 +1,8 @@
 #include "generate_project.h"
+#include "svg_validation_error_response.hpp"
+
+#include <userver/formats/json/serialize.hpp>
+#include <userver/logging/log.hpp>
 
 namespace ya_brander::handlers {
 
@@ -32,6 +36,7 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
   }
 
   std::string prompt = body["prompt"].As<std::string>("");
+  std::string model = body["model"].As<std::string>("deepseek-v4-flash/latest");
 
   if (prompt.empty()) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
@@ -42,22 +47,26 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
 
   if (prompt.size() > kMaxPromptLength) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-	userver::formats::json::ValueBuilder err;
-	err["message"] = "Prompt is too long (max 1500 characters)";
+    userver::formats::json::ValueBuilder err;
+    err["message"] = "Prompt is too long (max 1500 characters)";
     return err.ExtractValue();
   }
 
   userver::formats::json::ValueBuilder res;
   try {
-    std::string new_url = project_manager_.GenerateAI(id, prompt);
+      std::string new_url = project_manager_.GenerateAI(id, prompt, model);
 
     if (!new_url.empty()) {
-        res["url"] = new_url;
+      res["url"] = new_url;
     }
 
-    return res.ExtractValue();
-
-  } catch (const std::exception& e) {
+  }catch (const components::SVGValidationError& error) {
+      request.SetResponseStatus(
+          userver::server::http::HttpStatus::kUnprocessableEntity);
+    userver::formats::json::ValueBuilder err;
+    err["message"] = error.what();
+    return err.ExtractValue();
+  }catch (const std::exception& e) {
     // Логируем реальную причину падения
     LOG_ERROR() << "AI generation failed for project_id=" << id << ": " << e.what();
     // Отдаем клиенту 503 статус вместо краша
@@ -70,4 +79,4 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
   return res.ExtractValue();
 }
 
-} // namespace ya_brander::handlers
+}  // namespace ya_brander::handlers
