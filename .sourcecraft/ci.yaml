@@ -37,6 +37,10 @@ workflows:
         cubes:
           - name: run-build-backend-check
             gitlab_workflow: .sourcecraft/build-backend-check.yaml
+            env:
+              # Нужно для docker login: check-джоба тянет BuildKit-кэш
+              # --cache-from=type=registry из приватного Yandex CR.
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
 
   # Сборка + публикация образа в registry, затем деплой — строго по порядку
   # (задание deploy стартует только после успешного завершения задания build).
