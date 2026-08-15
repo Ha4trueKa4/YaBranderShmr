@@ -8,6 +8,10 @@ export interface ApiRequestOptions<Body = unknown>
   body?: Body | FormData
 }
 
+interface ApiClientOptions {
+  getAccessToken?: () => string | null
+}
+
 export class ApiError extends Error {
   public readonly status: number
   public readonly response: unknown
@@ -20,7 +24,10 @@ export class ApiError extends Error {
   }
 }
 
-export function createApiClient(baseUrl: string) {
+export function createApiClient(
+  baseUrl: string,
+  { getAccessToken }: ApiClientOptions = {},
+) {
   return async function apiRequest<Response, Body = unknown>(
     path: string,
     options: ApiRequestOptions<Body> = {},
@@ -41,8 +48,13 @@ export function createApiClient(baseUrl: string) {
     })
 
     const headers = new Headers(initialHeaders)
+    const accessToken = getAccessToken?.()
 
     headers.set('Accept', 'application/json')
+
+    if (accessToken && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${accessToken}`)
+    }
 
     const isFormData =
       typeof FormData !== 'undefined' && body instanceof FormData

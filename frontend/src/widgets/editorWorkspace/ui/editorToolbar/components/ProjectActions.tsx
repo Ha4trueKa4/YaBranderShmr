@@ -1,4 +1,6 @@
-import { Button } from '@shared/ui'
+import { authStore } from '@app/providers/auth'
+import { getAvatarInitials } from '@shared/lib'
+import { Avatar, Button } from '@shared/ui'
 import chevronDown from '../assets/chevronDown.svg'
 import styles from '../EditorToolbar.module.css'
 
@@ -13,6 +15,8 @@ export function ProjectActions({
   onOpenProfile,
   onSaveVersion,
 }: ProjectActionsProps) {
+  const session = authStore.getSession
+
   return (
     <div className={styles.projectActions}>
       <Button
@@ -26,9 +30,11 @@ export function ProjectActions({
         Export
         <img alt="" src={chevronDown} />
       </Button>
-      <button className={styles.avatar} onClick={onOpenProfile} type="button">
-        OL
-      </button>
+      {session && (
+        <button className={styles.avatar} onClick={onOpenProfile} type="button">
+          <Avatar initials={getAvatarInitials(session.user.nickname)} />
+        </button>
+      )}
     </div>
   )
 }

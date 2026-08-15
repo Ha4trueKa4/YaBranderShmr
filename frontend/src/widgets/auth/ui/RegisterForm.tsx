@@ -19,13 +19,8 @@ export function RegisterForm({
   const nicknameInputId = useId()
   const emailInputId = useId()
   const passwordInputId = useId()
-  const {
-    form,
-    isPasswordVisible,
-    isSubmitted,
-    submit,
-    togglePasswordVisibility,
-  } = useRegisterForm({ onSubmit })
+  const { form, isPasswordVisible, submit, togglePasswordVisibility } =
+    useRegisterForm({ onSubmit })
 
   return (
     <section className={styles.formSection}>
@@ -118,9 +113,6 @@ export function RegisterForm({
         <Button fullWidth loading={isPending} size="lg" type="submit">
           Create account
         </Button>
-        {isSubmitted && (
-          <p className={styles.success}>Your account has been created.</p>
-        )}
       </form>
       <p className={styles.footer}>
         Already have an account?{' '}

@@ -1,3 +1,4 @@
+import { getAvatarInitials } from '@shared/lib'
 import { Avatar } from '@shared/ui'
 import type { ReactNode } from 'react'
 
@@ -18,18 +19,14 @@ export interface ProfileHeaderProfile {
 }
 
 export function ProfileHeader({ actions, profile }: ProfileHeaderProps) {
-  const initials = profile.name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
   return (
     <section className={styles.profile}>
       <div className={styles.cover} />
       <div className={styles.content}>
-        <Avatar className={styles.avatar} initials={initials} />
+        <Avatar
+          className={styles.avatar}
+          initials={getAvatarInitials(profile.name)}
+        />
         <div className={styles.identity}>
           <h1>{profile.name}</h1>
           <p className={styles.username}>@{profile.username}</p>
