@@ -37,15 +37,16 @@ export const LayerTreeItem = observer(function LayerTreeItem({
     <div className={styles.treeItem}>
       <div
         className={`${isSelected ? styles.selected : styles.layer} ${
-          node.isVisible ? '' : styles.hidden
-        }`}
+          isExpanded ? styles.groupExpanded : ''
+        } ${node.isVisible ? '' : styles.hidden}`}
         style={{
           paddingInlineStart: indentation,
         }}
       >
-        {hasChildren ? (
+        {isGroup ? (
           <button
             className={styles.chevronButton}
+            disabled={!hasChildren}
             onClick={() => onToggleGroup(node.id)}
             type="button"
           >

@@ -20,6 +20,7 @@
 .layers {
   grid-area: layers;
   min-width: 0;
+  min-height: 0;
   border-right: 1px solid var(--color-border);
 }
 
