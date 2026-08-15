@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -32,6 +33,10 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 /**
  * Текстовое поле формы с поддержкой ошибки валидации и опциональной иконкой в конце поля
  * (например, переключатель видимости пароля) — см. "02 · Form Fields & Input Validation".
+ *
+ * @param singleLine однострочное поле фиксированной высоты [height]; при `false`
+ *  поле становится многострочным (textarea): текст переносится и растёт вниз,
+ *  а [height] задаёт минимальную высоту.
  */
 @Composable
 fun BrandTextField(
@@ -42,12 +47,16 @@ fun BrandTextField(
     placeholder: String = "",
     errorMessage: String? = null,
     height: Dp = 44.dp,
+    singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingIcon: (@Composable () -> Unit)? = null
 ) {
     val isError = errorMessage != null
     val borderColor = if (isError) AppColors.Error else AppColors.Border
+    // Однострочное поле центрирует содержимое по вертикали; многострочное —
+    // прижимает к верху и добавляет вертикальный отступ, чтобы текст не липнул к рамке.
+    val contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart
 
     Column(modifier = modifier) {
         Text(text = label, style = AppTypography.label)
@@ -55,21 +64,24 @@ fun BrandTextField(
             modifier = Modifier
                 .padding(top = AppSpacing.xs)
                 .fillMaxWidth()
-                .height(height)
+                .then(if (singleLine) Modifier.height(height) else Modifier.heightIn(min = height))
                 .background(AppColors.SurfaceVariant, RoundedCornerShape(AppShape.m))
                 .border(1.dp, borderColor, RoundedCornerShape(AppShape.m))
-                .padding(horizontal = AppSpacing.m),
-            contentAlignment = Alignment.CenterStart
+                .padding(horizontal = AppSpacing.m, vertical = if (singleLine) 0.dp else AppSpacing.s),
+            contentAlignment = contentAlignment
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            Row(
+                verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+            ) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = contentAlignment) {
                     if (value.isEmpty()) {
                         Text(text = placeholder, color = AppColors.TextMuted, fontSize = 14.sp)
                     }
                     BasicTextField(
                         value = value,
                         onValueChange = onValueChange,
-                        singleLine = true,
+                        singleLine = singleLine,
                         textStyle = TextStyle(color = AppColors.TextPrimary, fontSize = 14.sp),
                         cursorBrush = SolidColor(AppColors.Accent),
                         keyboardOptions = keyboardOptions,

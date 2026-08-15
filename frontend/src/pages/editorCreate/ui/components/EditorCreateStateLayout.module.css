@@ -12,9 +12,9 @@
   display: grid;
   place-items: center;
   min-height: 28rem;
-  border: 2px dashed #e4e4e7;
+  border: 2px dashed var(--color-border);
   border-radius: var(--radius-lg);
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .copy,
@@ -37,14 +37,14 @@
 .copy h1,
 .copyWidthLimited h1 {
   margin: 0;
-  color: #18181b;
+  color: var(--color-text-primary);
   font-size: var(--font-size-h2);
 }
 
 .copy p,
 .copyWidthLimited p {
   margin: var(--space-2) 0 0;
-  color: #71717a;
+  color: var(--color-text-muted);
 }
 
 .composer {

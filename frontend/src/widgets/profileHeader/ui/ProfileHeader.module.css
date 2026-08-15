@@ -1,0 +1,115 @@
+.profile {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.cover {
+  height: 10rem;
+  background: linear-gradient(
+    to right,
+    var(--color-accent-primary) 0 34%,
+    var(--color-surface-elevated) 34% 100%
+  );
+}
+
+.content {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 24rem);
+  gap: var(--space-6);
+  padding: var(--space-3) var(--space-8) var(--space-6) 11.5rem;
+}
+
+.avatar {
+  position: absolute;
+  top: -3.5rem;
+  left: var(--space-6);
+  width: 7rem;
+  height: 7rem;
+  border: 0.25rem solid var(--color-surface);
+  background: var(--color-accent-secondary);
+  font-size: var(--font-size-h1);
+}
+
+.identity {
+  min-width: 0;
+}
+
+.identity h1,
+.identity p {
+  margin: 0;
+}
+
+.identity h1 {
+  font-size: var(--font-size-h1);
+  line-height: 1.2;
+}
+
+.username,
+.bio {
+  color: var(--color-text-muted);
+}
+
+.identity .username {
+  margin-top: var(--space-1);
+}
+
+.identity .bio {
+  margin-top: var(--space-3);
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-8);
+  align-content: start;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin: var(--space-2) 0 0;
+}
+
+.stats div {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.stats dt,
+.stats dd {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+}
+
+.stats dd {
+  color: var(--color-text-secondary);
+}
+
+.profileActions {
+  display: flex;
+  justify-content: end;
+  gap: var(--space-2);
+}
+
+@media (width < 760px) {
+  .content {
+    grid-template-columns: 1fr;
+    padding: var(--space-6);
+  }
+
+  .avatar {
+    position: static;
+    margin-top: -5rem;
+  }
+
+  .actions {
+    min-width: 0;
+  }
+
+  .profileActions {
+    justify-content: start;
+  }
+}

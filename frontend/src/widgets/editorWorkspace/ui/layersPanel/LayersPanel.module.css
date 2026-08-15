@@ -1,6 +1,6 @@
 .panel {
   height: 100%;
-  color: #18181b;
+  color: var(--color-text-primary);
 }
 
 .header {
@@ -9,7 +9,7 @@
   justify-content: space-between;
   min-height: 2.5rem;
   padding: 0 var(--space-4);
-  border-bottom: 1px solid #e4e4e7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .header h2 {
@@ -46,6 +46,7 @@
 }
 
 .treeItem {
+  position: relative;
   width: 100%;
   min-width: 0;
 }
@@ -54,12 +55,16 @@
 .selected {
   display: flex;
   align-items: center;
+  width: 100%;
   min-width: 0;
   min-height: 2rem;
   padding-inline-end: var(--space-4);
+  border: 0;
   gap: var(--space-2);
+  font: inherit;
   font-size: 0.875rem;
   line-height: 1.25rem;
+  text-align: left;
   cursor: pointer;
   transition:
     background-color 160ms ease,
@@ -68,6 +73,10 @@
 
 .layer:hover {
   background: var(--color-surface-elevated);
+}
+
+.layer {
+  background: transparent;
 }
 
 .selected {
@@ -79,7 +88,6 @@
   color: var(--color-accent-primary);
 }
 
-.chevronButton,
 .itemButton {
   padding: 0;
   border: 0;
@@ -89,7 +97,6 @@
   cursor: pointer;
 }
 
-.chevronButton,
 .chevronPlaceholder {
   display: grid;
   flex: 0 0 1rem;

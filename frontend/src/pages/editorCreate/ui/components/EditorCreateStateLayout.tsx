@@ -1,4 +1,4 @@
-import iconGlow from '@shared/assets/iconGlow.svg'
+import { GenerateIcon } from '@shared/ui'
 import type { ReactNode } from 'react'
 
 import styles from './EditorCreateStateLayout.module.css'
@@ -22,7 +22,7 @@ export function EditorCreateStateLayout({
         <div
           className={isCopyWidthLimited ? styles.copyWidthLimited : styles.copy}
         >
-          <img alt="" className={styles.icon} src={iconGlow} />
+          <GenerateIcon className={styles.icon} />
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
