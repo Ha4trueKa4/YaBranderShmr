@@ -8,6 +8,17 @@ import Foundation
 @MainActor
 @Observable
 final class SessionStore {
+    enum AuthField: Equatable {
+        case fullName
+        case email
+        case password
+    }
+
+    enum AuthOperation: Equatable {
+        case signIn
+        case register
+    }
+
     enum State: Equatable {
         /// Токен ещё не проверяли — на старте, чтобы не мигнуть экраном входа.
         case unknown
@@ -18,6 +29,8 @@ final class SessionStore {
     private(set) var state: State = .unknown
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var errorField: AuthField?
+    private(set) var lastSuccessfulOperation: AuthOperation?
 
     private let tokenStore = TokenStore()
     private let networkClient: NetworkClient
@@ -36,22 +49,34 @@ final class SessionStore {
     func signIn(email: String, password: String) {
         authenticate(
             path: "/auth/login",
-            body: LoginRequest(email: email, password: password)
+            body: LoginRequest(email: email, password: password),
+            operation: .signIn
         )
     }
 
     func register(email: String, password: String, nickname: String) {
         authenticate(
             path: "/auth/register",
-            body: RegisterRequest(email: email, password: password, nickname: nickname)
+            body: RegisterRequest(email: email, password: password, nickname: nickname),
+            operation: .register
         )
     }
 
-    private func authenticate<Request: Encodable & Sendable>(path: String, body: Request) {
+    func clearError() {
+        errorMessage = nil
+        errorField = nil
+    }
+
+    private func authenticate<Request: Encodable & Sendable>(
+        path: String,
+        body: Request,
+        operation: AuthOperation
+    ) {
         guard !isLoading else { return }
 
         isLoading = true
-        errorMessage = nil
+        clearError()
+        lastSuccessfulOperation = nil
         let requestID = UUID()
         authenticationRequestID = requestID
         let client = networkClient
@@ -75,6 +100,7 @@ final class SessionStore {
                 guard store.save(response.accessToken) else {
                     throw NetworkError.tokenStorageError
                 }
+                self.lastSuccessfulOperation = operation
                 self.state = .signedIn
                 self.isLoading = false
                 self.authenticationTask = nil
@@ -85,7 +111,9 @@ final class SessionStore {
                       let self,
                       self.authenticationRequestID == requestID
                 else { return }
-                self.errorMessage = self.message(for: error)
+                let failure = self.failure(for: error, operation: operation)
+                self.errorMessage = failure.message
+                self.errorField = failure.field
                 self.isLoading = false
                 self.authenticationTask = nil
             }
@@ -99,27 +127,62 @@ final class SessionStore {
         authenticationTask = nil
         isLoading = false
         tokenStore.clear()
-        errorMessage = nil
+        clearError()
         state = .signedOut
     }
 
-    private func message(for error: Error) -> String {
+    private func failure(for error: Error, operation: AuthOperation) -> (message: String, field: AuthField?) {
+        if case NetworkError.serverValidation(_, let code, let field) = error {
+            let resolvedField = authField(for: code ?? field, operation: operation)
+            switch code {
+            case "EMAIL_EXISTS":
+                return ("An account with this email already exists.", .email)
+            case "NICKNAME_EXISTS":
+                return ("This name is already in use.", .fullName)
+            case "INVALID_EMAIL":
+                return ("Enter a valid email address.", .email)
+            case "INVALID_PASSWORD":
+                return ("Choose a stronger password.", .password)
+            case "INVALID_NICKNAME":
+                return ("Enter a valid name.", .fullName)
+            default:
+                return ("Please check your details and try again.", resolvedField)
+            }
+        }
+
         if case NetworkError.httpError(let statusCode) = error {
             switch statusCode {
             case 401:
-                return "Invalid email or password"
+                return ("Invalid email or password.", .none)
             case 409:
-                return "Email or nickname is already in use"
+                return ("Email or name is already in use.", operation == .register ? .email : nil)
+            case 400:
+                return ("Please check your details and try again.", nil)
+            case 500...599:
+                return ("The service is temporarily unavailable. Try again later.", nil)
             default:
-                return "Server error (\(statusCode))"
+                return ("Something went wrong. Try again later.", nil)
             }
         }
         if case NetworkError.missingAccessToken = error {
-            return "Please sign in again"
+            return ("Please sign in again.", nil)
         }
         if case NetworkError.tokenStorageError = error {
-            return "Unable to save the session"
+            return ("Unable to save the session. Try again.", nil)
         }
-        return "Unable to connect to the server"
+        return ("Unable to connect. Check your internet connection and try again.", nil)
+    }
+
+    private func authField(for value: String?, operation: AuthOperation) -> AuthField? {
+        switch value?.lowercased() {
+        case "email":
+            return .email
+        case "password":
+            return .password
+        case "nickname", "name", "fullname":
+            return operation == .register ? .fullName : nil
+        default:
+            return nil
+        }
     }
 }
