@@ -1,4 +1,8 @@
 #include "patch_project.h"
+#include "svg_validation_error_response.hpp"
+
+#include <userver/formats/json/serialize.hpp>
+#include <userver/logging/log.hpp>
 #include <userver/utils/datetime.hpp>
 
 namespace ya_brander::handlers {
@@ -55,4 +59,4 @@ userver::formats::json::Value PatchProjectHandler::HandleRequestJsonThrow(
   return res.ExtractValue();
 }
 
-}
+}  // namespace ya_brander::handlers

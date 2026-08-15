@@ -478,6 +478,9 @@ paths:
                 prompt:
                   type: string
                   example: "Добавь логотип с изображением кружки"
+                model:
+                  type: string
+                  example: "deepseek-v4-flash/latest"
       responses:
         '200':
           description: Сгенерированный SVG-код проекта

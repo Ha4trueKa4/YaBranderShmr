@@ -1,11 +1,10 @@
 #include "project_manager_component.h"
+#include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
 
 namespace ya_brander::components {
 
 const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-  <g>
-  </g>
 </svg>)SVG";
 
 namespace {
@@ -106,9 +105,9 @@ if (!data.empty()) {
     );
 }
 
-std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id);
-    std::string full_prompt;
+std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model) {
+    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+    LlmPrompt full_prompt;
 
 	std::string safe_prompt = EscapeXml(prompt);
 
@@ -117,9 +116,9 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     }else {
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt);
     }
-    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1);
-    version_storage_.SaveVersion(project_id, new_data);
-    return version_storage_.GetLatestVersionUrl(project_id);
+    auto new_data = llm_client_.SendPrompt(full_prompt, 10000, model, 0.1);
+    version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    return version_storage_.GetLatestVersionUrl(project_id);;
 }
 
 std::vector<models::Version> ProjectManagerComponent::ListVersions(
