@@ -79,6 +79,32 @@
     <string name="chats_error_title">Couldn\'t load chats</string>
     <string name="chats_error_retry">Retry</string>
 
+    <!-- Создание проекта -->
+    <string name="create_project_title">New Project</string>
+    <string name="create_project_back_description">Back</string>
+    <string name="create_project_name_label">Project name</string>
+    <string name="create_project_name_placeholder">My Startup Brand</string>
+    <string name="create_project_description_label">Brand description &amp; brief</string>
+    <string name="create_project_description_placeholder">Describe your brand values, target audience, preferred color scheme, visual mood…</string>
+    <string name="create_project_hint">Our AI will generate brand assets, palettes, and typography presets.</string>
+    <string name="create_project_submit">Generate Brandkit</string>
+    <string name="create_project_submitting">Generating brand assets…</string>
+    <string name="create_project_error">Couldn\'t generate brand assets. Please try again.</string>
+
+    <!-- Экран проекта (чат с ИИ) -->
+    <string name="project_title_placeholder">Project</string>
+    <string name="project_back_description">Back</string>
+    <string name="project_history_description">Version history</string>
+    <string name="project_share_description">Share project</string>
+    <string name="project_input_placeholder">Describe what to change…</string>
+    <string name="project_send_description">Send message</string>
+
+    <string name="project_system_created">Project created successfully</string>
+    <string name="project_system_version_saved">Version %1$s saved</string>
+
+    <string name="project_error_title">Couldn\'t load project</string>
+    <string name="project_error_retry">Retry</string>
+
     <!-- Относительное время: подписи строк чата.
          Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->
     <string name="chats_time_just_now">just now</string>

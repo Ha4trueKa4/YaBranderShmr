@@ -8,23 +8,50 @@ pytest_plugins = ['pytest_userver.plugins.postgresql']
 
 @pytest.fixture(scope='session')
 def service_source_dir():
-    """Path to root directory service."""
     return pathlib.Path(__file__).parent.parent
 
 
 @pytest.fixture(scope='session')
 def initial_data_path(service_source_dir):
-    """Path for find files with data"""
-    return [
-        service_source_dir / 'postgresql/data',
-    ]
+    return [service_source_dir / 'postgresql/data']
 
 
 @pytest.fixture(scope='session')
 def pgsql_local(service_source_dir, pgsql_local_create):
-    """Create schemas databases for tests"""
     databases = discover.find_schemas(
-        'postgres-db-1',  # service name that goes to the DB connection
+        'postgres-db-1',
         [service_source_dir.joinpath('postgresql/schemas')],
     )
-    return pgsql_local_create(list(databases.values()))
+    db1_only = {k: v for k, v in databases.items() if k == 'db-1'}
+    return pgsql_local_create(list(db1_only.values()))
+        
+def _get_connection_string(conn_info):
+    for attr in ('connection_string', 'dsn', 'uri'):
+        if hasattr(conn_info, attr):
+            value = getattr(conn_info, attr)
+            if isinstance(value, str):
+                return value
+    for method_name in ('get_connection_string', 'get_dsn', 'get_uri'):
+        if hasattr(conn_info, method_name):
+            method = getattr(conn_info, method_name)
+            if callable(method):
+                try:
+                    result = method()
+                    if isinstance(result, str):
+                        return result
+                except TypeError:
+                    pass
+    try:
+        return str(conn_info)
+    except Exception:
+        pass
+    raise AttributeError(f"Не удалось получить строку подключения из {conn_info!r}")
+
+
+@pytest.fixture(scope='session')
+def userver_pg_config(pgsql_local):
+    def _patch_config(config_yaml, config_vars):
+        conn_str = _get_connection_string(pgsql_local['db-1'])
+        config_vars['dbconnection'] = conn_str
+        config_vars['dbconnection-vector'] = conn_str
+    return _patch_config

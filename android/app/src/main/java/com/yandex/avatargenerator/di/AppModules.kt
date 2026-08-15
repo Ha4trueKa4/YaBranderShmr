@@ -4,9 +4,11 @@ import com.yandex.avatargenerator.core.di.coreModule
 import com.yandex.avatargenerator.core.di.networkModule
 import com.yandex.avatargenerator.feature.auth.di.authModule
 import com.yandex.avatargenerator.feature.create.di.chatsModule
+import com.yandex.avatargenerator.feature.createproject.di.createProjectModule
 import com.yandex.avatargenerator.feature.feed.di.feedModule
 import com.yandex.avatargenerator.feature.onboarding.di.onboardingModule
 import com.yandex.avatargenerator.feature.profile.di.profileModule
+import com.yandex.avatargenerator.feature.project.di.projectModule
 
 /**
  * Полный граф зависимостей приложения: общие [coreModule] и [networkModule]
@@ -20,5 +22,7 @@ val appModules = listOf(
     authModule,
     feedModule,
     chatsModule,
+    createProjectModule,
     profileModule,
+    projectModule,
 )

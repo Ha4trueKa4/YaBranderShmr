@@ -14,8 +14,13 @@ export const zLoginRequest = z.object({
 })
 
 export const zAuthResponse = z.object({
-  access_token: z.string().optional(),
-  token_type: z.string().optional(),
+  access_token: z.string(),
+  token_type: z.string(),
+  user: z.object({
+    id: z.string(),
+    email: z.email(),
+    nickname: z.string(),
+  }),
 })
 
 export const zUserProfile = z.object({
@@ -27,20 +32,14 @@ export const zProjectDescription = z.object({
   id: z.string().optional(),
   author_id: z.string().optional(),
   name: z.string().optional(),
+  description: z.string().optional(),
   is_public: z.boolean().optional(),
   created_at: z.iso.datetime().optional(),
 })
 
-export const zProjectData = z.object({
-  width: z.int().optional(),
-  height: z.int().optional(),
-  background: z.string().optional(),
-  layers: z.array(z.record(z.string(), z.unknown())).optional(),
-})
-
 export const zProject = zProjectDescription.and(
   z.object({
-    data: zProjectData.optional(),
+    data: z.string().optional(),
   }),
 )
 
@@ -82,6 +81,14 @@ export const zGetUsersByIdResponse = zUserProfile.and(
   }),
 )
 
+export const zDeleteUsersByIdSubscribePath = z.object({
+  id: z.string(),
+})
+
+export const zPostUsersByIdSubscribePath = z.object({
+  id: z.string(),
+})
+
 export const zPostProjectsBody = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
@@ -107,7 +114,7 @@ export const zGetProjectsByIdResponse = zProject
 
 export const zPatchProjectsByIdBody = z.object({
   is_public: z.boolean().optional(),
-  data: zProjectData.optional(),
+  data: z.string().optional(),
 })
 
 export const zPatchProjectsByIdPath = z.object({
@@ -123,6 +130,8 @@ export const zPostProjectsByIdGeneratePath = z.object({
 })
 
 /**
- * Сгенерированный JSON-граф элементов
+ * Сгенерированный SVG-код проекта
  */
-export const zPostProjectsByIdGenerateResponse = zProjectData
+export const zPostProjectsByIdGenerateResponse = z.object({
+  data: z.string().optional(),
+})

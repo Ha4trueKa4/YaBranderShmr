@@ -1,29 +1,27 @@
 import type {
-  EditorLayer,
-  EditorLayerByType,
-  EditorLayerType,
+  EditorElement,
+  EditorElementByType,
+  EditorElementType,
 } from '@entities/editorDocument'
 import type { ComponentType } from 'react'
 
-import { BackgroundProperties } from './backgroundProperties/BackgroundProperties'
 import styles from './InspectorPanel.module.css'
 import { ShapeProperties } from './shapeProperties/ShapeProperties'
 import { TextProperties } from './textProperties/TextProperties'
 
 type InspectorByType = {
-  [TType in EditorLayerType]: ComponentType<{
-    layer: EditorLayerByType<TType>
+  [TType in EditorElementType]: ComponentType<{
+    layer: EditorElementByType<TType>
   }>
 }
 
 const inspectorByType = {
-  background: BackgroundProperties,
   shape: ShapeProperties,
   text: TextProperties,
 } satisfies InspectorByType
 
 interface InspectorPanelProps {
-  selectedLayer: EditorLayer | null
+  selectedLayer: EditorElement | null
 }
 
 export function InspectorPanel({ selectedLayer }: InspectorPanelProps) {

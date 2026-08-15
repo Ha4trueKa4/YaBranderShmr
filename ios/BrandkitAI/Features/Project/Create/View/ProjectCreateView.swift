@@ -43,38 +43,7 @@ struct ProjectCreateView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .brandBackground()
-        .navigationTitle(viewModel.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(onBack != nil)
-        .toolbar {
-            if let onBack {
-                backItem(action: onBack)
-            }
-        }
-    }
-
-    @ToolbarContentBuilder
-    private func backItem(action: @escaping () -> Void) -> some ToolbarContent {
-        if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .topBarLeading) {
-                backButton(action: action)
-            }
-            .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .topBarLeading) {
-                backButton(action: action)
-            }
-        }
-    }
-
-    private func backButton(action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: "arrow.left")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.primary)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Back")
+        .customNavigationBar(title: viewModel.title, onBack: onBack)
     }
 }
 
