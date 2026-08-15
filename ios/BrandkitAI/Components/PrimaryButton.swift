@@ -8,20 +8,35 @@ import SwiftUI
 struct PrimaryButton: View {
     let title: String
     var isEnabled: Bool = true
+    var isLoading = false
     var fill: AnyShapeStyle = AnyShapeStyle(.tint)
     let action: () -> Void
 
+    @State private var feedbackTrigger = 0
+
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
+        Button {
+            feedbackTrigger += 1
+            action()
+        } label: {
+            HStack(spacing: 10) {
+                if isLoading {
+                    ProgressView()
+                        .tint(.white)
+                }
+
+                Text(isLoading ? "Please wait..." : title)
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
         }
         .buttonStyle(PrimaryButtonStyle(fill: fill))
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.5)
+        .disabled(!isEnabled || isLoading)
+        .opacity(isEnabled || isLoading ? 1 : 0.5)
+        .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)
+        .accessibilityLabel(isLoading ? "Loading" : title)
     }
 }
 
@@ -59,6 +74,6 @@ struct LinkButton: View {
     .padding(24)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(.systemBackground))
-    .tint(.purple)
+    .tint(Color.accentColor)
     .preferredColorScheme(.dark)
 }
