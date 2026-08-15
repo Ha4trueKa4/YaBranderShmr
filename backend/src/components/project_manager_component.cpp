@@ -29,7 +29,7 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 
     std::string project_id = row["id"].As<std::string>();
     LOG_INFO() << "Created project with ID: " << project_id;
-    version_storage_.SaveVersion(project_id, kDefaultSvg); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    version_storage_.SaveVersion(project_id, kDefaultSvg);
 
   return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), kDefaultSvg};
 }
@@ -89,7 +89,7 @@ if (!data.empty()) {
 }
 
 std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+    std::string current_state = version_storage_.GetLatestVersionData(project_id);
     std::string full_prompt;
 
     if (current_state.empty() || current_state == kDefaultSvg) {
@@ -97,8 +97,8 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     }else {
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt);
     }
-    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1); // ЗАГЛУШКА
-    version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1);
+    version_storage_.SaveVersion(project_id, new_data);
     return new_data;
 }
 
