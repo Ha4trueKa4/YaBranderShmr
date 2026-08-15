@@ -28,6 +28,7 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
                 <div className={styles.inputRow}>
                   <Input
                     {...field}
+                    autoFocus
                     className={styles.input}
                     invalid={Boolean(fieldState.error)}
                     leadingContent={<img alt="" src={sparkles} />}

@@ -7,11 +7,13 @@ import { SvgDefinitions } from './SvgDefinitions'
 interface LayerRendererProps {
   document: EditorDocument
   onSelectNode: (nodeId: string) => void
+  renderVersion: number
 }
 
 export const LayerRenderer = observer(function LayerRenderer({
   document,
   onSelectNode,
+  renderVersion: _renderVersion,
 }: LayerRendererProps) {
   return (
     <>
