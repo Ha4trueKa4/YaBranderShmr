@@ -1,7 +1,8 @@
 import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
 import { useProjectsQuery } from '@entities/project'
-import { Button } from '@shared/ui'
+import { getApiErrorMessage } from '@shared/api/api'
+import { Button, ErrorState } from '@shared/ui'
 import {
   OwnProjectsSection,
   ProfileHeader,
@@ -14,7 +15,11 @@ import styles from './profilePage.module.css'
 
 export function ProfilePage() {
   const navigate = useNavigate()
-  const { data: projects = [] } = useProjectsQuery()
+  const {
+    data: projects = [],
+    error: projectsError,
+    isError: isProjectsError,
+  } = useProjectsQuery()
   // TODO: Replace temporary profile details when the API returns them.
   const profile: ProfileHeaderProfile = {
     bio: 'Building ideas into brands. Product designer and creative technologist.',
@@ -27,7 +32,7 @@ export function ProfilePage() {
 
   function handleLogout() {
     authStore.signOut()
-    navigate(AppRoute.Auth, { replace: true })
+    navigate(AppRoute.Auth, { replace: true, viewTransition: true })
   }
 
   return (
@@ -45,7 +50,11 @@ export function ProfilePage() {
           }
           profile={profile}
         />
-        <OwnProjectsSection projects={projects} />
+        {isProjectsError ? (
+          <ErrorState message={getApiErrorMessage(projectsError)} />
+        ) : (
+          <OwnProjectsSection projects={projects} />
+        )}
       </main>
     </div>
   )

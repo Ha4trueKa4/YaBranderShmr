@@ -1,4 +1,5 @@
 import type { FeedProject } from '@entities/project/model/types'
+import { getAvatarInitials } from '@shared/lib'
 import { Avatar } from '@shared/ui'
 import { Link } from 'react-router-dom'
 
@@ -10,7 +11,7 @@ export interface FeedProjectCardProps {
 }
 
 export function FeedProjectCard({ project }: FeedProjectCardProps) {
-  const authorInitials = getInitials(project.author.name)
+  const authorInitials = getAvatarInitials(project.author.name)
 
   return (
     <article className={styles.card}>
@@ -32,14 +33,4 @@ export function FeedProjectCard({ project }: FeedProjectCardProps) {
       </div>
     </article>
   )
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
 }

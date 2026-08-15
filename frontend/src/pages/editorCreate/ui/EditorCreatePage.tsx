@@ -21,7 +21,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const handleProjectCreated = useCallback(
     ({ id }: { id: string }) => {
       // TODO: после создания вызывать feature генерации, а затем открывать проект.
-      navigate(`/projects/${id}`)
+      navigate(`/projects/${id}`, { viewTransition: true })
     },
     [navigate],
   )
@@ -40,7 +40,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   function handleGenerate(draft: ProjectDraft) {
     if (!isAuthorized) {
       pendingGenerationStore.save(draft)
-      navigate('/auth')
+      navigate('/auth', { viewTransition: true })
 
       return
     }

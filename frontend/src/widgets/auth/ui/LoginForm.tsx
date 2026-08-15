@@ -18,13 +18,8 @@ export function LoginForm({
 }: LoginFormProps) {
   const emailInputId = useId()
   const passwordInputId = useId()
-  const {
-    form,
-    isPasswordVisible,
-    isSubmitted,
-    submit,
-    togglePasswordVisibility,
-  } = useLoginForm({ onSubmit })
+  const { form, isPasswordVisible, submit, togglePasswordVisibility } =
+    useLoginForm({ onSubmit })
 
   return (
     <section className={styles.formSection}>
@@ -93,7 +88,6 @@ export function LoginForm({
         <Button fullWidth loading={isPending} size="lg" type="submit">
           Sign in
         </Button>
-        {isSubmitted && <p className={styles.success}>You are signed in.</p>}
       </form>
       <p className={styles.footer}>
         New to Brandkit AI?{' '}

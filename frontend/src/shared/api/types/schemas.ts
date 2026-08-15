@@ -1,7 +1,7 @@
 export {
   zAuthResponse,
   zDeleteProjectsByIdPath,
-  zError,
+  zGetFeedResponse,
   zGetProjectsByIdPath,
   zGetProjectsByIdResponse,
   zGetUsersByIdPath,

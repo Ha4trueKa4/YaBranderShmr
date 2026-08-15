@@ -44,8 +44,7 @@
 }
 
 .footer,
-.legalNotice,
-.success {
+.legalNotice {
   color: var(--color-auth-muted);
   margin: 0;
 }
@@ -72,11 +71,6 @@
 
 .link:hover {
   text-decoration: underline;
-}
-
-.success {
-  color: var(--color-success);
-  font-size: var(--font-size-body);
 }
 
 @media (max-width: 34rem) {
