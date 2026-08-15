@@ -32,6 +32,10 @@ export class EditorStore {
     this.selectedNodeId = nodeId
   }
 
+  isGroupExpanded(groupId: string): boolean {
+    return this.expandedGroupIds.has(groupId)
+  }
+
   toggleGroup(groupId: string) {
     if (this.expandedGroupIds.has(groupId)) {
       this.expandedGroupIds.delete(groupId)

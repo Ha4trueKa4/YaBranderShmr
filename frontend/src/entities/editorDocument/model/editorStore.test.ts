@@ -53,4 +53,18 @@ describe('EditorStore selection', () => {
 
     expect(store.selectedNode).toMatchObject({ id: 'wheel', type: 'shape' })
   })
+
+  it('toggles a group expansion state', () => {
+    const store = new EditorStore(document)
+
+    expect(store.isGroupExpanded('taxi')).toBe(false)
+
+    store.toggleGroup('taxi')
+
+    expect(store.isGroupExpanded('taxi')).toBe(true)
+
+    store.toggleGroup('taxi')
+
+    expect(store.isGroupExpanded('taxi')).toBe(false)
+  })
 })
