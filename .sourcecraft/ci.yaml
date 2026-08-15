@@ -31,21 +31,26 @@ on:
 
 workflows:
   # Проверка компиляции backend на этапе pull request:
-  # только docker build (без публикации образа и без затирания тега latest).
+  # инкрементальная cmake-сборка в раннере (без docker, без публикации образа).
   build-backend-check:
     tasks:
-      - name: build
+      - name: compile
         cubes:
           - name: run-build-backend-check
-            gitlab_workflow: .sourcecraft/build-backend-check.yaml
-            env:
-              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
+            gitlab_workflow: .sourcecraft/build-backend-compile.yaml
 
-  # Сборка + публикация образа в registry, затем деплой — строго по порядку
-  # (задание deploy стартует только после успешного завершения задания build).
+  # Сборка (инкрементальная компиляция) -> публикация тонкого образа в registry -> деплой.
+  # Задания стартуют строго по порядку: build зависит от compile, deploy — от build.
+  # Артефакты compile (бинарник + конфиги) передаются в build через needs.
   build-and-deploy-backend:
     tasks:
+      - name: compile
+        cubes:
+          - name: run-backend-compile
+            gitlab_workflow: .sourcecraft/build-backend-compile.yaml
+
       - name: build
+        needs: [compile]
         cubes:
           - name: run-build-backend
             gitlab_workflow: .sourcecraft/build-backend.yaml

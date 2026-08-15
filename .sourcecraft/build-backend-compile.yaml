@@ -1,0 +1,40 @@
+# Инкрементальная сборка backend (C++/userver).
+#
+# Раньше cmake выполнялся ВНУТРИ `docker build` (см. исходный Dockerfile): каждый прогон
+# был холодной сборкой, т.к. docker:dind в SourceCraft стартует без персистентного хранилища,
+# а `docker buildx --driver docker-container` (и его `--mount=type=cache`) недоступен.
+#
+# Теперь cmake запускается НАПОСРЕДСТВЕННО в раннере (образ с userver-тулчейном), а каталог
+# backend/build/ персистится между прогонами через GitLab `cache`. `cmake --build` перекомпилирует
+# только изменившиеся .cpp. Dockerfile становится тонким — просто копирует готовый бинарник.
+#
+# Ключ кэша привязан к CMakeLists.txt (конфигурация): правки только в src/ НЕ сбрасывают кэш,
+# поэтому инкрементальная пересборка действительно работает. Менять CMakeLists.txt редко —
+# при его изменении кэш корректно «протухает» и пересобирается с нуля.
+stages:
+  - compile
+
+compile:
+  stage: compile
+  image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
+  cache:
+    key:
+      files:
+        - backend/CMakeLists.txt
+    paths:
+      - backend/build/
+  script:
+    - cd backend
+    # `-B` на уже существующем build/ пере-конфигурирует и переиспользует объектные файлы,
+    # т.е. перекомпилируются только изменённые исходники (инкрементально).
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - cmake --build build -j$(nproc) --target ya_brander
+    - cd ..
+  # Артефакты передаются следующему заданию (сборка тонкого docker-образа):
+  #   - собранный бинарник ya_brander;
+  #   - конфиги (COPY configs в Dockerfile).
+  artifacts:
+    paths:
+      - backend/build/ya_brander
+      - backend/configs
+    expire_in: 1 day
