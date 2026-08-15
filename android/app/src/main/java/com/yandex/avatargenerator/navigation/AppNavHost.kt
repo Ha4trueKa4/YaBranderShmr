@@ -1,15 +1,21 @@
 package com.yandex.avatargenerator.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.auth.ui.LoginScreen
 import com.yandex.avatargenerator.feature.auth.ui.RegisterScreen
+import com.yandex.avatargenerator.feature.auth.ui.rememberCurrentUser
 import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
 import com.yandex.avatargenerator.feature.createproject.ui.CreateProjectScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
@@ -17,6 +23,8 @@ import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
 import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
+import com.yandex.avatargenerator.ui.components.BrandEmptyState
+import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
  * Граф навигации приложения.
@@ -25,8 +33,9 @@ import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
  * чатов, профиль и проект; остальные узлы — [PlaceholderScreen] до готовности фич.
  *
  * @param navController контроллер, общий со Scaffold (для нижней панели).
- * @param startDestination стартовый маршрут: онбординг при первом запуске,
- *  иначе лента. Выбирает вызывающий — ему доступен флаг «онбординг пройден».
+ * @param startDestination стартовый маршрут: лента для авторизованного,
+ *  онбординг при первом запуске, иначе вход. Выбирает вызывающий — ему доступны
+ *  флаги сессии и онбординга.
  */
 @Composable
 fun AppNavHost(
@@ -58,8 +67,10 @@ fun AppNavHost(
         }
 
         composable(Destination.Login.route) {
+            // Переход не по нажатию, а по успешному ответу сервера — экран сам
+            // сообщит о нём, когда токен уже сохранён.
             LoginScreen(
-                onSignInClick = { navController.navigateIntoAppAfterAuth() },
+                onSignedIn = { navController.navigateIntoAppAfterAuth() },
                 onNavigateToRegister = {
                     navController.navigate(Destination.Register.route) { launchSingleTop = true }
                 },
@@ -69,7 +80,7 @@ fun AppNavHost(
 
         composable(Destination.Register.route) {
             RegisterScreen(
-                onCreateAccountClick = { navController.navigateIntoAppAfterAuth() },
+                onRegistered = { navController.navigateIntoAppAfterAuth() },
                 onNavigateToLogin = {
                     navController.navigate(Destination.Login.route) { launchSingleTop = true }
                 },
@@ -120,17 +131,29 @@ fun AppNavHost(
         }
 
         composable(Destination.Profile.route) {
-            // Свой профиль (вкладка). id текущего пользователя появится из
-            // сессии/DI — пока временная заглушка "me".
-            ProfileScreen(
-                userId = "me",
-                isOwnProfile = true,
-                onProjectClick = { projectId ->
-                    navController.navigate(Destination.Project.createRoute(projectId))
-                },
-                onActionClick = { /* TODO: экран редактирования профиля */ },
-                modifier = Modifier.fillMaxSize(),
-            )
+            // Свой профиль (вкладка): id берём из сохранённой сессии.
+            //
+            // До появления id экран не рисуем вовсе: ProfileViewModel получает
+            // userId через parametersOf, а параметры Koin использует только при
+            // первом создании ViewModel — с заглушкой она бы навсегда осталась
+            // с чужим id.
+            val currentUser = rememberCurrentUser()
+            if (currentUser != null) {
+                ProfileScreen(
+                    userId = currentUser.id,
+                    isOwnProfile = true,
+                    onProjectClick = { projectId ->
+                        navController.navigate(Destination.Project.createRoute(projectId))
+                    },
+                    onActionClick = { /* TODO: экран редактирования профиля */ },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                // Сессия есть, а профиля нет — так у всех, кто вошёл до появления
+                // хранилища пользователя. Дозаполнить нечем: ручки `/auth/me` в
+                // API нет, поэтому честно просим войти заново.
+                ProfileWithoutSessionState(modifier = Modifier.fillMaxSize())
+            }
         }
 
         composable(
@@ -180,6 +203,25 @@ fun AppNavHost(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+}
+
+/**
+ * Вкладка профиля, когда id текущего пользователя недоступен: либо он ещё
+ * читается из хранилища, либо вход был до появления этого хранилища. Различить
+ * нельзя (см. `rememberCurrentUser`), поэтому показываем не индикатор загрузки,
+ * а просьбу войти заново — единственное, что тут вообще поможет.
+ */
+@Composable
+private fun ProfileWithoutSessionState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.background(AppColors.Background),
+        contentAlignment = Alignment.Center,
+    ) {
+        BrandEmptyState(
+            title = stringResource(R.string.profile_no_session_title),
+            subtitle = stringResource(R.string.profile_no_session_subtitle),
+        )
     }
 }
 

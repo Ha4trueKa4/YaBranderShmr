@@ -1,6 +1,8 @@
 package com.yandex.avatargenerator.feature.auth.domain
 
 import com.yandex.avatargenerator.feature.auth.domain.model.AuthSession
+import com.yandex.avatargenerator.feature.auth.domain.model.AuthUser
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Вход, регистрация и владение текущей сессией. Полученный токен реализация
@@ -9,9 +11,26 @@ import com.yandex.avatargenerator.feature.auth.domain.model.AuthSession
 interface AuthRepository {
 
     /**
+     * Есть ли сохранённая сессия. Первое значение приходит после чтения
+     * хранилища, поэтому подписчик не увидит ложного «не авторизован» на старте.
+     *
+     * Токен наружу не отдаём: `domain/` не должен знать про `core/network`.
+     */
+    val isAuthorized: Flow<Boolean>
+
+    /**
+     * Текущий пользователь или `null`. Источник — ответ входа/регистрации: ручки
+     * `/auth/me` в API нет, поэтому другого способа узнать свой id у клиента нет.
+     *
+     * `null` возможен и при действующей сессии — если вход был до появления
+     * хранилища профиля (см. `API.md`).
+     */
+    val currentUser: Flow<AuthUser?>
+
+    /**
      * `POST /auth/register`. Email реализация нормализует, никнейм обрезает.
      *
-     * @throws AuthException.RegistrationRejected поле не прошло проверку (400).
+     * @throws AuthException.FieldRejected поле не прошло проверку (400 или 422).
      * @throws AuthException.RegistrationConflict email или никнейм заняты (409).
      */
     suspend fun register(email: String, password: String, nickname: String): AuthSession
@@ -20,6 +39,7 @@ interface AuthRepository {
      * `POST /auth/login`.
      *
      * @throws AuthException.InvalidCredentials неверный email или пароль (401).
+     * @throws AuthException.FieldRejected сервер отверг формат поля (400 или 422).
      */
     suspend fun login(email: String, password: String): AuthSession
 

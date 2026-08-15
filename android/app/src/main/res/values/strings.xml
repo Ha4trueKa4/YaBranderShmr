@@ -22,6 +22,19 @@
     <string name="auth_no_account">No account?</string>
     <string name="auth_register">Register</string>
     <string name="auth_have_account">Already have an account?</string>
+    <string name="auth_signing_in">Signing in…</string>
+    <string name="auth_creating_account">Creating account…</string>
+
+    <!-- Вход и регистрация: ошибки. Сообщения бэкенда пользователю не показываем -->
+    <string name="auth_error_invalid_credentials">Wrong email or password</string>
+    <string name="auth_error_email_taken">This email is already registered</string>
+    <string name="auth_error_nickname_taken">This name is already taken</string>
+    <string name="auth_error_invalid_email">Enter a valid email</string>
+    <string name="auth_error_invalid_password">Password must be 8–128 characters and contain letters and digits</string>
+    <string name="auth_error_invalid_nickname">Name must be 3–64 characters</string>
+    <string name="auth_error_no_connection">No internet connection</string>
+    <string name="auth_error_server">Server is unavailable. Try again later</string>
+    <string name="auth_error_unknown">Something went wrong. Try again</string>
 
     <!-- Onboarding: welcome -->
     <string name="onboarding_brand_title">Brandkit AI</string>
@@ -90,6 +103,11 @@
     <string name="create_project_submit">Generate Brandkit</string>
     <string name="create_project_submitting">Generating brand assets…</string>
     <string name="create_project_error">Couldn\'t generate brand assets. Please try again.</string>
+
+    <!-- Профиль: своя вкладка без сохранённого пользователя.
+         Так у всех, кто вошёл до появления хранилища профиля — дозаполнить нечем -->
+    <string name="profile_no_session_title">Sign in again</string>
+    <string name="profile_no_session_subtitle">We couldn\'t find your account details. Please sign in again to open your profile</string>
 
     <!-- Экран проекта (чат с ИИ) -->
     <string name="project_title_placeholder">Project</string>
