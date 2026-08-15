@@ -36,10 +36,12 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
     return err.ExtractValue();
   }
 
-  std::string new_svg = project_manager_.GenerateAI(id, prompt);
+  std::string new_url = project_manager_.GenerateAI(id, prompt);
 
   userver::formats::json::ValueBuilder res;
-  res["data"] = new_svg;
+  if (!new_url.empty()) {
+      res["url"] = new_url;
+  }
 
   return res.ExtractValue();
 }

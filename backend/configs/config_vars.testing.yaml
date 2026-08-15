@@ -11,3 +11,4 @@ dbconnection: 'postgresql://testsuite@localhost:15433/ya_brander_db-1'
 dbconnection-vector: 'postgresql://user:password@service-vector-postgres:5432/vector_db'
 yandex-gpt-url: $mockserver/yandex-gpt-mock
 yandex-embedding-url: $mockserver/yandex-embedding-mock
+s3-endpoint: $mockserver

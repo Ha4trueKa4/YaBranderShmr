@@ -25,21 +25,23 @@ class MockChatRepository(
     private val messages: List<ChatMessage> = defaultMessages(),
 ) : ChatRepository {
 
-    override suspend fun getChat(projectId: String): ProjectChat {
+    override suspend fun getChat(projectId: String): Result<ProjectChat> {
         delay(networkDelayMillis)
-        return ProjectChat(id = projectId, title = title, messages = messages)
+        return Result.success(ProjectChat(id = projectId, title = title, messages = messages))
     }
 
     /**
      * Ответа ИИ мок не имитирует осознанно: генерация — задача бэкенда,
      * а экрану достаточно увидеть, что исходящее сообщение попало в ленту.
      */
-    override suspend fun sendMessage(projectId: String, text: String): ChatMessage {
+    override suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage> {
         delay(sendDelayMillis)
-        return ChatMessage.Outgoing(
-            id = UUID.randomUUID().toString(),
-            text = text,
-            sentAt = Instant.now(),
+        return Result.success(
+            ChatMessage.Outgoing(
+                id = UUID.randomUUID().toString(),
+                text = text,
+                sentAt = Instant.now(),
+            ),
         )
     }
 

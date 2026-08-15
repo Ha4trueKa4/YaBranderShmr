@@ -36,8 +36,12 @@ userver::formats::json::Value CreateProjectHandler::HandleRequestJsonThrow(
   res["is_public"] = project.is_public;
   res["created_at"] = userver::utils::datetime::Timestring(
       project.created_at, userver::utils::datetime::kDefaultTimezone,
-      userver::utils::datetime::kRfc3339Format);
-  res["data"] = project.data;
+      userver::utils::datetime::kRfc3339Format);  
+  
+  if (!project.url.empty()){
+	  res["url"] = project.url;
+  }
+  
 
   request.SetResponseStatus(userver::server::http::HttpStatus::kCreated);
   return res.ExtractValue();

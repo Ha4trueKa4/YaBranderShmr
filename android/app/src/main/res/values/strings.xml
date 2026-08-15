@@ -105,6 +105,25 @@
     <string name="project_error_title">Couldn\'t load project</string>
     <string name="project_error_retry">Retry</string>
 
+    <!-- Экран публичного проекта -->
+    <string name="public_project_follow">Follow</string>
+    <string name="public_project_following">Following</string>
+    <string name="public_project_download_png">Download PNG</string>
+    <string name="public_project_download_svg">Download SVG</string>
+    <string name="public_project_related_title">More from this creator</string>
+    <string name="public_project_error_title">Couldn\'t load project</string>
+    <string name="public_project_error_retry">Retry</string>
+
+    <!-- Подпись публикации. min/hr не склоняются — обычные string (как в чате). -->
+    <string name="public_project_published_recently">Recently published</string>
+    <string name="public_project_published_just_now">Published just now</string>
+    <string name="public_project_published_minutes">Published %1$d min ago</string>
+    <string name="public_project_published_hours">Published %1$d hr ago</string>
+    <plurals name="public_project_published_days">
+        <item quantity="one">Published %1$d day ago</item>
+        <item quantity="other">Published %1$d days ago</item>
+    </plurals>
+
     <!-- Относительное время: подписи строк чата.
          Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->
     <string name="chats_time_just_now">just now</string>

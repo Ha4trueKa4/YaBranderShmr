@@ -47,7 +47,10 @@ userver::formats::json::Value PatchProjectHandler::HandleRequestJsonThrow(
   res["created_at"] = userver::utils::datetime::Timestring(
       updated->created_at, userver::utils::datetime::kDefaultTimezone,
       userver::utils::datetime::kRfc3339Format);
-  res["data"] = updated->data;
+
+  if (!updated->url.empty()) {
+      res["url"] = updated->url;
+  }
 
   return res.ExtractValue();
 }

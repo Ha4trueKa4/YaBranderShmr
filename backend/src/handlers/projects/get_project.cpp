@@ -39,7 +39,9 @@ userver::formats::json::Value GetProjectHandler::HandleRequestJsonThrow(
   res["created_at"] = userver::utils::datetime::Timestring(
       project->created_at, userver::utils::datetime::kDefaultTimezone,
       userver::utils::datetime::kRfc3339Format);
-  res["data"] = project->data;
+  if (!project->url.empty()) {
+      res["url"] = project->url;
+  }
 
   return res.ExtractValue();
 }
