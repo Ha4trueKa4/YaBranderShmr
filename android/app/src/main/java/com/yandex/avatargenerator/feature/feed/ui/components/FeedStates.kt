@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -52,15 +53,18 @@ fun FeedAppendError(
         contentAlignment = Alignment.Center,
     ) {
         // Кликабельный текст вместо material3.TextButton (в фичах не используем сырые
-        // кнопки). Без ripple — как в BrandTextLink дизайн-системы.
+        // кнопки). Без ripple — как в BrandTextLink дизайн-системы. minimumInteractiveComponentSize
+        // держит тач-таргет ≥48dp, который давал TextButton.
         Text(
             text = stringResource(R.string.feed_append_error_retry),
             style = AppTypography.body.copy(color = AppColors.Accent),
-            modifier = Modifier.clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onRetry,
-            ),
+            modifier = Modifier
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onRetry,
+                )
+                .minimumInteractiveComponentSize(),
         )
     }
 }

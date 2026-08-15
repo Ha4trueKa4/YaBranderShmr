@@ -125,7 +125,7 @@
     </plurals>
 
     <!-- Профиль (свой/чужой) -->
-    <string name="profile_handle">@%1$s</string>
+    <string name="profile_handle">\@%1$s</string>
     <string name="profile_stats">%1$d Projects · %2$s Followers · %3$d Following</string>
     <string name="profile_action_edit">Edit Profile</string>
     <string name="profile_action_following">Following</string>
