@@ -10,6 +10,7 @@ import SwiftUI
 struct ChatView: View {
     let title: String
     var onBack: () -> Void = {}
+    var onOpenImage: () -> Void = {}
 
     @State private var viewModel = ChatViewModel()
     @State private var messageText = ""
@@ -37,7 +38,11 @@ struct ChatView: View {
                                 ) {
                                     switch message.attachment {
                                     case .mockImage:
-                                        ChatImageMockView()
+                                        Button(action: onOpenImage) {
+                                            ChatImageMockView()
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityHint("Opens the generated image")
                                     case .none:
                                         EmptyView()
                                     }

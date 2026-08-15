@@ -11,6 +11,7 @@ enum AppRoute: Hashable {
     /// Чат проекта — он же результат генерации: в макете разговор начинается
     /// с системной плашки «Project created successfully».
     case chat(projectID: UUID, title: String)
+    case chatImage(projectID: UUID, title: String)
     case projectEditor(projectID: UUID)
     case versionHistory(projectID: UUID)
     case publicProject(projectID: UUID)
