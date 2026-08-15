@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseTransform } from './parseTransform'
+import { parseTransform } from './parsers/parseTransform'
 
 describe('parseTransform', () => {
   it('returns the identity transform when the attribute is absent', () => {

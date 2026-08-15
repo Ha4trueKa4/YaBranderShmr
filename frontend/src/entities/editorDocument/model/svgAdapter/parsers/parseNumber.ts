@@ -1,4 +1,4 @@
-import { SvgParseError } from './errors'
+import { SvgParseError } from '../errors'
 
 export function parseNumberAttribute(
   element: Element,

@@ -1,6 +1,6 @@
-import type { Transform } from '../types'
+import type { Transform } from '../../types'
 
-import { SvgParseError } from './errors'
+import { SvgParseError } from '../errors'
 
 const identityTransform: Transform = {
   rotation: 0,

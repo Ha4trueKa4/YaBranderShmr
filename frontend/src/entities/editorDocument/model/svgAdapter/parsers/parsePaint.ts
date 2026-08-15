@@ -1,4 +1,4 @@
-import type { Paint } from '../types'
+import type { Paint } from '../../types'
 
 const gradientReference = /^url\(#([^()\s]+)\)$/
 

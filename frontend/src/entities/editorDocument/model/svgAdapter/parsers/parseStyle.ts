@@ -1,4 +1,4 @@
-import type { ShapeStyle, TextStyle } from '../types'
+import type { ShapeStyle, TextStyle } from '../../types'
 
 import { parseNumberAttribute } from './parseNumber'
 import { parsePaint } from './parsePaint'
