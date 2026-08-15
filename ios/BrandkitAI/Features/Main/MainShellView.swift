@@ -4,6 +4,7 @@ import SwiftUI
 /// экран **внутри** стека. Поэтому пушнутый экран перекрывает бар физически —
 /// с нативной анимацией и рабочим swipe-back, без флагов видимости.
 struct MainShellView: View {
+    @Environment(SessionStore.self) private var session
     @State private var router = AppRouter()
 
     var body: some View {
@@ -55,6 +56,7 @@ struct MainShellView: View {
 
         case .profile:
             ProfileView(
+                session: session,
                 isCurrentUser: true,
                 // TODO: id придёт из списка проектов профиля.
                 onOpenProject: { router.push(.projectEditor(projectID: UUID()), in: .profile) }
