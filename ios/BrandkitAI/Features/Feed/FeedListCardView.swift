@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct FeedListCardView: View {
+    static let titleFont = Font.system(size: 14, weight: .bold)
+    static let authorFont = Font.system(size: 12, weight: .medium)
+
     let title: String
-    let accountImage: Image?
+    let previewURL: URL?
     let coverColors: [Color]?
     let coverHeight: CGFloat?
     let accountAvatar: Image?
@@ -11,7 +14,7 @@ struct FeedListCardView: View {
 
     init(
         title: String,
-        accountImage: Image? = nil,
+        previewURL: URL? = nil,
         coverColors: [Color]? = nil,
         coverHeight: CGFloat? = nil,
         accountAvatar: Image? = nil,
@@ -19,7 +22,7 @@ struct FeedListCardView: View {
         onTap: @escaping () -> Void
     ) {
         self.title = title
-        self.accountImage = accountImage
+        self.previewURL = previewURL
         self.coverColors = coverColors
         self.coverHeight = coverHeight
         self.accountAvatar = accountAvatar
@@ -40,7 +43,7 @@ struct FeedListCardView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(Self.titleFont)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
@@ -56,7 +59,7 @@ struct FeedListCardView: View {
 
                         if let accountName {
                             Text(accountName)
-                                .font(.system(size: 12, weight: .medium))
+                                .font(Self.authorFont)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
@@ -65,24 +68,77 @@ struct FeedListCardView: View {
             }
             .padding(12)
         }
-        .alternateBackground(cornerSize: CGSize(width: 16, height: 16))
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .contentShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    @ViewBuilder
     private var cover: some View {
-        if let coverColors, !coverColors.isEmpty {
-            LinearGradient(
-                colors: coverColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: coverHeight ?? 128)
-        } else if let accountImage {
-            accountImage
-                .resizable()
-                .scaledToFit()
+        Group {
+            if let coverColors, !coverColors.isEmpty {
+                LinearGradient(
+                    colors: coverColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(height: coverHeight ?? 128)
+            } else {
+                FeedPreviewImage(url: previewURL)
+            }
         }
+        .clipShape(.rect(topLeadingRadius: 16, topTrailingRadius: 16))
     }
+}
+
+struct FeedListCardSkeleton: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            ShimmerPlaceholder()
+                .aspectRatio(1, contentMode: .fit)
+
+            VStack(alignment: .leading, spacing: 8) {
+                textLine(width: 96, font: FeedListCardView.titleFont)
+
+                HStack(spacing: 8) {
+                    ShimmerPlaceholder()
+                        .frame(width: 24, height: 24)
+                        .clipShape(Circle())
+
+                    textLine(width: 64, font: FeedListCardView.authorFont)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+        }
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityHidden(true)
+    }
+
+    private func textLine(width: CGFloat, font: Font) -> some View {
+        Text(verbatim: "•")
+            .font(font)
+            .hidden()
+            .frame(width: width, alignment: .leading)
+            .overlay {
+                ShimmerPlaceholder()
+                    .clipShape(Capsule())
+            }
+    }
+}
+
+#Preview {
+    HStack(alignment: .top, spacing: 12) {
+        FeedListCardView(
+            title: "Project Alpha",
+            previewURL: nil,
+            accountAvatar: Image("image.placeholder"),
+            accountName: "Alice",
+            onTap: {}
+        )
+
+        FeedListCardSkeleton()
+    }
+    .padding(16)
+    .preferredColorScheme(.dark)
 }
