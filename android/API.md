@@ -42,8 +42,9 @@ core/network/
   ApiJson.kt              общая настройка Json
   HttpClientFactory.kt    сборка единственного HttpClient
   AuthTokenProvider.kt    чтение токена (нужно клиенту)
-  AuthTokenStore.kt       чтение + запись (нужно репозиторию авторизации)
-  InMemoryAuthTokenStore.kt
+  AuthTokenStore.kt       чтение + запись + Flow токена (репозиторий авторизации)
+  EncryptedAuthTokenStore.kt  боевое хранилище: EncryptedSharedPreferences
+  InMemoryAuthTokenStore.kt   только для тестов
   ApiCall.kt              apiCall { } — маппинг ошибок Ktor в доменные
   NetworkException.kt     разбор тела ошибки в ValidationErrorDto
   HttpMethod.kt           какие методы можно повторять
@@ -132,8 +133,17 @@ API_INTEGRATION=1 ./gradlew :app:testDebugUnitTest --tests '*AuthApiIntegrationT
 
 Токен кладёт в хранилище сам репозиторий: дальше `HttpClient` подставляет
 заголовок на каждом запросе, и вызывающему коду не нужно об этом помнить.
-Хранится он пока в памяти процесса (`InMemoryAuthTokenStore`) — перезапуск
-приложения разлогинивает.
+Хранится он в `EncryptedSharedPreferences` (ключ — в Android Keystore,
+`EncryptedAuthTokenStore`) и переживает перезапуск приложения. Файл читается
+один раз лениво, дальше значение отдаётся из кэша: клиент спрашивает токен на
+каждом запросе, а каждое чтение — расшифровка через Keystore.
+`InMemoryAuthTokenStore` остался для тестов, где Android-контекста нет.
+
+Наличие сессии наружу отдаёт `AuthRepository.isAuthorized: Flow<Boolean>` —
+по нему навигация выбирает стартовый экран. Проверки валидности сохранённого
+токена при старте нет (ручки `/auth/me` в API нет), авто-разлогина по 401/403
+и logout в UI тоже пока нет: сменить аккаунт можно только через «Очистить
+данные» в настройках Android.
 
 ### Нормализация email
 

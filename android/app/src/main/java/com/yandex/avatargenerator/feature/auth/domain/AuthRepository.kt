@@ -1,12 +1,21 @@
 package com.yandex.avatargenerator.feature.auth.domain
 
 import com.yandex.avatargenerator.feature.auth.domain.model.AuthSession
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Вход, регистрация и владение текущей сессией. Полученный токен реализация
  * сама кладёт в [com.yandex.avatargenerator.core.network.AuthTokenStore].
  */
 interface AuthRepository {
+
+    /**
+     * Есть ли сохранённая сессия. Первое значение приходит после чтения
+     * хранилища, поэтому подписчик не увидит ложного «не авторизован» на старте.
+     *
+     * Токен наружу не отдаём: `domain/` не должен знать про `core/network`.
+     */
+    val isAuthorized: Flow<Boolean>
 
     /**
      * `POST /auth/register`. Email реализация нормализует, никнейм обрезает.

@@ -25,8 +25,9 @@ import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
  * чатов, профиль и проект; остальные узлы — [PlaceholderScreen] до готовности фич.
  *
  * @param navController контроллер, общий со Scaffold (для нижней панели).
- * @param startDestination стартовый маршрут: онбординг при первом запуске,
- *  иначе лента. Выбирает вызывающий — ему доступен флаг «онбординг пройден».
+ * @param startDestination стартовый маршрут: лента для авторизованного,
+ *  онбординг при первом запуске, иначе вход. Выбирает вызывающий — ему доступны
+ *  флаги сессии и онбординга.
  */
 @Composable
 fun AppNavHost(
@@ -58,8 +59,10 @@ fun AppNavHost(
         }
 
         composable(Destination.Login.route) {
+            // Переход не по нажатию, а по успешному ответу сервера — экран сам
+            // сообщит о нём, когда токен уже сохранён.
             LoginScreen(
-                onSignInClick = { navController.navigateIntoAppAfterAuth() },
+                onSignedIn = { navController.navigateIntoAppAfterAuth() },
                 onNavigateToRegister = {
                     navController.navigate(Destination.Register.route) { launchSingleTop = true }
                 },
@@ -69,7 +72,7 @@ fun AppNavHost(
 
         composable(Destination.Register.route) {
             RegisterScreen(
-                onCreateAccountClick = { navController.navigateIntoAppAfterAuth() },
+                onRegistered = { navController.navigateIntoAppAfterAuth() },
                 onNavigateToLogin = {
                     navController.navigate(Destination.Login.route) { launchSingleTop = true }
                 },

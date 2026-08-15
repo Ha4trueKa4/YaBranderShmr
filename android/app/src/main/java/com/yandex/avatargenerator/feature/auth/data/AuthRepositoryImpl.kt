@@ -15,6 +15,8 @@ import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 private const val RegisterPath = "auth/register"
 private const val LoginPath = "auth/login"
@@ -29,6 +31,8 @@ class AuthRepositoryImpl(
     private val client: HttpClient,
     private val tokenStore: AuthTokenStore,
 ) : AuthRepository {
+
+    override val isAuthorized: Flow<Boolean> = tokenStore.token.map { it != null }
 
     override suspend fun register(email: String, password: String, nickname: String): AuthSession {
         val response = try {

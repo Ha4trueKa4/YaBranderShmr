@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   Правила бэкапа и переноса на новое устройство (API 31+).
+   См. https://developer.android.com/about/versions/12/backup-restore#xml-changes
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
+        <!--
+        Токен зашифрован ключом из Android Keystore, а ключ не бэкапится: на
+        другом устройстве файл всё равно не расшифруется.
         -->
+        <exclude domain="sharedpref" path="auth_token_prefs.xml"/>
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="auth_token_prefs.xml"/>
     </device-transfer>
-    -->
 </data-extraction-rules>
