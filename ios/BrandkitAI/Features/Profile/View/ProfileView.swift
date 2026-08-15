@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @Environment(SessionStore.self) private var session
     @State private var viewModel = ProfileViewModel()
 
     var isCurrentUser: Bool = true
@@ -72,6 +73,26 @@ struct ProfileView: View {
         )
         .frame(height: 132)
         .accessibilityHidden(true)
+        .overlay(alignment: .topTrailing) {
+            if isCurrentUser {
+                signOutButton
+                    .padding(.top, 48)
+                    .padding(.trailing, 12)
+            }
+        }
+    }
+
+    private var signOutButton: some View {
+        Button(role: .destructive) {
+            session.signOut()
+        } label: {
+            Image(systemName: "rectangle.portrait.and.arrow.right")
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .accessibilityLabel("Sign out")
     }
 
     private var avatar: some View {
