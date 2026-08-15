@@ -21,7 +21,8 @@ namespace ya_brander::components {
       LLMClientComponent(const userver::components::ComponentConfig& config,
                          const userver::components::ComponentContext& context)
           : LoggableComponentBase(config, context),
-            http_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()) {
+            http_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()),
+            api_url_(config["api-url"].As<std::string>()){
         const char* key = std::getenv("YANDEX_AI_API_KEY");
         if (key == nullptr || std::string_view(key).empty()) {
           throw std::runtime_error("YANDEX_AI_API_KEY is not set");
@@ -38,6 +39,7 @@ namespace ya_brander::components {
         const double& TEMPERATURE) const;
     private:
       userver::clients::http::Client& http_client_;
+      std::string api_url_;
       std::string api_key_;  //Ключ должен был быть указан в .env
       std::string ExtractSVG(const std::string& text) const;
     };

@@ -1,6 +1,5 @@
 #include "project_manager_component.h"
 #include <userver/storages/postgres/component.hpp>
-#include <userver/formats/json/value_builder.hpp>
 
 namespace ya_brander::components {
 
@@ -32,13 +31,13 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
     LOG_INFO() << "Created project with ID: " << project_id;
     version_storage_.SaveVersion(project_id, kDefaultSvg); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
 
-    return {project_id, author_id, name, description, false, row["created_at"].As<std::string>(), kDefaultSvg};
+  return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), kDefaultSvg};
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at::text FROM projects WHERE id = $1::uuid",
+        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
         id
     );
 

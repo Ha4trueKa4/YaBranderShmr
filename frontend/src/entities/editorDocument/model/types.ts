@@ -1,7 +1,9 @@
 export type EditorLayerType = 'background' | 'shape' | 'text'
+export type EditorNodeType = EditorLayerType | 'group'
 
 interface EditorLayerBase {
   id: string
+  isVisible: boolean
   name: string
 }
 
@@ -31,6 +33,13 @@ export type TextLayer = EditorLayerBase & {
  */
 export type EditorLayer = BackgroundLayer | ShapeLayer | TextLayer
 
+export type EditorGroup = EditorLayerBase & {
+  children: EditorNode[]
+  type: 'group'
+}
+
+export type EditorNode = EditorGroup | EditorLayer
+
 export type EditorLayerByType<TType extends EditorLayerType> = Extract<
   EditorLayer,
   { type: TType }
@@ -38,6 +47,6 @@ export type EditorLayerByType<TType extends EditorLayerType> = Extract<
 
 export interface EditorDocument {
   height: number
-  layers: EditorLayer[]
+  layers: EditorNode[]
   width: number
 }

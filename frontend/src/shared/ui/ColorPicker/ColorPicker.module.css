@@ -1,0 +1,26 @@
+.picker {
+  width: 13rem;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.picker :global(.react-colorful__saturation) {
+  height: 9rem;
+  border-radius: calc(var(--radius-sm) / 2);
+}
+
+.picker :global(.react-colorful__hue) {
+  height: 0.75rem;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+}
+
+.picker :global(.react-colorful__pointer) {
+  width: 1rem;
+  height: 1rem;
+  border: 0.1875rem solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-accent-primary);
+}

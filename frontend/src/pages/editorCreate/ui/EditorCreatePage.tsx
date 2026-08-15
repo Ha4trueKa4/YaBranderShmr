@@ -4,18 +4,19 @@ import {
   pendingGenerationStore,
   useMockCreateProjectMutation,
 } from '@features/projectCreate'
-import { AppHeader } from '@widgets/appHeader'
-import { EditorEmptyState } from '@widgets/editorEmptyState'
-import { EditorGeneratingState } from '@widgets/editorGeneratingState'
+import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { EditorEmptyState } from './components/EditorEmptyState'
+import { EditorGeneratingState } from './components/EditorGeneratingState'
 import styles from './EditorCreatePage.module.css'
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
   const navigate = useNavigate()
   const isAuthorized = authStore.isAuthorized
+  const [description, setDescription] = useState('')
 
   const handleProjectCreated = useCallback(
     ({ id }: { id: string }) => {
@@ -30,6 +31,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
   const startGeneration = useCallback(
     (draft: ProjectDraft) => {
+      setDescription(draft.description)
       createProject(draft)
     },
     [createProject],
@@ -61,11 +63,15 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
   return (
     <main className={styles.page}>
-      <AppHeader />
+      <Header />
       {isCreatingProjectPending ? (
-        <EditorGeneratingState />
+        <EditorGeneratingState description={description} />
       ) : (
-        <EditorEmptyState onGenerate={handleGenerate} />
+        <EditorEmptyState
+          description={description}
+          onDescriptionChange={setDescription}
+          onGenerate={handleGenerate}
+        />
       )}
     </main>
   )

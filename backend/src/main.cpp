@@ -13,8 +13,10 @@
 #include "./handlers/auth/login_handler.hpp"
 #include "handlers/check/check.hpp"
 #include "handlers/projects/append_projects.h"
+
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "components/version_storage/version_storage_component_impl.hpp"
+#include "./handlers/users/append_users.hpp"
 #include "components/object_storage/s3_object_storage_component.hpp"
 
 int main(int argc, char* argv[]) {
@@ -39,6 +41,7 @@ int main(int argc, char* argv[]) {
     ya_brander::AppendLLM(component_list);
     // ya_brander::AppendAuth(component_list);
     ya_brander::AppendProjects(component_list);
+    ya_brander::AppendUsers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);
 }

@@ -1,5 +1,7 @@
+import { AppRoute } from '@app/providers/router/routes'
 import brandMark from '@shared/assets/brandmark.svg'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import iconPencil from '../assets/iconPencil.svg'
 import styles from '../EditorToolbar.module.css'
 
@@ -20,7 +22,9 @@ export function ProjectTitle({ onSubmit, title }: ProjectTitleProps) {
 
   return (
     <div className={styles.projectTitle}>
-      <img alt="" className={styles.brandMark} src={brandMark} />
+      <Link className={styles.brandMark} to={AppRoute.EditorCreate}>
+        <img alt="" src={brandMark} />
+      </Link>
       {isEditing ? (
         <form className={styles.projectNameForm} onSubmit={handleSubmit}>
           <input

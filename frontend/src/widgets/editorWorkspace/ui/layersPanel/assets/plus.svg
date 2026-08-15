@@ -1,0 +1,4 @@
+<!-- biome-ignore lint/a11y/noSvgWithoutTitle: Decorative image is rendered through an img element. -->
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M3.33301 8H12.6674M8.00021 3.3328V12.6672" stroke="#71717A" stroke-width="2" stroke-linecap="round"/>
+</svg>

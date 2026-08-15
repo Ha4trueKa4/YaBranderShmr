@@ -7,3 +7,4 @@ is-testing: false
 server-port: 8080
 
 dbconnection: 'postgresql://ya_brander_user:password@localhost:5432/ya_brander_db_1'
+yandex-gpt-url: 'https://ai.api.cloud.yandex.net/v1/responses'

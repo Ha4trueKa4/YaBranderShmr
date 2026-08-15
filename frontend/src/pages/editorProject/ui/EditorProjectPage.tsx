@@ -12,7 +12,10 @@ export function EditorProjectPage() {
 
   return (
     <main className={styles.page}>
-      {/* Загрузить проект по projectId через query и передать данные в EditorWorkspace. */}
+      {/*
+        TODO: вызвать useProjectQuery(projectId), передать загруженный Project в EditorWorkspace
+        и инициализировать EditorStore данными project.data. Пока workspace использует editorFixture.
+      */}
       <EditorWorkspace />
     </main>
   )

@@ -48,10 +48,17 @@ struct SignUpView: View {
                 )
             }
 
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+
             PrimaryButton(title: "Create account") {
                 viewModel.register()
             }
             .padding(.top, 24)
+            .disabled(viewModel.isLoading)
 
             ScreenFooter(
                 question: "Already have an account?",

@@ -67,7 +67,8 @@ components_manager:
       task_processor: main-task-processor
       throttling_enabled: false
 
-    llm-client: { }
+    llm-client:
+      api-url: $yandex-gpt-url
 
     postgres-db-1:
       dbconnection: $dbconnection
@@ -149,4 +150,20 @@ components_manager:
       path: /api/v1/auth/login
       method: POST
       task_processor: main-task-processor
+
+    handler-users-subscribe:
+      path: /api/v1/users/{id}/subscribe
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
+    handler-users-unsubscribe:
+      path: /api/v1/users/{id}/subscribe
+      method: DELETE
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
 
