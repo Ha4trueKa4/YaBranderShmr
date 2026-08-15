@@ -74,7 +74,13 @@ export function OwnProjectCard({
           )}
         </div>
         <p>
-          {visibility} · {updatedAt}
+          {isPrivate ? (
+            <p>
+              {visibility} · {updatedAt}
+            </p>
+          ) : (
+            <p>{updatedAt}</p>
+          )}
         </p>
         <Button
           fullWidth
