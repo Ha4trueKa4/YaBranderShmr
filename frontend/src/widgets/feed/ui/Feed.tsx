@@ -1,7 +1,7 @@
 import { useFeedQuery } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
 import { cn } from '@shared/lib'
-import { Button, ErrorState, Input, Spinner } from '@shared/ui'
+import { AsyncState, Button, Input } from '@shared/ui'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 
@@ -54,18 +54,16 @@ export function Feed() {
         </Button>
       </div>
 
-      {isPending ? (
-        <div className={styles.loadingState}>
-          <Spinner />
-        </div>
-      ) : isError ? (
-        <ErrorState message={getApiErrorMessage(error)} />
-      ) : (
+      <AsyncState
+        errorMessage={getApiErrorMessage(error)}
+        isError={isError}
+        isPending={isPending}
+      >
         <FeedProjectGrid
           filters={{ scope, searchQuery }}
           projects={data?.items ?? []}
         />
-      )}
+      </AsyncState>
     </section>
   )
 }
