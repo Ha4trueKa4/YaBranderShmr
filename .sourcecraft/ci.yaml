@@ -26,9 +26,11 @@ on:
     - workflows: [build-backend]
       filter:
         branches: ["main"]
+        paths: ["backend/**"]
     - workflows: [deploy-backend]
       filter:
         branches: ["main"]
+        paths: ["backend/**"]
 
 workflows:
   # Проверка компиляции backend на этапе pull request:
