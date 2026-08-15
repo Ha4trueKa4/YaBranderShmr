@@ -1,4 +1,9 @@
 import { authStore } from '@app/providers/auth'
+import {
+  getProjectSvg,
+  projectQueryKey,
+  projectSvgQueryKey,
+} from '@entities/project'
 import { useGenerateProjectMutation } from '@features/editorGenerate'
 import {
   type ProjectDraft,
@@ -7,6 +12,7 @@ import {
 } from '@features/projectCreate'
 import { getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useEffect, useState } from 'react'
@@ -18,6 +24,7 @@ import styles from './EditorCreatePage.module.css'
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const toast = useToast()
   const isAuthorized = authStore.isAuthorized
   const [description, setDescription] = useState('')
@@ -47,9 +54,24 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
-        await generateProject({
+        const generatedProject = await generateProject({
           projectId: project.id,
           prompt: draft.description,
+        })
+        const generatedProjectUrl = generatedProject.url
+
+        if (!generatedProjectUrl) {
+          toast.error('The generated project is unavailable. Please try again.')
+          return
+        }
+
+        queryClient.setQueryData(projectQueryKey(project.id), {
+          ...project,
+          url: generatedProjectUrl,
+        })
+        await queryClient.fetchQuery({
+          queryKey: projectSvgQueryKey(project.id),
+          queryFn: () => getProjectSvg(generatedProjectUrl),
         })
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
@@ -58,7 +80,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         setGenerationInProgress(false)
       }
     },
-    [createProject, generateProject, navigate, toast],
+    [createProject, generateProject, navigate, queryClient, toast],
   )
 
   function handleGenerate(draft: ProjectDraft) {

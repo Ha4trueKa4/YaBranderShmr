@@ -10,6 +10,10 @@ interface OwnProjectsSectionProps {
   isDeletingProjectPending: boolean
   onDeleteProject: (projectId: string) => Promise<void>
   onOpenProject: (projectId: string) => void
+  onUpdateProjectMetadata: (
+    projectId: string,
+    metadata: { isPublic: boolean },
+  ) => Promise<void>
   projects: Project[]
 }
 
@@ -17,6 +21,7 @@ export function OwnProjectsSection({
   isDeletingProjectPending,
   onDeleteProject,
   onOpenProject,
+  onUpdateProjectMetadata,
   projects,
 }: OwnProjectsSectionProps) {
   const [managedProjects, setManagedProjects] = useState(projects)
@@ -100,8 +105,15 @@ export function OwnProjectsSection({
       {editedProject?.id && (
         <ProjectManagementModal
           onClose={() => setEditedProjectId(null)}
-          onSubmit={({ isPublic, name }) => {
-            updateEditedProject({ is_public: isPublic, name })
+          onSubmit={async ({ isPublic }) => {
+            const projectId = editedProject.id
+
+            if (!projectId) {
+              return
+            }
+
+            await onUpdateProjectMetadata(projectId, { isPublic })
+            updateEditedProject({ is_public: isPublic })
             setEditedProjectId(null)
           }}
           project={editedProject}

@@ -1,4 +1,6 @@
 export { EditorStore } from './model/editorStore'
+export type { SvgImportResult, SvgImportWarning } from './model/svgAdapter'
+export { importSvg, parseSvg, serializeSvg } from './model/svgAdapter'
 export type {
   CircleGeometry,
   EditorDefinitions,
@@ -10,6 +12,7 @@ export type {
   EditorGroup,
   EditorNode,
   EditorNodeType,
+  EditorRawNode,
   EditorShape,
   EditorShapeType,
   EditorText,

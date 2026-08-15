@@ -68,3 +68,40 @@ export function parseDefinitions(root: Element): EditorDefinitions | undefined {
 
   return gradients.length > 0 ? { gradients } : undefined
 }
+
+export function parseDefinitionsTolerant(
+  root: Element,
+): EditorDefinitions | undefined {
+  const gradients: GradientDefinition[] = []
+  const rawDefinitions: string[] = []
+
+  for (const definition of Array.from(root.children).filter(
+    (child) => child.localName === 'defs',
+  )) {
+    for (const element of Array.from(definition.children)) {
+      if (!supportedGradientNames.has(element.localName)) {
+        rawDefinitions.push(new XMLSerializer().serializeToString(element))
+        continue
+      }
+
+      try {
+        gradients.push(parseGradient(element))
+      } catch (error) {
+        if (!(error instanceof SvgParseError)) {
+          throw error
+        }
+
+        rawDefinitions.push(new XMLSerializer().serializeToString(element))
+      }
+    }
+  }
+
+  if (gradients.length === 0 && rawDefinitions.length === 0) {
+    return undefined
+  }
+
+  return {
+    gradients,
+    ...(rawDefinitions.length > 0 ? { rawSvg: rawDefinitions.join('') } : {}),
+  }
+}

@@ -73,7 +73,7 @@ export function OwnProjectCard({
             />
           )}
         </div>
-        <p>{isPrivate ? <p>{visibility}</p> : <p>{updatedAt}</p>}</p>
+        <p>{isPrivate ? visibility : updatedAt}</p>
         <Button
           fullWidth
           onClick={handlePrimaryAction}

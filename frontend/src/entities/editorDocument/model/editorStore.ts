@@ -1,6 +1,9 @@
 import { makeAutoObservable } from 'mobx'
 
-import type { EditorDocument, EditorElement, EditorNode } from './types'
+import { setNodeVisibility } from './commands/setNodeVisibility'
+import { toggleNodeVisibility } from './commands/toggleNodeVisibility'
+import { findAncestorGroupIds, findNode } from './tree/findNode'
+import type { EditorDocument, EditorNode } from './types'
 
 /**
  * Состояние взаимодействия с редактором.
@@ -9,27 +12,68 @@ import type { EditorDocument, EditorElement, EditorNode } from './types'
 export class EditorStore {
   document: EditorDocument
   expandedGroupIds: Set<string>
-  selectedLayerId: string | null
+  selectedNodeId: string | null
   zoom = 1
 
   constructor(
     document: EditorDocument,
-    selectedLayerId: string | null = null,
+    selectedNodeId: string | null = null,
     expandedGroupIds: string[] = [],
   ) {
     this.document = document
     this.expandedGroupIds = new Set(expandedGroupIds)
-    this.selectedLayerId = selectedLayerId
+    this.selectedNodeId = selectedNodeId
 
     makeAutoObservable(this, {}, { autoBind: true })
   }
 
-  get selectedLayer(): EditorElement | null {
-    return findEditorElement(this.document.layers, this.selectedLayerId)
+  get selectedNode(): EditorNode | null {
+    return findNode(this.document.layers, this.selectedNodeId)
   }
 
-  setSelectedLayer(layerId: string | null) {
-    this.selectedLayerId = layerId
+  setSelectedNode(nodeId: string | null) {
+    this.selectedNodeId = nodeId
+
+    if (!nodeId) {
+      return
+    }
+
+    for (const groupId of findAncestorGroupIds(this.document.layers, nodeId) ??
+      []) {
+      this.expandedGroupIds.add(groupId)
+    }
+  }
+
+  setNodeVisibility(nodeId: string, isVisible: boolean) {
+    setNodeVisibility(this.document.layers, nodeId, isVisible)
+  }
+
+  toggleNodeVisibility(nodeId: string) {
+    toggleNodeVisibility(this.document.layers, nodeId)
+  }
+
+  setShapeFillColor(nodeId: string, color: string) {
+    const node = findNode(this.document.layers, nodeId)
+
+    if (node?.type !== 'shape') {
+      return
+    }
+
+    node.style.fill = { type: 'color', value: color }
+  }
+
+  setShapeFillOpacity(nodeId: string, opacity: number) {
+    const node = findNode(this.document.layers, nodeId)
+
+    if (node?.type !== 'shape') {
+      return
+    }
+
+    node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
+  }
+
+  isGroupExpanded(groupId: string): boolean {
+    return this.expandedGroupIds.has(groupId)
   }
 
   toggleGroup(groupId: string) {
@@ -41,31 +85,4 @@ export class EditorStore {
 
     this.expandedGroupIds.add(groupId)
   }
-}
-
-function findEditorElement(
-  nodes: EditorNode[],
-  layerId: string | null,
-): EditorElement | null {
-  if (!layerId) {
-    return null
-  }
-
-  for (const node of nodes) {
-    if (node.type === 'group') {
-      const layer = findEditorElement(node.children, layerId)
-
-      if (layer) {
-        return layer
-      }
-
-      continue
-    }
-
-    if (node.id === layerId) {
-      return node
-    }
-  }
-
-  return null
 }

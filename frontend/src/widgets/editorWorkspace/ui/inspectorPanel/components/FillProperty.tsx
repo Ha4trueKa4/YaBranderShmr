@@ -5,10 +5,17 @@ import styles from './FillProperty.module.css'
 
 interface FillPropertyProps {
   fill: string
+  onFillChange: (fill: string) => void
+  onOpacityChange: (opacity: number) => void
   opacity?: number
 }
 
-export function FillProperty({ fill, opacity = 1 }: FillPropertyProps) {
+export function FillProperty({
+  fill,
+  onFillChange,
+  onOpacityChange,
+  opacity = 1,
+}: FillPropertyProps) {
   const [draftFill, setDraftFill] = useState(fill)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const colorControlRef = useRef<HTMLDivElement>(null)
@@ -43,6 +50,19 @@ export function FillProperty({ fill, opacity = 1 }: FillPropertyProps) {
     }
   }, [isColorPickerOpen])
 
+  useEffect(() => {
+    setDraftFill(fill)
+  }, [fill])
+
+  function handleFillChange(color: string) {
+    setDraftFill(color)
+    onFillChange(color)
+  }
+
+  function handleOpacityChange(opacityPercent: number) {
+    onOpacityChange(opacityPercent / 100)
+  }
+
   return (
     <section className={styles.property}>
       <p className={styles.title}>Fill</p>
@@ -54,7 +74,7 @@ export function FillProperty({ fill, opacity = 1 }: FillPropertyProps) {
           />
           {isColorPickerOpen && (
             <div className={styles.colorPickerPopover}>
-              <ColorPicker color={draftFill} onChange={setDraftFill} />
+              <ColorPicker color={draftFill} onChange={handleFillChange} />
             </div>
           )}
         </div>
@@ -67,8 +87,12 @@ export function FillProperty({ fill, opacity = 1 }: FillPropertyProps) {
         <span>Opacity</span>
         <strong>{opacityPercent}%</strong>
       </div>
-      {/* TODO: сохранять draftFill и opacity в EditorStore через feature редактирования свойств. */}
-      <Range disabled max="100" min="0" value={opacityPercent} />
+      <Range
+        max="100"
+        min="0"
+        onChange={(event) => handleOpacityChange(Number(event.target.value))}
+        value={opacityPercent}
+      />
     </section>
   )
 }
