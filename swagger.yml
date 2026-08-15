@@ -139,7 +139,7 @@ paths:
                       projects:
                         type: array
                         items:
-                          $ref: '#/components/schemas/ProjectDescription'
+                          $ref: '#/components/schemas/Project'
         '400':
           description: Некорректный UUID пользователя
           content:
@@ -486,10 +486,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  url:
                     type: string
-                    description: "Результат работы нейросети в виде SVG-строки"
-                    example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100" fill="#FF0000"/></svg>'
+                    description: "S3 ссылка на объект проекта (отсутствует, если проект пуст)"
+                    example: "https://s3.yandexcloud.net/bucket/project_version.svg"
         '400':
           description: Не передан prompt
           content:
@@ -658,15 +658,6 @@ components:
           example: true
 
     Project:
-      allOf:
-        - $ref: '#/components/schemas/ProjectDescription'
-        - type: object
-          properties:
-            data:
-              type: string
-              example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100"/></svg>'
-
-    ProjectDescription:
       type: object
       properties:
         id:
@@ -754,3 +745,11 @@ components:
         message:
           type: string
           example: "Invalid email or password"
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string

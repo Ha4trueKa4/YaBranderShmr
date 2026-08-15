@@ -32,8 +32,9 @@ std::string CreateProjectHandler::HandleRequestThrow(const userver::server::http
   res["description"] = project.description;
   res["is_public"] = project.is_public;
   res["created_at"] = userver::utils::datetime::Timestring(project.created_at);
-  res["data"] = project.data;
-
+  if (!project.url.empty()){
+	res["url"] = project.url;
+  }
   request.SetResponseStatus(userver::server::http::HttpStatus::kCreated);
   return userver::formats::json::ToString(res.ExtractValue());
 }
