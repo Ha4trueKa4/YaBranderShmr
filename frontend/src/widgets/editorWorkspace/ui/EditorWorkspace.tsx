@@ -1,30 +1,27 @@
 import { AppRoute } from '@app/providers/router/routes'
-import { EditorStore } from '@entities/editorDocument'
+import { type EditorDocument, EditorStore } from '@entities/editorDocument'
 import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  editorFixture,
-  editorFixtureInitialState,
-} from '../model/editorFixture'
 import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
 
-export const EditorWorkspace = observer(function EditorWorkspace() {
+interface EditorWorkspaceProps {
+  document: EditorDocument
+  projectName: string
+}
+
+export const EditorWorkspace = observer(function EditorWorkspace({
+  document,
+  projectName: initialProjectName,
+}: EditorWorkspaceProps) {
   const navigate = useNavigate()
-  const [projectName, setProjectName] = useState('Orion Labs')
-  // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
-  // Сейчас editorFixture временно заменяет ответ API и собирается через parseSvg.
-  const [editorStore] = useState(
-    () =>
-      new EditorStore(editorFixture, editorFixtureInitialState.selectedNodeId, [
-        ...editorFixtureInitialState.expandedGroupIds,
-      ]),
-  )
+  const [projectName, setProjectName] = useState(initialProjectName)
+  const [editorStore] = useState(() => new EditorStore(document))
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
@@ -52,7 +49,6 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
           onUndo={handleToolbarAction}
           onZoomIn={handleToolbarAction}
           onZoomOut={handleToolbarAction}
-          // TODO: передавать название загруженного Project вместо временного значения.
           projectName={projectName}
         />
       </div>

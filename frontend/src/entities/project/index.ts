@@ -1,7 +1,11 @@
+export { getProjectSvg } from './api/getProjectSvg'
 export {
+  projectQueryKey,
+  projectSvgQueryKey,
   useDeleteProjectMutation,
   useFeedQuery,
   useProjectQuery,
+  useProjectSvgQuery,
   userProfileQueryKey,
   useUserProfileQuery,
 } from './api/queries'
