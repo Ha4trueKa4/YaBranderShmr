@@ -61,6 +61,7 @@ final class CurrentUserStore: CurrentUserService {
     private func refreshName(for id: String) async {
         do {
             let profile = try await userProfileService.profile(for: id)
+            guard self.id == id else { return }
             name = profile.name
         } catch {
             // Сбой некритичен: имя будет запрошено экраном профиля отдельным запросом.
