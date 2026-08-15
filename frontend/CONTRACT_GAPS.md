@@ -4,11 +4,13 @@
 
 ## Что нужно добавить в API
 
-- В `GET /users/{id}` → `UserProfile`: `username`, `bio`, `avatar_url`, `cover_url` (или согласованный вариант темы), `followers_count`, `following_count`, `is_following`.
-- В ответы с проектом (`ProjectDescription`): `updated_at`, статус (`draft` или `published`), `preview_url`, `published_at`; в публичных ответах — `author` с `id`, `name`, `username`, `avatar_url`.
-- `GET /projects`: список собственных проектов с пагинацией, сортировкой и фильтрами видимости/статуса.
-- `GET /feed/projects`: публичную ленту с query-параметрами `cursor` и `limit`, ответом `{ items, next_cursor }` и полями элемента `id`, `name`, `preview_url`, `published_at`, `author`.
-- Для публичного профиля: определить, отдаёт ли `GET /users/{id}` гостю только публичные проекты; иначе добавить `GET /users/{id}/projects?visibility=public`.
+Сначала стоит сверить этот список с фактическими ответами backend: существующее поле или endpoint не нужно переименовывать, если оно передаёт те же данные и подходит для UI. Добавлять нужно только данные, для которых нет совместимого аналога.
+
+- В `GET /users/{id}` → `UserProfile`: если их ещё нет в эквивалентной форме, добавить `username`, `bio`, `avatar_url`, `cover_url` (или согласованный вариант темы), `followers_count`, `following_count`, `is_following`.
+- В ответы с проектом (`ProjectDescription`): если их ещё нет в эквивалентной форме, добавить `updated_at`, статус (`draft` или `published`), `preview_url`, `published_at`; в публичных ответах — `author` с `id`, `name`, `username`, `avatar_url`.
+- Для списка собственных проектов: использовать имеющийся endpoint, если он уже возвращает список с пагинацией, сортировкой и фильтрами видимости/статуса; иначе добавить `GET /projects`.
+- Для публичной ленты: использовать существующий совместимый endpoint, если он возвращает проекты с query-параметрами `cursor` и `limit`, ответом `{ items, next_cursor }` и полями элемента `id`, `name`, `preview_url`, `published_at`, `author`; иначе добавить `GET /feed/projects`.
+- Для публичного профиля: определить, отдаёт ли `GET /users/{id}` гостю только публичные проекты; если нет совместимого endpoint, добавить `GET /users/{id}/projects?visibility=public`.
 
 `AuthResponse` менять не нужно: он уже возвращает обязательные `access_token`, `token_type` и `user` (`id`, `email`, `nickname`).
 
