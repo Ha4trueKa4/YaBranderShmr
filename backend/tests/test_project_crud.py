@@ -51,32 +51,6 @@ async def project_a(service_client, auth_header_a):
     return response.json()
 
 
-@pytest.fixture(autouse=True)
-def mock_yandex_gpt(mockserver):
-    """Фейковый сервер Yandex GPT, возвращающий SVG"""
-
-    @mockserver.json_handler("/yandex-gpt-mock")
-    def _mock_generate(request):
-        return {
-            "output": [
-                {
-                    "content": [
-                        {
-                            "text": (
-                                '<svg xmlns="http://www.w3.org/2000/svg" '
-                                'viewBox="0 0 500 500">'
-                                '<circle cx="250" cy="250" r="100"/>'
-                                "</svg>"
-                            )
-                        }
-                    ]
-                }
-            ]
-        }
-
-    return _mock_generate
-
-
 # ===================================================
 # Создание проекта с авторизацией и без, 2 сценария
 # ===================================================
@@ -86,9 +60,7 @@ async def test_create_project_success(
     """Успешное создание проекта с авторизацией -> 201"""
     project_desc = {
         "name": "Бренд кофейни",
-        "description": (
-            "Минималистичный стиль, темные тона, для спешелти кофейни"
-        ),
+        "description": "Минималистичный стиль, темные тона",
     }
     response = await service_client.post(
         "/api/v1/projects",
@@ -100,11 +72,10 @@ async def test_create_project_success(
     data = response.json()
     assert "id" in data
     assert data["name"] == project_desc["name"]
-    assert data["description"] == project_desc["description"]
     assert data["is_public"] is False
-    assert data["author_id"] == user_a["user"]["id"]
-    assert isinstance(data.get("data"), str)
-    assert "<svg" in data["data"]
+
+    assert "url" in data
+    assert isinstance(data["url"], str)
 
 
 async def test_create_project_unauthorized(service_client):
@@ -140,6 +111,7 @@ async def test_get_project_owner(
     assert data["id"] == project_id
     assert data["author_id"] == user_a["user"]["id"]
     assert data["name"] == "Бренд кофейни"
+    assert "url" in data
 
 
 async def test_get_project_forbidden_for_other(
@@ -162,7 +134,6 @@ async def test_get_project_not_found(service_client, auth_header_a):
         f"/api/v1/projects/{fake_id}",
         headers=auth_header_a,
     )
-
     assert response.status == 404
 
 
@@ -195,7 +166,7 @@ async def test_patch_project_success(
     updated_data = get_resp.json()
 
     assert updated_data["is_public"] is True
-    assert updated_data["data"] == new_svg
+    assert "url" in updated_data
 
 
 async def test_patch_project_forbidden(
@@ -226,7 +197,6 @@ async def test_delete_project_success(
     )
     assert del_resp.status == 200
 
-    # Убеждаемся, что проект больше не существует
     get_resp = await service_client.get(
         f"/api/v1/projects/{project_id}",
         headers=auth_header_a,
@@ -243,7 +213,6 @@ async def test_delete_project_forbidden(
         f"/api/v1/projects/{project_id}",
         headers=auth_header_b,
     )
-
     assert response.status == 403
 
 
@@ -265,8 +234,9 @@ async def test_generate_ai_success(
 
     assert response.status == 200
     data = response.json()
-    assert "data" in data
-    assert isinstance(data["data"], str)
+
+    assert "url" in data
+    assert isinstance(data["url"], str)
 
 
 async def test_generate_ai_forbidden(

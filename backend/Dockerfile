@@ -3,8 +3,16 @@ FROM ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0 AS build
 
 WORKDIR /build
 
-# Копируем весь backend (src/, CMakeLists.txt, конфиги)
-COPY . .
+# Копируем редко меняющиеся файлы ПЕРВЫМИ, чтобы кэш Docker-слоёв переиспользовался
+# при правках только в src/ (иначе любое изменение исходников сбрасывает весь кэш cmake).
+COPY CMakeLists.txt ./
+COPY configs ./configs
+COPY Makefile ./
+COPY docker-compose.yml ./
+COPY requirements.txt ./
+
+# Исходники копируем ПОСЛЕДНИМИ — они меняются чаще всего.
+COPY src ./src
 
 # Собираем Release-версию бинарника ya_brander
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \

@@ -31,15 +31,17 @@ internal class FakeChatRepository(
     /** Ошибка, которую должен бросить [sendMessage]; null — отправка успешна. */
     var sendError: Throwable? = null
 
-    override suspend fun getChat(projectId: String): ProjectChat {
+    override suspend fun getChat(projectId: String): Result<ProjectChat> {
         getChatCallCount++
-        return chatResult.getOrThrow()
+        return chatResult
     }
 
-    override suspend fun sendMessage(projectId: String, text: String): ChatMessage {
+    override suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage> {
         sentTexts += text
-        sendError?.let { throw it }
-        return ChatMessage.Outgoing(id = "sent-${sentTexts.size}", text = text, sentAt = sentAt)
+        sendError?.let { return Result.failure(it) }
+        return Result.success(
+            ChatMessage.Outgoing(id = "sent-${sentTexts.size}", text = text, sentAt = sentAt),
+        )
     }
 
     companion object {

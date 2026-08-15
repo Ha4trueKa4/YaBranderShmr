@@ -49,6 +49,15 @@ sealed class Destination(val route: String) {
         fun createRoute(projectId: String): String = "project/${Uri.encode(projectId)}"
     }
 
+    /**
+     * Экран публичного проекта (просмотр из ленты / по прямой ссылке).
+     * Аргумент — id проекта. Отдельно от [Project]: это витрина «только смотреть»
+     * (автор, подписка, экспорт), а не редактор своего проекта.
+     */
+    data object PublicProject : Destination("public-project/{$ARG_PROJECT_ID}") {
+        fun createRoute(projectId: String): String = "public-project/${Uri.encode(projectId)}"
+    }
+
     /** Профиль другого пользователя. Аргумент — id пользователя. */
     data object UserProfile : Destination("user/{$ARG_USER_ID}") {
         fun createRoute(userId: String): String = "user/${Uri.encode(userId)}"

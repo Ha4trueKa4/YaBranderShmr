@@ -23,6 +23,7 @@ on:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
+        paths: ["frontend/**"]
     - workflows: [build-and-deploy-backend]
       filter:
         branches: ["main"]
@@ -37,6 +38,8 @@ workflows:
         cubes:
           - name: run-build-backend-check
             gitlab_workflow: .sourcecraft/build-backend-check.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
 
   # Сборка + публикация образа в registry, затем деплой — строго по порядку
   # (задание deploy стартует только после успешного завершения задания build).

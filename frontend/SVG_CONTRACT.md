@@ -66,13 +66,14 @@
 Разрешены только:
 
 - контейнеры: `svg` (только корневой), `g`;
-- фигуры: `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`;
-- текст: `text`, `tspan`;
+- фигуры: `path`, `rect`, `circle`, `ellipse`, `line`;
+- текст: `text`;
 - определения цвета: `defs`, `linearGradient`, `radialGradient`, `stop`.
 
 Любой другой элемент отклоняется до его явного добавления в контракт. В
-частности запрещены: `script`, `style`, `foreignObject`, `iframe`, `image`,
-`use`, `symbol`, `marker`, `filter`, `mask`, `clipPath`, анимации и все
+частности запрещены: `polyline`, `polygon`, `tspan`, `script`, `style`,
+`foreignObject`, `iframe`, `image`, `use`, `symbol`, `marker`, `filter`,
+`mask`, `clipPath`, анимации и все
 SMIL-элементы.
 
 `path` допустим для отображения и перемещения как целый слой. Его точечное
@@ -129,7 +130,7 @@ transform="translate(tx ty) rotate(angle cx cy) scale(sx sy)"
 
 ## 5. Текст
 
-- `text` содержит только текстовые узлы и при необходимости `tspan`;
+- `text` содержит только текстовые узлы без вложенных SVG-элементов;
 - у каждого редактируемого `text` есть уникальный `id`;
 - позиция текста задаётся через `x` и `y`;
 - `textPath`, ссылки, HTML и внешние шрифты запрещены;

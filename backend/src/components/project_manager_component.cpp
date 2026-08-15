@@ -25,13 +25,14 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
     );
 
     auto row = res[0];
-
-
     std::string project_id = row["id"].As<std::string>();
     LOG_INFO() << "Created project with ID: " << project_id;
-    version_storage_.SaveVersion(project_id, kDefaultSvg); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
 
-  return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), kDefaultSvg};
+    version_storage_.SaveVersion(project_id, kDefaultSvg);
+
+	std::string url = version_storage_.GetLatestVersionUrl(project_id);
+
+  	return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), url};
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
@@ -45,7 +46,7 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
 
     auto row = res[0];
     const bool is_public = !row["is_private"].As<bool>();
-    auto data = version_storage_.GetLatestVersionUrl(id);
+   	std::string url = version_storage_.GetLatestVersionUrl(id);
 
     return models::Project{
         row["id"].As<std::string>(),
@@ -54,7 +55,7 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
         row["description"].As<std::string>(),
         is_public,
         row["created_at"].As<std::chrono::system_clock::time_point>(),
-        data
+        url
     };
 }
 
@@ -89,7 +90,7 @@ if (!data.empty()) {
 }
 
 std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+    std::string current_state = version_storage_.GetLatestVersionData(project_id);
     std::string full_prompt;
 
     if (current_state.empty() || current_state == kDefaultSvg) {
@@ -97,9 +98,9 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     }else {
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt);
     }
-    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1); // ЗАГЛУШКА
-    version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
-    return new_data;
+    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1);
+    version_storage_.SaveVersion(project_id, new_data);
+    return version_storage_.GetLatestVersionUrl(project_id);
 }
 
 std::vector<models::Version> ProjectManagerComponent::ListVersions(

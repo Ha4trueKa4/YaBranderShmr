@@ -1,6 +1,7 @@
 export { EditorStore } from './model/editorStore'
 export type {
   CircleGeometry,
+  EditorDefinitions,
   EditorDocument,
   EditorElement,
   EditorElementBase,
@@ -12,6 +13,10 @@ export type {
   EditorShape,
   EditorShapeType,
   EditorText,
+  EllipseGeometry,
+  GradientDefinition,
+  GradientStop,
+  LineGeometry,
   Paint,
   PathGeometry,
   RectGeometry,

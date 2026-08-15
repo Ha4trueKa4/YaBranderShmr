@@ -55,7 +55,7 @@ components_manager:
       #      load-enabled: $is-testing
       fs-task-processor: fs-task-processor
 
-    http-client-middleware-pipeline: {}
+    http-client-middleware-pipeline: { }
     #      load-enabled: $is-testing
 
     tests-control:
@@ -86,7 +86,7 @@ components_manager:
       path: /test/vector-search
       method: GET
       task_processor: main-task-processor
-      
+
     llm-client:
       api-url: $yandex-gpt-url
 
@@ -111,15 +111,15 @@ components_manager:
     # Внешние сервисы (или их моки)
     # ==========================================
     version-storage: { }
-    vector-search: 
+    vector-search:
       embedding-url: $yandex-embedding-url
       pg-component-name: postgres-vector-db
       db-table: vector_examples
       embedding-model: text-embeddings-v2-query
-      
+
     object-storage:
       bucket: ya-brander-svg
-      endpoint: storage.yandexcloud.net
+      endpoint: $s3-endpoint
       region: ru-central1
       presigned-url-ttl-seconds: 3600   # ссылки на один час для приватных объектов
 
