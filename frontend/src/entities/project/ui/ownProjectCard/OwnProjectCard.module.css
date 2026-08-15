@@ -23,6 +23,13 @@
   font-weight: var(--font-weight-medium);
 }
 
+@media (prefers-color-scheme: light) {
+  .visibility {
+    background: var(--color-text-primary);
+    color: var(--color-text-inverse);
+  }
+}
+
 .content {
   display: grid;
   gap: var(--space-2);
