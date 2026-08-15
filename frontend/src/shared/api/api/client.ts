@@ -74,16 +74,35 @@ export function createApiClient(
 
     const response = await fetch(url, requestInit)
 
-    const contentType = response.headers.get('content-type') ?? ''
-
-    const responseData = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text()
+    const responseData = await parseResponseData(response)
 
     if (!response.ok) {
       throw new ApiError(response.status, responseData)
     }
 
     return responseData as Response
+  }
+}
+
+async function parseResponseData(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+
+  const responseText = await response.text()
+
+  try {
+    const responseData = JSON.parse(responseText)
+
+    console.warn('API response has an unexpected Content-Type', {
+      contentType,
+      endpoint: response.url,
+    })
+
+    return responseData
+  } catch {
+    return responseText
   }
 }
