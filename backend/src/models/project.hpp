@@ -15,4 +15,10 @@ struct Project {
   std::string data;
 };
 
+/// @brief Результат генерации/правки SVG через LLM.
+struct GenerationResult {
+  std::string version_id;
+  std::string data;
+};
+
 } // namespace ya_brander::models

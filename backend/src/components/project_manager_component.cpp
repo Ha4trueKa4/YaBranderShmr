@@ -1,4 +1,6 @@
 #include "project_manager_component.h"
+#include <userver/formats/json/inline.hpp>
+#include <userver/formats/json/serialize.hpp>
 #include <userver/storages/postgres/component.hpp>
 
 namespace ya_brander::components {
@@ -88,18 +90,67 @@ if (!data.empty()) {
     );
 }
 
-std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
+namespace {
+constexpr std::size_t kHistoryPromptLimit = 10;
+}  // namespace
+
+std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
+    const std::string& project_id, std::size_t limit) {
+    auto res = pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kSlave,
+        "SELECT chat_history::text AS chat_history FROM projects WHERE id = $1::uuid",
+        project_id);
+    if (res.IsEmpty()) return {};
+
+    auto history_json = userver::formats::json::FromString(res[0]["chat_history"].As<std::string>());
+
+    std::vector<std::string> prompts;
+    for (const auto& entry : history_json) {
+        if (entry["role"].As<std::string>("") == "user") {
+            prompts.push_back(entry["text"].As<std::string>(""));
+        }
+    }
+    if (prompts.size() > limit) {
+        prompts.erase(prompts.begin(), prompts.end() - static_cast<std::ptrdiff_t>(limit));
+    }
+    return prompts;
+}
+
+void ProjectManagerComponent::AppendChatExchange(const std::string& project_id,
+                                                  const std::string& user_message,
+                                                  const std::string& version_id) {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
+        "  jsonb_build_object('role', 'user', 'text', $2::text, 'created_at', NOW()),"
+        "  jsonb_build_object('role', 'assistant', 'version_id', $3::text, 'created_at', NOW())"
+        "), updated_at = NOW() WHERE id = $1::uuid",
+        project_id, user_message, version_id);
+}
+
+userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
+    auto res = pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kSlave,
+        "SELECT chat_history::text AS chat_history FROM projects WHERE id = $1::uuid",
+        project_id);
+    if (res.IsEmpty()) return userver::formats::json::MakeArray();
+    return userver::formats::json::FromString(res[0]["chat_history"].As<std::string>());
+}
+
+models::GenerationResult ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
     std::string full_prompt;
 
     if (current_state.empty() || current_state == kDefaultSvg) {
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(prompt);
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(prompt, history);
     }else {
-        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt);
+        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt, history);
     }
     auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1); // ЗАГЛУШКА
-    version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
-    return new_data;
+    std::string version_id = version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    AppendChatExchange(project_id, prompt, version_id);
+    return {version_id, new_data};
 }
 
 } // namespace ya_brander::components

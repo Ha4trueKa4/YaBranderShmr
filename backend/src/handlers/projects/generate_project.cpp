@@ -33,10 +33,11 @@ std::string GenerateProjectHandler::HandleRequestThrow(const userver::server::ht
     return R"({"message": "Prompt cannot be empty"})";
   }
 
-  std::string new_svg = project_manager_.GenerateAI(id, prompt);
+  auto generation = project_manager_.GenerateAI(id, prompt);
 
   userver::formats::json::ValueBuilder res;
-  res["data"] = new_svg;
+  res["version_id"] = generation.version_id;
+  res["data"] = generation.data;
 
   return userver::formats::json::ToString(res.ExtractValue());
 }

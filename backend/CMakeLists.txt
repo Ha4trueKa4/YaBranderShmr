@@ -71,6 +71,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/patch_project.cpp
         src/handlers/projects/delete_project.cpp
         src/handlers/projects/generate_project.cpp
+        src/handlers/projects/get_project_chat.cpp
         src/components/version_storage/version_storage_component_impl.cpp
         src/handlers/users/append_users.hpp
         src/handlers/users/append_users.cpp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <userver/components/component_list.hpp>
 #include <userver/components/loggable_component_base.hpp>
 #include <userver/formats/json/value.hpp>
@@ -16,10 +17,14 @@ public:
   PromptConstructorComponent(const userver::components::ComponentConfig& config,
                              const userver::components::ComponentContext& context);
 
-  std::string BuildGenerationPrompt(const std::string& user_message) const;
+  /// @param history Предыдущие запросы пользователя по этому проекту
+  ///        (без ответов модели), от старых к новым.
+  std::string BuildGenerationPrompt(const std::string& user_message,
+                                    const std::vector<std::string>& history = {}) const;
 
   std::string BuildEditPrompt(const std::string& current_state,
-                              const std::string& user_message) const;
+                              const std::string& user_message,
+                              const std::vector<std::string>& history = {}) const;
 
   static userver::yaml_config::Schema GetStaticConfigSchema();
 

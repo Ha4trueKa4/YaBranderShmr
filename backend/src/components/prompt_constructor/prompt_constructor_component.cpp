@@ -13,11 +13,26 @@ PromptConstructorComponent::PromptConstructorComponent(
     : LoggableComponentBase(config, context),
       vector_search_(context.FindComponent<VectorSearchComponent>()) {}
 
-std::string PromptConstructorComponent::BuildGenerationPrompt(const std::string& user_message) const {
+namespace {
+
+void AppendHistory(std::string& prompt, const std::vector<std::string>& history) {
+    if (history.empty()) return;
+    prompt += "История предыдущих запросов пользователя по этому проекту (от старых к новым, "
+              "используй как контекст, не как повторное задание):\n";
+    for (const auto& past_message : history) {
+        prompt += "- " + past_message + "\n";
+    }
+    prompt += "\n";
+}
+
+}  // namespace
+
+std::string PromptConstructorComponent::BuildGenerationPrompt(
+    const std::string& user_message, const std::vector<std::string>& history) const {
     std::vector<std::string> examples = vector_search_.FindSimilar(user_message, 10);
 
     // 2. Конструируем итоговый промпт
-    std::string prompt = 
+    std::string prompt =
         "Ты — AI-редактор SVG-графики. Твоя задача - сгенерировать изображение по запросу. Технические требования: * Верни только чистый SVG-код в блоке разметки xml. Не пиши никаких вступлений, пояснений и заключений. * Укажи атрибуты xmlns=http://w3.org, а также viewBox=0 0 500 500 (или другой нужный размер). * Используй современные, гармоничные цвета. * Код должен быть аккуратным, сгруппированным с помощью тегов g и готовым к сохранению в svg файл.";
 
     if (!examples.empty()) {
@@ -27,6 +42,8 @@ std::string PromptConstructorComponent::BuildGenerationPrompt(const std::string&
         }
     }
 
+    AppendHistory(prompt, history);
+
     prompt += "Запрос пользователя: " + user_message;
 
     return prompt;
@@ -34,13 +51,14 @@ std::string PromptConstructorComponent::BuildGenerationPrompt(const std::string&
 
 std::string PromptConstructorComponent::BuildEditPrompt(
     const std::string& current_state,
-    const std::string& user_message) const {
+    const std::string& user_message,
+    const std::vector<std::string>& history) const {
 
     std::vector<std::string> examples = vector_search_.FindSimilar(user_message, 10);
 
     std::string current_state_str = current_state;
 
-    std::string prompt = 
+    std::string prompt =
         "Ты — AI-редактор SVG-графики. Тебе передано текущее состояние и запрос на его изменение.\n"
         "Твоя задача — применить изменения и вернуть готовый SVG-код (внутри тегов <svg>...</svg>).\n"
         "Технические требования: * Верни только чистый SVG-код в блоке разметки xml. Не пиши никаких вступлений, пояснений и заключений. * Укажи атрибуты xmlns=http://w3.org, а также viewBox=0 0 500 500 (или другой нужный размер). * Используй современные, гармоничные цвета. * Код должен быть аккуратным, сгруппированным с помощью тегов g и готовым к сохранению в svg файл.\n\n";
@@ -51,6 +69,8 @@ std::string PromptConstructorComponent::BuildEditPrompt(
           prompt += example + "\n\n";
         }
     }
+
+    AppendHistory(prompt, history);
 
     prompt += "Текущее состояние проекта:\n" + current_state_str + "\n\n";
     prompt += "Что нужно изменить (запрос пользователя): " + user_message;
