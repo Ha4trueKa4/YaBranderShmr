@@ -81,6 +81,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/vector_search_component.cpp
         src/handlers/test_vector_search/test_vector_search_handler.hpp
         src/handlers/test_vector_search/test_vector_search_handler.cpp
+        src/handlers/feed/get_feed.h
+        src/handlers/feed/get_feed.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

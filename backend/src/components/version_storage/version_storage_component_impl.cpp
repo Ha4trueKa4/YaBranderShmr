@@ -91,11 +91,35 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
                 row["project_id"].As<std::string>(),
                 row["version_num"].As<std::int32_t>(),
                 row["created_at"].As<userver::storages::postgres::TimePointTz>(),
-                row["s3_file_key"].As<std::string>(),
             });
         }
 
         return versions;
+    }
+
+    std::string VersionStorageComponentImpl::GetLatestVersionUrl(const std::string& /*project_id*/) {
+      // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+      return "";
+    }
+
+    std::string VersionStorageComponentImpl::GetVersionUrl(
+        const std::string& /*project_id*/, const std::string& /*version_id*/) {
+      // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+      return "";
+    }
+
+    std::unordered_map<std::string, std::string> VersionStorageComponentImpl::GetManyUrls(
+        const std::vector<std::string>& /*keys*/, bool /*is_public*/) {
+      // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+      return {};
+    }
+
+    void VersionStorageComponentImpl::SetLatestAcl(const std::string& /*project_id*/, bool /*make_public*/) {
+      // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    }
+
+    void VersionStorageComponentImpl::DeleteAllVersions(const std::string& /*project_id*/) {
+      // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
     }
 
     std::string VersionStorageComponentImpl::RestoreVersion(const std::string& project_id,

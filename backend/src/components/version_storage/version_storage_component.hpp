@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 #include <userver/components/loggable_component_base.hpp>
 #include "../../models/version.hpp"
