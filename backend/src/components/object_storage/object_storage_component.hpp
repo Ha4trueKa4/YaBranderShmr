@@ -1,39 +1,59 @@
 #pragma once
 #include <string>
+#include <string_view>
+#include <vector>
 #include <userver/components/loggable_component_base.hpp>
 
 namespace ya_brander::components {
 
-    /// @brief Интерфейс объектного хранилища (blob storage).
-    /// @details Хранит и отдает произвольные данные по ключу. Реализация может быть
-    ///          локальной (файлы) или облачной (S3). Компонент не знает о версиях,
-    ///          проектах или базе данных, только put/get байтов по ключу.
-    class ObjectStorageComponent : public userver::components::LoggableComponentBase {
-    public:
-        static constexpr std::string_view kName = "object-storage";
+/// @brief Интерфейс объектного хранилища (blob storage).
+/// @details Хранит и отдаёт произвольные данные по ключу. Компонент не знает о
+///          версиях, проектах или БД, только байты по ключу и ACL объекта.
+///          Единственная реализация сейчас это S3ObjectStorageComponent, но
+///          интерфейс сохранён, чтобы вызывающий код зависел от абстракции
+///          (тесты подменяют фейком, бэкенд можно поменять без правок вызовов).
+class ObjectStorageComponent : public userver::components::LoggableComponentBase {
+public:
+    static constexpr std::string_view kName = "object-storage";
 
-        ObjectStorageComponent(const userver::components::ComponentConfig& config,
-                               const userver::components::ComponentContext& context)
-            : LoggableComponentBase(config, context) {}
+    ObjectStorageComponent(const userver::components::ComponentConfig& config,
+                           const userver::components::ComponentContext& context)
+        : LoggableComponentBase(config, context) {}
 
-        ~ObjectStorageComponent() override = default;
+    ~ObjectStorageComponent() override = default;
 
-        /// @brief Сохраняет данные под указанным ключом.
-        /// @param key Ключ объекта.
-        /// @param data Данные для сохранения.
-        virtual void Put(const std::string& key, const std::string& data) = 0;
+    /// @brief Сохраняет данные под ключом и сразу задаёт ACL объекта.
+    /// @param make_public true -> public-read (объект публичного проекта),
+    ///        false -> private. ACL ставится в момент загрузки, отдельного
+    ///        запроса не нужно.
+    virtual void Put(const std::string& key, const std::string& data,
+                     bool make_public) = 0;
 
-        /// @brief Возвращает данные по ключу.
-        /// @param key Ключ объекта.
-        /// @return Данные или пустая строка, если объект не найден.
-        virtual std::string Get(const std::string& key) = 0;
+    /// @brief Возвращает данные по ключу.
+    /// @return Данные или пустая строка, если объекта нет.
+    /// @details Серверный доступ к байтам: промпт редактирования для LLM,
+    ///          восстановление версии. Для отдачи фронтенду используйте GetUrl.
+    virtual std::string Get(const std::string& key) = 0;
 
-        /// @brief Возвращает ссылку на svg в s3 БД, для прямого доступа (в основном для чтения).
-        /// Прямая ссылка если проект публичный или временная ссылка если проект приватный.
-        /// @param key Ключ объекта.
-        /// @param is_public тип проекта, публичный/приватный.
-        virtual std::string GetUrl(const std::string& key, bool is_public) = 0;  // URL, for preview
+    /// @brief Ссылка на объект для фронтенда (для чтения/превью).
+    /// @param is_public видимость проекта.
+    /// @details Публичный проект -> постоянная прямая ссылка (объект public-read,
+    ///          кешируется, дружелюбна к будущему CDN). Приватный проект ->
+    ///          временная (presigned) ссылка с коротким TTL. Авторизация «кто
+    ///          вообще имеет право на ссылку» происходит выше, на уровне API.
+    virtual std::string GetUrl(const std::string& key, bool is_public) = 0;
 
-    };
+    /// @brief Меняет ACL уже существующего объекта (public-read / private).
+    /// @details Используется при смене видимости проекта. По инварианту публичным
+    ///          может быть только объект текущей (последней) версии, поэтому это
+    ///          всегда один вызов, а не проход по всем версиям.
+    virtual void SetAcl(const std::string& key, bool make_public) = 0;
+
+    /// @brief Удаляет объект. Удаление несуществующего ключа — no-op.
+    virtual void Delete(const std::string& key) = 0;
+
+    /// @brief Удаляет набор объектов (например, все версии проекта при удалении).
+    virtual void DeleteMany(const std::vector<std::string>& keys) = 0;
+};
 
 }  // namespace ya_brander::components

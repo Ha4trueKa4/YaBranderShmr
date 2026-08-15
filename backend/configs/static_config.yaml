@@ -35,13 +35,12 @@ components_manager:
     testsuite-support: { }
 
     http-client:
-    #      load-enabled: $is-testing
 
     http-client-core:
       #      load-enabled: $is-testing
       fs-task-processor: fs-task-processor
 
-    http-client-middleware-pipeline:
+    http-client-middleware-pipeline: {}
     #      load-enabled: $is-testing
 
     tests-control:
@@ -85,7 +84,11 @@ components_manager:
     # ==========================================
     version-storage: { }
     vector-search: { }
-    object-storage: { }
+    object-storage:
+      bucket: ya-brander-svg
+      endpoint: storage.yandexcloud.net
+      region: ru-central1
+      presigned-url-ttl-seconds: 3600   # ссылки на один час для приватных объектов
 
     # ==========================================
     # Слой бизнес-логики (Service Layer)
