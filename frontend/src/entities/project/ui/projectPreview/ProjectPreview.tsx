@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import styles from './ProjectPreview.module.css'
 
 interface ProjectPreviewProps {
@@ -6,10 +8,18 @@ interface ProjectPreviewProps {
 }
 
 export function ProjectPreview({ imageUrl, title }: ProjectPreviewProps) {
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null)
+  const shouldShowImage = imageUrl && failedImageUrl !== imageUrl
+
   return (
     <div className={styles.preview}>
-      {imageUrl ? (
-        <img alt="" className={styles.image} src={imageUrl} />
+      {shouldShowImage ? (
+        <img
+          alt=""
+          className={styles.image}
+          onError={() => setFailedImageUrl(imageUrl)}
+          src={imageUrl}
+        />
       ) : (
         <span className={styles.mark} title={title} />
       )}

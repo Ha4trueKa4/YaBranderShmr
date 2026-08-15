@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import iconPencil from '../assets/iconPencil.svg'
 import styles from '../EditorToolbar.module.css'
+import { ProjectRenameModal } from './ProjectRenameModal'
 
 interface ProjectTitleProps {
   onSubmit: (projectName: string) => void
@@ -11,13 +12,11 @@ interface ProjectTitleProps {
 }
 
 export function ProjectTitle({ onSubmit, title }: ProjectTitleProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [projectName, setProjectName] = useState(title)
+  const [isRenameModalOpen, setRenameModalOpen] = useState(false)
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function handleSubmit(projectName: string) {
     onSubmit(projectName)
-    setIsEditing(false)
+    setRenameModalOpen(false)
   }
 
   return (
@@ -25,26 +24,20 @@ export function ProjectTitle({ onSubmit, title }: ProjectTitleProps) {
       <Link className={styles.brandMark} to={AppRoute.EditorCreate}>
         <img alt="" src={brandMark} />
       </Link>
-      {isEditing ? (
-        <form className={styles.projectNameForm} onSubmit={handleSubmit}>
-          <input
-            className={styles.projectNameInput}
-            onChange={(event) => setProjectName(event.target.value)}
-            value={projectName}
-          />
-        </form>
-      ) : (
-        <>
-          <strong className={styles.projectName}>{projectName}</strong>
-          <button
-            className={styles.editProjectName}
-            onClick={() => setIsEditing(true)}
-            type="button"
-          >
-            <img alt="" src={iconPencil} />
-          </button>
-        </>
-      )}
+      <strong className={styles.projectName}>{title}</strong>
+      <button
+        className={styles.editProjectName}
+        onClick={() => setRenameModalOpen(true)}
+        type="button"
+      >
+        <img alt="" src={iconPencil} />
+      </button>
+      <ProjectRenameModal
+        isOpen={isRenameModalOpen}
+        onClose={() => setRenameModalOpen(false)}
+        onSubmit={handleSubmit}
+        projectName={title}
+      />
     </div>
   )
 }
