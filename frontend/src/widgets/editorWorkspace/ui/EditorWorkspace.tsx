@@ -4,7 +4,10 @@ import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { editorFixture } from '../model/editorFixture'
+import {
+  editorFixture,
+  editorFixtureInitialState,
+} from '../model/editorFixture'
 import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
@@ -16,7 +19,10 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
   // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
   // Сейчас editorFixture временно заменяет ответ API и собирается через parseSvg.
   const [editorStore] = useState(
-    () => new EditorStore(editorFixture, 'taxi-body', ['taxi', 'taxi-sign']),
+    () =>
+      new EditorStore(editorFixture, editorFixtureInitialState.selectedNodeId, [
+        ...editorFixtureInitialState.expandedGroupIds,
+      ]),
   )
 
   function handleToolbarAction() {

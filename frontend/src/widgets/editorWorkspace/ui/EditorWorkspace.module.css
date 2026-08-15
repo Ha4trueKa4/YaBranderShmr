@@ -5,8 +5,8 @@
     "layers scene inspector"
     "status status status";
   grid-template-columns: 15rem minmax(0, 1fr) 17.5rem;
-  grid-template-rows: 4rem minmax(24rem, 1fr) 1.75rem;
-  min-height: 100vh;
+  grid-template-rows: 4rem minmax(0, 1fr) 1.75rem;
+  height: 100dvh;
   overflow: hidden;
   background: var(--color-surface);
 }
@@ -32,6 +32,7 @@
 .inspector {
   grid-area: inspector;
   min-width: 0;
+  min-height: 0;
   border-left: 1px solid var(--color-border);
 }
 
@@ -48,8 +49,7 @@
       "inspector inspector"
       "status status";
     grid-template-columns: 13rem minmax(0, 1fr);
-    grid-template-rows: 4rem minmax(24rem, 1fr) auto 1.75rem;
-    min-height: 100vh;
+    grid-template-rows: 4rem minmax(0, 1fr) auto 1.75rem;
   }
 
   .inspector {
@@ -68,6 +68,9 @@
       "status";
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 4rem minmax(20rem, 1fr) auto auto 1.75rem;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
   }
 
   .layers {
