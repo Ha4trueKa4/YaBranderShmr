@@ -82,7 +82,6 @@ struct SignUpView: View {
         .sensoryFeedback(.error, trigger: viewModel.validationTrigger)
         .sensoryFeedback(.error, trigger: viewModel.errorMessage)
         .sensoryFeedback(.success, trigger: viewModel.didSucceed)
-        .customNavigationBar(onBack: onSignIn)
     }
 }
 
