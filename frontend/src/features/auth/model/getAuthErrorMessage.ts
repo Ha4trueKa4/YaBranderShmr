@@ -1,6 +1,6 @@
-import { ApiError } from '@shared/api/api/client'
+import { ApiError, getApiErrorMessage } from '@shared/api/api'
 
-export function getAuthErrorMessage(error: Error): string {
+export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.status) {
       case 400:
@@ -10,13 +10,9 @@ export function getAuthErrorMessage(error: Error): string {
       case 409:
         return 'This email or nickname is already in use.'
       default:
-        return 'The service is temporarily unavailable. Please try again.'
+        return getApiErrorMessage(error)
     }
   }
 
-  if (error instanceof TypeError) {
-    return 'Unable to connect to the service. Please try again.'
-  }
-
-  return 'Something went wrong. Please try again.'
+  return getApiErrorMessage(error)
 }
