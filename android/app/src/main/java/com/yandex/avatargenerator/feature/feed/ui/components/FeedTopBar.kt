@@ -65,7 +65,8 @@ fun FeedTopBar(
                         append(stringResource(R.string.feed_brand_name_accent))
                     }
                 },
-                style = AppTypography.heading3.copy(fontWeight = FontWeight.ExtraBold),
+                // В макете ExtraBold, но такого начертания Inter в res/font нет — см. AppFont.
+                style = AppTypography.heading3.copy(fontWeight = FontWeight.Bold),
             )
         }
 

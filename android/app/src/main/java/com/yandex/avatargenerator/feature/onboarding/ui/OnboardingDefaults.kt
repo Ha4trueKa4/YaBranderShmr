@@ -1,7 +1,10 @@
 package com.yandex.avatargenerator.feature.onboarding.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -15,6 +18,9 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
  *
  * Здесь остаётся только специфика макета: то, чему есть токен в дизайн-системе,
  * берётся из [AppSpacing] / [AppShape] / [AppTypography] и не дублируется числом.
+ *
+ * Всё, что несёт цвет, объявлено `@Composable`-свойством — зависит от темы
+ * (см. [AppColors]); размеры остаются константами.
  *
  * Макет нарисован под iPhone 393×852; фиксированная высота экрана не переносится —
  * вертикаль распределяется по weight.
@@ -32,8 +38,9 @@ internal object OnboardingDefaults {
     val DotSize = 8.dp
     val ActiveDotWidth = 24.dp
     val DotSpacing = AppSpacing.xs
-    val ActiveDotColor = AppColors.OnAccent
-    val InactiveDotColor = AppColors.OnAccent.copy(alpha = 0.25f)
+
+    /** Прозрачность неактивной точки индикатора — цвет ей задаёт вызывающий. */
+    const val InactiveDotAlpha = 0.25f
 
     // --- страница 1: welcome ---
     val WelcomeHorizontalPadding = AppSpacing.xl
@@ -43,16 +50,24 @@ internal object OnboardingDefaults {
     val LogoTileRadius = 28.dp
     val LogoTileBorderWidth = 2.5.dp
     val LogoGlyphSize = 48.dp
+
+    // Плитка лого лежит поверх насыщенного WelcomeGradient — белая в обеих темах.
     val LogoTileFill = Color.White.copy(alpha = 0.13f)
     val LogoTileBorder = Color.White.copy(alpha = 0.25f)
 
-    val WelcomeGradient = Brush.horizontalGradient(listOf(AppColors.Accent, AppColors.AccentCyan))
+    val WelcomeGradient: Brush
+        @Composable @ReadOnlyComposable
+        get() = Brush.horizontalGradient(listOf(AppColors.Accent, AppColors.AccentCyan))
 
-    val BrandTitleStyle = AppTypography.heading1.copy(
-        fontWeight = FontWeight.ExtraBold,
-        color = AppColors.OnAccent,
-    )
-    val BrandSubtitleStyle = AppTypography.body.copy(color = AppColors.OnAccent.copy(alpha = 0.8f))
+    val BrandTitleStyle: TextStyle
+        // В макете ExtraBold, но такого начертания Inter в res/font нет — см. AppFont.
+        @Composable @ReadOnlyComposable get() = AppTypography.heading1.copy(
+            fontWeight = FontWeight.Bold,
+            color = AppColors.OnAccent,
+        )
+    val BrandSubtitleStyle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = AppTypography.body.copy(color = AppColors.OnAccent.copy(alpha = 0.8f))
 
     // --- страница 2: how it works ---
     val PageTitleSpacing = 40.dp
@@ -62,14 +77,19 @@ internal object OnboardingDefaults {
     val StepIconTileSize = 48.dp
     val StepIconTileRadius = 14.dp
     val StepIconSize = 20.dp
-    val StepIconTint = AppColors.AccentCyan
-    val BorderWidth = 1.dp
 
-    val PageTitleStyle = AppTypography.heading2
-    val StepTitleStyle = AppTypography.body.copy(fontWeight = FontWeight.Bold)
+    val StepIconTint: Color
+        @Composable @ReadOnlyComposable get() = AppColors.AccentCyan
+
+    val PageTitleStyle: TextStyle
+        @Composable @ReadOnlyComposable get() = AppTypography.heading2
+    val StepTitleStyle: TextStyle
+        @Composable @ReadOnlyComposable get() = AppTypography.body.copy(fontWeight = FontWeight.Bold)
 
     /** Подпись шага — [AppTypography.label] тем же кеглем, но обычным начертанием. */
-    val StepSubtitleStyle = AppTypography.label.copy(fontWeight = FontWeight.Normal)
+    val StepSubtitleStyle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = AppTypography.label.copy(fontWeight = FontWeight.Normal)
 
     // --- страница 3: get started ---
     val GetStartedContentSpacing = AppSpacing.xl
@@ -85,19 +105,21 @@ internal object OnboardingDefaults {
 
     val CtaGroupSpacing = 20.dp
 
-    /** Cyan в центре → purple по краю. Промежуточные стопы взяты из макета. */
-    val GlowBrush = Brush.radialGradient(
-        0.0f to AppColors.AccentCyan,
-        0.125f to Color(0xFF15A7D7),
-        0.25f to Color(0xFF2497DA),
-        0.5f to Color(0xFF4178E1),
-        0.75f to Color(0xFF5F59E7),
-        1.0f to AppColors.Accent,
-    )
+    /**
+     * Cyan в центре → violet по краю. Промежуточные стопы из макета лежат ровно
+     * на линейной интерполяции краёв, которую Compose делает сам.
+     */
+    val GlowBrush: Brush
+        @Composable @ReadOnlyComposable
+        get() = Brush.radialGradient(listOf(AppColors.AccentCyan, AppColors.Accent))
 
-    val MockupBrandNameStyle = AppTypography.heading3.copy(fontWeight = FontWeight.Bold)
+    val MockupBrandNameStyle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = AppTypography.heading3.copy(fontWeight = FontWeight.Bold)
 
     /** В макете 11sp — берём ближайший токен [AppTypography.caption] (12sp). */
-    val MockupTaglineStyle = AppTypography.caption
-    val CtaTitleStyle = PageTitleStyle
+    val MockupTaglineStyle: TextStyle
+        @Composable @ReadOnlyComposable get() = AppTypography.caption
+    val CtaTitleStyle: TextStyle
+        @Composable @ReadOnlyComposable get() = PageTitleStyle
 }

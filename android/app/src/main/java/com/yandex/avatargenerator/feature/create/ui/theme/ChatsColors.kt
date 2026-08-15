@@ -1,6 +1,9 @@
 package com.yandex.avatargenerator.feature.create.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Brush
+import com.yandex.avatargenerator.feature.create.ui.theme.ChatsColors.ThumbnailGradients
 import com.yandex.avatargenerator.ui.theme.AppColors
 
 /**
@@ -15,12 +18,15 @@ internal object ChatsColors {
      * (см. [com.yandex.avatargenerator.feature.create.ui.components.ChatThumbnail]).
      *
      * В макете это три произвольных градиента; здесь они пересобраны из токенов
-     * палитры, чтобы превью оставались в фирменных цветах и не разъезжались с
-     * приложением при правке [AppColors].
+     * палитры, чтобы превью оставались в фирменных цветах и следовали за темой.
      */
-    val ThumbnailGradients: List<Brush> = listOf(
-        Brush.horizontalGradient(listOf(AppColors.Error, AppColors.Accent)),
-        Brush.horizontalGradient(listOf(AppColors.Success, AppColors.AccentCyan)),
-        Brush.horizontalGradient(listOf(AppColors.Accent, AppColors.AccentCyan)),
-    )
+    val ThumbnailGradients: List<Brush>
+        @Composable @ReadOnlyComposable get() = listOf(
+            Brush.horizontalGradient(listOf(AppColors.Error, AppColors.Accent)),
+            Brush.horizontalGradient(listOf(AppColors.Success, AppColors.AccentCyan)),
+            Brush.horizontalGradient(listOf(AppColors.Accent, AppColors.AccentCyan)),
+        )
+
+    /** Размер [ThumbnailGradients] — для выбора индекса вне композиции. */
+    const val ThumbnailGradientCount = 3
 }

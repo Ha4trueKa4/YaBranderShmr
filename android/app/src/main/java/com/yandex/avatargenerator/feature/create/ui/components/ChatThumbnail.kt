@@ -22,11 +22,13 @@ internal fun ChatThumbnail(
     chatId: String,
     modifier: Modifier = Modifier,
 ) {
-    // remember(chatId) — чтобы не считать хеш на каждой рекомпозиции.
+    // remember(chatId) — чтобы не считать хеш на каждой рекомпозиции; запоминаем
+    // индекс, а не Brush, так как список градиентов зависит от темы.
     // Int.mod (а не %) даёт неотрицательный остаток при отрицательном хеше.
-    val gradient = remember(chatId) {
-        ChatsColors.ThumbnailGradients[chatId.hashCode().mod(ChatsColors.ThumbnailGradients.size)]
+    val index = remember(chatId) {
+        chatId.hashCode().mod(ChatsColors.ThumbnailGradientCount)
     }
+    val gradient = ChatsColors.ThumbnailGradients[index]
 
     Box(
         modifier = modifier

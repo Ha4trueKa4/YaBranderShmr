@@ -13,22 +13,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.Preview
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
+import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
 /**
  * Индикатор страниц из макета: активная точка растягивается в «капсулу» 24×8,
  * неактивные остаются кружками 8×8.
+ *
+ * @param color цвет активной точки; неактивные — он же с прозрачностью
+ *   [OnboardingDefaults.InactiveDotAlpha]. Индикатор лежит поверх всех страниц
+ *   сразу, а фон у них разный, поэтому цвет выбирает вызывающий.
  */
 @Composable
 internal fun PageIndicator(
     pageCount: Int,
     currentPage: Int,
+    color: Color,
     modifier: Modifier = Modifier,
 ) {
     val description = stringResource(
@@ -47,15 +54,19 @@ internal fun PageIndicator(
                 targetValue = if (isActive) OnboardingDefaults.ActiveDotWidth else OnboardingDefaults.DotSize,
                 label = "dotWidth",
             )
-            val color by animateColorAsState(
-                targetValue = if (isActive) OnboardingDefaults.ActiveDotColor else OnboardingDefaults.InactiveDotColor,
+            val dotColor by animateColorAsState(
+                targetValue = if (isActive) {
+                    color
+                } else {
+                    color.copy(alpha = OnboardingDefaults.InactiveDotAlpha)
+                },
                 label = "dotColor",
             )
             Spacer(
                 modifier = Modifier
                     .size(width = width, height = OnboardingDefaults.DotSize)
                     .clip(CircleShape)
-                    .background(color),
+                    .background(dotColor),
             )
         }
     }
@@ -65,6 +76,6 @@ internal fun PageIndicator(
 @Composable
 private fun PageIndicatorPreview() {
     AvatarGeneratorTheme {
-        PageIndicator(pageCount = 3, currentPage = 1)
+        PageIndicator(pageCount = 3, currentPage = 1, color = AppColors.TextPrimary)
     }
 }

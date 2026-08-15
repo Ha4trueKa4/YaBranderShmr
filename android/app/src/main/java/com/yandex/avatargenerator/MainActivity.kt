@@ -13,13 +13,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Прозрачный scrim для системных баров: в 3-кнопочном режиме по умолчанию
-        // подкладывается непрозрачный scrim (на светлой теме — белая полоска снизу).
-        // dark(...) убирает scrim и делает иконки системных кнопок светлыми — они
-        // ложатся прямо на тёмную область нижней панели. Иконки статус-бара тоже
-        // светлые (весь UI приложения тёмный).
+        // подкладывается непрозрачный. auto(...) убирает его и сам подбирает
+        // светлые/тёмные иконки под активную тему.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         setContent {
             AvatarGeneratorTheme {

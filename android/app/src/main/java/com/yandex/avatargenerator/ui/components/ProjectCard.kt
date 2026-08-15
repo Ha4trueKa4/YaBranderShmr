@@ -1,7 +1,6 @@
 package com.yandex.avatargenerator.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,14 +51,10 @@ fun ProjectCard(
     authorAvatarUrl: String? = null,
     aspectRatio: Float = 1.3f,
 ) {
-    val shape = RoundedCornerShape(AppShape.l)
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(AppColors.Surface)
-            .border(1.dp, AppColors.Border, shape)
+            .brandSurface(RoundedCornerShape(AppShape.l))
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
