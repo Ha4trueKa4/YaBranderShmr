@@ -121,7 +121,7 @@ components_manager:
 
     object-storage:
       bucket: ya-brander-svg
-      endpoint: storage.yandexcloud.net
+      endpoint: $s3-endpoint
       region: ru-central1
       presigned-url-ttl-seconds: 3600   # ссылки на один час для приватных объектов
 

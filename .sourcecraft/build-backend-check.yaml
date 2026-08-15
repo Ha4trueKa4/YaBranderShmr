@@ -12,6 +12,8 @@ build-check:
   services:
     - docker:dind
   script:
-    # Только проверка сборки: компилируем образ, НЕ публикуем в registry.
-    # Не трогаем тег latest — прод-образ не затирается незамерженным кодом.
-    - docker build --provenance=false --sbom=false -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    # Проверка компиляции: собираем образ, НЕ публикуем и НЕ трогаем тег latest.
+    # --cache-from (read-only) без --cache-to, чтобы PR не перезаписывал кэш main.
+    # Логин до сборки — кэш тянется из приватного CR. Команда на одной строке.
+    - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
+    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/

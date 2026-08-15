@@ -23,11 +23,8 @@ on:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
-    - workflows: [build-backend]
-      filter:
-        branches: ["main"]
-        paths: ["backend/**"]
-    - workflows: [deploy-backend]
+        paths: ["frontend/**"]
+    - workflows: [build-and-deploy-backend]
       filter:
         branches: ["main"]
         paths: ["backend/**"]
@@ -41,9 +38,12 @@ workflows:
         cubes:
           - name: run-build-backend-check
             gitlab_workflow: .sourcecraft/build-backend-check.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
 
-  # Сборка + публикация образа в registry на push в main (перед деплоем).
-  build-backend:
+  # Сборка + публикация образа в registry, затем деплой — строго по порядку
+  # (задание deploy стартует только после успешного завершения задания build).
+  build-and-deploy-backend:
     tasks:
       - name: build
         cubes:
@@ -52,9 +52,8 @@ workflows:
             env:
               YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
 
-  deploy-backend:
-    tasks:
       - name: deploy
+        needs: [build]
         cubes:
           - name: run-deploy-backend
             gitlab_workflow: .sourcecraft/deploy-backend.yaml

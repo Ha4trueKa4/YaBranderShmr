@@ -151,6 +151,7 @@ private fun ProjectScreenContentPreview() {
         ProjectContent(
             uiState = ProjectUiState.Content(
                 title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
                 messages = MockChatRepository.defaultMessages(),
                 draft = "",
             ),
@@ -169,6 +170,7 @@ private fun ProjectScreenEmptyChatPreview() {
         ProjectContent(
             uiState = ProjectUiState.Content(
                 title = "New project",
+                isPublic = false,
                 messages = emptyList(),
                 draft = "Violet logo for an AI startup",
             ),

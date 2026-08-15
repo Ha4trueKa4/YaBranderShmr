@@ -17,6 +17,13 @@ namespace ya_brander::components {
 
 namespace {
 
+std::string GetScheme(std::string_view endpoint) {
+  if (endpoint.find("http://") == 0 || endpoint.find("https://") == 0) {
+    return ""; // Протокол уже есть в строке (например, от mockserver)
+  }
+  return "https://"; // По умолчанию для продакшена
+}
+
 namespace hash = userver::crypto::hash;
 
 constexpr std::string_view kAlgorithm = "AWS4-HMAC-SHA256";
@@ -90,7 +97,9 @@ std::string S3ObjectStorageComponent::CanonicalUri(const std::string& key) const
 }
 
 std::string S3ObjectStorageComponent::ObjectUrl(const std::string& key) const {
-  return "https://" + endpoint_ + CanonicalUri(key);
+  std::string url = GetScheme(endpoint_) + endpoint_;
+  if (!url.empty() && url.back() == '/') url.pop_back(); // Убираем слэш от mockserver
+  return url + CanonicalUri(key);
 }
 
 userver::http::headers::HeaderMap S3ObjectStorageComponent::SignRequest(
@@ -289,7 +298,10 @@ std::string S3ObjectStorageComponent::MakePresignedGetUrl(
   const auto signature = hash::HmacSha256(signing_key, string_to_sign,
                                           hash::OutputEncoding::kHex);
 
-  return "https://" + endpoint_ + canonical_uri + '?' + canonical_query +
+  std::string url = GetScheme(endpoint_) + endpoint_;
+  if (!url.empty() && url.back() == '/') url.pop_back();
+
+  return url + canonical_uri + '?' + canonical_query +
          "&X-Amz-Signature=" + signature;
 }
 

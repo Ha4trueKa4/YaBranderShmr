@@ -3,6 +3,41 @@ import Foundation
 @MainActor
 @Observable
 final class ChatViewModel {
+    enum ProjectPrivacy: String, CaseIterable, Identifiable {
+        case privateProject
+        case publicShowcase
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .privateProject: "Private Project"
+            case .publicShowcase: "Public Showcase"
+            }
+        }
+
+        var shortTitle: String {
+            switch self {
+            case .privateProject: "Private"
+            case .publicShowcase: "Public"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .privateProject: "Only workspace members can edit and view"
+            case .publicShowcase: "Index project in public showcase database"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .privateProject: "lock"
+            case .publicShowcase: "globe"
+            }
+        }
+    }
+
     struct MessageSection: Identifiable {
         let date: Date
         let messages: [ChatMessage]
@@ -12,6 +47,7 @@ final class ChatViewModel {
 
     private(set) var messages: [ChatMessage] = []
     private(set) var sections: [MessageSection] = []
+    var privacy: ProjectPrivacy = .privateProject
 
     var lastMessageID: ChatMessage.ID? {
         sections.last?.messages.last?.id

@@ -3,6 +3,24 @@ import { describe, expect, it } from 'vitest'
 import { parseSvg } from './svgAdapter'
 
 describe('parseSvg', () => {
+  it('rejects invalid SVG markup with multiple root elements', () => {
+    expect(() => parseSvg('<svg></svg><svg></svg>')).toThrow(
+      'Invalid SVG markup',
+    )
+  })
+
+  it('rejects an SVG without a viewBox', () => {
+    expect(() =>
+      parseSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+    ).toThrow('SVG root must define a viewBox')
+  })
+
+  it('rejects a root that is not an SVG element', () => {
+    expect(() => parseSvg('<div viewBox="0 0 500 500"></div>')).toThrow(
+      'SVG document must have an <svg> root element',
+    )
+  })
+
   it('parses the canvas and a rectangle', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -78,7 +96,14 @@ describe('parseSvg', () => {
         isVisible: true,
         name: 'Logo',
         opacity: 1,
-        transform: { rotation: 5, scaleX: 1.2, scaleY: 0.8, x: 20, y: 10 },
+        transform: {
+          rotation: 5,
+          rotationCenter: { x: 250, y: 250 },
+          scaleX: 1.2,
+          scaleY: 0.8,
+          x: 20,
+          y: 10,
+        },
         type: 'group',
       },
     ])
@@ -114,6 +139,31 @@ describe('parseSvg', () => {
     ])
   })
 
+  it('normalizes a keyword font weight and parses letter spacing', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <text id="caption" x="20" y="40" font-weight="bold" letter-spacing="2">TAXI</text>
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      id: 'caption',
+      style: { fontWeight: 700, letterSpacing: 2 },
+      text: 'TAXI',
+      type: 'text',
+    })
+  })
+
+  it('rejects text with independently styled nested fragments', () => {
+    expect(() =>
+      parseSvg(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+          <text id="title" x="20" y="40">Hello <tspan fill="#6C3BFF">world</tspan></text>
+        </svg>
+      `),
+    ).toThrow('Unsupported SVG element: tspan')
+  })
+
   it('parses a path with its stroke properties', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -143,6 +193,77 @@ describe('parseSvg', () => {
         type: 'shape',
       },
     ])
+  })
+
+  it('preserves gradients in definitions and parses an ellipse', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+        <defs>
+          <radialGradient id="wheelGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E0E0E0" />
+            <stop offset="100%" stop-color="#606060" />
+          </radialGradient>
+        </defs>
+        <ellipse id="shadow" cx="400" cy="380" rx="300" ry="30" fill="url(#wheelGradient)" />
+      </svg>
+    `)
+
+    expect(document).toEqual({
+      definitions: {
+        gradients: [
+          {
+            attributes: { cx: '50%', cy: '50%', r: '50%' },
+            id: 'wheelGradient',
+            stops: [
+              { color: '#E0E0E0', offset: '0%' },
+              { color: '#606060', offset: '100%' },
+            ],
+            type: 'radialGradient',
+          },
+        ],
+      },
+      height: 500,
+      layers: [
+        {
+          geometry: { cx: 400, cy: 380, rx: 300, ry: 30, type: 'ellipse' },
+          id: 'shadow',
+          isLocked: false,
+          isVisible: true,
+          name: 'shadow',
+          opacity: 1,
+          shapeType: 'ellipse',
+          style: {
+            fill: { gradientId: 'wheelGradient', type: 'gradient' },
+            fillOpacity: 1,
+            stroke: { type: 'none' },
+            strokeOpacity: 1,
+            strokeWidth: 0,
+          },
+          transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 },
+          type: 'shape',
+        },
+      ],
+      width: 800,
+    })
+  })
+
+  it('parses a line as a shape with line geometry', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+        <line id="door-line" x1="380" y1="200" x2="380" y2="350" stroke="#D9A300" stroke-width="2" />
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      geometry: { type: 'line', x1: 380, x2: 380, y1: 200, y2: 350 },
+      id: 'door-line',
+      shapeType: 'line',
+      style: {
+        stroke: { type: 'color', value: '#D9A300' },
+        strokeWidth: 2,
+      },
+      type: 'shape',
+    })
   })
 
   it('rejects an unsupported SVG element', () => {

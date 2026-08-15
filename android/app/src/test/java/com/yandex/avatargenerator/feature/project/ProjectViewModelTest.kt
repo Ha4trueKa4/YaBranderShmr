@@ -1,6 +1,7 @@
 package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.Project
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import com.yandex.avatargenerator.feature.project.ui.ProjectUiState
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
@@ -21,7 +22,8 @@ import java.time.Instant
 internal class ProjectViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: FakeChatRepository
+    private lateinit var projectRepository: FakeProjectRepository
+    private lateinit var chatRepository: FakeChatRepository
 
     private val messages = listOf<ChatMessage>(
         ChatMessage.System.ProjectCreated(id = "system-created"),
@@ -31,12 +33,23 @@ internal class ProjectViewModelTest {
             sentAt = Instant.parse("2026-08-12T11:30:00Z"),
         ),
     )
-    private val chat = ProjectChat(id = PROJECT_ID, title = "Orion Brand AI", messages = messages)
+    private val chat = ProjectChat(id = PROJECT_ID, title = "chat title", messages = messages)
+    private val project = Project(
+        id = PROJECT_ID,
+        authorId = "author-1",
+        name = "Orion Brand AI",
+        description = null,
+        isPublic = true,
+        createdAt = null,
+        url = null,
+        data = null,
+    )
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        repository = FakeChatRepository()
+        projectRepository = FakeProjectRepository()
+        chatRepository = FakeChatRepository()
     }
 
     @After
@@ -44,32 +57,40 @@ internal class ProjectViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private fun viewModel() = ProjectViewModel(projectRepository, chatRepository, PROJECT_ID)
+
     @Test
     fun `starts in loading state`() {
         // StandardTestDispatcher не выполняет корутину загрузки до advanceUntilIdle,
         // поэтому здесь видно именно начальное состояние.
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        val viewModel = viewModel()
 
         assertEquals(ProjectUiState.Loading, viewModel.uiState.value)
     }
 
     @Test
-    fun `loaded chat gives content with its title and messages`() = runTest(dispatcher) {
-        repository.chatResult = Result.success(chat)
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+    fun `content берёт название и видимость из проекта, а сообщения из чата`() = runTest(dispatcher) {
+        projectRepository.projectResult = Result.success(project)
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
 
         advanceUntilIdle()
 
         assertEquals(
-            ProjectUiState.Content(title = chat.title, messages = messages, draft = ""),
+            ProjectUiState.Content(
+                title = project.name,
+                isPublic = project.isPublic,
+                messages = messages,
+                draft = "",
+            ),
             viewModel.uiState.value,
         )
     }
 
     @Test
-    fun `repository failure gives error state`() = runTest(dispatcher) {
-        repository.chatResult = Result.failure(IllegalStateException("network is down"))
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+    fun `падение загрузки чата даёт Error`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
+        val viewModel = viewModel()
 
         advanceUntilIdle()
 
@@ -77,26 +98,43 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `retry after an error reloads the chat`() = runTest(dispatcher) {
-        repository.chatResult = Result.failure(IllegalStateException("network is down"))
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+    fun `падение загрузки проекта даёт Error`() = runTest(dispatcher) {
+        projectRepository.projectResult = Result.failure(IllegalStateException("404"))
+        val viewModel = viewModel()
+
         advanceUntilIdle()
 
-        repository.chatResult = Result.success(chat)
+        assertEquals(ProjectUiState.Error, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `retry после ошибки перезагружает проект и чат`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        projectRepository.projectResult = Result.success(project)
+        chatRepository.chatResult = Result.success(chat)
         viewModel.retry()
         advanceUntilIdle()
 
         assertEquals(
-            ProjectUiState.Content(title = chat.title, messages = messages, draft = ""),
+            ProjectUiState.Content(
+                title = project.name,
+                isPublic = project.isPublic,
+                messages = messages,
+                draft = "",
+            ),
             viewModel.uiState.value,
         )
-        assertEquals(2, repository.getChatCallCount)
+        assertEquals(2, chatRepository.getChatCallCount)
+        assertEquals(2, projectRepository.getProjectCallCount)
     }
 
     @Test
     fun `draft change is kept in the state`() = runTest(dispatcher) {
-        repository.chatResult = Result.success(chat)
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
         advanceUntilIdle()
 
         viewModel.onDraftChange("Make it rounder")
@@ -106,8 +144,8 @@ internal class ProjectViewModelTest {
 
     @Test
     fun `send appends the message and clears the draft`() = runTest(dispatcher) {
-        repository.chatResult = Result.success(chat)
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
         advanceUntilIdle()
 
         // По краям пробелы: до репозитория должен дойти обрезанный текст.
@@ -123,14 +161,14 @@ internal class ProjectViewModelTest {
         val content = contentOf(viewModel)
         assertEquals(messages + expected, content.messages)
         assertEquals("", content.draft)
-        assertEquals(listOf("Make it rounder"), repository.sentTexts)
+        assertEquals(listOf("Make it rounder"), chatRepository.sentTexts)
     }
 
     @Test
     fun `send returns the draft back when sending fails`() = runTest(dispatcher) {
-        repository.chatResult = Result.success(chat)
-        repository.sendError = IllegalStateException("network is down")
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        chatRepository.chatResult = Result.success(chat)
+        chatRepository.sendError = IllegalStateException("network is down")
+        val viewModel = viewModel()
         advanceUntilIdle()
 
         viewModel.onDraftChange("  Make it rounder  ")
@@ -145,9 +183,9 @@ internal class ProjectViewModelTest {
 
     @Test
     fun `send does not overwrite a new draft when sending fails`() = runTest(dispatcher) {
-        repository.chatResult = Result.success(chat)
-        repository.sendError = IllegalStateException("network is down")
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        chatRepository.chatResult = Result.success(chat)
+        chatRepository.sendError = IllegalStateException("network is down")
+        val viewModel = viewModel()
         advanceUntilIdle()
 
         viewModel.onDraftChange("Make it rounder")
@@ -164,8 +202,8 @@ internal class ProjectViewModelTest {
 
     @Test
     fun `send does nothing for a blank draft`() = runTest(dispatcher) {
-        repository.chatResult = Result.success(chat)
-        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
         advanceUntilIdle()
 
         viewModel.onDraftChange("   ")
@@ -175,7 +213,7 @@ internal class ProjectViewModelTest {
         val content = contentOf(viewModel)
         assertEquals(messages, content.messages)
         assertEquals("   ", content.draft)
-        assertEquals(emptyList<String>(), repository.sentTexts)
+        assertEquals(emptyList<String>(), chatRepository.sentTexts)
     }
 
     private fun contentOf(viewModel: ProjectViewModel): ProjectUiState.Content =

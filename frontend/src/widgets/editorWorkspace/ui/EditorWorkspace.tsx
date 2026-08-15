@@ -33,7 +33,9 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
         <EditorToolbar
           onEditProjectName={handleProjectNameSubmit}
           onExport={handleToolbarAction}
-          onOpenProfile={() => navigate(AppRoute.Profile)}
+          onOpenProfile={() =>
+            navigate(AppRoute.Profile, { viewTransition: true })
+          }
           onPanTool={handleToolbarAction}
           onRedo={handleToolbarAction}
           onSaveVersion={handleToolbarAction}

@@ -13,6 +13,7 @@ enum NetworkError: Error, Sendable {
     case missingAccessToken
     case tokenStorageError
     case httpError(statusCode: Int)
+    case serverValidation(statusCode: Int, code: String?, field: String?)
     case decodingError
     case encodingError
 }

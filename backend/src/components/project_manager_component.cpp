@@ -25,13 +25,13 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
     );
 
     auto row = res[0];
-
-
     std::string project_id = row["id"].As<std::string>();
     LOG_INFO() << "Created project with ID: " << project_id;
     version_storage_.SaveVersion(project_id, kDefaultSvg);
 
-  return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), kDefaultSvg};
+	std::string url = version_storage_.GetLatestVersionUrl(project_id);
+
+  	return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), url};
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
@@ -45,7 +45,7 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
 
     auto row = res[0];
     const bool is_public = !row["is_private"].As<bool>();
-    auto data = version_storage_.GetLatestVersionUrl(id);
+   	std::string url = version_storage_.GetLatestVersionUrl(id);
 
     return models::Project{
         row["id"].As<std::string>(),
@@ -54,7 +54,7 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
         row["description"].As<std::string>(),
         is_public,
         row["created_at"].As<std::chrono::system_clock::time_point>(),
-        data
+        url
     };
 }
 
@@ -99,7 +99,7 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     }
     auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1);
     version_storage_.SaveVersion(project_id, new_data);
-    return new_data;
+    return version_storage_.GetLatestVersionUrl(project_id);
 }
 
 } // namespace ya_brander::components

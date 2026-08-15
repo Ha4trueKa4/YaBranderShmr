@@ -69,6 +69,46 @@ fun BrandPrimaryButton(
     }
 }
 
+/**
+ * Нейтральная (tonal) кнопка: заливка [AppColors.Surface] с бордером
+ * [AppColors.Border] и приглушённым текстом — для второстепенных действий
+ * равного веса рядом с [BrandPrimaryButton] (например, пара «Download PNG /
+ * Download SVG»), где акцентный outline [BrandSecondaryButton] перетягивал бы
+ * внимание.
+ *
+ * @param leadingIcon значок перед текстом; цвет наследуется от `contentColor`.
+ */
+@Composable
+fun BrandTonalButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    fullWidth: Boolean = false,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null
+) {
+    Material3Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
+            .height(BrandButtonDefaults.Height),
+        shape = RoundedCornerShape(AppShape.l),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AppColors.Surface,
+            contentColor = AppColors.TextSecondary
+        ),
+        border = BorderStroke(1.dp, AppColors.Border),
+        contentPadding = PaddingValues(horizontal = AppSpacing.l)
+    ) {
+        if (leadingIcon != null) {
+            leadingIcon()
+            Spacer(modifier = Modifier.width(AppSpacing.xs))
+        }
+        Text(text = text, color = AppColors.TextSecondary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 /** Второстепенная (outline) кнопка — "Secondary Action" в макете. */
 @Composable
 fun BrandSecondaryButton(
@@ -117,6 +157,18 @@ private fun BrandButtonsPreview() {
                 }
             )
             BrandSecondaryButton(text = "Secondary Action", onClick = {})
+            BrandTonalButton(
+                text = "Download SVG",
+                onClick = {},
+                fullWidth = true,
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_publish),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
             BrandPrimaryButton(text = "Disabled", onClick = {}, enabled = false)
         }
     }

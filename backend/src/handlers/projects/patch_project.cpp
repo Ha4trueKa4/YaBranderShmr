@@ -1,13 +1,15 @@
 #include "patch_project.h"
-#include <userver/formats/json/serialize.hpp>
 #include <userver/utils/datetime.hpp>
 
 namespace ya_brander::handlers {
 
 PatchProjectHandler::PatchProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+    : HttpHandlerJsonBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
-std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+userver::formats::json::Value PatchProjectHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value& body,
+    userver::server::request::RequestContext& context) const {
   std::string* user_id = context.GetDataOptional<std::string>("user_id");
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -26,7 +28,6 @@ std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http:
     return {};
   }
 
-  auto body = userver::formats::json::FromString(request.RequestBody());
   std::optional<bool> is_public;
   std::string data;
 
@@ -43,10 +44,15 @@ std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http:
   res["name"] = updated->name;
   res["description"] = updated->description;
   res["is_public"] = updated->is_public;
-  res["created_at"] = userver::utils::datetime::Timestring(updated->created_at);
-  res["data"] = updated->data;
+  res["created_at"] = userver::utils::datetime::Timestring(
+      updated->created_at, userver::utils::datetime::kDefaultTimezone,
+      userver::utils::datetime::kRfc3339Format);
 
-  return userver::formats::json::ToString(res.ExtractValue());
+  if (!updated->url.empty()) {
+      res["url"] = updated->url;
+  }
+
+  return res.ExtractValue();
 }
 
 }
