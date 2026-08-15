@@ -7,6 +7,9 @@ WORKDIR /build
 # при правках только в src/ (иначе любое изменение исходников сбрасывает весь кэш cmake).
 COPY CMakeLists.txt ./
 COPY configs ./configs
+COPY Makefile ./
+COPY docker-compose.yaml ./
+COPY requirements.txt ./
 
 # Исходники копируем ПОСЛЕДНИМИ — они меняются чаще всего.
 COPY src ./src
