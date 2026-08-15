@@ -2,7 +2,7 @@ import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
 import { useUserProfileQuery } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
-import { Button, ErrorState } from '@shared/ui'
+import { AsyncState, Button, ErrorState } from '@shared/ui'
 import {
   OwnProjectsSection,
   ProfileHeader,
@@ -21,6 +21,7 @@ export function ProfilePage() {
     data: userProfile,
     error: userProfileError,
     isError: isUserProfileError,
+    isPending: isUserProfilePending,
   } = useUserProfileQuery(userId)
 
   if (!session) {
@@ -57,11 +58,13 @@ export function ProfilePage() {
           }
           profile={profile}
         />
-        {isUserProfileError ? (
-          <ErrorState message={getApiErrorMessage(userProfileError)} />
-        ) : (
+        <AsyncState
+          errorMessage={getApiErrorMessage(userProfileError)}
+          isError={isUserProfileError}
+          isPending={isUserProfilePending}
+        >
           <OwnProjectsSection projects={projects} />
-        )}
+        </AsyncState>
       </main>
     </div>
   )

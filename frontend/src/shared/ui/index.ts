@@ -1,3 +1,5 @@
+export type { AsyncStateProps } from './AsyncState'
+export { AsyncState } from './AsyncState'
 export type { AvatarProps } from './Avatar'
 export { Avatar } from './Avatar'
 export type { ButtonProps } from './Button'

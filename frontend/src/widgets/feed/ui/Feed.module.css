@@ -56,13 +56,6 @@
   color: var(--color-text-muted);
 }
 
-.loadingState {
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  min-height: 7rem;
-}
-
 @media (width < 960px) {
   .toolbar {
     grid-template-columns: 1fr auto;
