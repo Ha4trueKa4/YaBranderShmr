@@ -5,6 +5,7 @@ import type {
 } from '@entities/editorDocument'
 import type { ComponentType } from 'react'
 
+import { getLayerPresentation } from '../layerPresentation'
 import { GroupProperties } from './groupProperties/GroupProperties'
 import styles from './InspectorPanel.module.css'
 import { ShapeProperties } from './shapeProperties/ShapeProperties'
@@ -44,6 +45,9 @@ export function InspectorPanel({ selectedNode }: InspectorPanelProps) {
       <section className={styles.panel}>
         <div className={styles.header}>
           <h2>Inspector</h2>
+          <span className={styles.typeLabel}>
+            {getLayerPresentation(selectedNode).label}
+          </span>
         </div>
         <div className={styles.content}>
           <GroupProperties layer={selectedNode} />
@@ -60,6 +64,9 @@ export function InspectorPanel({ selectedNode }: InspectorPanelProps) {
     <section className={styles.panel}>
       <div className={styles.header}>
         <h2>Inspector</h2>
+        <span className={styles.typeLabel}>
+          {getLayerPresentation(selectedNode).label}
+        </span>
       </div>
       <div className={styles.content}>
         {/* Поля свойств должны вызывать feature обновления слоя, а не менять layer напрямую. */}
