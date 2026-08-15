@@ -1,10 +1,10 @@
-package com.yandex.avatargenerator.feature.auth
+package com.yandex.avatargenerator.feature.auth.data
 
 import com.yandex.avatargenerator.core.network.ApiJson
 import com.yandex.avatargenerator.core.network.InMemoryAuthTokenStore
 import com.yandex.avatargenerator.core.network.installApiRetry
-import com.yandex.avatargenerator.feature.auth.data.AuthRepositoryImpl
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
+import com.yandex.avatargenerator.feature.auth.fake.FakeAuthUserStore
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -51,7 +51,8 @@ class AuthApiIntegrationTest {
                 contentType(ContentType.Application.Json)
             }
         }
-        return AuthRepositoryImpl(client, tokenStore) to tokenStore
+        // Профиль здесь не проверяем, поэтому хранилище пользователя — в памяти.
+        return AuthRepositoryImpl(client, tokenStore, FakeAuthUserStore()) to tokenStore
     }
 
     /** Уникальный логин на прогон: повторная регистрация того же — уже 409. */
@@ -143,8 +144,8 @@ class AuthApiIntegrationTest {
         val error = runCatching { repository.register("not-an-email", "Passw0rd23", "nickname") }
             .exceptionOrNull()
 
-        assertTrue("получили $error", error is AuthException.RegistrationRejected)
-        assertEquals(AuthException.Field.Email, (error as AuthException.RegistrationRejected).field)
+        assertTrue("получили $error", error is AuthException.FieldRejected)
+        assertEquals(AuthException.Field.Email, (error as AuthException.FieldRejected).field)
         assertNotNull(error.serverMessage)
     }
 
@@ -156,10 +157,10 @@ class AuthApiIntegrationTest {
 
         val error = runCatching { repository.register(email, "Ab1", nickname) }.exceptionOrNull()
 
-        assertTrue("получили $error", error is AuthException.RegistrationRejected)
+        assertTrue("получили $error", error is AuthException.FieldRejected)
         assertEquals(
             AuthException.Field.Password,
-            (error as AuthException.RegistrationRejected).field,
+            (error as AuthException.FieldRejected).field,
         )
     }
 
@@ -174,7 +175,7 @@ class AuthApiIntegrationTest {
 
         assertEquals(
             AuthException.Field.Password,
-            (error as AuthException.RegistrationRejected).field,
+            (error as AuthException.FieldRejected).field,
         )
     }
 
@@ -186,10 +187,10 @@ class AuthApiIntegrationTest {
 
         val error = runCatching { repository.register(email, password, "ab") }.exceptionOrNull()
 
-        assertTrue("получили $error", error is AuthException.RegistrationRejected)
+        assertTrue("получили $error", error is AuthException.FieldRejected)
         assertEquals(
             AuthException.Field.Nickname,
-            (error as AuthException.RegistrationRejected).field,
+            (error as AuthException.FieldRejected).field,
         )
     }
 

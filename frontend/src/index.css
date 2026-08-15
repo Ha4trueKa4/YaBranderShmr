@@ -101,11 +101,15 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--text-h);
-  font-family: var(--font-family-base);
+  font-family: var(--font-family-base), serif;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-regular);
   line-height: 1.5;
   transition:
     background-color 160ms ease,
     color 160ms ease;
+}
+
+@view-transition {
+  navigation: auto;
 }

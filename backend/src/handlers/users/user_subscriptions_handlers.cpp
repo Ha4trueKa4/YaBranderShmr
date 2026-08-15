@@ -1,19 +1,37 @@
 #include "user_subscriptions_handlers.h"
 
-#include <userver/formats/json/serialize.hpp>
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
 namespace ya_brander::handlers {
 
+namespace {
+
+userver::formats::json::Value MakeInvalidUuidError() {
+  userver::formats::json::ValueBuilder err;
+  err["code"] = "INVALID_UUID";
+  err["message"] = "Некорректный формат ID пользователя";
+  return err.ExtractValue();
+}
+
+userver::formats::json::Value MakeUserNotFoundError() {
+  userver::formats::json::ValueBuilder err;
+  err["code"] = "USER_NOT_FOUND";
+  err["message"] = "Пользователь не найден";
+  return err.ExtractValue();
+}
+
+}  // namespace
+
 GetUserSubscribersHandler::GetUserSubscribersHandler(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context),
+    : HttpHandlerJsonBase(config, context),
       subscription_storage_(context.FindComponent<components::SubscriptionStorageComponent>()) {}
 
-std::string GetUserSubscribersHandler::HandleRequestThrow(
+userver::formats::json::Value GetUserSubscribersHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
     userver::server::request::RequestContext& req_context) const {
   const auto& target_id = request.GetPathArg("id");
 
@@ -25,7 +43,7 @@ std::string GetUserSubscribersHandler::HandleRequestThrow(
 
     if (subscribers.empty() && !subscription_storage_.IsUserExists(target_id)) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
-      return R"({"code": "USER_NOT_FOUND", "message": "Пользователь не найден"})";
+      return MakeUserNotFoundError();
     }
 
     userver::formats::json::ValueBuilder response_array(userver::formats::common::Type::kArray);
@@ -41,11 +59,11 @@ std::string GetUserSubscribersHandler::HandleRequestThrow(
       response_array.PushBack(std::move(user_obj));
     }
 
-    return userver::formats::json::ToString(response_array.ExtractValue());
+    return response_array.ExtractValue();
 
   } catch (const userver::storages::postgres::DataException&) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-    return R"({"code": "INVALID_UUID", "message": "Некорректный формат ID пользователя"})";
+    return MakeInvalidUuidError();
   }
 }
 
@@ -53,11 +71,12 @@ std::string GetUserSubscribersHandler::HandleRequestThrow(
 GetUserSubscriptionsHandler::GetUserSubscriptionsHandler(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context),
+    : HttpHandlerJsonBase(config, context),
       subscription_storage_(context.FindComponent<components::SubscriptionStorageComponent>()) {}
 
-std::string GetUserSubscriptionsHandler::HandleRequestThrow(
+userver::formats::json::Value GetUserSubscriptionsHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
     userver::server::request::RequestContext& req_context) const {
   const auto& target_id = request.GetPathArg("id");
 
@@ -69,7 +88,7 @@ std::string GetUserSubscriptionsHandler::HandleRequestThrow(
 
     if (subscriptions.empty() && !subscription_storage_.IsUserExists(target_id)) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
-      return R"({"code": "USER_NOT_FOUND", "message": "Пользователь не найден"})";
+      return MakeUserNotFoundError();
     }
 
     userver::formats::json::ValueBuilder response_array(userver::formats::common::Type::kArray);
@@ -85,11 +104,11 @@ std::string GetUserSubscriptionsHandler::HandleRequestThrow(
       response_array.PushBack(std::move(user_obj));
     }
 
-    return userver::formats::json::ToString(response_array.ExtractValue());
+    return response_array.ExtractValue();
 
   } catch (const userver::storages::postgres::DataException&) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-    return R"({"code": "INVALID_UUID", "message": "Некорректный формат ID пользователя"})";
+    return MakeInvalidUuidError();
   }
 }
 

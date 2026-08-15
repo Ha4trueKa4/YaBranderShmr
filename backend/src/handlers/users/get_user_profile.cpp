@@ -15,13 +15,14 @@ namespace ya_brander::handlers {
 GetUserProfileHandler::GetUserProfileHandler(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context),
+    : HttpHandlerJsonBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()),
       subscription_storage_(context.FindComponent<components::SubscriptionStorageComponent>()),
       version_storage_(context.FindComponent<components::VersionStorageComponent>()) {}
 
-std::string GetUserProfileHandler::HandleRequestThrow(
+userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
     userver::server::request::RequestContext& req_context) const {
 
   const auto& target_id = request.GetPathArg("id");
@@ -38,7 +39,10 @@ std::string GetUserProfileHandler::HandleRequestThrow(
 
     if (user_res.IsEmpty()) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
-      return R"({"code": "USER_NOT_FOUND", "message": "Пользователь не найден"})";
+      userver::formats::json::ValueBuilder err;
+      err["code"] = "USER_NOT_FOUND";
+      err["message"] = "Пользователь не найден";
+      return err.ExtractValue();
     }
 
     auto user_row = user_res[0];
@@ -128,14 +132,20 @@ std::string GetUserProfileHandler::HandleRequestThrow(
 
     builder["projects"] = std::move(projects_array);
 
-    return userver::formats::json::ToString(builder.ExtractValue());
+    return builder.ExtractValue();
 
   } catch (const userver::storages::postgres::DataException& e) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-    return R"({"code": "INVALID_UUID", "message": "Некорректный формат ID пользователя"})";
+    userver::formats::json::ValueBuilder err;
+    err["code"] = "INVALID_UUID";
+    err["message"] = "Некорректный формат ID пользователя";
+    return err.ExtractValue();
   } catch (const std::exception& e) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
-    return R"({"code": "INTERNAL_ERROR", "message": "Внутренняя ошибка сервера"})";
+    userver::formats::json::ValueBuilder err;
+    err["code"] = "INTERNAL_ERROR";
+    err["message"] = "Внутренняя ошибка сервера";
+    return err.ExtractValue();
   }
 }
 

@@ -16,6 +16,7 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.Url
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -63,7 +64,7 @@ object HttpClientFactory {
             contentType(ContentType.Application.Json)
         }
 
-        install(authHeaderPlugin(tokenProvider))
+        installAuthHeader(tokenProvider, apiHost = Url(baseUrl).host)
 
         if (enableLogging) {
             install(Logging) {
@@ -94,12 +95,34 @@ internal fun HttpClientConfig<*>.installApiRetry() {
     }
 }
 
-/** Подставляет `Authorization: Bearer`, если токен есть и запрос не задал заголовок сам. */
-private fun authHeaderPlugin(tokenProvider: AuthTokenProvider) =
-    createClientPlugin(name = "AuthHeaderPlugin") {
-        onRequest { request, _ ->
-            if (request.headers.contains(HttpHeaders.Authorization)) return@onRequest
-            val token = tokenProvider.currentToken() ?: return@onRequest
-            request.header(HttpHeaders.Authorization, "Bearer $token")
-        }
-    }
+/**
+ * Подставляет `Authorization: Bearer` — только на запросы к [apiHost] и только
+ * если запрос не задал заголовок сам. Вынесено отдельно, чтобы тест проверял ту
+ * же политику, что уходит в прод.
+ *
+ * Проверка хоста нужна, чтобы первый же абсолютный URL на чужой домен (S3, CDN,
+ * внешняя аватарка) не увёз токен пользователя третьей стороне.
+ *
+ * [apiHost] берём из того же `baseUrl`, что приходит в [HttpClientFactory.create],
+ * а не из [ApiConfig] напрямую: иначе клиент со своим базовым адресом (тесты,
+ * стенд) молча перестанет получать заголовок.
+ */
+internal fun HttpClientConfig<*>.installAuthHeader(
+    tokenProvider: AuthTokenProvider,
+    apiHost: String,
+) {
+    install(
+        createClientPlugin(name = "AuthHeaderPlugin") {
+            onRequest { request, _ ->
+                // Хост у относительного пути появляется только после того, как
+                // defaultRequest подставит базовый URL: оба перехватчика сидят на
+                // фазе Before, поэтому installAuthHeader обязан идти после
+                // defaultRequest — иначе host пустой и заголовка не будет вообще.
+                if (!request.url.host.equals(apiHost, ignoreCase = true)) return@onRequest
+                if (request.headers.contains(HttpHeaders.Authorization)) return@onRequest
+                val token = tokenProvider.currentToken() ?: return@onRequest
+                request.header(HttpHeaders.Authorization, "Bearer $token")
+            }
+        },
+    )
+}

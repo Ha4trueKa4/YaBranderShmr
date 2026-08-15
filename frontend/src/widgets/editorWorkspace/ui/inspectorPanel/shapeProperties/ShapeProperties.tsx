@@ -1,4 +1,5 @@
 import type { EditorShape, Paint } from '@entities/editorDocument'
+import { observer } from 'mobx-react-lite'
 
 import { FillProperty } from '../components/FillProperty'
 import { PropertyField } from '../components/PropertyField'
@@ -7,6 +8,8 @@ import styles from '../Properties.module.css'
 
 interface ShapePropertiesProps {
   layer: EditorShape
+  onFillChange: (color: string) => void
+  onFillOpacityChange: (opacity: number) => void
 }
 
 function paintToLabel(paint: Paint) {
@@ -21,7 +24,11 @@ function paintToLabel(paint: Paint) {
   return 'None'
 }
 
-export function ShapeProperties({ layer }: ShapePropertiesProps) {
+export const ShapeProperties = observer(function ShapeProperties({
+  layer,
+  onFillChange,
+  onFillOpacityChange,
+}: ShapePropertiesProps) {
   return (
     <div className={styles.properties}>
       {/* Подключить изменение координат, fill и stroke через feature editorEditProperties. */}
@@ -31,10 +38,14 @@ export function ShapeProperties({ layer }: ShapePropertiesProps) {
         <PropertyField label="Y" value={layer.transform.y} />
       </div>
       <FillProperty
-        fill={paintToLabel(layer.style.fill)}
+        fill={
+          layer.style.fill.type === 'color' ? layer.style.fill.value : '#000000'
+        }
+        onFillChange={onFillChange}
+        onOpacityChange={onFillOpacityChange}
         opacity={layer.style.fillOpacity}
       />
       <StrokeProperty stroke={paintToLabel(layer.style.stroke)} />
     </div>
   )
-}
+})

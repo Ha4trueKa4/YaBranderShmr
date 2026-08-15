@@ -1,4 +1,5 @@
 #include "version_storage_component_impl.hpp"
+#include "../svg_validator.hpp"
 
 #include <cstdint>
 #include <stdexcept>
@@ -132,26 +133,26 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
     }
 
     std::vector<models::Version> VersionStorageComponentImpl::ListVersions(
-        const std::string& project_id) {
-      const auto res = pg_cluster_->Execute(
-          pg::ClusterHostType::kSlave,
-          "SELECT id, project_id, version_num, created_at "
-          "FROM project_versions WHERE project_id = $1::uuid "
-          "ORDER BY version_num DESC",
-          project_id);
+    const std::string& project_id) {
+    const auto res = pg_cluster_->Execute(
+        pg::ClusterHostType::kSlave,
+        "SELECT id::text, project_id::text, version_num, created_at "
+        "FROM project_versions WHERE project_id = $1::uuid "
+        "ORDER BY version_num DESC",
+        project_id);
 
-      std::vector<models::Version> versions;
-      versions.reserve(res.Size());
-      for (const auto& row : res) {
+    std::vector<models::Version> versions;
+    versions.reserve(res.Size());
+    for (const auto& row : res) {
         versions.push_back(models::Version{
             row["id"].As<std::string>(),
             row["project_id"].As<std::string>(),
             row["version_num"].As<std::int32_t>(),
             row["created_at"].As<pg::TimePointTz>(),
         });
-      }
-      return versions;
     }
+    return versions;
+}
 
     std::string VersionStorageComponentImpl::RestoreVersion(
         const std::string& project_id, const std::string& version_id) {

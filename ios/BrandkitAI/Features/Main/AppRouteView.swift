@@ -8,6 +8,7 @@ import SwiftUI
 ///   Все они собраны здесь, чтобы при подключении API править одно место.
 struct AppRouteView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(SessionStore.self) private var session
 
     let route: AppRoute
 
@@ -45,9 +46,11 @@ struct AppRouteView: View {
                 onOpenAuthor: { router.push(.profile(userID: UUID())) }
             )
 
-        case .profile:
+        case .profile(let userID):
             ProfileView(
+                session: session,
                 isCurrentUser: false,
+                userID: userID.uuidString,
                 onBack: { router.pop() },
                 onOpenProject: { router.push(.projectEditor(projectID: UUID())) }
             )

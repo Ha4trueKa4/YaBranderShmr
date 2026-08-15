@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+
+import { Spinner } from '@/shared'
 import styles from './Button.module.css'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -35,8 +37,7 @@ export function Button({
       disabled={disabled || loading}
       type={type}
     >
-      {loading && <span className={styles.spinner} />}
-      {children}
+      {loading ? <Spinner size="sm" /> : children}
     </button>
   )
 }

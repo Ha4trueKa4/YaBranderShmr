@@ -1,16 +1,30 @@
 #include "subscription_handlers.hpp"
 
 #include <userver/components/component.hpp>
+#include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
 namespace ya_brander::handlers {
 
+namespace {
+
+userver::formats::json::Value MakeMessage(std::string_view message) {
+  userver::formats::json::ValueBuilder builder;
+  builder["message"] = std::string(message);
+  return builder.ExtractValue();
+}
+
+}  // namespace
+
 SubscribeHandler::SubscribeHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context),
+    : HttpHandlerJsonBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()) {}
 
-std::string SubscribeHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+userver::formats::json::Value SubscribeHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
+    userver::server::request::RequestContext& context) const {
   std::string* user_id = context.GetDataOptional<std::string>("user_id");
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -20,7 +34,7 @@ std::string SubscribeHandler::HandleRequestThrow(const userver::server::http::Ht
   const auto& target_id = request.GetPathArg("id");
   if (target_id == *user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-    return R"({"message": "Cannot subscribe to yourself"})";
+    return MakeMessage("Cannot subscribe to yourself");
   }
 
   try {
@@ -30,17 +44,20 @@ std::string SubscribeHandler::HandleRequestThrow(const userver::server::http::Ht
         *user_id, target_id);
   } catch (const userver::storages::postgres::ForeignKeyViolation&) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
-    return R"({"message": "User not found"})";
+    return MakeMessage("User not found");
   }
 
-  return R"({"message": "Subscribed successfully"})";
+  return MakeMessage("Subscribed successfully");
 }
 
 UnsubscribeHandler::UnsubscribeHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context),
+    : HttpHandlerJsonBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()) {}
 
-std::string UnsubscribeHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+userver::formats::json::Value UnsubscribeHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
+    userver::server::request::RequestContext& context) const {
   std::string* user_id = context.GetDataOptional<std::string>("user_id");
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -54,7 +71,7 @@ std::string UnsubscribeHandler::HandleRequestThrow(const userver::server::http::
       "DELETE FROM subscriptions WHERE subscriber_id = $1::uuid AND target_user_id = $2::uuid",
       *user_id, target_id);
 
-  return R"({"message": "Unsubscribed successfully"})";
+  return MakeMessage("Unsubscribed successfully");
 }
 
 }  // namespace ya_brander::handlers

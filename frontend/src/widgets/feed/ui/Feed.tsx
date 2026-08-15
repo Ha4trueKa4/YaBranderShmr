@@ -1,5 +1,7 @@
+import { useFeedQuery } from '@entities/project'
+import { getApiErrorMessage } from '@shared/api/api'
 import { cn } from '@shared/lib'
-import { Button, Input } from '@shared/ui'
+import { AsyncState, Button, Input } from '@shared/ui'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 
@@ -7,16 +9,20 @@ import styles from './Feed.module.css'
 import { type FeedFilters, FeedProjectGrid } from './FeedProjectGrid'
 
 export function Feed() {
-  const [scope, setScope] = useState<FeedFilters['scope']>('all')
+  const [scope, setScope] = useState<FeedFilters['scope']>('discover')
   const [searchQuery, setSearchQuery] = useState('')
+  const { data, error, isError, isPending } = useFeedQuery(scope)
 
   return (
     <section className={styles.feed}>
       <div className={styles.toolbar}>
         <div className={styles.scopeTabs}>
           <button
-            className={cn(styles.scopeTab, scope === 'all' && styles.active)}
-            onClick={() => setScope('all')}
+            className={cn(
+              styles.scopeTab,
+              scope === 'discover' && styles.active,
+            )}
+            onClick={() => setScope('discover')}
             type="button"
           >
             All
@@ -48,7 +54,16 @@ export function Feed() {
         </Button>
       </div>
 
-      <FeedProjectGrid filters={{ scope, searchQuery }} />
+      <AsyncState
+        errorMessage={getApiErrorMessage(error)}
+        isError={isError}
+        isPending={isPending}
+      >
+        <FeedProjectGrid
+          filters={{ scope, searchQuery }}
+          projects={data?.items ?? []}
+        />
+      </AsyncState>
     </section>
   )
 }
