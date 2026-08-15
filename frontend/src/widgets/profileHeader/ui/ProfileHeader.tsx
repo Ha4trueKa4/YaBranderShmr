@@ -10,7 +10,6 @@ export interface ProfileHeaderProps {
 }
 
 export interface ProfileHeaderProfile {
-  bio: string
   followersCount: number
   followingCount: number
   name: string
@@ -30,7 +29,7 @@ export function ProfileHeader({ actions, profile }: ProfileHeaderProps) {
         <div className={styles.identity}>
           <h1>{profile.name}</h1>
           <p className={styles.username}>@{profile.username}</p>
-          <p className={styles.bio}>{profile.bio}</p>
+          {/* <p className={styles.bio}>{profile.bio}</p> */}
         </div>
         <div className={styles.actions}>
           <dl className={styles.stats}>
