@@ -8,7 +8,7 @@ WORKDIR /build
 COPY CMakeLists.txt ./
 COPY configs ./configs
 COPY Makefile ./
-COPY docker-compose.yaml ./
+COPY docker-compose.yml ./
 COPY requirements.txt ./
 
 # Исходники копируем ПОСЛЕДНИМИ — они меняются чаще всего.
