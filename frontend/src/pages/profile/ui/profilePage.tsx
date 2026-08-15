@@ -1,8 +1,13 @@
 import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
-import { useUserProfileQuery } from '@entities/project'
+import {
+  useDeleteProjectMutation,
+  userProfileQueryKey,
+  useUserProfileQuery,
+} from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
-import { AsyncState, Button, ErrorState } from '@shared/ui'
+import { AsyncState, Button, ErrorState, useToast } from '@shared/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   OwnProjectsSection,
   ProfileHeader,
@@ -17,6 +22,8 @@ import styles from './profilePage.module.css'
 
 export function ProfilePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const toast = useToast()
   const session = authStore.getSession
   const [isEditProfileModalOpen, setEditProfileModalOpen] = useState(false)
   const [profileName, setProfileName] = useState(
@@ -29,6 +36,8 @@ export function ProfilePage() {
     isError: isUserProfileError,
     isPending: isUserProfilePending,
   } = useUserProfileQuery(userId)
+  const { isPending: isDeletingProjectPending, mutateAsync: deleteProject } =
+    useDeleteProjectMutation()
 
   if (!session) {
     return <ProfileUnavailable />
@@ -60,6 +69,19 @@ export function ProfilePage() {
     setEditProfileModalOpen(false)
   }
 
+  async function handleDeleteProject(projectId: string) {
+    try {
+      await deleteProject(projectId)
+      await queryClient.invalidateQueries({
+        queryKey: userProfileQueryKey(userId),
+      })
+      toast.info('Project deleted.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+      throw error
+    }
+  }
+
   return (
     <div className={styles.page}>
       <Header />
@@ -86,6 +108,8 @@ export function ProfilePage() {
           isPending={isUserProfilePending}
         >
           <OwnProjectsSection
+            isDeletingProjectPending={isDeletingProjectPending}
+            onDeleteProject={handleDeleteProject}
             onOpenProject={handleOpenProject}
             projects={projects}
           />

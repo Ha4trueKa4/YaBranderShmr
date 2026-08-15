@@ -7,11 +7,15 @@ import styles from './OwnProjectsSection.module.css'
 import { ProjectManagementModal } from './ProjectManagementModal'
 
 interface OwnProjectsSectionProps {
+  isDeletingProjectPending: boolean
+  onDeleteProject: (projectId: string) => Promise<void>
   onOpenProject: (projectId: string) => void
   projects: Project[]
 }
 
 export function OwnProjectsSection({
+  isDeletingProjectPending,
+  onDeleteProject,
   onOpenProject,
   projects,
 }: OwnProjectsSectionProps) {
@@ -42,13 +46,21 @@ export function OwnProjectsSection({
     )
   }
 
-  function handleDeleteProject() {
-    if (!deletedProjectId) {
+  async function handleDeleteProject() {
+    const projectId = deletedProjectId
+
+    if (!projectId) {
+      return
+    }
+
+    try {
+      await onDeleteProject(projectId)
+    } catch {
       return
     }
 
     setManagedProjects((currentProjects) =>
-      currentProjects.filter((project) => project.id !== deletedProjectId),
+      currentProjects.filter((project) => project.id !== projectId),
     )
     setDeletedProjectId(null)
   }
@@ -98,6 +110,7 @@ export function OwnProjectsSection({
       <ConfirmationModal
         confirmLabel="Delete project"
         description={`Delete “${deletedProject?.name ?? 'Untitled project'}”? This action cannot be undone.`}
+        isConfirming={isDeletingProjectPending}
         isOpen={Boolean(deletedProject)}
         onCancel={() => setDeletedProjectId(null)}
         onConfirm={handleDeleteProject}

@@ -92,7 +92,9 @@ export function ProjectManagementModal({
               <Button onClick={onClose} variant="secondary">
                 Cancel
               </Button>
-              <Button type="submit">Save</Button>
+              <Button loading={form.formState.isSubmitting} type="submit">
+                Save
+              </Button>
             </div>
           </form>
         </section>
