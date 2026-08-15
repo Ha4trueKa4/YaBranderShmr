@@ -38,15 +38,19 @@ workflows:
           - name: run-build-backend-check
             gitlab_workflow: .sourcecraft/build-backend-check.yaml
 
+  # Сборка + публикация образа в registry, затем деплой — строго по порядку
+  # (задание deploy стартует только после успешного завершения задания build).
   build-and-deploy-backend:
     tasks:
       - name: build
-          cubes:
-            - name: run-build-backend
-              gitlab_workflow: .sourcecraft/build-backend.yaml
-              env:
-                YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
+        cubes:
+          - name: run-build-backend
+            gitlab_workflow: .sourcecraft/build-backend.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
+
       - name: deploy
+        needs: [build]
         cubes:
           - name: run-deploy-backend
             gitlab_workflow: .sourcecraft/deploy-backend.yaml
