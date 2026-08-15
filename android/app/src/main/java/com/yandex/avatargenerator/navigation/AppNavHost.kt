@@ -15,12 +15,13 @@ import com.yandex.avatargenerator.feature.createproject.ui.CreateProjectScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
+import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
 
 /**
  * Граф навигации приложения.
  *
- * Реальными экранами пока подключены онбординг, вход/регистрация, лента и список
- * чатов; остальные узлы — [PlaceholderScreen] до готовности фич.
+ * Реальными экранами пока подключены онбординг, вход/регистрация, лента, список
+ * чатов, профиль и проект; остальные узлы — [PlaceholderScreen] до готовности фич.
  *
  * @param navController контроллер, общий со Scaffold (для нижней панели).
  * @param startDestination стартовый маршрут: онбординг при первом запуске,
@@ -134,8 +135,12 @@ fun AppNavHost(
             arguments = listOf(navArgument(Destination.ARG_PROJECT_ID) { type = NavType.StringType }),
         ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString(Destination.ARG_PROJECT_ID).orEmpty()
-            // TODO: экран проекта — WebView-редактор + чат с ИИ.
-            PlaceholderScreen(title = "Проект", subtitle = "id: $projectId")
+            // TODO: WebView-редактор сверху — пока экран проекта это только чат с ИИ.
+            ProjectScreen(
+                projectId = projectId,
+                onBackClick = { navController.popBackStack() },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         composable(
