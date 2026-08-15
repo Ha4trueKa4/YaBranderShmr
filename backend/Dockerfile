@@ -14,8 +14,12 @@ COPY requirements.txt ./
 # Исходники копируем ПОСЛЕДНИМИ — они меняются чаще всего.
 COPY src ./src
 
-# Собираем Release-версию бинарника ya_brander
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
+# Собираем Release-версию бинарника ya_brander.
+# --mount=type=cache сохраняет каталог build/ (объектные файлы) между сборками через
+# BuildKit-кэш: при правках только в src/ перекомпилируются лишь изменённые файлы,
+# а не весь проект заново. Работает с buildx docker-container драйвером и mode=max.
+RUN --mount=type=cache,target=/build/build \
+    cmake -B build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j$(nproc) --target ya_brander
 
 # ---- стадия рантайма ----

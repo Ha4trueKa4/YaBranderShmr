@@ -14,6 +14,8 @@ build-check:
   script:
     # Проверка компиляции: собираем образ, НЕ публикуем и НЕ трогаем тег latest.
     # --cache-from (read-only) без --cache-to, чтобы PR не перезаписывал кэш main.
-    # Логин до сборки — кэш тянется из приватного CR. Команда на одной строке.
+    # Логин до сборки — кэш тянется из приватного CR. docker-драйвер не читает registry-кэш,
+    # поэтому используем buildx docker-container драйвер. Команда на одной строке.
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    - docker buildx create --name yc-builder --driver docker-container --use || docker buildx use yc-builder
+    - docker buildx build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
