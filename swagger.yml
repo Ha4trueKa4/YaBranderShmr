@@ -37,27 +37,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Ошибка валидации формата данных (неверный email, короткий пароль и т.д.)
+          description: Ошибка валидации формата данных (email/пароль/никнейм не проходят требования)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
               examples:
                 InvalidEmail:
-                  summary: Невалидный email
+                  summary: Некорректный email
                   value:
                     code: "INVALID_EMAIL"
-                    message: "Некорректный формат email"
-                WeakPassword:
-                  summary: Слабый пароль
+                    message: "Email is invalid"
+                    field: "email"
+                InvalidPassword:
+                  summary: Пароль не проходит требования
                   value:
                     code: "INVALID_PASSWORD"
-                    message: "Пароль слишком простой"
-                ShortNickname:
-                  summary: Короткий никнейм
+                    message: "Password must be 8-128 chars and contain letters and digits"
+                    field: "password"
+                InvalidNickname:
+                  summary: Никнейм не проходит требования
                   value:
                     code: "INVALID_NICKNAME"
-                    message: "Никнейм должен содержать минимум 3 символа"
+                    message: "Nickname must be 3-64 chars"
+                    field: "nickname"
         '409':
           description: Конфликт данных (email или nickname уже занят)
           content:
@@ -77,6 +80,8 @@ paths:
                     code: "NICKNAME_EXISTS"
                     message: "Этот никнейм уже занят другим пользователем"
                     field: "nickname"
+        '500':
+          description: Внутренняя ошибка сервера
 
   /auth/login:
     post:
@@ -96,14 +101,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Неверные учетные данные или пустой пароль
+          description: Неверный email, пароль или одно из полей не передано
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/AuthError'
               example:
                 code: "INVALID_CREDENTIALS"
-                message: "Неверный email или пароль"
+                message: "Invalid email or password"
+        '500':
+          description: Внутренняя ошибка сервера
 
   /users/{id}:
     get:
@@ -168,13 +175,33 @@ paths:
             example: "123e4567-e89b-12d3-a456-426614174000"
       responses:
         '200':
-          description: Подписка успешно оформлена
+          description: Подписка успешно оформлена (в т.ч. повторно — операция идемпотентна)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscribed successfully"
         '400':
           description: Нельзя подписаться на самого себя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Cannot subscribe to yourself"
         '401':
-          description: Не авторизован
+          description: Отсутствует или некорректен JWT
         '404':
-          description: Пользователь не найден
+          description: Пользователь, на которого оформляется подписка, не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "User not found"
+        '500':
+          description: Внутренняя ошибка сервера
 
     delete:
       summary: Отписаться от пользователя
@@ -191,9 +218,20 @@ paths:
             example: "123e4567-e89b-12d3-a456-426614174000"
       responses:
         '200':
-          description: Подписка успешно отменена
+          description: >
+            Подписка успешно отменена. Операция ничего не проверяет, кроме
+            авторизации — сработает 200, даже если подписки не было или
+            пользователь id не существует.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Unsubscribed successfully"
         '401':
-          description: Не авторизован
+          description: Отсутствует или некорректен JWT
+        '500':
+          description: Внутренняя ошибка сервера
 
   /users/{id}/subscribers:
     get:
@@ -299,8 +337,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Project'
+        '400':
+          description: Не передано название проекта (name)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Name is required"
         '401':
-          description: Не авторизован
+          description: Отсутствует или некорректен JWT
+        '500':
+          description: Внутренняя ошибка сервера
 
   /projects/{id}:
     get:
@@ -322,10 +370,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Project'
+        '401':
+          description: Проект приватный, а запрос анонимный (без JWT)
         '403':
-          description: Нет прав (не автор проекта)
+          description: >
+            Проект приватный, и вы авторизованы, но не автор проекта.
+            Также этим кодом отвечает auth-мидлварь, если сам JWT
+            невалиден/просрочен (в таком случае наличие прав уже не проверяется).
         '404':
           description: Проект не найден
+        '500':
+          description: Внутренняя ошибка сервера
 
     patch:
       summary: Обновить данные проекта (ручное сохранение)
@@ -353,11 +408,21 @@ paths:
                   example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><g></g></svg>'
       responses:
         '200':
-          description: Проект успешно обновлен
+          description: Проект успешно обновлён. Возвращает полный объект проекта после изменений.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
         '401':
-          description: Не авторизован
+          description: Отсутствует или некорректен JWT
         '403':
-          description: Нет прав (не автор проекта)
+          description: >
+            Вы авторизованы, но не автор проекта. Также этим кодом отвечает
+            auth-мидлварь при невалидном/просроченном JWT.
+        '404':
+          description: Проект не найден
+        '500':
+          description: Внутренняя ошибка сервера
 
     delete:
       summary: Удаление проекта
@@ -374,12 +439,20 @@ paths:
       responses:
         '200':
           description: Проект удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Project deleted successfully"
         '401':
-          description: Не авторизован
+          description: Отсутствует или некорректен JWT
         '403':
           description: Нет прав на удаление чужого проекта
         '404':
           description: Проект не найден
+        '500':
+          description: Внутренняя ошибка сервера
 
   /projects/{id}/generate:
     post:
@@ -417,6 +490,14 @@ paths:
                     type: string
                     description: "Результат работы нейросети в виде SVG-строки"
                     example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100" fill="#FF0000"/></svg>'
+        '400':
+          description: Не передан prompt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Prompt cannot be empty"
         '401':
           description: Не авторизован
         '403':
@@ -495,13 +576,19 @@ components:
         email:
           type: string
           format: email
+          maxLength: 128
           example: "user@example.com"
         password:
           type: string
           format: password
-          example: "StrongPassword123!"
+          minLength: 8
+          maxLength: 128
+          description: "8-128 символов, обязательно хотя бы одна буква и одна цифра"
+          example: "strongPassword123!"
         nickname:
           type: string
+          minLength: 3
+          maxLength: 64
           example: "John Doe"
 
     LoginRequest:
@@ -649,12 +736,21 @@ components:
           type: string
           example: "email"
 
-    Error:
+    MessageResponse:
       type: object
+      description: Простой ответ вида "успех/ошибка одной строкой", без кода ошибки — используется там, где хендлер не различает конкретные причины сбоя.
+      properties:
+        message:
+          type: string
+          example: "Project deleted successfully"
+
+    AuthError:
+      type: object
+      description: Ошибка аутентификации при входе — код всегда один и тот же, не различает "нет такого email" от "неверный пароль" (чтобы не палить существование email).
       properties:
         code:
           type: string
           example: "INVALID_CREDENTIALS"
         message:
           type: string
-          example: "Неверный email или пароль"
+          example: "Invalid email or password"
