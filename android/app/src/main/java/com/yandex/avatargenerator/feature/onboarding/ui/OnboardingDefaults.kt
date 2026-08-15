@@ -85,15 +85,8 @@ internal object OnboardingDefaults {
 
     val CtaGroupSpacing = 20.dp
 
-    /** Cyan в центре → purple по краю. Промежуточные стопы взяты из макета. */
-    val GlowBrush = Brush.radialGradient(
-        0.0f to AppColors.AccentCyan,
-        0.125f to Color(0xFF15A7D7),
-        0.25f to Color(0xFF2497DA),
-        0.5f to Color(0xFF4178E1),
-        0.75f to Color(0xFF5F59E7),
-        1.0f to AppColors.Accent,
-    )
+    /** Cyan в центре → purple по краю. Палитра свечения — токен [AppColors.OnboardingGlow]. */
+    val GlowBrush = AppColors.OnboardingGlow
 
     val MockupBrandNameStyle = AppTypography.heading3.copy(fontWeight = FontWeight.Bold)
 
