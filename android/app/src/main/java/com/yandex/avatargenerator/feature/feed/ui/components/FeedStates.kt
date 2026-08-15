@@ -1,13 +1,15 @@
 package com.yandex.avatargenerator.feature.feed.ui.components
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -49,11 +51,16 @@ fun FeedAppendError(
             .padding(AppSpacing.xs),
         contentAlignment = Alignment.Center,
     ) {
-        TextButton(onClick = onRetry) {
-            Text(
-                text = stringResource(R.string.feed_append_error_retry),
-                style = AppTypography.body.copy(color = AppColors.Accent),
-            )
-        }
+        // Кликабельный текст вместо material3.TextButton (в фичах не используем сырые
+        // кнопки). Без ripple — как в BrandTextLink дизайн-системы.
+        Text(
+            text = stringResource(R.string.feed_append_error_retry),
+            style = AppTypography.body.copy(color = AppColors.Accent),
+            modifier = Modifier.clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onRetry,
+            ),
+        )
     }
 }
