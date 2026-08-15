@@ -94,17 +94,11 @@ private fun ProjectContent(
         )
 
         when (uiState) {
-            ProjectUiState.Loading -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            ProjectUiState.Loading -> ProjectCenteredBox {
                 CircularProgressIndicator(color = AppColors.Accent)
             }
 
-            ProjectUiState.Error -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            ProjectUiState.Error -> ProjectCenteredBox {
                 BrandErrorState(
                     title = stringResource(R.string.project_error_title),
                     retryLabel = stringResource(R.string.project_error_retry),
@@ -129,6 +123,22 @@ private fun ProjectContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * Центрирующая обёртка для состояний Loading и Error — одинаковая у обоих.
+ *
+ * Обернуть в общий `Box` весь `when` нельзя: ветка `Content` живёт в `Column`
+ * и использует `Modifier.weight(1f)`, которого в `BoxScope` нет.
+ */
+@Composable
+private fun ProjectCenteredBox(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 

@@ -77,12 +77,12 @@ internal fun ChatInputBar(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
         ) {
-            DraftField(
+            ChatInputDraftField(
                 draft = draft,
                 onDraftChange = onDraftChange,
                 modifier = Modifier.weight(1f),
             )
-            SendButton(enabled = draft.isNotBlank(), onClick = onSendClick)
+            ChatInputSendButton(enabled = draft.isNotBlank(), onClick = onSendClick)
         }
 
         // Область системной навигации в том же фоне; сам «хват» рисует система.
@@ -99,7 +99,7 @@ internal fun ChatInputBar(
 }
 
 @Composable
-private fun DraftField(
+private fun ChatInputDraftField(
     draft: String,
     onDraftChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -131,7 +131,7 @@ private fun DraftField(
 }
 
 @Composable
-private fun SendButton(
+private fun ChatInputSendButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

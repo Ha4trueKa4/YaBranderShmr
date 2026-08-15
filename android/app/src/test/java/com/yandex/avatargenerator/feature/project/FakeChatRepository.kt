@@ -21,8 +21,15 @@ internal class FakeChatRepository(
     var getChatCallCount: Int = 0
         private set
 
-    /** Тексты, дошедшие до репозитория: по ним видно, что отправка не сработала. */
+    /**
+     * Тексты, дошедшие до репозитория: по ним видно, что отправка не сработала.
+     * При заданном [sendError] текст всё равно попадает сюда — попытка отправки
+     * была, упала она уже после.
+     */
     val sentTexts: MutableList<String> = mutableListOf()
+
+    /** Ошибка, которую должен бросить [sendMessage]; null — отправка успешна. */
+    var sendError: Throwable? = null
 
     override suspend fun getChat(projectId: String): ProjectChat {
         getChatCallCount++
@@ -31,6 +38,7 @@ internal class FakeChatRepository(
 
     override suspend fun sendMessage(projectId: String, text: String): ChatMessage {
         sentTexts += text
+        sendError?.let { throw it }
         return ChatMessage.Outgoing(id = "sent-${sentTexts.size}", text = text, sentAt = sentAt)
     }
 

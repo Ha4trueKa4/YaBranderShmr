@@ -9,6 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,7 +28,8 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  * Лента сообщений проекта. Каждый вид сообщения рисуется своим элементом:
  * пузыри по краям экрана, системные события — пилюлей и разделителем версии.
  *
- * При появлении нового сообщения прокручивается к нему.
+ * Открывается сразу на последнем сообщении; при появлении нового сообщения
+ * прокручивается к нему с анимацией.
  */
 @Composable
 internal fun ChatTimeline(
@@ -32,13 +37,23 @@ internal fun ChatTimeline(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    // Сколько сообщений уже показано. Храним именно размер, а не флаг «первый
+    // проход»: по нему видно, промотка нужна из-за нового сообщения или лента
+    // просто пересоздалась (поворот экрана) и трогать позицию не надо.
+    var renderedCount by rememberSaveable { mutableIntStateOf(0) }
 
     // Ключ — размер, а не сам список: перерисовка существующего сообщения
     // (например, дозагрузка картинки) прокрутку дёргать не должна.
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.lastIndex)
+        if (messages.isEmpty()) return@LaunchedEffect
+        when {
+            // Первое открытие: позиционируемся мгновенно, без «проезда» сверху вниз.
+            renderedCount == 0 -> listState.scrollToItem(messages.lastIndex)
+            // Сообщение дописали при открытом экране — прокручиваемся с анимацией.
+            messages.size > renderedCount -> listState.animateScrollToItem(messages.lastIndex)
+            // Размер не изменился: позицию не трогаем, её восстановил listState.
         }
+        renderedCount = messages.size
     }
 
     LazyColumn(

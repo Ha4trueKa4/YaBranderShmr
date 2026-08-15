@@ -38,7 +38,8 @@ internal class ProjectViewModel(
      * Отправляет черновик и дописывает результат в конец ленты.
      *
      * Поле очищается сразу, до ответа репозитория, — иначе на время задержки
-     * ввод «залипает» с уже отправленным текстом.
+     * ввод «залипает» с уже отправленным текстом. Если отправка не удалась,
+     * текст возвращается в поле, чтобы не пропасть без следа.
      */
     fun send() {
         val state = _uiState.value
@@ -46,13 +47,25 @@ internal class ProjectViewModel(
         val text = state.draft.trim()
         if (text.isEmpty()) return
 
-        _uiState.value = state.copy(draft = "")
+        _uiState.update { if (it is ProjectUiState.Content) it.copy(draft = "") else it }
         viewModelScope.launch {
-            // Ошибку отправки пока проглатываем: показывать её нечем (нет снекбара
-            // в дизайн-системе), а сваливать весь экран в Error из-за одного
-            // сообщения — хуже. TODO: индикация неотправленного сообщения.
+            // Отдельно ошибку отправки не показываем: снекбара в дизайн-системе нет,
+            // а сваливать весь экран в Error из-за одного сообщения — хуже. Чтобы
+            // текст всё же не пропал, возвращаем его в поле ввода (см. ниже).
+            // TODO: индикация неотправленного сообщения со статусом и повтором.
             val message = runCatching { repository.sendMessage(projectId, text) }.getOrNull()
-                ?: return@launch
+            if (message == null) {
+                // Пользователь мог начать набирать новое, пока шла отправка, — тогда
+                // старый текст не возвращаем, чтобы не перетереть ввод.
+                _uiState.update { current ->
+                    if (current is ProjectUiState.Content && current.draft.isEmpty()) {
+                        current.copy(draft = text)
+                    } else {
+                        current
+                    }
+                }
+                return@launch
+            }
             _uiState.update { current ->
                 if (current is ProjectUiState.Content) {
                     current.copy(messages = current.messages + message)

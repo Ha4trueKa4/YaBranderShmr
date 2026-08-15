@@ -127,6 +127,42 @@ internal class ProjectViewModelTest {
     }
 
     @Test
+    fun `send returns the draft back when sending fails`() = runTest(dispatcher) {
+        repository.chatResult = Result.success(chat)
+        repository.sendError = IllegalStateException("network is down")
+        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("  Make it rounder  ")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        // Возвращается уже обрезанный текст — именно тот, что уходил в репозиторий.
+        assertEquals("Make it rounder", content.draft)
+        assertEquals(messages, content.messages)
+    }
+
+    @Test
+    fun `send does not overwrite a new draft when sending fails`() = runTest(dispatcher) {
+        repository.chatResult = Result.success(chat)
+        repository.sendError = IllegalStateException("network is down")
+        val viewModel = ProjectViewModel(repository, PROJECT_ID)
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        // Отправка ещё не завершилась (StandardTestDispatcher), пользователь
+        // успевает начать новое сообщение — его перетирать нельзя.
+        viewModel.onDraftChange("Actually, make it square")
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals("Actually, make it square", content.draft)
+        assertEquals(messages, content.messages)
+    }
+
+    @Test
     fun `send does nothing for a blank draft`() = runTest(dispatcher) {
         repository.chatResult = Result.success(chat)
         val viewModel = ProjectViewModel(repository, PROJECT_ID)
