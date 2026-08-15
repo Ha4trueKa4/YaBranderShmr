@@ -14,21 +14,48 @@ on:
       filter:
         target_branches: ["main"]
         paths: ["android/**"]
+    - workflows: build-backend-check
+      filter:
+        target_branches: ["main"]
+        paths: ["backend/**"]
+
   push:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
+    - workflows: [build-backend]
+      filter:
+        branches: ["main"]
     - workflows: [deploy-backend]
       filter:
         branches: ["main"]
 
 workflows:
+  # Проверка компиляции backend на этапе pull request:
+  # только docker build (без публикации образа и без затирания тега latest).
+  build-backend-check:
+    tasks:
+      - name: build
+        cubes:
+          - name: run-build-backend-check
+            gitlab_workflow: .sourcecraft/build-backend-check.yaml
+
+  # Сборка + публикация образа в registry на push в main (перед деплоем).
+  build-backend:
+    tasks:
+      - name: build
+        cubes:
+          - name: run-build-backend
+            gitlab_workflow: .sourcecraft/build-backend.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
+
   deploy-backend:
     tasks:
-      - name: build-and-deploy
+      - name: deploy
         cubes:
-          - name: run-backend-ci
-            gitlab_workflow: .sourcecraft/backend-ci.yaml
+          - name: run-deploy-backend
+            gitlab_workflow: .sourcecraft/deploy-backend.yaml
             env:
               YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
               YC_SERVER_IP: ${{ secrets.YC_SERVER_IP }}
@@ -36,6 +63,8 @@ workflows:
               YC_SSH_PRIVATE_KEY: ${{ secrets.YC_SSH_PRIVATE_KEY }}
               JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
               YANDEX_AI_API_KEY: ${{ secrets.YANDEX_AI_API_KEY }}
+              S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+              S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
 
   deploy-frontend-dev:
     tasks:
