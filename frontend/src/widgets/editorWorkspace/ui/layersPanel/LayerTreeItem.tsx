@@ -71,7 +71,10 @@ export const LayerTreeItem = observer(function LayerTreeItem({
         </div>
         <button
           className={styles.visibilityButton}
-          onClick={() => onToggleVisibility(node.id)}
+          onClick={(event) => {
+            event.stopPropagation()
+            onToggleVisibility(node.id)
+          }}
           type="button"
         >
           <VisibilityIcon size={16} strokeWidth={2} />

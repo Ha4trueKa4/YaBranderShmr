@@ -22,6 +22,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const navigate = useNavigate()
   const [projectName, setProjectName] = useState(initialProjectName)
   const [editorStore] = useState(() => new EditorStore(document))
+  const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
@@ -31,6 +32,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     // TODO: сохранять название через API, когда PATCH /projects/{id}
     // будет поддерживать поле name.
     setProjectName(nextProjectName)
+  }
+
+  function handleToggleVisibility(nodeId: string) {
+    editorStore.toggleNodeVisibility(nodeId)
+    setSceneRenderVersion((version) => version + 1)
   }
 
   return (
@@ -58,7 +64,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           nodes={editorStore.document.layers}
           onSelectNode={editorStore.setSelectedNode}
           onToggleGroup={editorStore.toggleGroup}
-          onToggleVisibility={editorStore.toggleNodeVisibility}
+          onToggleVisibility={handleToggleVisibility}
           selectedNodeId={editorStore.selectedNodeId}
         />
       </aside>
@@ -66,6 +72,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         <EditorScene
           document={editorStore.document}
           onSelectNode={editorStore.setSelectedNode}
+          renderVersion={sceneRenderVersion}
         />
       </div>
       <aside className={styles.inspector}>
