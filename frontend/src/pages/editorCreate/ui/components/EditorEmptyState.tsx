@@ -34,7 +34,9 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
                     placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
                     ref={field.ref}
                   />
-                  <Button type="submit">Generate</Button>
+                  <Button className={styles.generateButton} type="submit">
+                    Generate
+                  </Button>
                 </div>
                 {fieldState.error && (
                   <p className={styles.error}>{fieldState.error.message}</p>

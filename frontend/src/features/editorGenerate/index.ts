@@ -1,1 +1,1 @@
-export {}
+export { useGenerateProjectMutation } from './api/queries'
