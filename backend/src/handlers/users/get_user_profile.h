@@ -10,6 +10,7 @@
 #include <userver/storages/postgres/component.hpp>
 
 #include "../../components/subscription_storage/subscription_storage_component.h"
+#include "../../components/version_storage/version_storage_component.hpp"
 
 namespace ya_brander::handlers {
 class GetUserProfileHandler final : public userver::server::handlers::HttpHandlerBase {
@@ -25,6 +26,7 @@ public:
 
 private:
   userver::storages::postgres::ClusterPtr pg_cluster_;
+  components::VersionStorageComponent& version_storage_;
   const components::SubscriptionStorageComponent& subscription_storage_;
 };
 

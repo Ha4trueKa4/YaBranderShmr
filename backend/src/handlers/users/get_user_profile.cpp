@@ -3,6 +3,8 @@
 #include <chrono>
 #include <stdexcept>
 #include <optional>
+#include <vector>
+#include <unordered_map>
 
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/json/value_builder.hpp>
@@ -15,12 +17,13 @@ GetUserProfileHandler::GetUserProfileHandler(
     const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()),
-      subscription_storage_(context.FindComponent<components::SubscriptionStorageComponent>()) {}
+      subscription_storage_(context.FindComponent<components::SubscriptionStorageComponent>()),
+      version_storage_(context.FindComponent<components::VersionStorageComponent>()) {}
 
 std::string GetUserProfileHandler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request,
     userver::server::request::RequestContext& req_context) const {
-    
+
   const auto& target_id = request.GetPathArg("id");
 
   std::string* auth_user_id_ptr = req_context.GetDataOptional<std::string>("user_id");
@@ -55,16 +58,42 @@ std::string GetUserProfileHandler::HandleRequestThrow(
     auto proj_res = is_self
         ? pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
-            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at "
+            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at, last_version_key "
             "FROM projects WHERE author_id = $1::uuid ORDER BY created_at DESC",
             target_id
         )
         : pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
-            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at "
+            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at, last_version_key "
             "FROM projects WHERE author_id = $1::uuid AND is_private = FALSE ORDER BY created_at DESC",
             target_id
         );
+
+    std::vector<std::string> keys_public;
+    std::vector<std::string> keys_private;
+
+    for (const auto& row : proj_res) {
+      if (!row["last_version_key"].IsNull()) {
+        auto key = row["last_version_key"].As<std::string>();
+        if (row["is_private"].As<bool>()) {
+          keys_private.push_back(key);
+        } else {
+          keys_public.push_back(key);
+        }
+      }
+    }
+
+    std::unordered_map<std::string, std::string> urls;
+
+    if (!keys_public.empty()) {
+      auto pub_urls = version_storage_.GetManyUrls(keys_public, true);
+      urls.insert(pub_urls.begin(), pub_urls.end());
+    }
+
+    if (!keys_private.empty()) {
+      auto priv_urls = version_storage_.GetManyUrls(keys_private, false);
+      urls.insert(priv_urls.begin(), priv_urls.end());
+    }
 
     userver::formats::json::ValueBuilder builder;
     builder["id"] = user_id_str;
@@ -85,6 +114,15 @@ std::string GetUserProfileHandler::HandleRequestThrow(
       proj["description"] = row["description"].As<std::string>();
       proj["is_public"] = !row["is_private"].As<bool>();
       proj["created_at"] = row["created_at"].As<std::chrono::system_clock::time_point>();
+
+      if (!row["last_version_key"].IsNull()) {
+        auto key = row["last_version_key"].As<std::string>();
+        auto it = urls.find(key);
+        if (it != urls.end() && !it->second.empty()) {
+          proj["url"] = it->second;
+        }
+      }
+
       projects_array.PushBack(std::move(proj));
     }
 
