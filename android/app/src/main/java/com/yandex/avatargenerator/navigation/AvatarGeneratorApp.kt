@@ -30,9 +30,10 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  * значения граф не строится.
  *
  * Нижняя панель показывается на верхнеуровневых вкладках ([TopLevelDestination])
- * и на чужом профиле ([Destination.UserProfile]) — чтобы с него была та же
- * навигация, что и со своего. На прочих экранах-деталях (проект) и на онбординге
- * она скрыта, чтобы не мешать полноэкранному контенту.
+ * и на экранах-витринах — чужом профиле ([Destination.UserProfile]) и публичном
+ * проекте ([Destination.PublicProject]), — чтобы с них была та же навигация, что
+ * и со вкладок. На экране-редакторе (проект) и на онбординге она скрыта, чтобы
+ * не мешать полноэкранному контенту.
  *
  * Инсеты системных баров экранам раздаёт `Scaffold`, но с двумя исключениями:
  *  - онбординг рисуется во всё окно и отступает от баров сам;
@@ -52,8 +53,9 @@ fun AvatarGeneratorApp(
     val currentDestination = currentBackStackEntry?.destination
     // Узел ещё не определён (первый кадр либо флаг не прочитан) — ориентируемся
     // на будущий стартовый экран: верхнеуровневый только если онбординг пройден.
-    // Чужой профиль — не вкладка, но панель на нём нужна (навигация как со своего).
-    val showBottomBar = currentDestination.isOnRoute(Destination.UserProfile.route) ||
+    // Витрины (чужой профиль, публичный проект) — не вкладки, но панель на них
+    // нужна (навигация как со вкладок).
+    val showBottomBar = currentDestination.isOnAnyRoute(BottomBarDetailRoutes) ||
         (currentDestination.isTopLevel() ?: (hasSeenOnboarding == true))
     // Тот же приём для полноэкранного режима: до готовности бэкстека онбординг
     // будет открыт ровно тогда, когда флаг ещё не выставлен.
@@ -131,6 +133,13 @@ private fun rememberStartDestination(hasSeenOnboarding: Boolean?): String? {
 /** Маршруты верхнеуровневых вкладок; константа — считается один раз, не на каждой рекомпозиции. */
 private val TopLevelRoutes: Set<String> =
     TopLevelDestination.entries.mapTo(HashSet()) { it.destination.route }
+
+/**
+ * Экраны-детали (витрины), на которых нижняя панель всё же показывается: с них
+ * доступна та же навигация, что и со вкладок. Экран-редактор (проект) сюда не входит.
+ */
+private val BottomBarDetailRoutes: Set<String> =
+    setOf(Destination.UserProfile.route, Destination.PublicProject.route)
 
 /**
  * Является ли текущий узел одной из верхнеуровневых вкладок.
