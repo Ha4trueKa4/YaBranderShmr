@@ -14,9 +14,9 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 export const EditorWorkspace = observer(function EditorWorkspace() {
   const navigate = useNavigate()
   // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
-  // Сейчас editorFixture временно заменяет ответ API, чтобы можно было проверять UI.
+  // Сейчас editorFixture временно заменяет ответ API и собирается через parseSvg.
   const [editorStore] = useState(
-    () => new EditorStore(editorFixture, 'icon-shape', ['logo']),
+    () => new EditorStore(editorFixture, 'taxi-body', ['taxi', 'taxi-sign']),
   )
 
   function handleToolbarAction() {
@@ -53,7 +53,7 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
         />
       </aside>
       <div className={styles.scene}>
-        <EditorScene />
+        <EditorScene document={editorStore.document} />
       </div>
       <aside className={styles.inspector}>
         <InspectorPanel selectedLayer={editorStore.selectedLayer} />
