@@ -11,5 +11,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UpdateProjectRequestDto(
     @SerialName("is_public") val isPublic: Boolean? = null,
-    @SerialName("data") val data: ProjectDataDto? = null,
+    /** SVG-разметка проекта одной строкой (ручное сохранение холста). */
+    @SerialName("data") val data: String? = null,
 )

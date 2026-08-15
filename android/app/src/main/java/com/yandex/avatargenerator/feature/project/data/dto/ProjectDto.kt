@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * Проект целиком: ответ `POST /projects` и `GET /projects/{id}`.
- * В swagger это `allOf`, но наследования у `@Serializable` нет — поля плоско.
+ * В swagger это `allOf` (`ProjectDescription` + `data`), но наследования у
+ * `@Serializable` нет — поля плоско.
  */
 @Serializable
 data class ProjectDto(
@@ -15,5 +16,8 @@ data class ProjectDto(
     @SerialName("description") val description: String? = null,
     @SerialName("is_public") val isPublic: Boolean? = null,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("data") val data: ProjectDataDto? = null,
+    /** S3-ссылка на объект проекта; отсутствует, если проект пустой. */
+    @SerialName("url") val url: String? = null,
+    /** SVG-разметка проекта одной строкой; отсутствует у пустого проекта. */
+    @SerialName("data") val data: String? = null,
 )
