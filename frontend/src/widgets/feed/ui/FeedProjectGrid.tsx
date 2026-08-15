@@ -1,4 +1,4 @@
-import {type FeedProject, FeedProjectCard} from '@entities/project'
+import { type FeedProject, FeedProjectCard } from '@entities/project'
 
 import styles from './Feed.module.css'
 
@@ -16,9 +16,11 @@ export function FeedProjectGrid({ filters, projects }: FeedProjectGridProps) {
   const { searchQuery } = filters
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const visibleProjects = projects.filter((project) => {
-      return !normalizedQuery ||
-        project.name.toLocaleLowerCase().includes(normalizedQuery) ||
-        project.author.name.toLocaleLowerCase().includes(normalizedQuery)
+    return (
+      !normalizedQuery ||
+      project.name.toLocaleLowerCase().includes(normalizedQuery) ||
+      project.author.name.toLocaleLowerCase().includes(normalizedQuery)
+    )
   })
 
   return (

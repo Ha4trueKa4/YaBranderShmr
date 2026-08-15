@@ -17,7 +17,7 @@ export const Header = observer(function Header({
 }: HeaderProps) {
   const navigate = useNavigate()
   const isAuthorized = authStore.isAuthorized
-    const session = authStore.getSession
+  const session = authStore.getSession
 
   function handleSignInClick() {
     document.documentElement.dataset.navigationTransition = 'auth'
@@ -39,7 +39,7 @@ export const Header = observer(function Header({
     })
   }
 
-    return (
+  return (
     <header className={styles.header}>
       <div className={cn(styles.content, fullWidth && styles.contentFullWidth)}>
         <button
@@ -95,10 +95,7 @@ export const Header = observer(function Header({
           </button>
         ) : (
           <div className={styles.actions}>
-            <Button
-              onClick={handleSignInClick}
-              variant="ghost"
-            >
+            <Button onClick={handleSignInClick} variant="ghost">
               Sign in
             </Button>
             <Button onClick={() => navigate('/auth', { viewTransition: true })}>

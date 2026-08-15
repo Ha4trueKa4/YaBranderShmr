@@ -4,7 +4,11 @@ import {
   useLoginMutation,
   useRegisterMutation,
 } from '@features/auth'
-import {type AuthResponse, type LoginRequest, type RegisterRequest } from '@shared/api/types'
+import type {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+} from '@shared/api/types'
 import { useToast } from '@shared/ui'
 import { LoginForm, RegisterForm } from '@widgets'
 import { useState } from 'react'
@@ -24,7 +28,7 @@ export function AuthPage() {
   const { isPending: isRegisteringPending, mutateAsync: register } =
     useRegisterMutation()
 
-  function signIn({access_token, user}: AuthResponse) {
+  function signIn({ access_token, user }: AuthResponse) {
     authStore.signIn({
       accessToken: access_token,
       user,
