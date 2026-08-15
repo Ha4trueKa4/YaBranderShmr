@@ -11,6 +11,7 @@ import androidx.navigation.navArgument
 import com.yandex.avatargenerator.feature.auth.ui.LoginScreen
 import com.yandex.avatargenerator.feature.auth.ui.RegisterScreen
 import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
+import com.yandex.avatargenerator.feature.createproject.ui.CreateProjectScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
@@ -92,8 +93,24 @@ fun AppNavHost(
                     // Чат = проект: id строки — это projectId экрана проекта.
                     navController.navigate(Destination.Project.createRoute(chatId))
                 },
-                // TODO: создание нового проекта (команда «создание/редактирование»).
-                onNewProject = { },
+                onNewProject = {
+                    navController.navigate(Destination.CreateProject.route) { launchSingleTop = true }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        composable(Destination.CreateProject.route) {
+            CreateProjectScreen(
+                onBack = { navController.popBackStack() },
+                onProjectCreated = { projectId ->
+                    // Форму создания из бэкстека убираем: «назад» с экрана проекта
+                    // возвращает к списку чатов, а не к уже отправленной форме.
+                    navController.navigate(Destination.Project.createRoute(projectId)) {
+                        popUpTo(Destination.CreateProject.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         }
