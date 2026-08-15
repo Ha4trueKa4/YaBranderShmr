@@ -3,9 +3,9 @@
 import * as z from 'zod'
 
 export const zRegisterRequest = z.object({
-  email: z.email(),
-  password: z.string(),
-  nickname: z.string(),
+  email: z.email().max(128),
+  password: z.string().min(8).max(128),
+  nickname: z.string().min(3).max(64),
 })
 
 export const zLoginRequest = z.object({
@@ -26,6 +26,9 @@ export const zAuthResponse = z.object({
 export const zUserProfile = z.object({
   id: z.string().optional(),
   name: z.string().optional(),
+  subscribers_count: z.int().optional(),
+  subscriptions_count: z.int().optional(),
+  is_subscribed: z.boolean().optional(),
 })
 
 export const zProjectDescription = z.object({
@@ -35,6 +38,7 @@ export const zProjectDescription = z.object({
   description: z.string().optional(),
   is_public: z.boolean().optional(),
   created_at: z.iso.datetime().optional(),
+  url: z.string().optional(),
 })
 
 export const zProject = zProjectDescription.and(
@@ -43,14 +47,38 @@ export const zProject = zProjectDescription.and(
   }),
 )
 
+export const zFeedItem = z.object({
+  id: z.string().optional(),
+  author_id: z.string().optional(),
+  author_login: z.string().optional(),
+  name: z.string().optional(),
+  created_at: z.iso.datetime().optional(),
+  preview_url: z.string().optional(),
+})
+
+export const zFeedResponse = z.object({
+  items: z.array(zFeedItem).optional(),
+  next_cursor: z.string().optional(),
+})
+
 export const zValidationError = z.object({
   code: z.string().optional(),
   message: z.string().optional(),
   field: z.string().optional(),
 })
 
-export const zError = z.object({
-  code: z.int().optional(),
+/**
+ * Простой ответ вида "успех/ошибка одной строкой", без кода ошибки — используется там, где хендлер не различает конкретные причины сбоя.
+ */
+export const zMessageResponse = z.object({
+  message: z.string().optional(),
+})
+
+/**
+ * Ошибка аутентификации при входе — код всегда один и тот же, не различает "нет такого email" от "неверный пароль" (чтобы не палить существование email).
+ */
+export const zAuthError = z.object({
+  code: z.string().optional(),
   message: z.string().optional(),
 })
 
@@ -85,12 +113,53 @@ export const zDeleteUsersByIdSubscribePath = z.object({
   id: z.string(),
 })
 
+/**
+ * Подписка успешно отменена. Операция ничего не проверяет, кроме авторизации — сработает 200, даже если подписки не было или пользователь id не существует.
+ *
+ */
+export const zDeleteUsersByIdSubscribeResponse = zMessageResponse
+
 export const zPostUsersByIdSubscribePath = z.object({
   id: z.string(),
 })
 
+/**
+ * Подписка успешно оформлена (в т.ч. повторно — операция идемпотентна)
+ */
+export const zPostUsersByIdSubscribeResponse = zMessageResponse
+
+export const zGetUsersByIdSubscribersPath = z.object({
+  id: z.string(),
+})
+
+/**
+ * Список пользователей-подписчиков
+ */
+export const zGetUsersByIdSubscribersResponse = z.array(
+  z.object({
+    id: z.string().optional(),
+    name: z.string().optional(),
+    is_subscribed: z.boolean().optional(),
+  }),
+)
+
+export const zGetUsersByIdSubscriptionsPath = z.object({
+  id: z.string(),
+})
+
+/**
+ * Список профилей пользователей, на которых подписан текущий
+ */
+export const zGetUsersByIdSubscriptionsResponse = z.array(
+  z.object({
+    id: z.string().optional(),
+    name: z.string().optional(),
+    is_subscribed: z.boolean().optional(),
+  }),
+)
+
 export const zPostProjectsBody = z.object({
-  name: z.string().optional(),
+  name: z.string(),
   description: z.string().optional(),
 })
 
@@ -102,6 +171,11 @@ export const zPostProjectsResponse = zProject
 export const zDeleteProjectsByIdPath = z.object({
   id: z.string(),
 })
+
+/**
+ * Проект удалён
+ */
+export const zDeleteProjectsByIdResponse = zMessageResponse
 
 export const zGetProjectsByIdPath = z.object({
   id: z.string(),
@@ -121,8 +195,13 @@ export const zPatchProjectsByIdPath = z.object({
   id: z.string(),
 })
 
+/**
+ * Проект успешно обновлён. Возвращает полный объект проекта после изменений.
+ */
+export const zPatchProjectsByIdResponse = zProject
+
 export const zPostProjectsByIdGenerateBody = z.object({
-  prompt: z.string().optional(),
+  prompt: z.string(),
 })
 
 export const zPostProjectsByIdGeneratePath = z.object({
@@ -135,3 +214,14 @@ export const zPostProjectsByIdGeneratePath = z.object({
 export const zPostProjectsByIdGenerateResponse = z.object({
   data: z.string().optional(),
 })
+
+export const zGetFeedQuery = z.object({
+  scope: z.enum(['discover', 'following']).optional().default('discover'),
+  cursor: z.string().optional(),
+  limit: z.int().gte(1).lte(50).optional().default(20),
+})
+
+/**
+ * Страница ленты
+ */
+export const zGetFeedResponse = zFeedResponse

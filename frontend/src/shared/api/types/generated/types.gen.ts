@@ -6,6 +6,9 @@ export type ClientOptions = {
 
 export type RegisterRequest = {
   email: string
+  /**
+   * 8-128 символов, обязательно хотя бы одна буква и одна цифра
+   */
   password: string
   nickname: string
 }
@@ -16,18 +19,9 @@ export type LoginRequest = {
 }
 
 export type AuthResponse = {
-  /**
-   * Долгоживущий JWT токен для доступа к API
-   */
   access_token: string
   token_type: string
-  /**
-   * Данные авторизованного пользователя
-   */
   user: {
-    /**
-     * Уникальный идентификатор авторизованного пользователя
-     */
     id: string
     email: string
     nickname: string
@@ -37,12 +31,15 @@ export type AuthResponse = {
 export type UserProfile = {
   id?: string
   name?: string
+  subscribers_count?: number
+  subscriptions_count?: number
+  /**
+   * Подписан ли текущий авторизованный пользователь на этого пользователя. Отсутствует при запросе собственного профиля.
+   */
+  is_subscribed?: boolean
 }
 
 export type Project = ProjectDescription & {
-  /**
-   * Чистая SVG-разметка проекта
-   */
   data?: string
 }
 
@@ -53,25 +50,53 @@ export type ProjectDescription = {
   description?: string
   is_public?: boolean
   created_at?: string
+  /**
+   * S3 ссылка на объект проекта (отсутствует, если проект пуст)
+   */
+  url?: string
+}
+
+export type FeedResponse = {
+  items?: Array<FeedItem>
+  /**
+   * Курсор для запроса следующей страницы. Отсутствует, если страница последняя.
+   */
+  next_cursor?: string
+}
+
+export type FeedItem = {
+  /**
+   * Идентификатор проекта
+   */
+  id?: string
+  author_id?: string
+  author_login?: string
+  name?: string
+  created_at?: string
+  /**
+   * Ссылка на превью последней версии проекта. Пустая строка, если превью ещё не сгенерировано.
+   */
+  preview_url?: string
 }
 
 export type ValidationError = {
-  /**
-   * Строковый код ошибки для обработки на клиенте
-   */
   code?: string
-  /**
-   * Человекочитаемое сообщение
-   */
   message?: string
-  /**
-   * Название поля, в котором произошла ошибка
-   */
   field?: string
 }
 
-export type Error = {
-  code?: number
+/**
+ * Простой ответ вида "успех/ошибка одной строкой", без кода ошибки — используется там, где хендлер не различает конкретные причины сбоя.
+ */
+export type MessageResponse = {
+  message?: string
+}
+
+/**
+ * Ошибка аутентификации при входе — код всегда один и тот же, не различает "нет такого email" от "неверный пароль" (чтобы не палить существование email).
+ */
+export type AuthError = {
+  code?: string
   message?: string
 }
 
@@ -84,13 +109,17 @@ export type PostAuthRegisterData = {
 
 export type PostAuthRegisterErrors = {
   /**
-   * Ошибка валидации формата данных (неверный email, короткий пароль и т.д.)
+   * Ошибка валидации формата данных (email/пароль/никнейм не проходят требования)
    */
-  400: Error
+  400: ValidationError
   /**
    * Конфликт данных (email или nickname уже занят)
    */
   409: ValidationError
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
 
 export type PostAuthRegisterError =
@@ -115,10 +144,16 @@ export type PostAuthLoginData = {
 
 export type PostAuthLoginErrors = {
   /**
-   * Неверный email или пароль
+   * Неверный email, пароль или одно из полей не передано
    */
-  401: unknown
+  401: AuthError
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
+
+export type PostAuthLoginError = PostAuthLoginErrors[keyof PostAuthLoginErrors]
 
 export type PostAuthLoginResponses = {
   /**
@@ -140,6 +175,10 @@ export type GetUsersByIdData = {
 }
 
 export type GetUsersByIdErrors = {
+  /**
+   * Некорректный UUID пользователя
+   */
+  400: unknown
   /**
    * Пользователь не найден
    */
@@ -172,17 +211,25 @@ export type DeleteUsersByIdSubscribeData = {
 
 export type DeleteUsersByIdSubscribeErrors = {
   /**
-   * Не авторизован
+   * Отсутствует или некорректен JWT
    */
   401: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
 
 export type DeleteUsersByIdSubscribeResponses = {
   /**
-   * Подписка успешно отменена
+   * Подписка успешно отменена. Операция ничего не проверяет, кроме авторизации — сработает 200, даже если подписки не было или пользователь id не существует.
+   *
    */
-  200: unknown
+  200: MessageResponse
 }
+
+export type DeleteUsersByIdSubscribeResponse =
+  DeleteUsersByIdSubscribeResponses[keyof DeleteUsersByIdSubscribeResponses]
 
 export type PostUsersByIdSubscribeData = {
   body?: never
@@ -200,27 +247,111 @@ export type PostUsersByIdSubscribeErrors = {
   /**
    * Нельзя подписаться на самого себя
    */
-  400: unknown
+  400: MessageResponse
   /**
-   * Не авторизован
+   * Отсутствует или некорректен JWT
    */
   401: unknown
+  /**
+   * Пользователь, на которого оформляется подписка, не найден
+   */
+  404: MessageResponse
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+}
+
+export type PostUsersByIdSubscribeError =
+  PostUsersByIdSubscribeErrors[keyof PostUsersByIdSubscribeErrors]
+
+export type PostUsersByIdSubscribeResponses = {
+  /**
+   * Подписка успешно оформлена (в т.ч. повторно — операция идемпотентна)
+   */
+  200: MessageResponse
+}
+
+export type PostUsersByIdSubscribeResponse =
+  PostUsersByIdSubscribeResponses[keyof PostUsersByIdSubscribeResponses]
+
+export type GetUsersByIdSubscribersData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/users/{id}/subscribers'
+}
+
+export type GetUsersByIdSubscribersErrors = {
+  /**
+   * Некорректный формат ID
+   */
+  400: unknown
   /**
    * Пользователь не найден
    */
   404: unknown
 }
 
-export type PostUsersByIdSubscribeResponses = {
+export type GetUsersByIdSubscribersResponses = {
   /**
-   * Подписка успешно оформлена
+   * Список пользователей-подписчиков
    */
-  200: unknown
+  200: Array<{
+    id?: string
+    name?: string
+    /**
+     * Подписан ли авторизованный пользователь на этого человека
+     */
+    is_subscribed?: boolean
+  }>
 }
+
+export type GetUsersByIdSubscribersResponse =
+  GetUsersByIdSubscribersResponses[keyof GetUsersByIdSubscribersResponses]
+
+export type GetUsersByIdSubscriptionsData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/users/{id}/subscriptions'
+}
+
+export type GetUsersByIdSubscriptionsErrors = {
+  /**
+   * Некорректный формат ID
+   */
+  400: unknown
+  /**
+   * Пользователь не найден
+   */
+  404: unknown
+}
+
+export type GetUsersByIdSubscriptionsResponses = {
+  /**
+   * Список профилей пользователей, на которых подписан текущий
+   */
+  200: Array<{
+    id?: string
+    name?: string
+    /**
+     * Подписан ли авторизованный пользователь на этого человека
+     */
+    is_subscribed?: boolean
+  }>
+}
+
+export type GetUsersByIdSubscriptionsResponse =
+  GetUsersByIdSubscriptionsResponses[keyof GetUsersByIdSubscriptionsResponses]
 
 export type PostProjectsData = {
   body: {
-    name?: string
+    name: string
     description?: string
   }
   path?: never
@@ -230,10 +361,20 @@ export type PostProjectsData = {
 
 export type PostProjectsErrors = {
   /**
-   * Не авторизован
+   * Не передано название проекта (name)
+   */
+  400: MessageResponse
+  /**
+   * Отсутствует или некорректен JWT
    */
   401: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
+
+export type PostProjectsError = PostProjectsErrors[keyof PostProjectsErrors]
 
 export type PostProjectsResponses = {
   /**
@@ -259,21 +400,32 @@ export type DeleteProjectsByIdData = {
 
 export type DeleteProjectsByIdErrors = {
   /**
-   * Не авторизован
+   * Отсутствует или некорректен JWT
    */
   401: unknown
   /**
-   * Нет прав (не автор проекта)
+   * Нет прав на удаление чужого проекта
    */
   403: unknown
+  /**
+   * Проект не найден
+   */
+  404: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
 
 export type DeleteProjectsByIdResponses = {
   /**
    * Проект удалён
    */
-  200: unknown
+  200: MessageResponse
 }
+
+export type DeleteProjectsByIdResponse =
+  DeleteProjectsByIdResponses[keyof DeleteProjectsByIdResponses]
 
 export type GetProjectsByIdData = {
   body?: never
@@ -286,13 +438,22 @@ export type GetProjectsByIdData = {
 
 export type GetProjectsByIdErrors = {
   /**
-   * Нет прав (не автор проекта)
+   * Проект приватный, а запрос анонимный (без JWT)
+   */
+  401: unknown
+  /**
+   * Проект приватный, и вы авторизованы, но не автор проекта. Также этим кодом отвечает auth-мидлварь, если сам JWT невалиден/просрочен (в таком случае наличие прав уже не проверяется).
+   *
    */
   403: unknown
   /**
    * Проект не найден
    */
   404: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
 
 export type GetProjectsByIdResponses = {
@@ -322,25 +483,37 @@ export type PatchProjectsByIdData = {
 
 export type PatchProjectsByIdErrors = {
   /**
-   * Не авторизован
+   * Отсутствует или некорректен JWT
    */
   401: unknown
   /**
-   * Нет прав (не автор проекта)
+   * Вы авторизованы, но не автор проекта. Также этим кодом отвечает auth-мидлварь при невалидном/просроченном JWT.
+   *
    */
   403: unknown
+  /**
+   * Проект не найден
+   */
+  404: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
 }
 
 export type PatchProjectsByIdResponses = {
   /**
-   * Проект успешно обновлен
+   * Проект успешно обновлён. Возвращает полный объект проекта после изменений.
    */
-  200: unknown
+  200: Project
 }
+
+export type PatchProjectsByIdResponse =
+  PatchProjectsByIdResponses[keyof PatchProjectsByIdResponses]
 
 export type PostProjectsByIdGenerateData = {
   body: {
-    prompt?: string
+    prompt: string
   }
   path: {
     id: string
@@ -351,10 +524,21 @@ export type PostProjectsByIdGenerateData = {
 
 export type PostProjectsByIdGenerateErrors = {
   /**
+   * Не передан prompt
+   */
+  400: MessageResponse
+  /**
    * Не авторизован
    */
   401: unknown
+  /**
+   * Нет прав на генерацию в чужом проекте
+   */
+  403: unknown
 }
+
+export type PostProjectsByIdGenerateError =
+  PostProjectsByIdGenerateErrors[keyof PostProjectsByIdGenerateErrors]
 
 export type PostProjectsByIdGenerateResponses = {
   /**
@@ -370,3 +554,44 @@ export type PostProjectsByIdGenerateResponses = {
 
 export type PostProjectsByIdGenerateResponse =
   PostProjectsByIdGenerateResponses[keyof PostProjectsByIdGenerateResponses]
+
+export type GetFeedData = {
+  body?: never
+  path?: never
+  query?: {
+    /**
+     * discover — все публичные проекты всех пользователей. following — только проекты авторов, на которых подписан текущий пользователь (требует авторизации).
+     *
+     */
+    scope?: 'discover' | 'following'
+    /**
+     * Значение next_cursor из предыдущего ответа. Если не передан — отдаётся первая страница.
+     */
+    cursor?: string
+    /**
+     * Размер страницы. Значения вне диапазона обрезаются сервером.
+     */
+    limit?: number
+  }
+  url: '/feed'
+}
+
+export type GetFeedErrors = {
+  /**
+   * Некорректное значение scope
+   */
+  400: unknown
+  /**
+   * scope=following без авторизации
+   */
+  401: unknown
+}
+
+export type GetFeedResponses = {
+  /**
+   * Страница ленты
+   */
+  200: FeedResponse
+}
+
+export type GetFeedResponse = GetFeedResponses[keyof GetFeedResponses]

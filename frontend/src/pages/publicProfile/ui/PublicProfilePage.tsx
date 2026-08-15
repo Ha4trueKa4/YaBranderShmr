@@ -9,7 +9,6 @@ import { Header } from '@widgets/header'
 import styles from './PublicProfilePage.module.css'
 
 const profile: ProfileHeaderProfile = {
-  bio: 'Independent art director and identity designer. Making brands feel human.',
   followersCount: 1200,
   followingCount: 146,
   name: 'Julia Morales',

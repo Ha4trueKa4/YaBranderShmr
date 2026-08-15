@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { type FeedScope, getFeed } from './getFeed'
 import { getProject } from './getProject'
-import { getProjects } from './getProjects'
+import { getUserProfile } from './getProjects'
 
+export const feedQueryKey = (scope: FeedScope) => ['feed', scope] as const
 export const projectQueryKey = (id: string) => ['project', id] as const
-export const projectsQueryKey = ['projects'] as const
+export const userProfileQueryKey = (userId: string | undefined) =>
+  ['user-profile', userId] as const
 
 export function useProjectQuery(id: string) {
   return useQuery({
@@ -15,10 +18,19 @@ export function useProjectQuery(id: string) {
   })
 }
 
-export function useProjectsQuery() {
+export function useUserProfileQuery(userId: string) {
   return useQuery({
-    queryKey: projectsQueryKey,
-    queryFn: getProjects,
+    queryKey: userProfileQueryKey(userId),
+    queryFn: () => getUserProfile(userId),
+    enabled: Boolean(userId),
+    retry: false,
+  })
+}
+
+export function useFeedQuery(scope: FeedScope) {
+  return useQuery({
+    queryKey: feedQueryKey(scope),
+    queryFn: () => getFeed(scope),
     retry: false,
   })
 }

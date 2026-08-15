@@ -1,4 +1,4 @@
-import { api } from '@shared/api/api'
+import { api, parseApiResponse } from '@shared/api/api'
 import {
   type PostProjectsData,
   type Project,
@@ -17,5 +17,5 @@ export async function createProject(
     body: validBody,
   })
 
-  return zPostProjectsResponse.parse(response)
+  return parseApiResponse(zPostProjectsResponse, response, '/projects')
 }

@@ -1,0 +1,30 @@
+.form {
+  flex: 1;
+}
+
+.descriptionField {
+  width: 100%;
+}
+
+.inputRow {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}
+
+.error {
+  margin: var(--space-1) 0 0;
+  color: var(--color-error);
+  font-size: var(--font-size-caption);
+}
+
+@media (width < 640px) {
+  .inputRow {
+    flex-direction: column;
+  }
+}
