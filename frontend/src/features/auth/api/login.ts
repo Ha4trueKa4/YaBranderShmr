@@ -1,4 +1,4 @@
-import { api } from '@shared/api/api'
+import { api, parseApiResponse } from '@shared/api/api'
 import {
   type AuthResponse,
   type LoginRequest,
@@ -13,5 +13,5 @@ export async function login(body: LoginRequest): Promise<AuthResponse> {
     body: validBody,
   })
 
-  return zPostAuthLoginResponse.parse(response)
+  return parseApiResponse(zPostAuthLoginResponse, response, '/auth/login')
 }
