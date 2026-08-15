@@ -4,13 +4,11 @@
 
 ## Что нужно добавить в API
 
-| Где | Добавить в контракт |
-| --- | --- |
-| `GET /users/{id}` → `UserProfile` | `username`, `bio`, `avatar_url`, `cover_url` (или согласованный вариант темы), `followers_count`, `following_count`, `is_following` |
-| Ответы с проектом (`ProjectDescription`) | `updated_at`, статус (`draft \| published`), `preview_url`, `published_at`; в публичных ответах — `author` с `id`, `name`, `username`, `avatar_url` |
-| `GET /projects` | Список собственных проектов с пагинацией, сортировкой и фильтрами видимости/статуса |
-| `GET /feed/projects` | Публичная лента: `cursor`, `limit`, ответ `{ items, next_cursor }`, а в элементе `id`, `name`, `preview_url`, `published_at`, `author` |
-| Публичный профиль | Явно определить: `GET /users/{id}` отдаёт гостю только публичные проекты либо добавить `GET /users/{id}/projects?visibility=public` |
+- В `GET /users/{id}` → `UserProfile`: `username`, `bio`, `avatar_url`, `cover_url` (или согласованный вариант темы), `followers_count`, `following_count`, `is_following`.
+- В ответы с проектом (`ProjectDescription`): `updated_at`, статус (`draft` или `published`), `preview_url`, `published_at`; в публичных ответах — `author` с `id`, `name`, `username`, `avatar_url`.
+- `GET /projects`: список собственных проектов с пагинацией, сортировкой и фильтрами видимости/статуса.
+- `GET /feed/projects`: публичную ленту с query-параметрами `cursor` и `limit`, ответом `{ items, next_cursor }` и полями элемента `id`, `name`, `preview_url`, `published_at`, `author`.
+- Для публичного профиля: определить, отдаёт ли `GET /users/{id}` гостю только публичные проекты; иначе добавить `GET /users/{id}/projects?visibility=public`.
 
 `AuthResponse` менять не нужно: он уже возвращает обязательные `access_token`, `token_type` и `user` (`id`, `email`, `nickname`).
 
