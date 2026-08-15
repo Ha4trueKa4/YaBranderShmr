@@ -43,6 +43,8 @@ CREATE TABLE subscriptions
     CHECK (subscriber_id <> target_user_id)
 );
 
+
+
 CREATE INDEX idx_projects_author_id ON projects (author_id);
 CREATE INDEX idx_projects_public ON projects (created_at DESC) WHERE is_private = FALSE;
 

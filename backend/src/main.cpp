@@ -4,6 +4,7 @@
 #include <userver/clients/http/middlewares/pipeline_component.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/server/handlers/ping.hpp>
+#include <userver/server/middlewares/cors.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
@@ -18,6 +19,8 @@
 #include "components/version_storage/version_storage_component_impl.hpp"
 #include "components/object_storage/local_file_storage.hpp"
 #include "./handlers/users/append_users.hpp"
+#include "components/vector_search_component.h"
+#include "handlers/test_vector_search/test_vector_search_handler.hpp"
 #include "handlers/feed/get_feed.h"
 
 int main(int argc, char* argv[]) {
@@ -33,10 +36,13 @@ int main(int argc, char* argv[]) {
             .Append<ya_brander::auth::LoginHandler>()
             .Append<ya_brander::auth::RegisterHandler>()
             // --- shared infrastructure: used by all feature modules ---
+            .Append<userver::components::Postgres>("postgres-vector-db")
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
             .Append<ya_brander::components::LocalFileStorage>()
+            .Append<userver::server::middlewares::CorsFactory>();
+            .Append<ya_brander::handlers::TestVectorSearchHandler>(); 
             .Append<ya_brander::handlers::GetFeedHandler>();
     
     // Регистрация модулей когда будут готовы

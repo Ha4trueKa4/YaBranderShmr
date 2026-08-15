@@ -14,6 +14,8 @@
     "format:check": "biome format --config-path=./biome.json src",
     "check": "pnpm typecheck && biome check --config-path=./biome.json src",
     "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
     "ts:generate": "openapi-ts"
   },
   "dependencies": {
@@ -43,6 +45,7 @@
     "globals": "^17.7.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }

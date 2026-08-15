@@ -77,6 +77,10 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/append_users.cpp
         src/handlers/users/subscription_handlers.hpp
         src/handlers/users/subscription_handlers.cpp
+
+        src/components/vector_search_component.cpp
+        src/handlers/test_vector_search/test_vector_search_handler.hpp
+        src/handlers/test_vector_search/test_vector_search_handler.cpp
         src/handlers/feed/get_feed.h
         src/handlers/feed/get_feed.cpp
 )

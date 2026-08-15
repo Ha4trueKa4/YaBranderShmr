@@ -6,11 +6,16 @@ import { type RegisterSubmitHandler, useRegisterForm } from '../model'
 import styles from './AuthForms.module.css'
 
 interface RegisterFormProps {
+  isPending?: boolean
   onSubmit?: RegisterSubmitHandler
   onSwitchToLogin?: () => void
 }
 
-export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
+export function RegisterForm({
+  isPending = false,
+  onSubmit,
+  onSwitchToLogin,
+}: RegisterFormProps) {
   const nicknameInputId = useId()
   const emailInputId = useId()
   const passwordInputId = useId()
@@ -110,7 +115,7 @@ export function RegisterForm({ onSubmit, onSwitchToLogin }: RegisterFormProps) {
             )}
           />
         </div>
-        <Button fullWidth size="lg" type="submit">
+        <Button fullWidth loading={isPending} size="lg" type="submit">
           Create account
         </Button>
         {isSubmitted && (
