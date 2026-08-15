@@ -145,15 +145,18 @@ private fun androidx.navigation.NavDestination?.isTopLevel(): Boolean? {
 }
 
 /**
- * Переход на вкладку по стандартному паттерну bottom-навигации:
- *  - popUpTo стартового узла с сохранением состояния (не копим бэкстек вкладок);
- *  - launchSingleTop — без дублей;
- *  - restoreState — восстанавливаем прокрутку/состояние ранее открытой вкладки.
+ * Переход на вкладку bottom-навигации: всегда открываем корень вкладки,
+ * не копим бэкстек (popUpTo стартового узла) и без дублей (launchSingleTop).
+ *
+ * Состояние вкладок сознательно НЕ сохраняем (никаких saveState/restoreState):
+ * панель видна и на экране-детали (чужой профиль, [Destination.UserProfile]),
+ * а сохранённый саб-стек вкладки восстанавливал бы этот экран-деталь поверх
+ * корня — тап «Лента» открывал бы не ленту, а ранее просмотренный профиль.
+ * Клик по вкладке всегда даёт чистый корень вкладки.
  */
 private fun NavHostController.navigateToTab(tab: TopLevelDestination) {
     navigate(tab.destination.route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
+        popUpTo(graph.findStartDestination().id)
         launchSingleTop = true
-        restoreState = true
     }
 }
