@@ -3,6 +3,24 @@ import { describe, expect, it } from 'vitest'
 import { parseSvg } from './svgAdapter'
 
 describe('parseSvg', () => {
+  it('rejects invalid SVG markup with multiple root elements', () => {
+    expect(() => parseSvg('<svg></svg><svg></svg>')).toThrow(
+      'Invalid SVG markup',
+    )
+  })
+
+  it('rejects an SVG without a viewBox', () => {
+    expect(() =>
+      parseSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+    ).toThrow('SVG root must define a viewBox')
+  })
+
+  it('rejects a root that is not an SVG element', () => {
+    expect(() => parseSvg('<div viewBox="0 0 500 500"></div>')).toThrow(
+      'SVG document must have an <svg> root element',
+    )
+  })
+
   it('parses the canvas and a rectangle', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
