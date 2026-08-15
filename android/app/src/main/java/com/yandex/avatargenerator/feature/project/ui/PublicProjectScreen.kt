@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -42,6 +41,7 @@ import com.yandex.avatargenerator.feature.project.data.MockPublicProjectReposito
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProject
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectAuthor
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectRelatedItem
+import com.yandex.avatargenerator.feature.project.ui.components.PublicProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.util.publishedLabel
 import com.yandex.avatargenerator.ui.components.BrandAvatar
 import com.yandex.avatargenerator.ui.components.BrandErrorState
@@ -56,10 +56,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 // Декоративный градиент hero-баннера по макету (violet → cyan → pink, слева направо):
-// виден, пока грузится превью проекта или если превью нет. Розовый — точечное
-// значение баннера, вне палитры AppColors.
+// виден, пока грузится превью проекта или если превью нет. Все цвета — токены палитры.
 private val HeroGradient = Brush.horizontalGradient(
-    listOf(AppColors.Accent, AppColors.AccentCyan, Color(0xFFEC4899)),
+    listOf(AppColors.Accent, AppColors.AccentCyan, AppColors.AccentPink),
 )
 
 // Заглушка превью карточек «More from this creator» — на токенах палитры.
@@ -91,9 +90,7 @@ internal fun PublicProjectScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        PublicProjectUiState.Loading -> PublicProjectCenteredBox(modifier) {
-            CircularProgressIndicator(color = AppColors.Accent)
-        }
+        PublicProjectUiState.Loading -> PublicProjectSkeleton(modifier)
 
         PublicProjectUiState.Error -> PublicProjectCenteredBox(modifier) {
             BrandErrorState(

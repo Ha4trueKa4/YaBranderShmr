@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -17,6 +16,7 @@ import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.project.data.MockChatRepository
 import com.yandex.avatargenerator.feature.project.ui.components.ChatInputBar
 import com.yandex.avatargenerator.feature.project.ui.components.ChatTimeline
+import com.yandex.avatargenerator.feature.project.ui.components.ProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.components.ProjectTopBar
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -94,9 +94,12 @@ private fun ProjectContent(
         )
 
         when (uiState) {
-            ProjectUiState.Loading -> ProjectCenteredBox {
-                CircularProgressIndicator(color = AppColors.Accent)
-            }
+            ProjectUiState.Loading -> ProjectSkeleton(
+                // Скелетон занимает всё место между шапкой и (отсутствующим) вводом.
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
 
             ProjectUiState.Error -> ProjectCenteredBox {
                 BrandErrorState(
