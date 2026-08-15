@@ -19,13 +19,6 @@ export default defineConfig(({ mode }) => {
         '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
       },
     },
-<<<<<<< HEAD
-  test: {
-    environment: 'jsdom',
-    include: ['src/**/*.test.ts'],
-  },
-=======
->>>>>>> 2fcf11a (Feed Page)
     server: {
       proxy: {
         '/api': {
@@ -34,5 +27,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+      test: {
+          environment: 'jsdom',
+          include: ['src/**/*.test.ts'],
+      },
   }
 })
