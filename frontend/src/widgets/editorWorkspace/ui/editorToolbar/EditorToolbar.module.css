@@ -114,10 +114,10 @@
 }
 
 .avatar {
-  background: #a78bfa;
+  background: var(--color-accent-primary);
   border: 0;
   border-radius: 50%;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: var(--font-size-label);
   height: 2.25rem;
   width: 2.25rem;

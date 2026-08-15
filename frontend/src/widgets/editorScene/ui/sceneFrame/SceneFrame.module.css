@@ -3,8 +3,8 @@
   width: min(100%, 37.5rem);
   aspect-ratio: 1;
   place-items: center;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: var(--shadow-md);
-  color: #71717a;
+  color: var(--color-text-muted);
   font-size: var(--font-size-caption);
 }

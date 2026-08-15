@@ -19,8 +19,19 @@ export type AuthResponse = {
   /**
    * Долгоживущий JWT токен для доступа к API
    */
-  access_token?: string
-  token_type?: string
+  access_token: string
+  token_type: string
+  /**
+   * Данные авторизованного пользователя
+   */
+  user: {
+    /**
+     * Уникальный идентификатор авторизованного пользователя
+     */
+    id: string
+    email: string
+    nickname: string
+  }
 }
 
 export type UserProfile = {
@@ -29,24 +40,19 @@ export type UserProfile = {
 }
 
 export type Project = ProjectDescription & {
-  data?: ProjectData
+  /**
+   * Чистая SVG-разметка проекта
+   */
+  data?: string
 }
 
 export type ProjectDescription = {
   id?: string
   author_id?: string
   name?: string
+  description?: string
   is_public?: boolean
   created_at?: string
-}
-
-export type ProjectData = {
-  width?: number
-  height?: number
-  background?: string
-  layers?: Array<{
-    [key: string]: unknown
-  }>
 }
 
 export type ValidationError = {
@@ -152,6 +158,66 @@ export type GetUsersByIdResponses = {
 export type GetUsersByIdResponse =
   GetUsersByIdResponses[keyof GetUsersByIdResponses]
 
+export type DeleteUsersByIdSubscribeData = {
+  body?: never
+  path: {
+    /**
+     * Идентификатор пользователя, от которого отписываются
+     */
+    id: string
+  }
+  query?: never
+  url: '/users/{id}/subscribe'
+}
+
+export type DeleteUsersByIdSubscribeErrors = {
+  /**
+   * Не авторизован
+   */
+  401: unknown
+}
+
+export type DeleteUsersByIdSubscribeResponses = {
+  /**
+   * Подписка успешно отменена
+   */
+  200: unknown
+}
+
+export type PostUsersByIdSubscribeData = {
+  body?: never
+  path: {
+    /**
+     * Идентификатор пользователя, на которого оформляется подписка
+     */
+    id: string
+  }
+  query?: never
+  url: '/users/{id}/subscribe'
+}
+
+export type PostUsersByIdSubscribeErrors = {
+  /**
+   * Нельзя подписаться на самого себя
+   */
+  400: unknown
+  /**
+   * Не авторизован
+   */
+  401: unknown
+  /**
+   * Пользователь не найден
+   */
+  404: unknown
+}
+
+export type PostUsersByIdSubscribeResponses = {
+  /**
+   * Подписка успешно оформлена
+   */
+  200: unknown
+}
+
 export type PostProjectsData = {
   body: {
     name?: string
@@ -183,7 +249,7 @@ export type DeleteProjectsByIdData = {
   body?: never
   path: {
     /**
-     * Уникальный иден��ификатор проекта
+     * Уникальный идентификатор проекта
      */
     id: string
   }
@@ -242,7 +308,10 @@ export type GetProjectsByIdResponse =
 export type PatchProjectsByIdData = {
   body: {
     is_public?: boolean
-    data?: ProjectData
+    /**
+     * Чистая SVG-разметка проекта
+     */
+    data?: string
   }
   path: {
     id: string
@@ -289,9 +358,14 @@ export type PostProjectsByIdGenerateErrors = {
 
 export type PostProjectsByIdGenerateResponses = {
   /**
-   * Сгенерированный JSON-граф элементов
+   * Сгенерированный SVG-код проекта
    */
-  200: ProjectData
+  200: {
+    /**
+     * Результат работы нейросети в виде SVG-строки
+     */
+    data?: string
+  }
 }
 
 export type PostProjectsByIdGenerateResponse =

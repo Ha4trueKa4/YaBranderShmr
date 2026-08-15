@@ -38,10 +38,17 @@ struct SignInView: View {
                 )
             }
 
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+
             PrimaryButton(title: "Sign in") {
                 viewModel.signIn()
             }
             .padding(.top, 24)
+            .disabled(viewModel.isLoading)
 
             LinkButton(title: "Forgot password?") {}
                 .padding(.top, 16)
