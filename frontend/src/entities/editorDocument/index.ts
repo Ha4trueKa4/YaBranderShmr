@@ -1,4 +1,5 @@
 export { EditorStore } from './model/editorStore'
+export { parseSvg } from './model/svgAdapter'
 export type {
   CircleGeometry,
   EditorDefinitions,
