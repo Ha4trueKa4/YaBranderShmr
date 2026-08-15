@@ -15,9 +15,11 @@ build:
     # --provenance=false --sbom=false обязательны: без них Yandex CR отклоняет пуш
     # (attestation-манифесты). Логин до сборки — кэш тянется из приватного CR.
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    # docker-драйвер не пишет registry-кэш — нужен buildx docker-container драйвер.
-    # Переиспользуем билдер yc-builder, если он уже создан.
-    - docker buildx create --name yc-builder --driver docker-container --use || docker buildx use yc-builder
-    # BuildKit-кэш (:cache): --cache-from подтягивает слои, --cache-to пишет новые (mode=max).
-    # --push собирает и пушит оба тега (SHA + latest) из билдера. Команда на одной строке.
-    - docker buildx build --provenance=false --sbom=false --push --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -t $REGISTRY/$IMAGE:latest -f backend/Dockerfile backend/
+    # BuildKit-кэш в реестре (:cache): --cache-from подтягивает слои, --cache-to пишет новые.
+    # Команда на одной строке — "\"-переносы ломают разбор аргументов docker build.
+    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
+    - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
+    - docker push $REGISTRY/$IMAGE:latest
+    # Чистим локальный тег по SHA (в самом CR он остаётся для откатов).
+    - docker rmi $REGISTRY/$IMAGE:$CI_COMMIT_SHA
