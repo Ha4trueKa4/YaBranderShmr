@@ -96,7 +96,14 @@ describe('parseSvg', () => {
         isVisible: true,
         name: 'Logo',
         opacity: 1,
-        transform: { rotation: 5, scaleX: 1.2, scaleY: 0.8, x: 20, y: 10 },
+        transform: {
+          rotation: 5,
+          rotationCenter: { x: 250, y: 250 },
+          scaleX: 1.2,
+          scaleY: 0.8,
+          x: 20,
+          y: 10,
+        },
         type: 'group',
       },
     ])
@@ -130,6 +137,31 @@ describe('parseSvg', () => {
         y: 365,
       },
     ])
+  })
+
+  it('normalizes a keyword font weight and parses letter spacing', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <text id="caption" x="20" y="40" font-weight="bold" letter-spacing="2">TAXI</text>
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      id: 'caption',
+      style: { fontWeight: 700, letterSpacing: 2 },
+      text: 'TAXI',
+      type: 'text',
+    })
+  })
+
+  it('rejects text with independently styled nested fragments', () => {
+    expect(() =>
+      parseSvg(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+          <text id="title" x="20" y="40">Hello <tspan fill="#6C3BFF">world</tspan></text>
+        </svg>
+      `),
+    ).toThrow('Unsupported SVG element: tspan')
   })
 
   it('parses a path with its stroke properties', () => {

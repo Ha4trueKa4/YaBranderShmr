@@ -1,9 +1,9 @@
 import type { EditorDocument } from '../types'
 
 import { SvgParseError } from './errors'
-import { parseLayers } from './parsers/parseLayers'
 import { parseRoot } from './parseRoot'
 import { parseDefinitions } from './parsers/parseDefinitions'
+import { parseLayers } from './parsers/parseLayers'
 import { validateSvgElements } from './validateSvg'
 
 export function parseSvg(svg: string): EditorDocument {

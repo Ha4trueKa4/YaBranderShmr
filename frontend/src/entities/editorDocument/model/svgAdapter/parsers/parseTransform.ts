@@ -59,6 +59,11 @@ export function parseTransform(value: string | null): Transform {
 
     if (name === 'rotate' && (values.length === 1 || values.length === 3)) {
       transform.rotation += values[0]
+
+      if (values.length === 3) {
+        transform.rotationCenter = { x: values[1], y: values[2] }
+      }
+
       continue
     }
 

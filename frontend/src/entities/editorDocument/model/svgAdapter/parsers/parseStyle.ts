@@ -1,10 +1,33 @@
 import type { ShapeStyle, TextStyle } from '../../types'
 
+import { SvgParseError } from '../errors'
 import { parseNumberAttribute } from './parseNumber'
 import { parsePaint } from './parsePaint'
 
 function parseOpacity(element: Element, attributeName: string): number {
   return parseNumberAttribute(element, attributeName, 1)
+}
+
+function parseFontWeight(value: string | null): number | undefined {
+  if (value === null) {
+    return undefined
+  }
+
+  if (value === 'normal') {
+    return 400
+  }
+
+  if (value === 'bold') {
+    return 700
+  }
+
+  const fontWeight = Number(value)
+
+  if (!Number.isFinite(fontWeight)) {
+    throw new SvgParseError(`Unsupported SVG font-weight: ${value}`)
+  }
+
+  return fontWeight
 }
 
 export function parseShapeStyle(element: Element): ShapeStyle {
@@ -36,7 +59,7 @@ export function parseShapeStyle(element: Element): ShapeStyle {
 export function parseTextStyle(element: Element): TextStyle {
   const fontStyle = element.getAttribute('font-style')
   const textAnchor = element.getAttribute('text-anchor')
-  const fontWeight = element.getAttribute('font-weight')
+  const fontWeight = parseFontWeight(element.getAttribute('font-weight'))
   const letterSpacing = element.getAttribute('letter-spacing')
 
   return {
@@ -47,9 +70,7 @@ export function parseTextStyle(element: Element): TextStyle {
     fontFamily: element.getAttribute('font-family') ?? 'sans-serif',
     fontSize: parseNumberAttribute(element, 'font-size', 16),
     ...(fontStyle === 'italic' || fontStyle === 'normal' ? { fontStyle } : {}),
-    ...(fontWeight && Number.isFinite(Number(fontWeight))
-      ? { fontWeight: Number(fontWeight) }
-      : {}),
+    ...(fontWeight === undefined ? {} : { fontWeight }),
     ...(letterSpacing && Number.isFinite(Number(letterSpacing))
       ? { letterSpacing: Number(letterSpacing) }
       : {}),

@@ -5,6 +5,10 @@ export type Paint =
 
 export type Transform = {
   rotation: number
+  rotationCenter?: {
+    x: number
+    y: number
+  }
   scaleX: number
   scaleY: number
   x: number
