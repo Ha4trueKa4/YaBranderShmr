@@ -4,6 +4,7 @@
 #include <userver/clients/http/middlewares/pipeline_component.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/server/handlers/ping.hpp>
+#include <userver/server/middlewares/cors.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
@@ -35,7 +36,8 @@ int main(int argc, char* argv[]) {
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-            .Append<ya_brander::components::LocalFileStorage>();
+            .Append<ya_brander::components::LocalFileStorage>()
+            .Append<userver::server::middlewares::CorsFactory>();
     
     // Регистрация модулей когда будут готовы
     ya_brander::AppendCheck(component_list);
