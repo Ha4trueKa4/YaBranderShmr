@@ -16,6 +16,7 @@ import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
+import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
 
 /**
  * Граф навигации приложения.
@@ -78,8 +79,10 @@ fun AppNavHost(
 
         composable(Destination.Feed.route) {
             FeedScreen(
+                // Из ленты открываем витрину публичного проекта (только просмотр),
+                // а не редактор — редактор доступен из «Создать»/своего профиля.
                 onProjectClick = { projectId ->
-                    navController.navigate(Destination.Project.createRoute(projectId))
+                    navController.navigate(Destination.PublicProject.createRoute(projectId))
                 },
                 onAuthorClick = { authorId ->
                     navController.navigate(Destination.UserProfile.createRoute(authorId))
@@ -144,6 +147,23 @@ fun AppNavHost(
         }
 
         composable(
+            route = Destination.PublicProject.route,
+            arguments = listOf(navArgument(Destination.ARG_PROJECT_ID) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val projectId = backStackEntry.arguments?.getString(Destination.ARG_PROJECT_ID).orEmpty()
+            PublicProjectScreen(
+                projectId = projectId,
+                onAuthorClick = { authorId ->
+                    navController.navigate(Destination.UserProfile.createRoute(authorId))
+                },
+                onRelatedClick = { relatedId ->
+                    navController.navigate(Destination.PublicProject.createRoute(relatedId))
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        composable(
             route = Destination.UserProfile.route,
             arguments = listOf(navArgument(Destination.ARG_USER_ID) { type = NavType.StringType }),
         ) { backStackEntry ->
@@ -151,8 +171,10 @@ fun AppNavHost(
             ProfileScreen(
                 userId = userId,
                 isOwnProfile = false,
+                // Чужой профиль: проекты открываем витриной (только просмотр),
+                // как из ленты; редактор — только для своих проектов.
                 onProjectClick = { projectId ->
-                    navController.navigate(Destination.Project.createRoute(projectId))
+                    navController.navigate(Destination.PublicProject.createRoute(projectId))
                 },
                 onActionClick = { /* Подписка обрабатывается во ViewModel */ },
                 modifier = Modifier.fillMaxSize(),
