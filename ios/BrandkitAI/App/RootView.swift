@@ -96,6 +96,7 @@ struct RootView: View {
                 SignInView(session: session) {
                     present(.signUp)
                 }
+                .swipeBackEnabled()
             }
             .tint(Color.accentColor)
             .interactiveDismissDisabled()
