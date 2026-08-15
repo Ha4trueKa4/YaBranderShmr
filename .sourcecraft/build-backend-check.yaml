@@ -12,14 +12,8 @@ build-check:
   services:
     - docker:dind
   script:
-    # Только проверка сборки: компилируем образ, НЕ публикуем в registry.
-    # Не трогаем тег latest — прод-образ не затирается незамерженным кодом.
-    #
-    # Логин ДО сборки: --cache-from=type=registry тянет кэш из приватного реестра,
-    # поэтому авторизация нужна уже на этапе build. БЕЗ логина — 401 Unauthorized.
+    # Проверка компиляции: собираем образ, НЕ публикуем и НЕ трогаем тег latest.
+    # --cache-from (read-only) без --cache-to, чтобы PR не перезаписывал кэш main.
+    # Логин до сборки — кэш тянется из приватного CR. Команда на одной строке.
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    # --cache-from (read-only): подтягиваем BuildKit-кэш из реестра, чтобы PR-проверка
-    # не собиралась с нуля. БЕЗ --cache-to: PR-кэш не должен перезаписывать кэш main.
-    # ВАЖНО: команда на ОДНОЙ строке — в этом раннере "\"-переносы строк ломают
-    # разбор аргументов docker build ("docker buildx build requires 1 argument").
     - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/

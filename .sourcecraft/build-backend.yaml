@@ -12,23 +12,14 @@ build:
   services:
     - docker:dind
   script:
-    # контекст сборки - папка backend, Dockerfile - backend/Dockerfile
-    # --provenance=false --sbom=false ОБЯЗАТЕЛЬНЫ: без них Yandex CR отклоняет пуш
-    # с ошибкой "Cannot read manifest data" (attestation-манифесты Docker/BuildKit)
-    #
-    # Логин ДО сборки: --cache-from=type=registry тянет кэш из приватного реестра,
-    # поэтому авторизация нужна уже на этапе build, а не перед пушем.
+    # --provenance=false --sbom=false обязательны: без них Yandex CR отклоняет пуш
+    # (attestation-манифесты). Логин до сборки — --cache-from тянет кэш из приватного CR.
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    # Персистентный BuildKit-кэш через реестр: --cache-from подтягивает прошлые слои,
-    # --cache-to пишет обновлённый кэш под тегом :cache (mode=max сохраняет весь граф).
-    # Это устраняет холодные сборки между запусками.
-    # ВАЖНО: команда на ОДНОЙ строке — в этом раннере "\"-переносы строк ломают
-    # разбор аргументов docker build ("docker buildx build requires 1 argument").
+    # BuildKit-кэш в реестре (:cache): --cache-from подтягивает прошлые слои, --cache-to пишет новые.
+    # Команда на одной строке — "\"-переносы ломают разбор аргументов docker build.
     - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
     - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
     - docker push $REGISTRY/$IMAGE:latest
-    # Чистим локальный образ с тегом по SHA в раннере, чтобы не копить слои
-    # на диске. Примечание: в самом Yandex CR тег по SHA остаётся (для откатов),
-    # удаление именно из реестра делается вручную/по API.
+    # Чистим локальный тег по SHA (в самом CR он остаётся для откатов).
     - docker rmi $REGISTRY/$IMAGE:$CI_COMMIT_SHA
