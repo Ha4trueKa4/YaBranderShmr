@@ -6,6 +6,8 @@ import com.yandex.avatargenerator.feature.auth.data.AuthUserStore
 import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
 import com.yandex.avatargenerator.feature.auth.domain.CurrentUserUseCase
 import com.yandex.avatargenerator.feature.auth.domain.IsAuthorizedUseCase
+import com.yandex.avatargenerator.feature.auth.domain.LoginUseCase
+import com.yandex.avatargenerator.feature.auth.domain.RegisterUseCase
 import com.yandex.avatargenerator.feature.auth.ui.LoginViewModel
 import com.yandex.avatargenerator.feature.auth.ui.RegisterViewModel
 import org.koin.core.module.dsl.factoryOf
@@ -24,6 +26,8 @@ val authModule = module {
     }
     factoryOf(::IsAuthorizedUseCase)
     factoryOf(::CurrentUserUseCase)
+    factoryOf(::LoginUseCase)
+    factoryOf(::RegisterUseCase)
     viewModelOf(::LoginViewModel)
     viewModelOf(::RegisterViewModel)
 }

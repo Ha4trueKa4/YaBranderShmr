@@ -1,11 +1,7 @@
-package com.yandex.avatargenerator.feature.auth
+package com.yandex.avatargenerator.feature.auth.ui
 
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
-import com.yandex.avatargenerator.feature.auth.ui.AuthField
-import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
-import com.yandex.avatargenerator.feature.auth.ui.targetField
-import com.yandex.avatargenerator.feature.auth.ui.toAuthFormError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

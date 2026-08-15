@@ -1,11 +1,9 @@
-package com.yandex.avatargenerator.feature.auth
+package com.yandex.avatargenerator.feature.auth.ui
 
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
-import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
-import com.yandex.avatargenerator.feature.auth.ui.LoginEvent
-import com.yandex.avatargenerator.feature.auth.ui.LoginViewModel
-import com.yandex.avatargenerator.feature.auth.ui.MaxAuthInputLength
+import com.yandex.avatargenerator.feature.auth.domain.LoginUseCase
+import com.yandex.avatargenerator.feature.auth.fake.FakeAuthRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -42,7 +40,7 @@ internal class LoginViewModelTest {
 
     @Test
     fun `successful login emits SignedIn and passes the entered credentials`() = runTest(dispatcher) {
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
         viewModel.onEmailChange("user@example.com")
         viewModel.onPasswordChange("secret123")
 
@@ -64,7 +62,7 @@ internal class LoginViewModelTest {
     @Test
     fun `invalid credentials are shown above the button, not under the fields`() = runTest(dispatcher) {
         repository.failure = AuthException.InvalidCredentials()
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
         viewModel.onEmailChange("user@example.com")
         viewModel.onPasswordChange("wrong-password")
 
@@ -81,7 +79,7 @@ internal class LoginViewModelTest {
     @Test
     fun `a rejected email is shown under the email field`() = runTest(dispatcher) {
         repository.failure = AuthException.FieldRejected(AuthException.Field.Email)
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
         viewModel.onEmailChange("не-email")
         viewModel.onPasswordChange("secret123")
 
@@ -95,7 +93,7 @@ internal class LoginViewModelTest {
 
     @Test
     fun `input is capped at the technical limit`() {
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
 
         viewModel.onEmailChange("a".repeat(MaxAuthInputLength + 100))
         viewModel.onPasswordChange("b".repeat(MaxAuthInputLength + 100))
@@ -108,7 +106,7 @@ internal class LoginViewModelTest {
     @Test
     fun `network failure re-enables the button so the user can retry`() = runTest(dispatcher) {
         repository.failure = NetworkException.NoConnection()
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
         viewModel.onEmailChange("user@example.com")
         viewModel.onPasswordChange("secret123")
 
@@ -123,7 +121,7 @@ internal class LoginViewModelTest {
 
     @Test
     fun `submit is disabled until both fields are filled`() {
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
 
         assertFalse(viewModel.uiState.value.canSubmit)
 
@@ -142,7 +140,7 @@ internal class LoginViewModelTest {
 
     @Test
     fun `submit with an empty form does not reach the repository`() = runTest(dispatcher) {
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
 
         viewModel.onSubmit()
         advanceUntilIdle()
@@ -153,7 +151,7 @@ internal class LoginViewModelTest {
     @Test
     fun `second submit during a running request does not send another one`() = runTest(dispatcher) {
         repository.suspendUntilResumed = true
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
         viewModel.onEmailChange("user@example.com")
         viewModel.onPasswordChange("secret123")
 
@@ -177,7 +175,7 @@ internal class LoginViewModelTest {
     @Test
     fun `editing a field clears the previous error`() = runTest(dispatcher) {
         repository.failure = AuthException.InvalidCredentials()
-        val viewModel = LoginViewModel(repository)
+        val viewModel = LoginViewModel(LoginUseCase(repository))
         viewModel.onEmailChange("user@example.com")
         viewModel.onPasswordChange("wrong-password")
 

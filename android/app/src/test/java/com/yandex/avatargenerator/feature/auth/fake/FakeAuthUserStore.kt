@@ -1,4 +1,4 @@
-package com.yandex.avatargenerator.feature.auth
+package com.yandex.avatargenerator.feature.auth.fake
 
 import com.yandex.avatargenerator.feature.auth.data.AuthUserStore
 import com.yandex.avatargenerator.feature.auth.domain.model.AuthUser

@@ -1,10 +1,10 @@
-package com.yandex.avatargenerator.feature.auth
+package com.yandex.avatargenerator.feature.auth.data
 
 import com.yandex.avatargenerator.core.network.ApiJson
 import com.yandex.avatargenerator.core.network.InMemoryAuthTokenStore
 import com.yandex.avatargenerator.core.network.installApiRetry
-import com.yandex.avatargenerator.feature.auth.data.AuthRepositoryImpl
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
+import com.yandex.avatargenerator.feature.auth.fake.FakeAuthUserStore
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout

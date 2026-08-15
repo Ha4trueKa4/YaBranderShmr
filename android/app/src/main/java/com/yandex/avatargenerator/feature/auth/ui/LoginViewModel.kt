@@ -2,7 +2,7 @@ package com.yandex.avatargenerator.feature.auth.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
+import com.yandex.avatargenerator.feature.auth.domain.LoginUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,11 +14,11 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel экрана входа: держит поля формы и по запросу логинит пользователя
- * через [AuthRepository]. Токен репозиторий сохраняет сам — сюда возвращается
+ * через [LoginUseCase]. Токен репозиторий сохраняет сам — сюда возвращается
  * только результат, по которому шлётся [LoginEvent.SignedIn].
  */
 internal class LoginViewModel(
-    private val repository: AuthRepository,
+    private val login: LoginUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -63,7 +63,7 @@ internal class LoginViewModel(
                 )
             }
             try {
-                repository.login(state.email, state.password)
+                login(state.email, state.password)
                 // Токен уже записан репозиторием — здесь остаётся только навигация.
                 _uiState.update { it.copy(isSubmitting = false) }
                 _events.send(LoginEvent.SignedIn)
