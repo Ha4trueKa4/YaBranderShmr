@@ -175,8 +175,8 @@ components_manager:
       auth:
         types:
           - jwt
-      max_requests_in_flight: 50
-      max_requests_per_second: 100
+      max_requests_in_flight: 150
+      max_requests_per_second: 300
 
     handler-auth-register:
       path: /api/v1/auth/register
