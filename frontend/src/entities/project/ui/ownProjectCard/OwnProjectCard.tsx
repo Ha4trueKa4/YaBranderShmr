@@ -50,7 +50,7 @@ export function OwnProjectCard({
     >
       <div className={styles.previewWrap}>
         <ProjectPreview imageUrl={project.url ?? null} title={title} />
-        {isPrivate && <span className={styles.visibility}>{visibility}</span>}
+        {!isPrivate && <span className={styles.visibility}>{visibility}</span>}
       </div>
       <div className={styles.content}>
         <div className={styles.titleRow}>
