@@ -27,6 +27,7 @@ export type TextStyle = {
   fontSize: number
   fontStyle?: 'italic' | 'normal'
   fontWeight?: number
+  letterSpacing?: number
   textAnchor?: 'end' | 'middle' | 'start'
 }
 
@@ -52,7 +53,28 @@ export type PathGeometry = {
   type: 'path'
 }
 
-export type ShapeGeometry = RectGeometry | CircleGeometry | PathGeometry
+export type EllipseGeometry = {
+  cx: number
+  cy: number
+  rx: number
+  ry: number
+  type: 'ellipse'
+}
+
+export type LineGeometry = {
+  type: 'line'
+  x1: number
+  x2: number
+  y1: number
+  y2: number
+}
+
+export type ShapeGeometry =
+  | RectGeometry
+  | CircleGeometry
+  | PathGeometry
+  | EllipseGeometry
+  | LineGeometry
 export type EditorShapeType = ShapeGeometry['type']
 export type EditorElementType = 'shape' | 'text'
 export type EditorNodeType = EditorElementType | 'group'
@@ -74,6 +96,8 @@ export type EditorShape = EditorElementBase & {
     | { geometry: RectGeometry; shapeType: 'rect' }
     | { geometry: CircleGeometry; shapeType: 'circle' }
     | { geometry: PathGeometry; shapeType: 'path' }
+    | { geometry: EllipseGeometry; shapeType: 'ellipse' }
+    | { geometry: LineGeometry; shapeType: 'line' }
   )
 
 export type EditorText = EditorElementBase & {
@@ -98,7 +122,29 @@ export type EditorElementByType<TType extends EditorElementType> = Extract<
   { type: TType }
 >
 
+/**
+ * Градиенты не являются слоями: MVP только сохраняет их, чтобы SVG не терял
+ * внешний вид. Редактирование точек и stops добавим при необходимости.
+ */
+export type GradientStop = {
+  color: string
+  offset: string
+  opacity?: number
+}
+
+export type GradientDefinition = {
+  attributes: Record<string, string>
+  id: string
+  stops: GradientStop[]
+  type: 'linearGradient' | 'radialGradient'
+}
+
+export type EditorDefinitions = {
+  gradients: GradientDefinition[]
+}
+
 export interface EditorDocument {
+  definitions?: EditorDefinitions
   width: number
   height: number
   layers: EditorNode[]

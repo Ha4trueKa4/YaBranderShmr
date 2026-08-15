@@ -23,6 +23,9 @@ importers:
       mobx-react-lite:
         specifier: ^5.0.0
         version: 5.0.0(mobx@7.0.0)(react@19.2.8)
+      nvm:
+        specifier: ^0.0.4
+        version: 0.0.4
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -75,6 +78,9 @@ importers:
       globals:
         specifier: ^17.7.0
         version: 17.9.0
+      pnpm:
+        specifier: ^10.34.5
+        version: 10.34.5
       typescript:
         specifier: ~6.0.2
         version: 6.0.3
@@ -1099,6 +1105,11 @@ packages:
     resolution: {integrity: sha512-D9UOmYG3UH1V+ENW56t5QXBwJw1YEY18ruVeus89Rw+SyIgjPkCO84bRzO3uNIYosJbNwiabWVn48o3uJLjxFQ==}
     engines: {node: '>=18'}
 
+  nvm@0.0.4:
+    resolution: {integrity: sha512-jvmyELykYcdyd0VCGY0E8Aqe5MngEasVvlPvrcJHbwBMUbVqa72mPdQuPzyTcykEtEx7jDrMY0QA5MoV+8EhgA==}
+    deprecated: This is NOT the correct nvm. Visit https://nvm.sh and use the curl command to install it.
+    hasBin: true
+
   obug@2.1.4:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
@@ -1145,6 +1156,11 @@ packages:
 
   pkg-types@2.3.1:
     resolution: {integrity: sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg==}
+
+  pnpm@10.34.5:
+    resolution: {integrity: sha512-pO4F8vc2WCVb1qiYWcBlpFwopX2u+uLIk6Fo7itzFow3uR6D5X6mdlStA/AwMXRkMOi84442LgQmBfuKvIAZLg==}
+    engines: {node: '>=18.12'}
+    hasBin: true
 
   postcss@8.5.26:
     resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
@@ -2300,6 +2316,8 @@ snapshots:
 
   node-releases@2.0.53: {}
 
+  nvm@0.0.4: {}
+
   obug@2.1.4: {}
 
   ohash@2.0.11: {}
@@ -2347,6 +2365,8 @@ snapshots:
       confbox: 0.2.4
       exsolve: 1.1.1
       pathe: 2.0.3
+
+  pnpm@10.34.5: {}
 
   postcss@8.5.26:
     dependencies:
