@@ -23,6 +23,7 @@ on:
     - workflows: [deploy-frontend-dev]
       filter:
         branches: [main]
+        paths: ["frontend/**"]
     - workflows: [build-and-deploy-backend]
       filter:
         branches: ["main"]
