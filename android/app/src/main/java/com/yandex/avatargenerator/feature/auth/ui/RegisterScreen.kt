@@ -1,10 +1,7 @@
 package com.yandex.avatargenerator.feature.auth.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.auth.ui.components.AuthBrandMark
+import com.yandex.avatargenerator.feature.auth.ui.components.AuthFormLayout
 import com.yandex.avatargenerator.feature.auth.ui.components.AuthPasswordVisibilityToggle
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTextField
@@ -99,125 +97,113 @@ private fun RegisterContent(
     onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(AppColors.Background)
-    ) {
+    AuthFormLayout(modifier = modifier) {
+        AuthBrandMark()
+
+        Text(
+            text = stringResource(R.string.auth_create_account),
+            style = AppTypography.heading2,
+            modifier = Modifier.padding(top = AppSpacing.l)
+        )
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = AppSpacing.l),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .padding(top = AppSpacing.l),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.m)
         ) {
-            AuthBrandMark()
-
-            Text(
-                text = stringResource(R.string.auth_create_account),
-                style = AppTypography.heading2,
-                modifier = Modifier.padding(top = AppSpacing.l)
+            // В макете поле подписано «Full name», в API оно называется
+            // nickname — расхождение осознанное, подпись не меняем.
+            BrandTextField(
+                label = stringResource(R.string.auth_field_full_name),
+                value = uiState.nickname,
+                onValueChange = onNicknameChange,
+                placeholder = stringResource(R.string.auth_placeholder_full_name),
+                errorMessage = uiState.nicknameError?.text(),
+                height = 48.dp
             )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = AppSpacing.l),
-                verticalArrangement = Arrangement.spacedBy(AppSpacing.m)
-            ) {
-                // В макете поле подписано «Full name», в API оно называется
-                // nickname — расхождение осознанное, подпись не меняем.
-                BrandTextField(
-                    label = stringResource(R.string.auth_field_full_name),
-                    value = uiState.nickname,
-                    onValueChange = onNicknameChange,
-                    placeholder = stringResource(R.string.auth_placeholder_full_name),
-                    errorMessage = uiState.nicknameError?.text(),
-                    height = 48.dp
-                )
-                BrandTextField(
-                    label = stringResource(R.string.auth_field_email),
-                    value = uiState.email,
-                    onValueChange = onEmailChange,
-                    placeholder = stringResource(R.string.auth_placeholder_email),
-                    errorMessage = uiState.emailError?.text(),
-                    height = 48.dp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-                )
-                BrandTextField(
-                    label = stringResource(R.string.auth_field_password),
-                    value = uiState.password,
-                    onValueChange = onPasswordChange,
-                    placeholder = stringResource(R.string.auth_placeholder_password),
-                    errorMessage = uiState.passwordError?.text(),
-                    height = 48.dp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    visualTransformation = if (uiState.isPasswordVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    trailingIcon = {
-                        AuthPasswordVisibilityToggle(
-                            visible = uiState.isPasswordVisible,
-                            onToggle = onPasswordVisibilityToggle
-                        )
-                    }
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = AppSpacing.l),
-                verticalArrangement = Arrangement.spacedBy(AppSpacing.m),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Ошибка не про конкретное поле (сеть, незнакомый код сервера) —
-                // показываем над кнопкой.
-                uiState.formError?.let { error ->
-                    Text(
-                        text = error.text(),
-                        style = AppTypography.label,
-                        color = AppColors.Error
+            BrandTextField(
+                label = stringResource(R.string.auth_field_email),
+                value = uiState.email,
+                onValueChange = onEmailChange,
+                placeholder = stringResource(R.string.auth_placeholder_email),
+                errorMessage = uiState.emailError?.text(),
+                height = 48.dp,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            )
+            BrandTextField(
+                label = stringResource(R.string.auth_field_password),
+                value = uiState.password,
+                onValueChange = onPasswordChange,
+                placeholder = stringResource(R.string.auth_placeholder_password),
+                errorMessage = uiState.passwordError?.text(),
+                height = 48.dp,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = if (uiState.isPasswordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                trailingIcon = {
+                    AuthPasswordVisibilityToggle(
+                        visible = uiState.isPasswordVisible,
+                        onToggle = onPasswordVisibilityToggle
                     )
                 }
+            )
+        }
 
-                BrandPrimaryButton(
-                    text = stringResource(
-                        if (uiState.isSubmitting) {
-                            R.string.auth_creating_account
-                        } else {
-                            R.string.auth_create_account
-                        },
-                    ),
-                    onClick = onSubmit,
-                    fullWidth = true,
-                    enabled = uiState.canSubmit,
-                    leadingIcon = if (uiState.isSubmitting) {
-                        {
-                            CircularProgressIndicator(
-                                // 18.dp / 2.dp — размеры индикатора внутри кнопки, точечные значения вне шкалы.
-                                modifier = Modifier.size(18.dp),
-                                color = AppColors.OnAccent,
-                                strokeWidth = 2.dp,
-                            )
-                        }
-                    } else {
-                        null
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = AppSpacing.l),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.m),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Ошибка не про конкретное поле (сеть, незнакомый код сервера) —
+            // показываем над кнопкой.
+            uiState.formError?.let { error ->
+                Text(
+                    text = error.text(),
+                    style = AppTypography.label,
+                    color = AppColors.Error
                 )
             }
 
-            BrandTextLink(
-                text = stringResource(R.string.auth_have_account),
-                actionText = stringResource(R.string.auth_sign_in),
-                onClick = onNavigateToLogin,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = AppSpacing.l)
+            BrandPrimaryButton(
+                text = stringResource(
+                    if (uiState.isSubmitting) {
+                        R.string.auth_creating_account
+                    } else {
+                        R.string.auth_create_account
+                    },
+                ),
+                onClick = onSubmit,
+                fullWidth = true,
+                enabled = uiState.canSubmit,
+                leadingIcon = if (uiState.isSubmitting) {
+                    {
+                        CircularProgressIndicator(
+                            // 18.dp / 2.dp — размеры индикатора внутри кнопки, точечные значения вне шкалы.
+                            modifier = Modifier.size(18.dp),
+                            color = AppColors.OnAccent,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                } else {
+                    null
+                }
             )
         }
+
+        BrandTextLink(
+            text = stringResource(R.string.auth_have_account),
+            actionText = stringResource(R.string.auth_sign_in),
+            onClick = onNavigateToLogin,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = AppSpacing.l)
+        )
     }
 }
 

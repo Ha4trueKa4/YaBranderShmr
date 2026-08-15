@@ -1,7 +1,10 @@
 package com.yandex.avatargenerator.feature.auth.di
 
 import com.yandex.avatargenerator.feature.auth.data.AuthRepositoryImpl
+import com.yandex.avatargenerator.feature.auth.data.AuthUserPreferencesStore
+import com.yandex.avatargenerator.feature.auth.data.AuthUserStore
 import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
+import com.yandex.avatargenerator.feature.auth.domain.CurrentUserUseCase
 import com.yandex.avatargenerator.feature.auth.domain.IsAuthorizedUseCase
 import com.yandex.avatargenerator.feature.auth.ui.LoginViewModel
 import com.yandex.avatargenerator.feature.auth.ui.RegisterViewModel
@@ -10,12 +13,17 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 /**
- * Зависимости фичи авторизации: репозиторий, флаг сессии для навигации и
- * ViewModel обоих экранов.
+ * Зависимости фичи авторизации: хранилище профиля, репозиторий, флаг сессии и
+ * текущий пользователь для навигации, ViewModel обоих экранов.
  */
 val authModule = module {
-    single<AuthRepository> { AuthRepositoryImpl(client = get(), tokenStore = get()) }
+    // DataStore приходит из coreModule — свой файл настроек фича не заводит.
+    single<AuthUserStore> { AuthUserPreferencesStore(get()) }
+    single<AuthRepository> {
+        AuthRepositoryImpl(client = get(), tokenStore = get(), userStore = get())
+    }
     factoryOf(::IsAuthorizedUseCase)
+    factoryOf(::CurrentUserUseCase)
     viewModelOf(::LoginViewModel)
     viewModelOf(::RegisterViewModel)
 }

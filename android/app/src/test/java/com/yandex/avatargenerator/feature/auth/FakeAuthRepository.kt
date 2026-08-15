@@ -22,6 +22,9 @@ internal class FakeAuthRepository : AuthRepository {
     /** Текущее значение [isAuthorized] — читать в тесте удобнее, чем собирать Flow. */
     val authorized: Boolean get() = _isAuthorized.value
 
+    private val _currentUser = MutableStateFlow<AuthUser?>(null)
+    override val currentUser: Flow<AuthUser?> = _currentUser.asStateFlow()
+
     /** Если задано — [login] и [register] бросают это вместо успешного ответа. */
     var failure: Exception? = null
 
@@ -77,6 +80,7 @@ internal class FakeAuthRepository : AuthRepository {
 
     override suspend fun logout() {
         _isAuthorized.value = false
+        _currentUser.value = null
     }
 
     /** Общий хвост запроса: подождать (если просили), упасть или отдать сессию. */
@@ -84,6 +88,8 @@ internal class FakeAuthRepository : AuthRepository {
         if (suspendUntilResumed) gate.await()
         failure?.let { throw it }
         _isAuthorized.value = true
+        // Как настоящий репозиторий: пользователь запоминается вместе с токеном.
+        _currentUser.value = session.user
         return session
     }
 }

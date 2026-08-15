@@ -28,12 +28,13 @@ internal class LoginViewModel(
     val events = _events.receiveAsFlow()
 
     // Правка поля гасит ошибки: старое сообщение относилось к прошлому вводу.
+    // Ввод обрезаем по [MaxAuthInputLength] — см. комментарий у константы.
     fun onEmailChange(value: String) = _uiState.update {
-        it.copy(email = value, emailError = null, formError = null)
+        it.copy(email = value.take(MaxAuthInputLength), emailError = null, formError = null)
     }
 
     fun onPasswordChange(value: String) = _uiState.update {
-        it.copy(password = value, passwordError = null, formError = null)
+        it.copy(password = value.take(MaxAuthInputLength), passwordError = null, formError = null)
     }
 
     fun onPasswordVisibilityToggle() = _uiState.update {

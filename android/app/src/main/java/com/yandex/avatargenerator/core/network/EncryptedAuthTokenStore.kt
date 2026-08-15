@@ -57,19 +57,33 @@ class EncryptedAuthTokenStore(
         return cache.value
     }
 
+    // Запись берёт тот же [loadMutex], что и чтение: иначе ленивое чтение файла,
+    // уже вошедшее в критическую секцию, вернётся из Keystore после update() и
+    // затрёт свежий токен старым значением из файла. Инвариант — «чтение из файла
+    // никогда не перезаписывает более позднюю запись».
+    // Дедлока нет: ни update(), ни clear() не вызывают loadOnce().
     override suspend fun update(token: String) = withContext(ioDispatcher) {
-        preferences?.edit { putString(KeyAccessToken, token) }
-        isLoaded = true
-        cache.value = token
+        loadMutex.withLock {
+            preferences?.edit { putString(KeyAccessToken, token) }
+            isLoaded = true
+            cache.value = token
+        }
     }
 
     override suspend fun clear() = withContext(ioDispatcher) {
-        preferences?.edit { remove(KeyAccessToken) }
-        isLoaded = true
-        cache.value = null
+        loadMutex.withLock {
+            preferences?.edit { remove(KeyAccessToken) }
+            isLoaded = true
+            cache.value = null
+        }
     }
 
-    /** Читает файл ровно один раз; [Mutex] — чтобы параллельные запросы не прочли его дважды. */
+    /**
+     * Читает файл ровно один раз; [Mutex] — чтобы параллельные запросы не прочли
+     * его дважды и, что важнее, чтобы упорядочить чтение из файла относительно
+     * записи нового токена: пока идёт чтение (сотни мс в Keystore), [update] и
+     * [clear] ждут, и результат чтения не может затереть более свежее значение.
+     */
     private suspend fun loadOnce() {
         if (isLoaded) return
         loadMutex.withLock {

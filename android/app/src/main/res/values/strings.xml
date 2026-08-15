@@ -104,6 +104,11 @@
     <string name="create_project_submitting">Generating brand assets…</string>
     <string name="create_project_error">Couldn\'t generate brand assets. Please try again.</string>
 
+    <!-- Профиль: своя вкладка без сохранённого пользователя.
+         Так у всех, кто вошёл до появления хранилища профиля — дозаполнить нечем -->
+    <string name="profile_no_session_title">Sign in again</string>
+    <string name="profile_no_session_subtitle">We couldn\'t find your account details. Please sign in again to open your profile</string>
+
     <!-- Экран проекта (чат с ИИ) -->
     <string name="project_title_placeholder">Project</string>
     <string name="project_back_description">Back</string>

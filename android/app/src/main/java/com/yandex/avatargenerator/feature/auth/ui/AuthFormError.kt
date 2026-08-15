@@ -21,13 +21,13 @@ internal enum class AuthFormError {
     /** `409 NICKNAME_EXISTS`. */
     NicknameTaken,
 
-    /** `400 INVALID_EMAIL`. */
+    /** `400`/`422` `INVALID_EMAIL` — приходит и на входе, и на регистрации. */
     InvalidEmail,
 
-    /** `400 INVALID_PASSWORD`. */
+    /** `400`/`422` `INVALID_PASSWORD`. */
     InvalidPassword,
 
-    /** `400 INVALID_NICKNAME`. */
+    /** `400`/`422` `INVALID_NICKNAME`. */
     InvalidNickname,
 
     /** Нет сети или таймаут. */
@@ -52,7 +52,7 @@ internal fun Throwable.toAuthFormError(): AuthFormError = when (this) {
         else -> AuthFormError.Unknown
     }
 
-    is AuthException.RegistrationRejected -> when (field) {
+    is AuthException.FieldRejected -> when (field) {
         AuthException.Field.Email -> AuthFormError.InvalidEmail
         AuthException.Field.Password -> AuthFormError.InvalidPassword
         AuthException.Field.Nickname -> AuthFormError.InvalidNickname

@@ -5,6 +5,7 @@ import com.yandex.avatargenerator.core.network.ApiJson
 import com.yandex.avatargenerator.core.network.InMemoryAuthTokenStore
 import com.yandex.avatargenerator.feature.auth.data.AuthRepositoryImpl
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
+import com.yandex.avatargenerator.feature.auth.domain.model.AuthUser
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandler
@@ -18,6 +19,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -35,6 +37,7 @@ private const val AuthResponseJson = """
 class AuthRepositoryImplTest {
 
     private val tokenStore = InMemoryAuthTokenStore()
+    private val userStore = FakeAuthUserStore()
 
     private fun repository(handler: MockRequestHandler): AuthRepositoryImpl {
         val client = HttpClient(MockEngine(handler)) {
@@ -45,7 +48,7 @@ class AuthRepositoryImplTest {
                 contentType(ContentType.Application.Json)
             }
         }
-        return AuthRepositoryImpl(client, tokenStore)
+        return AuthRepositoryImpl(client, tokenStore, userStore)
     }
 
     private fun jsonHeaders() =
@@ -61,6 +64,20 @@ class AuthRepositoryImplTest {
         assertEquals("Bearer", session.tokenType)
         assertEquals("John", session.user.nickname)
         assertEquals("jwt-token", tokenStore.currentToken())
+    }
+
+    @Test
+    fun `login запоминает пользователя из ответа`() = runTest {
+        val repository = repository { respond(AuthResponseJson, headers = jsonHeaders()) }
+
+        repository.login("user@example.com", "secret")
+
+        // Ручки /auth/me нет: ответ входа — единственный источник своего id.
+        assertEquals(
+            AuthUser(id = "u-1", email = "user@example.com", nickname = "John"),
+            userStore.savedUser,
+        )
+        assertEquals(userStore.savedUser, repository.currentUser.first())
     }
 
     @Test
@@ -96,6 +113,7 @@ class AuthRepositoryImplTest {
 
         assertEquals("u-1", session.user.id)
         assertEquals("jwt-token", tokenStore.currentToken())
+        assertEquals("u-1", userStore.savedUser?.id)
     }
 
     @Test
@@ -152,10 +170,89 @@ class AuthRepositoryImplTest {
             repository.register("user@example.com", "1", "John")
         }.exceptionOrNull()
 
-        assertTrue("получили $error", error is AuthException.RegistrationRejected)
-        val rejected = error as AuthException.RegistrationRejected
+        assertTrue("получили $error", error is AuthException.FieldRejected)
+        val rejected = error as AuthException.FieldRejected
         assertEquals(AuthException.Field.Password, rejected.field)
         assertEquals("слишком короткий", rejected.serverMessage)
+    }
+
+    @Test
+    fun `422 разбирается так же, как 400`() = runTest {
+        val repository = repository {
+            respond(
+                content = """{"code":"INVALID_NICKNAME","message":"короткий","field":"nickname"}""",
+                status = HttpStatusCode.UnprocessableEntity,
+                headers = jsonHeaders(),
+            )
+        }
+
+        val error = runCatching {
+            repository.register("user@example.com", "secret", "Jo")
+        }.exceptionOrNull()
+
+        assertTrue("получили $error", error is AuthException.FieldRejected)
+        assertEquals(
+            AuthException.Field.Nickname,
+            (error as AuthException.FieldRejected).field,
+        )
+    }
+
+    @Test
+    fun `400 INVALID_EMAIL на login указывает на поле email`() = runTest {
+        val repository = repository {
+            respond(
+                content = """{"code":"INVALID_EMAIL","message":"не email","field":"email"}""",
+                status = HttpStatusCode.BadRequest,
+                headers = jsonHeaders(),
+            )
+        }
+
+        val error = runCatching { repository.login("не-email", "secret") }.exceptionOrNull()
+
+        // Иначе пользователь увидел бы общее «что-то пошло не так».
+        assertTrue("получили $error", error is AuthException.FieldRejected)
+        assertEquals(
+            AuthException.Field.Email,
+            (error as AuthException.FieldRejected).field,
+        )
+        assertNull(tokenStore.currentToken())
+    }
+
+    @Test
+    fun `чужой token_type роняет разбор и не сохраняет сессию`() = runTest {
+        val repository = repository {
+            respond(
+                content = """
+                    {
+                      "access_token": "jwt-token",
+                      "token_type": "MAC",
+                      "user": { "id": "u-1", "email": "user@example.com", "nickname": "John" }
+                    }
+                """.trimIndent(),
+                headers = jsonHeaders(),
+            )
+        }
+
+        val error = runCatching { repository.login("user@example.com", "secret") }.exceptionOrNull()
+
+        // Заголовок собирается строкой "Bearer $token": молчать о расхождении хуже.
+        assertTrue("получили $error", error is NetworkException.Serialization)
+        assertNull(tokenStore.currentToken())
+        assertNull(userStore.savedUser)
+    }
+
+    @Test
+    fun `регистр token_type значения не имеет`() = runTest {
+        val repository = repository {
+            respond(
+                content = AuthResponseJson.replace("\"Bearer\"", "\"bearer\""),
+                headers = jsonHeaders(),
+            )
+        }
+
+        repository.login("user@example.com", "secret")
+
+        assertEquals("jwt-token", tokenStore.currentToken())
     }
 
     @Test
@@ -197,12 +294,13 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `logout забывает токен`() = runTest {
+    fun `logout забывает и токен, и пользователя`() = runTest {
         val repository = repository { respond(AuthResponseJson, headers = jsonHeaders()) }
         repository.login("user@example.com", "secret")
 
         repository.logout()
 
         assertNull(tokenStore.currentToken())
+        assertNull(userStore.savedUser)
     }
 }

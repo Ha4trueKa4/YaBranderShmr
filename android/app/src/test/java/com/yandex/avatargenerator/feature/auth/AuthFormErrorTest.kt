@@ -26,10 +26,10 @@ internal class AuthFormErrorTest {
             AuthException.RegistrationConflict(AuthException.Field.Password) to AuthFormError.Unknown,
             AuthException.RegistrationConflict(AuthException.Field.Unknown) to AuthFormError.Unknown,
 
-            AuthException.RegistrationRejected(AuthException.Field.Email) to AuthFormError.InvalidEmail,
-            AuthException.RegistrationRejected(AuthException.Field.Password) to AuthFormError.InvalidPassword,
-            AuthException.RegistrationRejected(AuthException.Field.Nickname) to AuthFormError.InvalidNickname,
-            AuthException.RegistrationRejected(AuthException.Field.Unknown) to AuthFormError.Unknown,
+            AuthException.FieldRejected(AuthException.Field.Email) to AuthFormError.InvalidEmail,
+            AuthException.FieldRejected(AuthException.Field.Password) to AuthFormError.InvalidPassword,
+            AuthException.FieldRejected(AuthException.Field.Nickname) to AuthFormError.InvalidNickname,
+            AuthException.FieldRejected(AuthException.Field.Unknown) to AuthFormError.Unknown,
         )
 
         cases.forEach { (failure, expected) ->

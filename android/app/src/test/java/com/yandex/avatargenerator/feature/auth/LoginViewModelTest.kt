@@ -5,6 +5,7 @@ import com.yandex.avatargenerator.feature.auth.domain.AuthException
 import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
 import com.yandex.avatargenerator.feature.auth.ui.LoginEvent
 import com.yandex.avatargenerator.feature.auth.ui.LoginViewModel
+import com.yandex.avatargenerator.feature.auth.ui.MaxAuthInputLength
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -75,6 +76,33 @@ internal class LoginViewModelTest {
         // Сервер не сказал, что именно неверно, — подсветка полей была бы враньём.
         assertNull(state.emailError)
         assertNull(state.passwordError)
+    }
+
+    @Test
+    fun `a rejected email is shown under the email field`() = runTest(dispatcher) {
+        repository.failure = AuthException.FieldRejected(AuthException.Field.Email)
+        val viewModel = LoginViewModel(repository)
+        viewModel.onEmailChange("не-email")
+        viewModel.onPasswordChange("secret123")
+
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(AuthFormError.InvalidEmail, state.emailError)
+        assertNull(state.formError)
+    }
+
+    @Test
+    fun `input is capped at the technical limit`() {
+        val viewModel = LoginViewModel(repository)
+
+        viewModel.onEmailChange("a".repeat(MaxAuthInputLength + 100))
+        viewModel.onPasswordChange("b".repeat(MaxAuthInputLength + 100))
+
+        // Это защита от абсурда, а не валидация: правила длины остаются на бэкенде.
+        assertEquals(MaxAuthInputLength, viewModel.uiState.value.email.length)
+        assertEquals(MaxAuthInputLength, viewModel.uiState.value.password.length)
     }
 
     @Test

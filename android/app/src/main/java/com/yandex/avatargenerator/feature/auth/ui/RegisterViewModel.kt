@@ -18,7 +18,8 @@ import kotlinx.coroutines.launch
  * результат, по которому шлётся [RegisterEvent.Registered].
  *
  * Правила длины пароля и никнейма на клиенте не проверяются: их решает сервер,
- * а экран показывает подсказку по коду ошибки.
+ * а экран показывает подсказку по коду ошибки. Единственное ограничение ввода —
+ * технический потолок [MaxAuthInputLength].
  */
 internal class RegisterViewModel(
     private val repository: AuthRepository,
@@ -31,16 +32,17 @@ internal class RegisterViewModel(
     val events = _events.receiveAsFlow()
 
     // Правка поля гасит ошибки: старое сообщение относилось к прошлому вводу.
+    // Ввод обрезаем по [MaxAuthInputLength] — см. комментарий у константы.
     fun onNicknameChange(value: String) = _uiState.update {
-        it.copy(nickname = value, nicknameError = null, formError = null)
+        it.copy(nickname = value.take(MaxAuthInputLength), nicknameError = null, formError = null)
     }
 
     fun onEmailChange(value: String) = _uiState.update {
-        it.copy(email = value, emailError = null, formError = null)
+        it.copy(email = value.take(MaxAuthInputLength), emailError = null, formError = null)
     }
 
     fun onPasswordChange(value: String) = _uiState.update {
-        it.copy(password = value, passwordError = null, formError = null)
+        it.copy(password = value.take(MaxAuthInputLength), passwordError = null, formError = null)
     }
 
     fun onPasswordVisibilityToggle() = _uiState.update {

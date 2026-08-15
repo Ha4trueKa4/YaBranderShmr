@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.feature.auth
 
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
 import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
+import com.yandex.avatargenerator.feature.auth.ui.MaxAuthInputLength
 import com.yandex.avatargenerator.feature.auth.ui.RegisterEvent
 import com.yandex.avatargenerator.feature.auth.ui.RegisterViewModel
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +64,7 @@ internal class RegisterViewModelTest {
 
     @Test
     fun `rejected password is shown under the password field`() = runTest(dispatcher) {
-        repository.failure = AuthException.RegistrationRejected(AuthException.Field.Password)
+        repository.failure = AuthException.FieldRejected(AuthException.Field.Password)
         val viewModel = RegisterViewModel(repository)
         viewModel.fillForm()
 
@@ -79,7 +80,7 @@ internal class RegisterViewModelTest {
 
     @Test
     fun `rejected nickname is shown under the nickname field`() = runTest(dispatcher) {
-        repository.failure = AuthException.RegistrationRejected(AuthException.Field.Nickname)
+        repository.failure = AuthException.FieldRejected(AuthException.Field.Nickname)
         val viewModel = RegisterViewModel(repository)
         viewModel.fillForm()
 
@@ -95,7 +96,7 @@ internal class RegisterViewModelTest {
 
     @Test
     fun `unknown server code falls back to the common error above the button`() = runTest(dispatcher) {
-        repository.failure = AuthException.RegistrationRejected(AuthException.Field.Unknown)
+        repository.failure = AuthException.FieldRejected(AuthException.Field.Unknown)
         val viewModel = RegisterViewModel(repository)
         viewModel.fillForm()
 
@@ -108,6 +109,21 @@ internal class RegisterViewModelTest {
         assertNull(state.nicknameError)
         assertNull(state.emailError)
         assertNull(state.passwordError)
+    }
+
+    @Test
+    fun `input is capped at the technical limit`() {
+        val viewModel = RegisterViewModel(repository)
+
+        viewModel.onNicknameChange("n".repeat(MaxAuthInputLength + 100))
+        viewModel.onEmailChange("a".repeat(MaxAuthInputLength + 100))
+        viewModel.onPasswordChange("b".repeat(MaxAuthInputLength + 100))
+
+        // Это защита от абсурда, а не валидация: правила длины остаются на бэкенде.
+        val state = viewModel.uiState.value
+        assertEquals(MaxAuthInputLength, state.nickname.length)
+        assertEquals(MaxAuthInputLength, state.email.length)
+        assertEquals(MaxAuthInputLength, state.password.length)
     }
 
     @Test
