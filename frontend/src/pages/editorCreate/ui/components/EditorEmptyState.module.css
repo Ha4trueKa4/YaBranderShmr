@@ -17,6 +17,10 @@
   min-width: 0;
 }
 
+.generateButton {
+  align-self: stretch;
+}
+
 .error {
   margin: var(--space-1) 0 0;
   color: var(--color-error);
