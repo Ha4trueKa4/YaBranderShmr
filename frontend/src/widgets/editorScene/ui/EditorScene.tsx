@@ -5,12 +5,13 @@ import { SceneFrame } from './sceneFrame/SceneFrame'
 
 interface EditorSceneProps {
   document: EditorDocument
+  onSelectNode: (nodeId: string) => void
 }
 
-export function EditorScene({ document }: EditorSceneProps) {
+export function EditorScene({ document, onSelectNode }: EditorSceneProps) {
   return (
     <section className={styles.scene}>
-      <SceneFrame document={document} />
+      <SceneFrame document={document} onSelectNode={onSelectNode} />
     </section>
   )
 }

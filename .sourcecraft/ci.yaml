@@ -87,6 +87,7 @@ workflows:
               - corepack prepare pnpm@11.16.0 --activate
               - pnpm install --frozen-lockfile
               - pnpm check
+              - pnpm test
               - pnpm build
 
           - name: upload-static-site

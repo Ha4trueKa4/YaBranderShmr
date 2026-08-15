@@ -63,10 +63,17 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         />
       </aside>
       <div className={styles.scene}>
-        <EditorScene document={editorStore.document} />
+        <EditorScene
+          document={editorStore.document}
+          onSelectNode={editorStore.setSelectedNode}
+        />
       </div>
       <aside className={styles.inspector}>
-        <InspectorPanel selectedNode={editorStore.selectedNode} />
+        <InspectorPanel
+          onShapeFillChange={editorStore.setShapeFillColor}
+          onShapeFillOpacityChange={editorStore.setShapeFillOpacity}
+          selectedNode={editorStore.selectedNode}
+        />
       </aside>
       <div className={styles.status}>
         <EditorStatusBar />

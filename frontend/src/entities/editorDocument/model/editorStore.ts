@@ -2,7 +2,7 @@ import { makeAutoObservable } from 'mobx'
 
 import { setNodeVisibility } from './commands/setNodeVisibility'
 import { toggleNodeVisibility } from './commands/toggleNodeVisibility'
-import { findNode } from './tree/findNode'
+import { findAncestorGroupIds, findNode } from './tree/findNode'
 import type { EditorDocument, EditorNode } from './types'
 
 /**
@@ -33,6 +33,15 @@ export class EditorStore {
 
   setSelectedNode(nodeId: string | null) {
     this.selectedNodeId = nodeId
+
+    if (!nodeId) {
+      return
+    }
+
+    for (const groupId of findAncestorGroupIds(this.document.layers, nodeId) ??
+      []) {
+      this.expandedGroupIds.add(groupId)
+    }
   }
 
   setNodeVisibility(nodeId: string, isVisible: boolean) {
@@ -41,6 +50,26 @@ export class EditorStore {
 
   toggleNodeVisibility(nodeId: string) {
     toggleNodeVisibility(this.document.layers, nodeId)
+  }
+
+  setShapeFillColor(nodeId: string, color: string) {
+    const node = findNode(this.document.layers, nodeId)
+
+    if (node?.type !== 'shape') {
+      return
+    }
+
+    node.style.fill = { type: 'color', value: color }
+  }
+
+  setShapeFillOpacity(nodeId: string, opacity: number) {
+    const node = findNode(this.document.layers, nodeId)
+
+    if (node?.type !== 'shape') {
+      return
+    }
+
+    node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
   }
 
   isGroupExpanded(groupId: string): boolean {

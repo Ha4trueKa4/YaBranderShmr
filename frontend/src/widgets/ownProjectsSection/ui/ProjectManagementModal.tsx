@@ -15,7 +15,7 @@ type ProjectNameFormValues = z.infer<typeof projectNameFormSchema>
 
 interface ProjectManagementModalProps {
   onClose: () => void
-  onSubmit: (values: { isPublic: boolean; name: string }) => void
+  onSubmit: (values: { isPublic: boolean; name: string }) => Promise<void>
   project: Project
 }
 
@@ -45,8 +45,8 @@ export function ProjectManagementModal({
           <h2 className={styles.title}>Manage project</h2>
           <form
             className={styles.form}
-            onSubmit={form.handleSubmit(({ name }) => {
-              onSubmit({ isPublic, name })
+            onSubmit={form.handleSubmit(async ({ name }) => {
+              await onSubmit({ isPublic, name })
             })}
           >
             <FormField

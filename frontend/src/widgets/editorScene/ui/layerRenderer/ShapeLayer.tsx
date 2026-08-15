@@ -1,4 +1,5 @@
 import type { EditorShape } from '@entities/editorDocument'
+import { observer } from 'mobx-react-lite'
 
 import { getPaintValue } from './model/getPaintValue'
 import { getTransformValue } from './model/getTransformValue'
@@ -7,7 +8,9 @@ interface ShapeLayerProps {
   node: EditorShape
 }
 
-export function ShapeLayer({ node }: ShapeLayerProps) {
+export const ShapeLayer = observer(function ShapeLayer({
+  node,
+}: ShapeLayerProps) {
   const commonProps = {
     fill: getPaintValue(node.style.fill),
     fillOpacity: node.style.fillOpacity,
@@ -32,4 +35,4 @@ export function ShapeLayer({ node }: ShapeLayerProps) {
     case 'path':
       return <path {...commonProps} {...node.geometry} />
   }
-}
+})

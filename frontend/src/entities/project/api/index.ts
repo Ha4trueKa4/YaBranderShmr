@@ -11,5 +11,8 @@ export {
   useProjectQuery,
   useProjectSvgQuery,
   userProfileQueryKey,
+  useUpdateProjectMetadataMutation,
   useUserProfileQuery,
 } from './queries'
+export type { UpdateProjectMetadataInput } from './updateProject'
+export { updateProject } from './updateProject'

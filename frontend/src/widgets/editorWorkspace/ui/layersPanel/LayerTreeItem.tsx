@@ -43,6 +43,12 @@ export const LayerTreeItem = observer(function LayerTreeItem({
           paddingInlineStart: indentation,
         }}
       >
+        <button
+          aria-label={`Select layer ${node.name}`}
+          className={styles.selectRowButton}
+          onClick={() => onSelectNode(node.id)}
+          type="button"
+        />
         {isGroup ? (
           <button
             className={styles.chevronButton}
@@ -59,14 +65,10 @@ export const LayerTreeItem = observer(function LayerTreeItem({
         ) : (
           <span className={styles.chevronPlaceholder} />
         )}
-        <button
-          className={styles.itemButton}
-          onClick={() => onSelectNode(node.id)}
-          type="button"
-        >
+        <div className={styles.itemButton}>
           <LayerIcon className={styles.icon} size={16} strokeWidth={2} />
           <span className={styles.layerName}>{node.name}</span>
-        </button>
+        </div>
         <button
           className={styles.visibilityButton}
           onClick={() => onToggleVisibility(node.id)}

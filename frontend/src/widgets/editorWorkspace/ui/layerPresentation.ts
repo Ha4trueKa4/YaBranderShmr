@@ -1,6 +1,14 @@
 import type { EditorNode, EditorShapeType } from '@entities/editorDocument'
 import type { LucideIcon } from 'lucide-react'
-import { Circle, Folder, Minus, PenTool, Square, Type } from 'lucide-react'
+import {
+  Circle,
+  Folder,
+  Lock,
+  Minus,
+  PenTool,
+  Square,
+  Type,
+} from 'lucide-react'
 
 export type LayerPresentation = {
   icon: LucideIcon
@@ -12,6 +20,7 @@ const presentationByNodeType: Record<
   LayerPresentation
 > = {
   group: { icon: Folder, label: 'Group' },
+  raw: { icon: Lock, label: 'Locked SVG' },
   text: { icon: Type, label: 'Text' },
 }
 

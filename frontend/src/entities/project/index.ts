@@ -7,6 +7,7 @@ export {
   useProjectQuery,
   useProjectSvgQuery,
   userProfileQueryKey,
+  useUpdateProjectMetadataMutation,
   useUserProfileQuery,
 } from './api/queries'
 export type { FeedProject, PublicProfileProject } from './model/types'

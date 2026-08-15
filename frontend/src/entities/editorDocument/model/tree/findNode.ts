@@ -24,3 +24,24 @@ export function findNode(
 
   return null
 }
+
+export function findAncestorGroupIds(
+  nodes: EditorNode[],
+  nodeId: string,
+): string[] | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) {
+      return []
+    }
+
+    if (node.type === 'group') {
+      const ancestorGroupIds = findAncestorGroupIds(node.children, nodeId)
+
+      if (ancestorGroupIds) {
+        return [node.id, ...ancestorGroupIds]
+      }
+    }
+  }
+
+  return null
+}

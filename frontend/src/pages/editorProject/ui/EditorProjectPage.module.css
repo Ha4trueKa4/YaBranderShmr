@@ -5,3 +5,7 @@
   background: var(--color-bg);
   color: var(--color-text-primary);
 }
+
+.loadingState {
+  height: 100%;
+}

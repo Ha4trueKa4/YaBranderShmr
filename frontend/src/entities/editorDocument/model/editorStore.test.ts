@@ -52,6 +52,7 @@ describe('EditorStore selection', () => {
     store.setSelectedNode('wheel')
 
     expect(store.selectedNode).toMatchObject({ id: 'wheel', type: 'shape' })
+    expect(store.isGroupExpanded('taxi')).toBe(true)
   })
 
   it('toggles a group expansion state', () => {
@@ -83,5 +84,27 @@ describe('EditorStore selection', () => {
     }
 
     expect(group.children[0].isVisible).toBe(true)
+  })
+
+  it('changes a shape fill color', () => {
+    const store = new EditorStore(document)
+
+    store.setShapeFillColor('wheel', '#FF0000')
+    store.setSelectedNode('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      style: { fill: { type: 'color', value: '#FF0000' } },
+    })
+  })
+
+  it('changes a shape fill opacity', () => {
+    const store = new EditorStore(document)
+
+    store.setShapeFillOpacity('wheel', 0.4)
+    store.setSelectedNode('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      style: { fillOpacity: 0.4 },
+    })
   })
 })

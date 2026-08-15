@@ -3,6 +3,7 @@ import { AppRoute } from '@app/providers/router/routes'
 import {
   useDeleteProjectMutation,
   userProfileQueryKey,
+  useUpdateProjectMetadataMutation,
   useUserProfileQuery,
 } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
@@ -38,6 +39,8 @@ export function ProfilePage() {
   } = useUserProfileQuery(userId)
   const { isPending: isDeletingProjectPending, mutateAsync: deleteProject } =
     useDeleteProjectMutation()
+  const { mutateAsync: updateProjectMetadata } =
+    useUpdateProjectMetadataMutation()
 
   if (!session) {
     return <ProfileUnavailable />
@@ -82,6 +85,22 @@ export function ProfilePage() {
     }
   }
 
+  async function handleUpdateProjectMetadata(
+    projectId: string,
+    { isPublic }: { isPublic: boolean },
+  ) {
+    try {
+      await updateProjectMetadata({ projectId, is_public: isPublic })
+      await queryClient.invalidateQueries({
+        queryKey: userProfileQueryKey(userId),
+      })
+      toast.info('Project updated.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+      throw error
+    }
+  }
+
   return (
     <div className={styles.page}>
       <Header />
@@ -111,6 +130,7 @@ export function ProfilePage() {
             isDeletingProjectPending={isDeletingProjectPending}
             onDeleteProject={handleDeleteProject}
             onOpenProject={handleOpenProject}
+            onUpdateProjectMetadata={handleUpdateProjectMetadata}
             projects={projects}
           />
         </AsyncState>

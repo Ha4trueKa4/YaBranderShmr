@@ -81,7 +81,7 @@ export type ShapeGeometry =
   | LineGeometry
 export type EditorShapeType = ShapeGeometry['type']
 export type EditorElementType = 'shape' | 'text'
-export type EditorNodeType = EditorElementType | 'group'
+export type EditorNodeType = EditorElementType | 'group' | 'raw'
 
 export type EditorElementBase = {
   id: string
@@ -119,7 +119,12 @@ export type EditorGroup = EditorElementBase & {
   type: 'group'
 }
 
-export type EditorNode = EditorGroup | EditorElement
+export type EditorRawNode = EditorElementBase & {
+  rawSvg: string
+  type: 'raw'
+}
+
+export type EditorNode = EditorGroup | EditorElement | EditorRawNode
 
 export type EditorElementByType<TType extends EditorElementType> = Extract<
   EditorElement,
@@ -145,6 +150,7 @@ export type GradientDefinition = {
 
 export type EditorDefinitions = {
   gradients: GradientDefinition[]
+  rawSvg?: string
 }
 
 export interface EditorDocument {

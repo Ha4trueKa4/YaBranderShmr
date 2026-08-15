@@ -1,9 +1,4 @@
-import type {
-  EditorElementByType,
-  EditorElementType,
-  EditorNode,
-} from '@entities/editorDocument'
-import type { ComponentType } from 'react'
+import type { EditorNode } from '@entities/editorDocument'
 
 import { getLayerPresentation } from '../layerPresentation'
 import { GroupProperties } from './groupProperties/GroupProperties'
@@ -11,22 +6,17 @@ import styles from './InspectorPanel.module.css'
 import { ShapeProperties } from './shapeProperties/ShapeProperties'
 import { TextProperties } from './textProperties/TextProperties'
 
-type InspectorByType = {
-  [TType in EditorElementType]: ComponentType<{
-    layer: EditorElementByType<TType>
-  }>
-}
-
-const inspectorByType = {
-  shape: ShapeProperties,
-  text: TextProperties,
-} satisfies InspectorByType
-
 interface InspectorPanelProps {
+  onShapeFillChange: (nodeId: string, color: string) => void
+  onShapeFillOpacityChange: (nodeId: string, opacity: number) => void
   selectedNode: EditorNode | null
 }
 
-export function InspectorPanel({ selectedNode }: InspectorPanelProps) {
+export function InspectorPanel({
+  onShapeFillChange,
+  onShapeFillOpacityChange,
+  selectedNode,
+}: InspectorPanelProps) {
   if (!selectedNode) {
     return (
       <section className={styles.panel}>
@@ -56,9 +46,45 @@ export function InspectorPanel({ selectedNode }: InspectorPanelProps) {
     )
   }
 
-  const Properties = inspectorByType[selectedNode.type] as ComponentType<{
-    layer: typeof selectedNode
-  }>
+  if (selectedNode.type === 'raw') {
+    return (
+      <section className={styles.panel}>
+        <div className={styles.header}>
+          <h2>Inspector</h2>
+          <span className={styles.typeLabel}>
+            {getLayerPresentation(selectedNode).label}
+          </span>
+        </div>
+        <div className={styles.content}>
+          <p>
+            This SVG layer is locked because its features are not editable yet.
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  if (selectedNode.type === 'shape') {
+    return (
+      <section className={styles.panel}>
+        <div className={styles.header}>
+          <h2>Inspector</h2>
+          <span className={styles.typeLabel}>
+            {getLayerPresentation(selectedNode).label}
+          </span>
+        </div>
+        <div className={styles.content}>
+          <ShapeProperties
+            layer={selectedNode}
+            onFillChange={(color) => onShapeFillChange(selectedNode.id, color)}
+            onFillOpacityChange={(opacity) =>
+              onShapeFillOpacityChange(selectedNode.id, opacity)
+            }
+          />
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className={styles.panel}>
@@ -69,8 +95,7 @@ export function InspectorPanel({ selectedNode }: InspectorPanelProps) {
         </span>
       </div>
       <div className={styles.content}>
-        {/* Поля свойств должны вызывать feature обновления слоя, а не менять layer напрямую. */}
-        <Properties layer={selectedNode} />
+        <TextProperties layer={selectedNode} />
       </div>
     </section>
   )

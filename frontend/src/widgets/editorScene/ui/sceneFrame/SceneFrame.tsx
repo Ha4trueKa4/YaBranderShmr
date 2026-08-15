@@ -7,9 +7,10 @@ import styles from './SceneFrame.module.css'
 
 interface SceneFrameProps {
   document: EditorDocument
+  onSelectNode: (nodeId: string) => void
 }
 
-export function SceneFrame({ document }: SceneFrameProps) {
+export function SceneFrame({ document, onSelectNode }: SceneFrameProps) {
   return (
     <div className={styles.frame}>
       <svg
@@ -18,7 +19,7 @@ export function SceneFrame({ document }: SceneFrameProps) {
         xmlns="http://www.w3.org/2000/svg"
       >
         <title>Макет проекта</title>
-        <LayerRenderer document={document} />
+        <LayerRenderer document={document} onSelectNode={onSelectNode} />
       </svg>
       <SelectionOverlay />
       <TransformHandles />

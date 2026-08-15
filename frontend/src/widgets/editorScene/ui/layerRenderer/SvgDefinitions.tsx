@@ -5,12 +5,19 @@ interface SvgDefinitionsProps {
 }
 
 export function SvgDefinitions({ definitions }: SvgDefinitionsProps) {
-  if (!definitions || definitions.gradients.length === 0) {
+  if (
+    !definitions ||
+    (!definitions.rawSvg && definitions.gradients.length === 0)
+  ) {
     return null
   }
 
   return (
     <defs>
+      {definitions.rawSvg && (
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: raw SVG is sanitized before import.
+        <g dangerouslySetInnerHTML={{ __html: definitions.rawSvg }} />
+      )}
       {definitions.gradients.map((gradient) => {
         const stops = gradient.stops.map((stop) => (
           <stop

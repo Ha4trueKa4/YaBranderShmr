@@ -14,8 +14,8 @@
     "format:check": "biome format --config-path=./biome.json src",
     "check": "pnpm typecheck && biome check --config-path=./biome.json src",
     "preview": "vite preview",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "vitest run",
+    "test:run": "pnpm test",
     "ts:generate": "openapi-ts"
   },
   "dependencies": {
