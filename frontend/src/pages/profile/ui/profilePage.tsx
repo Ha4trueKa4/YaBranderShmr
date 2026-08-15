@@ -9,13 +9,19 @@ import {
   type ProfileHeaderProfile,
 } from '@widgets'
 import { Header } from '@widgets/header'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { generatePath, useNavigate } from 'react-router-dom'
 
+import { EditProfileModal } from './EditProfileModal'
 import styles from './profilePage.module.css'
 
 export function ProfilePage() {
   const navigate = useNavigate()
   const session = authStore.getSession
+  const [isEditProfileModalOpen, setEditProfileModalOpen] = useState(false)
+  const [profileName, setProfileName] = useState(
+    () => session?.user.nickname ?? '',
+  )
   const userId = session?.user.id ?? ''
   const {
     data: userProfile,
@@ -33,14 +39,25 @@ export function ProfilePage() {
   const profile: ProfileHeaderProfile = {
     followersCount: userProfile?.subscribers_count ?? 0,
     followingCount: userProfile?.subscriptions_count ?? 0,
-    name: session.user.nickname,
+    name: profileName,
     projectsCount: projects.length,
-    username: session.user.nickname,
+    username: profileName,
   }
 
   function handleLogout() {
     authStore.signOut()
     navigate(AppRoute.Auth, { replace: true, viewTransition: true })
+  }
+
+  function handleOpenProject(projectId: string) {
+    navigate(generatePath(AppRoute.EditorProject, { projectId }), {
+      viewTransition: true,
+    })
+  }
+
+  function handleEditProfile(name: string) {
+    setProfileName(name)
+    setEditProfileModalOpen(false)
   }
 
   return (
@@ -53,7 +70,12 @@ export function ProfilePage() {
               <Button onClick={handleLogout} variant="ghost">
                 Log out
               </Button>
-              <Button variant="secondary">Edit profile</Button>
+              <Button
+                onClick={() => setEditProfileModalOpen(true)}
+                variant="secondary"
+              >
+                Edit profile
+              </Button>
             </>
           }
           profile={profile}
@@ -63,9 +85,18 @@ export function ProfilePage() {
           isError={isUserProfileError}
           isPending={isUserProfilePending}
         >
-          <OwnProjectsSection projects={projects} />
+          <OwnProjectsSection
+            onOpenProject={handleOpenProject}
+            projects={projects}
+          />
         </AsyncState>
       </main>
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        name={profileName}
+        onClose={() => setEditProfileModalOpen(false)}
+        onSubmit={handleEditProfile}
+      />
     </div>
   )
 }

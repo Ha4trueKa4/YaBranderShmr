@@ -13,6 +13,7 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 
 export const EditorWorkspace = observer(function EditorWorkspace() {
   const navigate = useNavigate()
+  const [projectName, setProjectName] = useState('Orion Labs')
   // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
   // Сейчас editorFixture временно заменяет ответ API, чтобы можно было проверять UI.
   const [editorStore] = useState(
@@ -23,8 +24,10 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
     // TODO: подключить действия после реализации editorStore.
   }
 
-  function handleProjectNameSubmit(_projectName: string) {
-    // TODO: сохранить название проекта после подключения editorStore.
+  function handleProjectNameSubmit(nextProjectName: string) {
+    // TODO: сохранять название через API, когда PATCH /projects/{id}
+    // будет поддерживать поле name.
+    setProjectName(nextProjectName)
   }
 
   return (
@@ -44,7 +47,7 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
           onZoomIn={handleToolbarAction}
           onZoomOut={handleToolbarAction}
           // TODO: передавать название загруженного Project вместо временного значения.
-          projectName="Orion Labs"
+          projectName={projectName}
         />
       </div>
       <aside className={styles.layers}>

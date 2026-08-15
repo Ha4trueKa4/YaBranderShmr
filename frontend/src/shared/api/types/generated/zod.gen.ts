@@ -31,28 +31,22 @@ export const zUserProfile = z.object({
   is_subscribed: z.boolean().optional(),
 })
 
-export const zProjectDescription = z.object({
+export const zProject = z.object({
   id: z.string().optional(),
   author_id: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
   is_public: z.boolean().optional(),
-  created_at: z.iso.datetime().optional(),
+  created_at: z.iso.datetime({ offset: true }).optional(),
   url: z.string().optional(),
 })
-
-export const zProject = zProjectDescription.and(
-  z.object({
-    data: z.string().optional(),
-  }),
-)
 
 export const zFeedItem = z.object({
   id: z.string().optional(),
   author_id: z.string().optional(),
   author_login: z.string().optional(),
   name: z.string().optional(),
-  created_at: z.iso.datetime().optional(),
+  created_at: z.iso.datetime({ offset: true }).optional(),
   preview_url: z.string().optional(),
 })
 
@@ -82,6 +76,11 @@ export const zAuthError = z.object({
   message: z.string().optional(),
 })
 
+export const zError = z.object({
+  code: z.string().optional(),
+  message: z.string().optional(),
+})
+
 export const zPostAuthRegisterBody = zRegisterRequest
 
 /**
@@ -105,7 +104,7 @@ export const zGetUsersByIdPath = z.object({
  */
 export const zGetUsersByIdResponse = zUserProfile.and(
   z.object({
-    projects: z.array(zProjectDescription).optional(),
+    projects: z.array(zProject).optional(),
   }),
 )
 
@@ -212,7 +211,7 @@ export const zPostProjectsByIdGeneratePath = z.object({
  * Сгенерированный SVG-код проекта
  */
 export const zPostProjectsByIdGenerateResponse = z.object({
-  data: z.string().optional(),
+  url: z.string().optional(),
 })
 
 export const zGetFeedQuery = z.object({

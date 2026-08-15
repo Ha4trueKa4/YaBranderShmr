@@ -19,7 +19,6 @@ export {
   zPostProjectsByIdGenerateResponse,
   zPostProjectsResponse,
   zProject,
-  zProjectDescription,
   zRegisterRequest,
   zUserProfile,
   zValidationError,

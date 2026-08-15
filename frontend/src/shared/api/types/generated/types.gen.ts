@@ -39,11 +39,7 @@ export type UserProfile = {
   is_subscribed?: boolean
 }
 
-export type Project = ProjectDescription & {
-  data?: string
-}
-
-export type ProjectDescription = {
+export type Project = {
   id?: string
   author_id?: string
   name?: string
@@ -96,6 +92,11 @@ export type MessageResponse = {
  * Ошибка аутентификации при входе — код всегда один и тот же, не различает "нет такого email" от "неверный пароль" (чтобы не палить существование email).
  */
 export type AuthError = {
+  code?: string
+  message?: string
+}
+
+export type Error = {
   code?: string
   message?: string
 }
@@ -178,19 +179,21 @@ export type GetUsersByIdErrors = {
   /**
    * Некорректный UUID пользователя
    */
-  400: unknown
+  400: Error
   /**
    * Пользователь не найден
    */
-  404: unknown
+  404: Error
 }
+
+export type GetUsersByIdError = GetUsersByIdErrors[keyof GetUsersByIdErrors]
 
 export type GetUsersByIdResponses = {
   /**
    * Профиль пользователя
    */
   200: UserProfile & {
-    projects?: Array<ProjectDescription>
+    projects?: Array<Project>
   }
 }
 
@@ -546,9 +549,9 @@ export type PostProjectsByIdGenerateResponses = {
    */
   200: {
     /**
-     * Результат работы нейросети в виде SVG-строки
+     * S3 ссылка на объект проекта (отсутствует, если проект пуст)
      */
-    data?: string
+    url?: string
   }
 }
 
@@ -580,12 +583,14 @@ export type GetFeedErrors = {
   /**
    * Некорректное значение scope
    */
-  400: unknown
+  400: Error
   /**
    * scope=following без авторизации
    */
   401: unknown
 }
+
+export type GetFeedError = GetFeedErrors[keyof GetFeedErrors]
 
 export type GetFeedResponses = {
   /**
