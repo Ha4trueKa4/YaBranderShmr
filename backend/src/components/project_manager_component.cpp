@@ -8,6 +8,24 @@ const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" vi
   </g>
 </svg>)SVG";
 
+namespace {
+std::string EscapeXml(const std::string& input) {
+    std::string output;
+    output.reserve(input.size() * 1.1);
+    for (char c : input) {
+        switch (c) {
+            case '<': output += "&lt;"; break;
+            case '>': output += "&gt;"; break;
+            case '&': output += "&amp;"; break;
+            case '"': output += "&quot;"; break;
+            case '\'': output += "&apos;"; break;
+            default: output += c; break;
+        }
+    }
+    return output;
+}
+} // namespace
+
 ProjectManagerComponent::ProjectManagerComponent(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -92,10 +110,12 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     std::string current_state = version_storage_.GetLatestVersionData(project_id);
     std::string full_prompt;
 
+	std::string safe_prompt = EscapeXml(prompt);
+
     if (current_state.empty() || current_state == kDefaultSvg) {
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(prompt);
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt);
     }else {
-        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt);
+        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt);
     }
     auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1);
     version_storage_.SaveVersion(project_id, new_data);
