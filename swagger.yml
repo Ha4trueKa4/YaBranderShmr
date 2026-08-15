@@ -15,6 +15,8 @@ tags:
     description: Пользователи и профили
   - name: Projects
     description: Создание, редактирование и генерация проектов
+  - name: Feed
+    description: Лента публичных проектов
 
 paths:
   /auth/register:
@@ -138,10 +140,24 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/ProjectDescription'
+        '400':
+          description: Некорректный UUID пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "INVALID_UUID"
+                message: "Некорректный формат ID пользователя"
         '404':
           description: Пользователь не найден
-        '500':
-          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "Пользователь не найден"
 
   /users/{id}/subscribe:
     post:
@@ -216,6 +232,82 @@ paths:
           description: Отсутствует или некорректен JWT
         '500':
           description: Внутренняя ошибка сервера
+
+  /users/{id}/subscribers:
+    get:
+      summary: Получить список всех подписчиков пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+        - { }
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список пользователей-подписчиков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "123e4567-e89b-12d3-a456-426614174000"
+                    name:
+                      type: string
+                      example: "John Doe"
+                    is_subscribed:
+                      type: boolean
+                      description: "Подписан ли авторизованный пользователь на этого человека"
+                      example: false
+        '400':
+          description: Некорректный формат ID
+        '404':
+          description: Пользователь не найден
+
+  /users/{id}/subscriptions:
+    get:
+      summary: Получить список всех подписок пользователя
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+        - { }
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список профилей пользователей, на которых подписан текущий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "123e4567-e89b-12d3-a456-426614174000"
+                    name:
+                      type: string
+                      example: "John Doe"
+                    is_subscribed:
+                      type: boolean
+                      description: "Подписан ли авторизованный пользователь на этого человека"
+                      example: false
+        '400':
+          description: Некорректный формат ID
+        '404':
+          description: Пользователь не найден
 
   /projects:
     post:
@@ -356,9 +448,7 @@ paths:
         '401':
           description: Отсутствует или некорректен JWT
         '403':
-          description: >
-            Вы авторизованы, но не автор проекта. Также этим кодом отвечает
-            auth-мидлварь при невалидном/просроченном JWT.
+          description: Нет прав на удаление чужого проекта
         '404':
           description: Проект не найден
         '500':
@@ -409,15 +499,64 @@ paths:
               example:
                 message: "Prompt cannot be empty"
         '401':
-          description: Отсутствует или некорректен JWT
+          description: Не авторизован
         '403':
+          description: Нет прав на генерацию в чужом проекте
+
+  /feed:
+    get:
+      summary: Лента публичных проектов
+      description: >
+        Возвращает страницу публичных проектов, отсортированных по дате создания
+        (сначала новые). Курсорная пагинация — для следующей страницы нужно
+        передать next_cursor из предыдущего ответа, а не увеличивать offset.
+      tags: [ Feed ]
+      security:
+        - BearerAuth: [ ]
+        - { }
+      parameters:
+        - name: scope
+          in: query
+          required: false
           description: >
-            Вы авторизованы, но не автор проекта. Также этим кодом отвечает
-            auth-мидлварь при невалидном/просроченном JWT.
-        '404':
-          description: Проект не найден
-        '500':
-          description: Внутренняя ошибка сервера (в т.ч. сбой обращения к LLM)
+            discover — все публичные проекты всех пользователей.
+            following — только проекты авторов, на которых подписан текущий
+            пользователь (требует авторизации).
+          schema:
+            type: string
+            enum: [ discover, following ]
+            default: discover
+        - name: cursor
+          in: query
+          required: false
+          description: Значение next_cursor из предыдущего ответа. Если не передан — отдаётся первая страница.
+          schema:
+            type: string
+            example: "2026-08-14T10:00:00.123456+00:00|3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        - name: limit
+          in: query
+          required: false
+          description: Размер страницы. Значения вне диапазона обрезаются сервером.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Страница ленты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedResponse'
+        '400':
+          description: Некорректное значение scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: scope=following без авторизации
 
 components:
   securitySchemes:
@@ -465,7 +604,7 @@ components:
         password:
           type: string
           format: password
-          example: "strongPassword123!"
+          example: "StrongPassword123!"
 
     AuthResponse:
       type: object
@@ -476,14 +615,12 @@ components:
       properties:
         access_token:
           type: string
-          description: Долгоживущий JWT токен для доступа к API
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         token_type:
           type: string
           example: "Bearer"
         user:
           type: object
-          description: Данные авторизованного пользователя
           required:
             - id
             - email
@@ -491,7 +628,6 @@ components:
           properties:
             id:
               type: string
-              description: Уникальный идентификатор авторизованного пользователя
               example: "123e4567-e89b-12d3-a456-426614174000"
             email:
               type: string
@@ -506,8 +642,20 @@ components:
       properties:
         id:
           type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
         name:
           type: string
+          example: "John Doe"
+        subscribers_count:
+          type: integer
+          example: 2
+        subscriptions_count:
+          type: integer
+          example: 1
+        is_subscribed:
+          type: boolean
+          description: "Подписан ли текущий авторизованный пользователь на этого пользователя. Отсутствует при запросе собственного профиля."
+          example: true
 
     Project:
       allOf:
@@ -516,41 +664,77 @@ components:
           properties:
             data:
               type: string
-              description: "Чистая SVG-разметка проекта"
-              example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><g></g></svg>'
+              example: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="100"/></svg>'
 
     ProjectDescription:
       type: object
       properties:
         id:
           type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
         author_id:
           type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
         name:
           type: string
+          example: "Бренд кофейни"
         description:
           type: string
+          example: "Минималистичный стиль"
         is_public:
           type: boolean
+          example: false
         created_at:
           type: string
           format: date-time
+        url:
+          type: string
+          description: "S3 ссылка на объект проекта (отсутствует, если проект пуст)"
+          example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+
+    FeedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedItem'
+        next_cursor:
+          type: string
+          description: Курсор для запроса следующей страницы. Отсутствует, если страница последняя.
+          example: "2026-08-14T10:00:00.123456+00:00|3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+    FeedItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Идентификатор проекта
+        author_id:
+          type: string
+        author_login:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        preview_url:
+          type: string
+          description: Ссылка на превью последней версии проекта. Пустая строка, если превью ещё не сгенерировано.
 
     ValidationError:
       type: object
       properties:
         code:
           type: string
-          description: Строковый код ошибки для обработки на клиенте
-          example: "NICKNAME_EXISTS"
+          example: "EMAIL_EXISTS"
         message:
           type: string
-          description: Человекочитаемое сообщение
-          example: "Этот никнейм уже занят"
+          example: "Пользователь с таким email уже зарегистрирован"
         field:
           type: string
-          description: Название поля, в котором произошла ошибка
-          example: "nickname"
+          example: "email"
 
     MessageResponse:
       type: object

@@ -1,0 +1,17 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.content {
+  width: min(100% - 3rem, var(--content-max-width));
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+}
+
+@media (width < 640px) {
+  .content {
+    width: min(100% - 2rem, var(--content-max-width));
+  }
+}

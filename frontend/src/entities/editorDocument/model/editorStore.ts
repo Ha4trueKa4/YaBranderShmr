@@ -1,6 +1,6 @@
 import { makeAutoObservable } from 'mobx'
 
-import type { EditorDocument, EditorLayer, EditorNode } from './types'
+import type { EditorDocument, EditorElement, EditorNode } from './types'
 
 /**
  * Состояние взаимодействия с редактором.
@@ -24,8 +24,8 @@ export class EditorStore {
     makeAutoObservable(this, {}, { autoBind: true })
   }
 
-  get selectedLayer(): EditorLayer | null {
-    return findEditorLayer(this.document.layers, this.selectedLayerId)
+  get selectedLayer(): EditorElement | null {
+    return findEditorElement(this.document.layers, this.selectedLayerId)
   }
 
   setSelectedLayer(layerId: string | null) {
@@ -43,17 +43,17 @@ export class EditorStore {
   }
 }
 
-function findEditorLayer(
+function findEditorElement(
   nodes: EditorNode[],
   layerId: string | null,
-): EditorLayer | null {
+): EditorElement | null {
   if (!layerId) {
     return null
   }
 
   for (const node of nodes) {
     if (node.type === 'group') {
-      const layer = findEditorLayer(node.children, layerId)
+      const layer = findEditorElement(node.children, layerId)
 
       if (layer) {
         return layer
