@@ -29,9 +29,10 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  * лента. Флаг лежит в DataStore и читается асинхронно, поэтому до первого
  * значения граф не строится.
  *
- * Нижняя панель показывается только на верхнеуровневых вкладках
- * ([TopLevelDestination]); на экранах-деталях (проект, чужой профиль) и на
- * онбординге она скрыта, чтобы не мешать полноэкранному контенту.
+ * Нижняя панель показывается на верхнеуровневых вкладках ([TopLevelDestination])
+ * и на чужом профиле ([Destination.UserProfile]) — чтобы с него была та же
+ * навигация, что и со своего. На прочих экранах-деталях (проект) и на онбординге
+ * она скрыта, чтобы не мешать полноэкранному контенту.
  *
  * Инсеты системных баров экранам раздаёт `Scaffold`, но с двумя исключениями:
  *  - онбординг рисуется во всё окно и отступает от баров сам;
@@ -51,7 +52,9 @@ fun AvatarGeneratorApp(
     val currentDestination = currentBackStackEntry?.destination
     // Узел ещё не определён (первый кадр либо флаг не прочитан) — ориентируемся
     // на будущий стартовый экран: верхнеуровневый только если онбординг пройден.
-    val showBottomBar = currentDestination.isTopLevel() ?: (hasSeenOnboarding == true)
+    // Чужой профиль — не вкладка, но панель на нём нужна (навигация как со своего).
+    val showBottomBar = currentDestination.isOnRoute(Destination.UserProfile.route) ||
+        (currentDestination.isTopLevel() ?: (hasSeenOnboarding == true))
     // Тот же приём для полноэкранного режима: до готовности бэкстека онбординг
     // будет открыт ровно тогда, когда флаг ещё не выставлен.
     val isFullBleed = currentDestination?.isOnRoute(Destination.Onboarding.route)

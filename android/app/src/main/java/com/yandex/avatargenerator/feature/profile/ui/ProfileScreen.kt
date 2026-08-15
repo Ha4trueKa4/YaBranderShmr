@@ -126,16 +126,13 @@ private fun ProfileContent(
                 key = { it.id },
                 contentType = { "project" },
             ) { project ->
+                // Автор всех карточек — владелец профиля, он уже показан в шапке;
+                // в карточках имя/аватар не дублируем (authorName не передаём).
                 ProjectCard(
                     title = project.title,
-                    authorName = project.author.displayName,
                     previewUrl = project.previewUrl,
-                    authorAvatarUrl = project.author.avatarUrl,
                     aspectRatio = masonryAspectRatio(project.id),
                     onClick = { onProjectClick(project.id) },
-                    // Автор всех карточек — владелец этого профиля; тап по автору
-                    // никуда не ведёт (мы уже на его профиле).
-                    onAuthorClick = {},
                 )
             }
         }

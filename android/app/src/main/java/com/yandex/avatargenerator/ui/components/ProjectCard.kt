@@ -28,26 +28,29 @@ import kotlin.math.abs
 
 /**
  * Карточка проекта для masonry-сеток (лента, профиль): превью переменной высоты +
- * название + кликабельная строка автора (аватар + имя).
+ * название + опциональная кликабельная строка автора (аватар + имя).
  *
  * Домен-агностична — принимает примитивы, каждый экран мапит свою модель. Оболочка
  * оформлена как у [BrandCard], но с переменной высотой превью и интерактивной строкой
  * автора (отдельный [onAuthorClick]), которых у BrandCard нет.
  *
  * @param previewUrl превью проекта; null — плашка-заглушка [AppColors.SurfaceVariant].
+ * @param authorName имя автора; null — строка автора не показывается (на профиле
+ *   владелец уже в шапке, дублировать в каждой карточке не нужно).
  * @param authorAvatarUrl аватар автора; null — инициалы по [authorName] через [BrandAvatar].
  * @param aspectRatio пропорции превью (ширина:высота). Для masonry высоту варьируют
  *   через [masonryAspectRatio], пока бэкенд не отдаёт реальные размеры превью.
  * @param onClick клик по карточке (открыть проект).
- * @param onAuthorClick клик по строке автора (открыть профиль автора).
+ * @param onAuthorClick клик по строке автора (открыть профиль автора); null — строка
+ *   не кликабельна.
  */
 @Composable
 fun ProjectCard(
     title: String,
-    authorName: String,
     onClick: () -> Unit,
-    onAuthorClick: () -> Unit,
     modifier: Modifier = Modifier,
+    authorName: String? = null,
+    onAuthorClick: (() -> Unit)? = null,
     previewUrl: String? = null,
     authorAvatarUrl: String? = null,
     aspectRatio: Float = 1.3f,
@@ -85,25 +88,27 @@ fun ProjectCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(AppShape.s))
-                    .clickable(onClick = onAuthorClick),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BrandAvatar(
-                    size = 24.dp,
-                    imageUrl = authorAvatarUrl,
-                    initials = authorInitials(authorName),
-                )
-                Text(
-                    text = authorName,
-                    style = AppTypography.caption.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            if (authorName != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(AppShape.s))
+                        .then(if (onAuthorClick != null) Modifier.clickable(onClick = onAuthorClick) else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BrandAvatar(
+                        size = 24.dp,
+                        imageUrl = authorAvatarUrl,
+                        initials = authorInitials(authorName),
+                    )
+                    Text(
+                        text = authorName,
+                        style = AppTypography.caption.copy(fontWeight = FontWeight.Medium),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
