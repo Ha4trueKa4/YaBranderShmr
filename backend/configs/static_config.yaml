@@ -202,6 +202,11 @@ components_manager:
 
     handler-feed:
       path: /api/v1/feed
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
     handler-users-get:
       path: /api/v1/users/{id}
       method: GET
