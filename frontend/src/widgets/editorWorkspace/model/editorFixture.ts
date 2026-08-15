@@ -1,9 +1,20 @@
-import { parseSvg } from '@entities/editorDocument'
-
-import { mockTaxiSvg } from './mockTaxiSvg'
+import {
+  createEditorFixtureDocument,
+  type EditorFixtureId,
+  getEditorFixture,
+} from './fixtures'
 
 /**
  * Временная замена `project.data` для UI редактора, пока проект не загружается с API.
- * Мок намеренно проходит тот же путь, что и будущий ответ API: SVG → EditorDocument.
+ * Чтобы временно сменить макет на холсте, достаточно поменять ID ниже:
+ * `taxi-simple`, `taxi-detailed`, `taxi-qwen` или `profile-badge`.
  */
-export const editorFixture = parseSvg(mockTaxiSvg)
+export const activeEditorFixtureId: EditorFixtureId = 'taxi-detailed'
+
+const activeEditorFixture = getEditorFixture(activeEditorFixtureId)
+
+export const editorFixture = createEditorFixtureDocument(activeEditorFixtureId)
+export const editorFixtureInitialState = {
+  expandedGroupIds: activeEditorFixture.initiallyExpandedGroupIds,
+  selectedNodeId: activeEditorFixture.initiallySelectedNodeId,
+}
