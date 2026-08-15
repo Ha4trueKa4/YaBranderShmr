@@ -68,6 +68,7 @@ struct SignUpView: View {
             }
             .padding(.top, 32)
         }
+        .customNavigationBar(onBack: { dismiss() })
     }
 }
 

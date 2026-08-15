@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProjectGeneratingView: View {
+    var onBack: (() -> Void)?
     var onOpenEditor: () -> Void = {}
 
     var body: some View {
@@ -9,7 +10,7 @@ struct ProjectGeneratingView: View {
 
             Button("Open editor", action: onOpenEditor)
         }
-        .navigationTitle("Generating")
+        .customNavigationBar(title: "Generating", onBack: onBack)
     }
 }
 

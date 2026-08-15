@@ -72,6 +72,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: isSignInPresented) {
             NavigationStack {
                 SignInView(session: session)
+                    .swipeBackEnabled()
             }
             .tint(.purple)
             .interactiveDismissDisabled()

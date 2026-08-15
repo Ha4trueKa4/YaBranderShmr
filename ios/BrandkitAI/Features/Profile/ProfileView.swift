@@ -4,6 +4,7 @@ struct ProfileView: View {
     @Environment(SessionStore.self) private var session
 
     var isCurrentUser: Bool = true
+    var onBack: (() -> Void)?
     var onOpenProject: () -> Void = {}
 
     var body: some View {
@@ -18,7 +19,7 @@ struct ProfileView: View {
                 }
             }
         }
-        .navigationTitle("Profile")
+        .customNavigationBar(title: "Profile", onBack: onBack)
     }
 }
 
