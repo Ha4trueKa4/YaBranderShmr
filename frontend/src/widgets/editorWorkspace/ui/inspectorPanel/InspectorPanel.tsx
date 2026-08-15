@@ -1,10 +1,11 @@
 import type {
-  EditorElement,
   EditorElementByType,
   EditorElementType,
+  EditorNode,
 } from '@entities/editorDocument'
 import type { ComponentType } from 'react'
 
+import { GroupProperties } from './groupProperties/GroupProperties'
 import styles from './InspectorPanel.module.css'
 import { ShapeProperties } from './shapeProperties/ShapeProperties'
 import { TextProperties } from './textProperties/TextProperties'
@@ -21,11 +22,11 @@ const inspectorByType = {
 } satisfies InspectorByType
 
 interface InspectorPanelProps {
-  selectedLayer: EditorElement | null
+  selectedNode: EditorNode | null
 }
 
-export function InspectorPanel({ selectedLayer }: InspectorPanelProps) {
-  if (!selectedLayer) {
+export function InspectorPanel({ selectedNode }: InspectorPanelProps) {
+  if (!selectedNode) {
     return (
       <section className={styles.panel}>
         <div className={styles.header}>
@@ -38,8 +39,21 @@ export function InspectorPanel({ selectedLayer }: InspectorPanelProps) {
     )
   }
 
-  const Properties = inspectorByType[selectedLayer.type] as ComponentType<{
-    layer: typeof selectedLayer
+  if (selectedNode.type === 'group') {
+    return (
+      <section className={styles.panel}>
+        <div className={styles.header}>
+          <h2>Inspector</h2>
+        </div>
+        <div className={styles.content}>
+          <GroupProperties layer={selectedNode} />
+        </div>
+      </section>
+    )
+  }
+
+  const Properties = inspectorByType[selectedNode.type] as ComponentType<{
+    layer: typeof selectedNode
   }>
 
   return (
@@ -49,7 +63,7 @@ export function InspectorPanel({ selectedLayer }: InspectorPanelProps) {
       </div>
       <div className={styles.content}>
         {/* Поля свойств должны вызывать feature обновления слоя, а не менять layer напрямую. */}
-        <Properties layer={selectedLayer} />
+        <Properties layer={selectedNode} />
       </div>
     </section>
   )

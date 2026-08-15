@@ -1,6 +1,6 @@
 import { makeAutoObservable } from 'mobx'
 
-import type { EditorDocument, EditorElement, EditorNode } from './types'
+import type { EditorDocument, EditorNode } from './types'
 
 /**
  * Состояние взаимодействия с редактором.
@@ -9,27 +9,27 @@ import type { EditorDocument, EditorElement, EditorNode } from './types'
 export class EditorStore {
   document: EditorDocument
   expandedGroupIds: Set<string>
-  selectedLayerId: string | null
+  selectedNodeId: string | null
   zoom = 1
 
   constructor(
     document: EditorDocument,
-    selectedLayerId: string | null = null,
+    selectedNodeId: string | null = null,
     expandedGroupIds: string[] = [],
   ) {
     this.document = document
     this.expandedGroupIds = new Set(expandedGroupIds)
-    this.selectedLayerId = selectedLayerId
+    this.selectedNodeId = selectedNodeId
 
     makeAutoObservable(this, {}, { autoBind: true })
   }
 
-  get selectedLayer(): EditorElement | null {
-    return findEditorElement(this.document.layers, this.selectedLayerId)
+  get selectedNode(): EditorNode | null {
+    return findEditorNode(this.document.layers, this.selectedNodeId)
   }
 
-  setSelectedLayer(layerId: string | null) {
-    this.selectedLayerId = layerId
+  setSelectedNode(nodeId: string | null) {
+    this.selectedNodeId = nodeId
   }
 
   toggleGroup(groupId: string) {
@@ -43,27 +43,25 @@ export class EditorStore {
   }
 }
 
-function findEditorElement(
+function findEditorNode(
   nodes: EditorNode[],
-  layerId: string | null,
-): EditorElement | null {
-  if (!layerId) {
+  nodeId: string | null,
+): EditorNode | null {
+  if (!nodeId) {
     return null
   }
 
   for (const node of nodes) {
-    if (node.type === 'group') {
-      const layer = findEditorElement(node.children, layerId)
-
-      if (layer) {
-        return layer
-      }
-
-      continue
+    if (node.id === nodeId) {
+      return node
     }
 
-    if (node.id === layerId) {
-      return node
+    if (node.type === 'group') {
+      const childNode = findEditorNode(node.children, nodeId)
+
+      if (childNode) {
+        return childNode
+      }
     }
   }
 
