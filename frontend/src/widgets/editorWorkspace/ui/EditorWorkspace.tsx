@@ -51,6 +51,7 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
           nodes={editorStore.document.layers}
           onSelectNode={editorStore.setSelectedNode}
           onToggleGroup={editorStore.toggleGroup}
+          onToggleVisibility={editorStore.toggleNodeVisibility}
           selectedNodeId={editorStore.selectedNodeId}
         />
       </aside>

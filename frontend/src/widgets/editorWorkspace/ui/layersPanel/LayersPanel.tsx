@@ -10,6 +10,7 @@ interface LayersPanelProps {
   nodes: EditorNode[]
   onSelectNode: (nodeId: string) => void
   onToggleGroup: (groupId: string) => void
+  onToggleVisibility: (nodeId: string) => void
   selectedNodeId: string | null
 }
 
@@ -18,6 +19,7 @@ export const LayersPanel = observer(function LayersPanel({
   nodes,
   onSelectNode,
   onToggleGroup,
+  onToggleVisibility,
   selectedNodeId,
 }: LayersPanelProps) {
   return (
@@ -38,6 +40,7 @@ export const LayersPanel = observer(function LayersPanel({
             node={node}
             onSelectNode={onSelectNode}
             onToggleGroup={onToggleGroup}
+            onToggleVisibility={onToggleVisibility}
             selectedNodeId={selectedNodeId}
           />
         ))}

@@ -67,4 +67,21 @@ describe('EditorStore selection', () => {
 
     expect(store.isGroupExpanded('taxi')).toBe(false)
   })
+
+  it('toggles visibility without changing a child node state', () => {
+    const store = new EditorStore(document)
+
+    store.toggleNodeVisibility('taxi')
+
+    expect(store.selectedNode).toBeNull()
+    expect(store.document.layers[0].isVisible).toBe(false)
+
+    const group = store.document.layers[0]
+
+    if (group.type !== 'group') {
+      throw new Error('Expected the first test layer to be a group')
+    }
+
+    expect(group.children[0].isVisible).toBe(true)
+  })
 })

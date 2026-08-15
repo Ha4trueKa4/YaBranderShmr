@@ -6,6 +6,7 @@ import type {
   Paint,
   Transform,
 } from '@entities/editorDocument'
+import { observer } from 'mobx-react-lite'
 
 interface LayerRendererProps {
   document: EditorDocument
@@ -161,11 +162,13 @@ function renderNode(node: EditorNode) {
   return <g key={node.id}>{renderShape(node)}</g>
 }
 
-export function LayerRenderer({ document }: LayerRendererProps) {
+export const LayerRenderer = observer(function LayerRenderer({
+  document,
+}: LayerRendererProps) {
   return (
     <>
       {renderDefinitions(document.definitions)}
       {document.layers.map(renderNode)}
     </>
   )
-}
+})
