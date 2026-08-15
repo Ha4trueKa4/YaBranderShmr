@@ -1,6 +1,8 @@
 export {
+  useDeleteProjectMutation,
   useFeedQuery,
   useProjectQuery,
+  userProfileQueryKey,
   useUserProfileQuery,
 } from './api/queries'
 export type { FeedProject, PublicProfileProject } from './model/types'

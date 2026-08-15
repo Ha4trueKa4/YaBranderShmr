@@ -7,6 +7,7 @@ export interface ConfirmationModalProps {
   confirmLabel: string
   confirmVariant?: ButtonProps['variant']
   description: string
+  isConfirming?: boolean
   isOpen: boolean
   onCancel: () => void
   onConfirm: () => void
@@ -18,6 +19,7 @@ export function ConfirmationModal({
   confirmLabel,
   confirmVariant = 'danger',
   description,
+  isConfirming = false,
   isOpen,
   onCancel,
   onConfirm,
@@ -38,7 +40,11 @@ export function ConfirmationModal({
             <Button onClick={onCancel} variant="secondary">
               {cancelLabel}
             </Button>
-            <Button onClick={onConfirm} variant={confirmVariant}>
+            <Button
+              loading={isConfirming}
+              onClick={onConfirm}
+              variant={confirmVariant}
+            >
               {confirmLabel}
             </Button>
           </div>

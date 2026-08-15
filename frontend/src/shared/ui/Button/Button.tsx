@@ -37,8 +37,7 @@ export function Button({
       disabled={disabled || loading}
       type={type}
     >
-      {loading && <Spinner size="sm" />}
-      {children}
+      {loading ? <Spinner size="sm" /> : children}
     </button>
   )
 }

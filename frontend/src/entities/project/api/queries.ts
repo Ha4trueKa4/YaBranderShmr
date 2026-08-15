@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
+import { deleteProject } from './deleteProject'
 import { type FeedScope, getFeed } from './getFeed'
 import { getProject } from './getProject'
 import { getUserProfile } from './getProjects'
@@ -15,6 +16,13 @@ export function useProjectQuery(id: string) {
     queryFn: () => getProject(id),
     enabled: Boolean(id),
     retry: false,
+  })
+}
+
+export function useDeleteProjectMutation() {
+  return useMutation({
+    mutationKey: ['project', 'delete'],
+    mutationFn: (projectId: string) => deleteProject(projectId),
   })
 }
 
