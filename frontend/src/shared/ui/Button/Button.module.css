@@ -71,16 +71,3 @@
 .danger:hover:not(:disabled) {
   background: rgb(239 68 68 / 6%);
 }
-.spinner {
-  animation: spin 0.7s linear infinite;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  height: 1em;
-  width: 1em;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
