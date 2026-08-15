@@ -103,4 +103,23 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     return version_storage_.GetLatestVersionUrl(project_id);
 }
 
+std::vector<models::Version> ProjectManagerComponent::ListVersions(
+const std::string& project_id) {
+    return version_storage_.ListVersions(project_id);
+}
+
+std::string ProjectManagerComponent::GetVersionUrl(
+    const std::string& project_id, const std::string& version_id) {
+    return version_storage_.GetVersionUrl(project_id, version_id);
+}
+
+std::string ProjectManagerComponent::RestoreVersion(
+    const std::string& project_id, const std::string& version_id) {
+    return version_storage_.RestoreVersion(project_id, version_id);
+}
+
+std::string ProjectManagerComponent::GetLatestVersionUrl(const std::string& project_id) {
+    return version_storage_.GetLatestVersionUrl(project_id);
+}
+
 } // namespace ya_brander::components

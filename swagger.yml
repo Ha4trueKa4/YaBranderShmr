@@ -503,6 +503,125 @@ paths:
         '403':
           description: Нет прав на генерацию в чужом проекте
 
+  /projects/{id}/versions:
+    get:
+      summary: Список версий проекта
+      description: >
+        История версий проекта. Доступна только автору проекта — даже если проект
+        публичный (публичность открывает только текущую версию через /projects/{id},
+        но не историю). Отсортировано по version_num по убыванию (сначала новые).
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список версий проекта
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  versions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VersionInfo'
+        '401':
+          description: Отсутствует или некорректен JWT (анонимный запрос)
+        '403':
+          description: >
+            Вы авторизованы, но не автор проекта. История приватна независимо от
+            публичности проекта. Также этим кодом отвечает auth-мидлварь при
+            невалидном/просроченном JWT.
+        '404':
+          description: Проект не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /projects/{id}/versions/{version_id}:
+    get:
+      summary: Получить ссылку на конкретную версию
+      description: >
+        Возвращает временную (presigned) ссылку на объект выбранной версии для
+        просмотра. Только для автора проекта. Запрос ограничен парой project_id +
+        version_id, поэтому версию из чужого проекта получить нельзя (будет 404).
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version_id
+          in: path
+          required: true
+          description: Идентификатор версии (UUID), из поля id ответа /versions
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ссылка на объект версии
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionUrl'
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: Вы авторизованы, но не автор проекта (или невалидный JWT)
+        '404':
+          description: Проект не найден, либо версия не существует / не принадлежит этому проекту
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /projects/{id}/versions/{version_id}/restore:
+    post:
+      summary: Откатить проект к выбранной версии
+      description: >
+        Сохраняет содержимое выбранной версии как НОВУЮ последнюю версию проекта
+        (неразрушающий откат — промежуточная история сохраняется). ACL новой версии
+        выставляется по текущей видимости проекта. Только для автора. Тела запроса нет.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version_id
+          in: path
+          required: true
+          description: Идентификатор версии (UUID), к которой откатываемся
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >
+            Откат выполнен. Возвращает id созданной новой версии и свежую ссылку
+            на неё, чтобы фронт мог сразу её отрисовать.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionUrl'
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: Вы авторизованы, но не автор проекта (или невалидный JWT)
+        '404':
+          description: Проект не найден, либо версия не существует / не принадлежит этому проекту
+        '500':
+          description: Внутренняя ошибка сервера
+
+
   /feed:
     get:
       summary: Лента публичных проектов
@@ -753,3 +872,34 @@ components:
           type: string
         message:
           type: string
+    VersionInfo:
+      type: object
+      description: Метаданные одной версии проекта (без ключей объектного хранилища).
+      properties:
+        id:
+          type: string
+          description: Идентификатор версии (UUID). Используется в /versions/{version_id}.
+          example: "5a4e8657-151f-4088-a660-ac99b15994b7"
+        version_num:
+          type: integer
+          description: Порядковый номер версии в рамках проекта.
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-08-15T00:01:55.123456+00:00"
+
+
+    VersionUrl:
+      type: object
+      description: >
+        Ответ с id версии и ссылкой на её объект. У /versions/{version_id} это
+        просмотр выбранной версии; у /restore — новая (созданная откатом) версия.
+      properties:
+        version_id:
+          type: string
+          example: "5a4e8657-151f-4088-a660-ac99b15994b7"
+        url:
+          type: string
+          description: Временная presigned-ссылка на SVG-объект версии.
+          example: "https://storage.yandexcloud.net/ya-brander-svg/projects/.../....svg?X-Amz-..."

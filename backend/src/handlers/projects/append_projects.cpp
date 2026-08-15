@@ -9,6 +9,9 @@
 #include "patch_project.h"
 #include "delete_project.h"
 #include "generate_project.h"
+#include "versions/get_version.hpp"
+#include "versions/list_versions.hpp"
+#include "versions/restore_version.hpp"
 
 namespace ya_brander {
 
@@ -28,7 +31,10 @@ void AppendProjects(userver::components::ComponentList& component_list) {
       .Append<handlers::GetProjectHandler>()
       .Append<handlers::PatchProjectHandler>()
       .Append<handlers::DeleteProjectHandler>()
-      .Append<handlers::GenerateProjectHandler>();
+      .Append<handlers::GenerateProjectHandler>()
+      .Append<handlers::GetVersionHandler>()
+      .Append<handlers::ListVersionsHandler>()
+      .Append<handlers::RestoreVersionHandler>();
 }
 
 } // namespace ya_brander
