@@ -38,21 +38,14 @@ namespace ya_brander::components {
                                    const std::string& version_id) override;
 
         std::string GetLatestVersionData(const std::string& project_id) override;
-        std::string GetLatestVersionUrl(const std::string& project_id) override;
+
+
         std::string GetVersionUrl(const std::string& project_id,
                                   const std::string& version_id) override;
-        std::unordered_map<std::string, std::string> GetManyUrls(
-            const std::vector<std::string>& keys, bool is_public) override;
-        void SetLatestAcl(const std::string& project_id, bool make_public) override;
-        void DeleteAllVersions(const std::string& project_id) override;
-
-        std::string GetVersionUrl(
-            const std::string& project_id, const std::string& version_id) override;
-
 
         /// @brief Возвращает ссылку на объект последней версии для фронтенда.
         /// @details Публичный проект -> постоянная прямая ссылка; приватный ->
-        ///          временная presigned-ссылка. Байты через б  экенд не тянет.
+        ///          временная presigned-ссылка. Байты через бэкенд не тянет.
         std::string GetLatestVersionUrl(const std::string& project_id) override;
 
         /// @brief Возвращает мапу с ключами и привязанным к ним готовым
