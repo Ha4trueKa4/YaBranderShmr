@@ -6,9 +6,7 @@
 
 Список сверяется только со `swagger.yml` и сгенерированными из него типами. Поле или endpoint считается добавленным лишь после явного описания в OpenAPI: наличие такого значения в фактическом ответе backend само по себе не закрывает пункт.
 
-Поля, необходимые карточкам и шапке профиля, нужно добавить в `required`. Если значение может отсутствовать, его следует возвращать как `null` (`nullable: true` в OpenAPI 3.0), а не опускать поле из ответа.
-
-- В `GET /users/{id}` → `UserProfile` добавить поля: `username: string`, `bio: string | null`, `avatar_url: string | null` с форматом `uri`, `cover_url: string | null` с форматом `uri`, `followers_count: integer` (минимум `0`), `following_count: integer` (минимум `0`), `is_following: boolean`.
+Поля, необходимые карточкам, нужно добавить в `required`. Если значение может отсутствовать, его следует возвращать как `null` (`nullable: true` в OpenAPI 3.0), а не опускать поле из ответа.
 - В `ProjectDescription` добавить: `updated_at: string` с форматом `date-time`, `status: "draft" | "published"`, `preview_url: string | null` с форматом `uri`, `published_at: string | null` с форматом `date-time`.
 - Для публичных проектов описать схему автора, например `PublicProjectAuthor`: `id: string`, `name: string`, `username: string`, `avatar_url: string | null` с форматом `uri`; добавить `author: PublicProjectAuthor` в ответ с публичным проектом.
 - Добавить `GET /projects` со схемой query-параметров: `cursor?: string`, `limit?: integer`, `visibility?: "public" | "private"`, `status?: "draft" | "published"`; ответ `ProjectListResponse`: `items: ProjectDescription[]`, `next_cursor: string | null`.
@@ -22,21 +20,20 @@
 ### Уже есть
 
 - `GET /users/{id}` возвращает `UserProfile` и список `projects`.
-- В `UserProfile` описаны только `id` и `name`.
+- В `UserProfile` описаны `id`, `name`, `subscribers_count`, `subscriptions_count` и `is_subscribed`.
 - Есть `POST` и `DELETE /users/{id}/subscribe`.
 
-### Не хватает для ProfileHeader
+### Данные для ProfileHeader
 
-- `username` — отображается как `@username` и должен быть уникальным.
-- `bio` — короткое описание профиля.
-- `avatar_url` — URL пользовательского аватара; пока UI использует инициалы.
-- `cover_url` или согласованный вариант обложки/цветовой темы профиля.
-- `followers_count` и `following_count` — счётчики для шапки профиля.
-- `is_following` — нужен авторизованному зрителю чужого профиля, чтобы показать корректное действие «Follow/Following».
+- Имя и username собственного профиля берутся из `authStore.getSession.user.nickname`.
+- Количество проектов вычисляется из длины списка `projects`.
+- Bio временно не отображается в интерфейсе.
+- Счётчики подписчиков и подписок уже есть в `UserProfile` как `subscribers_count` и `subscriptions_count`.
+- Состояние подписки уже есть в `UserProfile` как `is_subscribed`.
 
 ### Временное состояние во frontend
 
-`ProfileHeader` пока принимает локальный `ProfileHeaderProfile`, а не `UserProfile`. Поля, которых нет в контракте (`bio`, `username` и счётчики), временно захардкожены в `ProfilePage` и `PublicProfilePage`.
+`ProfileHeader` пока принимает локальный `ProfileHeaderProfile`, а не `UserProfile`. На собственном профиле имя и username передаются из `authStore`, количество проектов — из полученного списка, а счётчики — из уже существующих полей `UserProfile`.
 
 ## Проекты
 
