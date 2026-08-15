@@ -18,3 +18,4 @@ Testing/
 Makefile.local
 *.bak
 .env
+mock_s3/
