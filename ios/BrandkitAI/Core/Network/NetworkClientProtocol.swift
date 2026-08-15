@@ -35,4 +35,16 @@ nonisolated protocol NetworkClientProtocol: Sendable {
         authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws
+
+    func request<Response: Decodable & Sendable>(
+        _ method: HTTPMethod,
+        path: String,
+        authorization: AuthorizationRequirement
+    ) async throws -> Response
+
+    func request(
+        _ method: HTTPMethod,
+        path: String,
+        authorization: AuthorizationRequirement
+    ) async throws
 }

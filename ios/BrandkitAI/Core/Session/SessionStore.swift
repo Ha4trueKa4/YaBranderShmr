@@ -32,18 +32,44 @@ final class SessionStore {
     private(set) var errorField: AuthField?
     private(set) var lastSuccessfulOperation: AuthOperation?
 
-    private let tokenStore = TokenStore()
+    private let tokenStore: TokenStore
     private let networkClient: NetworkClient
     private var authenticationTask: Task<Void, Never>?
     private var authenticationRequestID = UUID()
 
-    init(baseURL: String = "http://158.160.187.118:8080/api/v1") {
-        networkClient = NetworkClient(baseURL: baseURL, tokenStore: tokenStore)
+    /// Данные авторизованного пользователя (id + имя) и доступ к профилям.
+    let currentUserService: any CurrentUserService
+    let userProfileService: any UserProfileService
+
+    init(
+        baseURL: String = "http://158.160.187.118:8080/api/v1",
+        currentUserService: (any CurrentUserService)? = nil,
+        userProfileService: (any UserProfileService)? = nil
+    ) {
+        let tokenStore = TokenStore()
+        let networkClient = NetworkClient(baseURL: baseURL, tokenStore: tokenStore)
+        let profileService = userProfileService ?? RemoteUserProfileService(networkClient: networkClient)
+        self.tokenStore = tokenStore
+        self.networkClient = networkClient
+        self.userProfileService = profileService
+        self.currentUserService = currentUserService ?? CurrentUserStore(
+            tokenStore: tokenStore,
+            userProfileService: profileService
+        )
     }
 
     /// Проверка на входе: вызывается один раз при запуске.
+    ///
+    /// Если токена нет или его срок жизни истёк — разлогиниваемся: очищаем
+    /// Keychain и хранилище пользователя, чтобы не показывать «залогинен»
+    /// с нерабочим токеном.
     func restore() {
-        state = tokenStore.accessToken?.isEmpty == false ? .signedIn : .signedOut
+        if let token = tokenStore.accessToken, !token.isEmpty, !JWTDecoder.isExpired(token) {
+            state = .signedIn
+            Task { await currentUserService.restore() }
+        } else {
+            signOut()
+        }
     }
 
     func signIn(email: String, password: String) {
@@ -100,6 +126,7 @@ final class SessionStore {
                 guard store.save(response.accessToken) else {
                     throw NetworkError.tokenStorageError
                 }
+                self.currentUserService.save(id: response.user.id, name: response.user.nickname)
                 self.lastSuccessfulOperation = operation
                 self.state = .signedIn
                 self.isLoading = false
@@ -127,6 +154,7 @@ final class SessionStore {
         authenticationTask = nil
         isLoading = false
         tokenStore.clear()
+        currentUserService.clear()
         clearError()
         state = .signedOut
     }

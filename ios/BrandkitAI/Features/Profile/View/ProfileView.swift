@@ -1,13 +1,33 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @Environment(SessionStore.self) private var session
-    @State private var viewModel = ProfileViewModel()
+    private let session: SessionStore
+    @State private var viewModel: ProfileViewModel
 
-    var isCurrentUser: Bool = true
+    var isCurrentUser: Bool
     var onBack: (() -> Void)?
-    var onEditProfile: () -> Void = {}
-    var onOpenProject: () -> Void = {}
+    var onEditProfile: () -> Void
+    var onOpenProject: () -> Void
+
+    init(
+        session: SessionStore,
+        isCurrentUser: Bool = true,
+        userID: String? = nil,
+        onBack: (() -> Void)? = nil,
+        onEditProfile: @escaping () -> Void = {},
+        onOpenProject: @escaping () -> Void = {}
+    ) {
+        self.session = session
+        self.isCurrentUser = isCurrentUser
+        self.onBack = onBack
+        self.onEditProfile = onEditProfile
+        self.onOpenProject = onOpenProject
+        _viewModel = State(initialValue: ProfileViewModel(
+            currentUserService: session.currentUserService,
+            userProfileService: session.userProfileService,
+            userID: isCurrentUser ? nil : userID
+        ))
+    }
 
     @ViewBuilder
     var body: some View {
@@ -29,6 +49,8 @@ struct ProfileView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .task { await viewModel.load() }
+        .refreshable { await viewModel.load() }
     }
 
     private var profileHeader: some View {
@@ -40,20 +62,19 @@ struct ProfileView: View {
                     .offset(y: -32)
                     .padding(.bottom, -32)
 
-                VStack(spacing: 3) {
-                    Text(viewModel.name)
-                        .font(.system(size: 20, weight: .bold))
+                Text(viewModel.name)
+                    .font(.system(size: 20, weight: .bold))
 
-                    Text(viewModel.nickname)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
+                if viewModel.name.isEmpty {
+                    if viewModel.isLoading {
+                        ProgressView()
+                    } else if let errorMessage = viewModel.errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
-
-                Text(viewModel.bio)
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 320)
 
                 stats
 
@@ -176,7 +197,11 @@ struct ProfileView: View {
 
 #Preview {
     NavigationStack {
-        ProfileView()
+        ProfileView(
+            session: SessionStore(
+                currentUserService: MockCurrentUserService(),
+                userProfileService: MockUserProfileService()
+            )
+        )
     }
-    .environment(SessionStore())
 }
