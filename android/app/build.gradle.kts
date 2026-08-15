@@ -7,13 +7,13 @@ plugins {
 android {
     namespace = "com.yandex.avatargenerator"
     compileSdk {
-        version = release(37)
+        version = release(36)
     }
 
     defaultConfig {
         applicationId = "com.yandex.avatargenerator"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
