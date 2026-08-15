@@ -21,13 +21,11 @@ struct PrivacyPicker: View {
             }
             .padding(.top, 28)
 
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 24)
         .padding(.top, 24)
         .presentationDetents([.height(360)])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(32)
         .presentationBackground(Color(.background))
     }
 
