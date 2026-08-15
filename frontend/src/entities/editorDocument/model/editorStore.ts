@@ -1,5 +1,8 @@
 import { makeAutoObservable } from 'mobx'
 
+import { setNodeVisibility } from './commands/setNodeVisibility'
+import { toggleNodeVisibility } from './commands/toggleNodeVisibility'
+import { findNode } from './tree/findNode'
 import type { EditorDocument, EditorNode } from './types'
 
 /**
@@ -25,7 +28,7 @@ export class EditorStore {
   }
 
   get selectedNode(): EditorNode | null {
-    return findEditorNode(this.document.layers, this.selectedNodeId)
+    return findNode(this.document.layers, this.selectedNodeId)
   }
 
   setSelectedNode(nodeId: string | null) {
@@ -33,19 +36,11 @@ export class EditorStore {
   }
 
   setNodeVisibility(nodeId: string, isVisible: boolean) {
-    const node = findEditorNode(this.document.layers, nodeId)
-
-    if (node) {
-      node.isVisible = isVisible
-    }
+    setNodeVisibility(this.document.layers, nodeId, isVisible)
   }
 
   toggleNodeVisibility(nodeId: string) {
-    const node = findEditorNode(this.document.layers, nodeId)
-
-    if (node) {
-      this.setNodeVisibility(nodeId, !node.isVisible)
-    }
+    toggleNodeVisibility(this.document.layers, nodeId)
   }
 
   isGroupExpanded(groupId: string): boolean {
@@ -61,29 +56,4 @@ export class EditorStore {
 
     this.expandedGroupIds.add(groupId)
   }
-}
-
-function findEditorNode(
-  nodes: EditorNode[],
-  nodeId: string | null,
-): EditorNode | null {
-  if (!nodeId) {
-    return null
-  }
-
-  for (const node of nodes) {
-    if (node.id === nodeId) {
-      return node
-    }
-
-    if (node.type === 'group') {
-      const childNode = findEditorNode(node.children, nodeId)
-
-      if (childNode) {
-        return childNode
-      }
-    }
-  }
-
-  return null
 }
