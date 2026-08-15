@@ -44,7 +44,10 @@ std::string PatchProjectHandler::HandleRequestThrow(const userver::server::http:
   res["description"] = updated->description;
   res["is_public"] = updated->is_public;
   res["created_at"] = userver::utils::datetime::Timestring(updated->created_at);
-  res["data"] = updated->data;
+
+  if (!updated->url.empty()) {
+      res["url"] = updated->url;
+  }
 
   return userver::formats::json::ToString(res.ExtractValue());
 }
