@@ -31,6 +31,16 @@ public:
 
   std::string GenerateAI(const std::string& project_id, const std::string& prompt);
 
+  std::vector<models::Version> ListVersions(const std::string& project_id);
+
+  std::string GetVersionUrl(const std::string& project_id,
+                          const std::string& version_id);
+
+  std::string RestoreVersion(const std::string& project_id,
+                           const std::string& version_id);
+
+  std::string GetLatestVersionUrl(const std::string& project_id);
+
 private:
   userver::storages::postgres::ClusterPtr pg_cluster_;
   VersionStorageComponent& version_storage_;
