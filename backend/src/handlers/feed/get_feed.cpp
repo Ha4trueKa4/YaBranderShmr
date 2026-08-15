@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <optional>
 #include <userver/components/component.hpp>
-#include <userver/formats/json/serialize.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/datetime.hpp>
 
@@ -47,15 +46,20 @@ std::optional<std::pair<std::string, std::string>> DecodeCursor(const std::strin
 }  // namespace
 
 GetFeedHandler::GetFeedHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context),
+    : HttpHandlerJsonBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()),
       version_storage_(context.FindComponent<components::VersionStorageComponentImpl>()) {}
 
-std::string GetFeedHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+userver::formats::json::Value GetFeedHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
+    userver::server::request::RequestContext& context) const {
   const std::string scope = request.HasArg("scope") ? request.GetArg("scope") : "discover";
   if (scope != "discover" && scope != "following") {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-    return R"({"message": "scope must be 'discover' or 'following'"})";
+    userver::formats::json::ValueBuilder err;
+    err["message"] = "scope must be 'discover' or 'following'";
+    return err.ExtractValue();
   }
 
   std::string* user_id = context.GetDataOptional<std::string>("user_id");
@@ -113,7 +117,9 @@ std::string GetFeedHandler::HandleRequestThrow(const userver::server::http::Http
     item["author_id"] = row["author_id"].As<std::string>();
     item["author_login"] = row["author_login"].As<std::string>();
     item["name"] = row["name"].As<std::string>();
-    item["created_at"] = userver::utils::datetime::Timestring(row["created_at"].As<std::chrono::system_clock::time_point>());
+    item["created_at"] = userver::utils::datetime::Timestring(
+        row["created_at"].As<std::chrono::system_clock::time_point>(),
+        userver::utils::datetime::kDefaultTimezone, userver::utils::datetime::kRfc3339Format);
     item["preview_url"] = (url_it != urls.end()) ? url_it->second : "";
     items_builder.PushBack(std::move(item));
   }
@@ -122,11 +128,13 @@ std::string GetFeedHandler::HandleRequestThrow(const userver::server::http::Http
   response["items"] = std::move(items_builder);
   if (has_more) {
     const auto last_row = res[items_count - 1];
-    const auto created_at_str = userver::utils::datetime::Timestring(last_row["created_at"].As<std::chrono::system_clock::time_point>());
+    const auto created_at_str = userver::utils::datetime::Timestring(
+        last_row["created_at"].As<std::chrono::system_clock::time_point>(),
+        userver::utils::datetime::kDefaultTimezone, userver::utils::datetime::kRfc3339Format);
     response["next_cursor"] = created_at_str + "|" + last_row["id"].As<std::string>();
   }
 
-  return userver::formats::json::ToString(response.ExtractValue());
+  return response.ExtractValue();
 }
 
 }  // namespace ya_brander::handlers
