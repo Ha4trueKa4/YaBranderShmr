@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -99,7 +100,12 @@ private fun CreateProjectContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(AppColors.Background),
+            .background(AppColors.Background)
+            // Поднимаем контент над клавиатурой: приложение edge-to-edge, окно не
+            // ресайзится, поэтому инсет IME отрабатываем сами — иначе кнопка «Сгенерировать»
+            // уезжает под клавиатуру. Инсеты системных баров уже сняты Scaffold'ом
+            // (consumeWindowInsets), так что двойного отступа не будет.
+            .imePadding(),
     ) {
         CreateProjectTopBar(onBack = onBack)
 
