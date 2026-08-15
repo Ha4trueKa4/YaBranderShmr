@@ -14,4 +14,9 @@ build-check:
   script:
     # Только проверка сборки: компилируем образ, НЕ публикуем в registry.
     # Не трогаем тег latest — прод-образ не затирается незамерженным кодом.
-    - docker build --provenance=false --sbom=false -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    #
+    # --cache-from (read-only): подтягиваем BuildKit-кэш из реестра, чтобы PR-проверка
+    # не собиралась с нуля. БЕЗ --cache-to: PR-кэш не должен перезаписывать кэш main.
+    - docker build --provenance=false --sbom=false \
+        --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache \
+        -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/

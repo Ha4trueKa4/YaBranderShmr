@@ -15,8 +15,17 @@ build:
     # контекст сборки - папка backend, Dockerfile - backend/Dockerfile
     # --provenance=false --sbom=false ОБЯЗАТЕЛЬНЫ: без них Yandex CR отклоняет пуш
     # с ошибкой "Cannot read manifest data" (attestation-манифесты Docker/BuildKit)
-    - docker build --provenance=false --sbom=false -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    #
+    # Логин ДО сборки: --cache-from=type=registry тянет кэш из приватного реестра,
+    # поэтому авторизация нужна уже на этапе build, а не перед пушем.
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
+    # Персистентный BuildKit-кэш через реестр: --cache-from подтягивает прошлые слои,
+    # --cache-to пишет обновлённый кэш под тегом :cache (mode=max сохраняет весь граф).
+    # Это устраняет холодные сборки между запусками.
+    - docker build --provenance=false --sbom=false \
+        --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache \
+        --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max \
+        -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
     - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
     - docker push $REGISTRY/$IMAGE:latest
