@@ -110,7 +110,7 @@
   padding: 0;
 }
 
-@media (width < 640px) {
+@media (width < 760px) {
   .header {
     height: 4rem;
   }
@@ -123,16 +123,20 @@
     display: none;
   }
 
+  .avatar > span:first-child {
+    display: none;
+  }
+
   .actions > :first-child {
     display: none;
   }
 
   .navigation {
-    position: static;
-    margin-left: auto;
-    margin-right: var(--space-3);
+    position: absolute;
+    left: 50%;
+    margin: 0;
     gap: var(--space-3);
-    transform: none;
+    transform: translateX(-50%);
   }
 
   .navigationLink {
@@ -140,6 +144,27 @@
   }
 
   .navigationLinkActive::after {
+    display: none;
+  }
+}
+
+@media (width < 480px) {
+  .navigation {
+    gap: var(--space-2);
+  }
+
+  .projectsLabel {
+    font-size: 0;
+  }
+
+  .projectsLabel::after {
+    content: "Projects";
+    font-size: var(--font-size-caption);
+  }
+}
+
+@media (width < 360px) {
+  .navigationLink:first-child {
     display: none;
   }
 }

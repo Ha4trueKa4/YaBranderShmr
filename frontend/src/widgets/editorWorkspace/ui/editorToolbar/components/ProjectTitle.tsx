@@ -7,11 +7,12 @@ import styles from '../EditorToolbar.module.css'
 import { ProjectRenameModal } from './ProjectRenameModal'
 
 interface ProjectTitleProps {
+  canEdit: boolean
   onSubmit: (projectName: string) => Promise<void>
   title: string
 }
 
-export function ProjectTitle({ onSubmit, title }: ProjectTitleProps) {
+export function ProjectTitle({ canEdit, onSubmit, title }: ProjectTitleProps) {
   const [isRenameModalOpen, setRenameModalOpen] = useState(false)
 
   async function handleSubmit(projectName: string) {
@@ -29,19 +30,23 @@ export function ProjectTitle({ onSubmit, title }: ProjectTitleProps) {
         <img alt="" src={brandMark} />
       </Link>
       <strong className={styles.projectName}>{title}</strong>
-      <button
-        className={styles.editProjectName}
-        onClick={() => setRenameModalOpen(true)}
-        type="button"
-      >
-        <img alt="" src={iconPencil} />
-      </button>
-      <ProjectRenameModal
-        isOpen={isRenameModalOpen}
-        onClose={() => setRenameModalOpen(false)}
-        onSubmit={handleSubmit}
-        projectName={title}
-      />
+      {canEdit && (
+        <>
+          <button
+            className={styles.editProjectName}
+            onClick={() => setRenameModalOpen(true)}
+            type="button"
+          >
+            <img alt="" src={iconPencil} />
+          </button>
+          <ProjectRenameModal
+            isOpen={isRenameModalOpen}
+            onClose={() => setRenameModalOpen(false)}
+            onSubmit={handleSubmit}
+            projectName={title}
+          />
+        </>
+      )}
     </div>
   )
 }

@@ -12,14 +12,25 @@ import type {
 import { useToast } from '@shared/ui'
 import { LoginForm, RegisterForm } from '@widgets'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import heroCanvas from '../assets/heroCanvas.svg'
 import heroLogoShape from '../assets/heroLogoShape.svg'
 import styles from './authPage.module.css'
 
 type AuthForm = 'login' | 'register'
 
+interface AuthLocationState {
+  from?: unknown
+}
+
+function getReturnPath(state: unknown) {
+  const from = (state as AuthLocationState | null)?.from
+
+  return typeof from === 'string' && from.startsWith('/projects/') ? from : '/'
+}
+
 export function AuthPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const toast = useToast()
   const [activeForm, setActiveForm] = useState<AuthForm>('login')
@@ -27,13 +38,14 @@ export function AuthPage() {
     useLoginMutation()
   const { isPending: isRegisteringPending, mutateAsync: register } =
     useRegisterMutation()
+  const returnPath = getReturnPath(location.state)
 
   function signIn({ access_token, user }: AuthResponse) {
     authStore.signIn({
       accessToken: access_token,
       user,
     })
-    navigate('/', { replace: true, viewTransition: true })
+    navigate(returnPath, { replace: true, viewTransition: true })
   }
 
   function handleAuthError(error: unknown) {

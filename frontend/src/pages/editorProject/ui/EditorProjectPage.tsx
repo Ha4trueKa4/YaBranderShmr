@@ -1,3 +1,4 @@
+import { authStore } from '@app/providers/auth'
 import { importSvg } from '@entities/editorDocument'
 import { useProjectQuery, useProjectSvgQuery } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
@@ -71,6 +72,9 @@ export function EditorProjectPage() {
       >
         {parsedDocument.document && projectQuery.data && (
           <EditorWorkspace
+            canEdit={
+              projectQuery.data.author_id === authStore.getSession?.user.id
+            }
             document={parsedDocument.document}
             key={projectId}
             projectId={projectId}

@@ -5,6 +5,7 @@ import { SceneFrame } from './sceneFrame/SceneFrame'
 
 interface EditorSceneProps {
   document: EditorDocument
+  isReadOnly: boolean
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -14,6 +15,7 @@ interface EditorSceneProps {
 
 export function EditorScene({
   document,
+  isReadOnly,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -24,6 +26,7 @@ export function EditorScene({
     <section className={styles.scene}>
       <SceneFrame
         document={document}
+        isReadOnly={isReadOnly}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
         onTextPositionChange={onTextPositionChange}

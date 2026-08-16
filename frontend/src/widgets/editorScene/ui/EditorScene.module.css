@@ -7,3 +7,10 @@
   padding: var(--space-6);
   background-color: var(--color-surface-elevated);
 }
+
+@media (width < 640px) {
+  .scene {
+    padding: var(--space-5);
+    background-color: var(--color-surface-elevated);
+  }
+}

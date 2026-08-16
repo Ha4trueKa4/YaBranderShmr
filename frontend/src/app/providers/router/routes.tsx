@@ -5,7 +5,7 @@ import { FeedPage } from '@pages/feed'
 import { ProfilePage } from '@pages/profile'
 import { PublicProfilePage } from '@pages/publicProfile'
 // import { MainPage } from '@pages/main'
-import { Navigate, type RouteObject } from 'react-router-dom'
+import { Navigate, type RouteObject, useLocation } from 'react-router-dom'
 
 export const AppRoute = {
   EditorCreate: '/',
@@ -25,6 +25,13 @@ const publicRoutes: RouteObject[] = [
   // { path: AppRoute.Profile, element: <ProfilePage /> },
 ]
 
+function ProjectAuthRedirect() {
+  const location = useLocation()
+  const from = `${location.pathname}${location.search}${location.hash}`
+
+  return <Navigate replace state={{ from }} to={AppRoute.Auth} />
+}
+
 export const authorizedRoutes: RouteObject[] = [
   ...publicRoutes,
   { path: AppRoute.EditorProject, element: <EditorProjectPage /> },
@@ -35,6 +42,7 @@ export const authorizedRoutes: RouteObject[] = [
 export const unauthorizedRoutes: RouteObject[] = [
   ...publicRoutes,
   { path: AppRoute.Auth, element: <AuthPage /> },
+  { path: AppRoute.EditorProject, element: <ProjectAuthRedirect /> },
   { path: '*', element: <Navigate to={AppRoute.EditorCreate} replace /> },
 ]
 

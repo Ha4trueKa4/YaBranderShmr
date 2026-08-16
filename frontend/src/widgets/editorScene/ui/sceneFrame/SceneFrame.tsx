@@ -18,6 +18,7 @@ import styles from './SceneFrame.module.css'
 
 interface SceneFrameProps {
   document: EditorDocument
+  isReadOnly: boolean
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -59,6 +60,7 @@ function getSvgPointerPosition(
 
 export function SceneFrame({
   document,
+  isReadOnly,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -90,7 +92,7 @@ export function SceneFrame({
 
   const handleShapePointerDown = useCallback(
     (node: EditorShape, event: ReactPointerEvent<SVGGElement>) => {
-      if (event.button !== 0) {
+      if (isReadOnly || event.button !== 0) {
         return
       }
 
@@ -124,12 +126,12 @@ export function SceneFrame({
         },
       }
     },
-    [onSelectNode],
+    [isReadOnly, onSelectNode],
   )
 
   const handleTextPointerDown = useCallback(
     (node: EditorText, event: ReactPointerEvent<SVGGElement>) => {
-      if (event.button !== 0) {
+      if (isReadOnly || event.button !== 0) {
         return
       }
 
@@ -160,7 +162,7 @@ export function SceneFrame({
         startTransformPosition: { x: node.x, y: node.y },
       }
     },
-    [onSelectNode],
+    [isReadOnly, onSelectNode],
   )
 
   const handleShapePointerMove = useCallback(
@@ -239,11 +241,15 @@ export function SceneFrame({
           renderVersion={renderVersion}
           registerEditableElement={registerEditableElement}
         />
-        <SelectionOverlay
-          getEditableElement={getEditableElement}
-          selectedNode={selectedNode}
-        />
-        <TransformHandles />
+        {!isReadOnly && (
+          <>
+            <SelectionOverlay
+              getEditableElement={getEditableElement}
+              selectedNode={selectedNode}
+            />
+            <TransformHandles />
+          </>
+        )}
       </svg>
     </div>
   )
