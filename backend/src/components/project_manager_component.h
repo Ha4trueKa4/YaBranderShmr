@@ -25,7 +25,8 @@ public:
 
   std::optional<models::Project> GetProject(const std::string& id);
 
-  void UpdateProject(const std::string& id, std::optional<bool> is_public, std::string data);
+  void UpdateProject(const std::string& id, std::optional<std::string> name,
+                     std::optional<bool> is_public, std::string data);
 
   void DeleteProject(const std::string& id);
 

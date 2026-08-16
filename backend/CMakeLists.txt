@@ -103,6 +103,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/object_storage/s3_object_storage_component.cpp
         src/components/subscription_storage/subscription_storage_component.cpp
         src/handlers/users/get_user_profile.cpp
+        src/handlers/users/patch_user_profile.cpp
         src/handlers/users/user_subscriptions_handlers.cpp
 )
 
