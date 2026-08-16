@@ -1,18 +1,11 @@
-import {
-  BottomSheet,
-  ColorPicker,
-  ColorSwatch,
-  IconButton,
-  PopupMenu,
-} from '@shared/ui'
+import { BottomSheet, ColorPicker } from '@shared/ui'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
 
-import iconHand from '../editorToolbar/assets/iconHand.svg'
-import iconMousePointer from '../editorToolbar/assets/iconMousePointer.svg'
-import iconRotateLeft from '../editorToolbar/assets/iconRotateLeft.svg'
-import iconRotateRight from '../editorToolbar/assets/iconRotateRight.svg'
 import { InspectorPanel } from '../inspectorPanel/InspectorPanel'
+import { MobileCanvasControls } from './components/MobileCanvasControls'
+import { MobileEditorHeader } from './components/MobileEditorHeader'
+import { MobileSelectionActions } from './components/MobileSelectionActions'
 import styles from './EditorMobileLayout.module.css'
 
 interface EditorMobileLayoutProps
@@ -63,7 +56,6 @@ export function EditorMobileLayout({
 }: EditorMobileLayoutProps) {
   const hasSelection = Boolean(selectedNode)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
-  const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false)
   const fillColor = getFillColor(selectedNode)
 
   function handleFillChange(color: string) {
@@ -80,104 +72,30 @@ export function EditorMobileLayout({
 
   return (
     <div className={styles.layout}>
-      <header className={styles.header}>
-        <IconButton className={styles.headerButton} onClick={onBack}>
-          <span className={styles.backIcon}>←</span>
-        </IconButton>
-        <div className={styles.title}>
-          <span>Brandkit webview</span>
-          <strong>{projectName}</strong>
-        </div>
-        <div
-          className={styles.menuAnchor}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <IconButton
-            className={styles.headerButton}
-            onClick={() => setIsProjectMenuOpen((isOpen) => !isOpen)}
-          >
-            <span className={styles.moreIcon}>•••</span>
-          </IconButton>
-          {isProjectMenuOpen && (
-            <PopupMenu
-              items={[
-                { label: 'Export', onClick: onExport },
-                ...(canEdit
-                  ? [
-                      {
-                        label: isSavingVersion ? 'Saving…' : 'Save',
-                        onClick: onSaveVersion,
-                      },
-                    ]
-                  : [
-                      {
-                        label: isCreatingProjectCopy ? 'Opening…' : 'Explore',
-                        onClick: onCreateCopy,
-                      },
-                    ]),
-              ]}
-              onClose={() => setIsProjectMenuOpen(false)}
-            />
-          )}
-        </div>
-      </header>
+      <MobileEditorHeader
+        canEdit={canEdit}
+        isCreatingProjectCopy={isCreatingProjectCopy}
+        isSavingVersion={isSavingVersion}
+        onBack={onBack}
+        onCreateCopy={onCreateCopy}
+        onExport={onExport}
+        onSaveVersion={onSaveVersion}
+        projectName={projectName}
+      />
       <div className={styles.scene}>{scene}</div>
       {canEdit && (
-        <div className={styles.selectionActions}>
-          {hasSelection ? (
-            <>
-              <button
-                disabled={!fillColor}
-                onClick={() => setIsColorPickerOpen(true)}
-                type="button"
-              >
-                <span
-                  className={styles.fillDot}
-                  style={{ background: fillColor ?? undefined }}
-                />
-                Fill
-              </button>
-              <span />
-              <button type="button">Stroke</button>
-              <span />
-              <button className={styles.deleteAction} type="button">
-                Delete
-              </button>
-            </>
-          ) : (
-            <p>Select an element</p>
-          )}
-        </div>
+        <MobileSelectionActions
+          fillColor={fillColor}
+          hasSelection={hasSelection}
+          onOpenColorPicker={() => setIsColorPickerOpen(true)}
+        />
       )}
       {canEdit && (
         <>
-          <div className={styles.canvasControls}>
-            {fillColor ? (
-              <ColorSwatch
-                className={styles.fillSwatch}
-                color={fillColor}
-                onClick={() => setIsColorPickerOpen(true)}
-              />
-            ) : (
-              <IconButton className={styles.activeTool}>
-                <img alt="" src={iconMousePointer} />
-              </IconButton>
-            )}
-            <IconButton>
-              <img alt="" src={iconHand} />
-            </IconButton>
-            <span />
-            <IconButton>
-              <img alt="" src={iconRotateLeft} />
-            </IconButton>
-            <IconButton>
-              <img alt="" src={iconRotateRight} />
-            </IconButton>
-            <span />
-            <IconButton>
-              <span className={styles.fitIcon}>⌗</span>
-            </IconButton>
-          </div>
+          <MobileCanvasControls
+            fillColor={fillColor}
+            onOpenColorPicker={() => setIsColorPickerOpen(true)}
+          />
           <button
             className={styles.propertiesTrigger}
             onClick={onOpenProperties}

@@ -9,6 +9,6 @@
     min-height: 100dvh;
     height: auto;
     overflow: visible;
-    background: var(--color-bg);
+    background: var(--color-surface);
   }
 }
