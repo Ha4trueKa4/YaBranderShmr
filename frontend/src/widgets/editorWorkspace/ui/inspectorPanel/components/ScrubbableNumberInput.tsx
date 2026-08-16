@@ -59,7 +59,7 @@ export function ScrubbableNumberInput({
     const offset =
       axis === 'horizontal'
         ? currentPosition - dragState.startPosition
-        : dragState.startPosition - currentPosition
+        : currentPosition - dragState.startPosition
     const nextValue = roundToStep(dragState.startValue + offset * step, step)
 
     onValueChange(min === undefined ? nextValue : Math.max(min, nextValue))
