@@ -22,10 +22,6 @@ private val AppDarkColorScheme = darkColorScheme(
 
 @Composable
 fun AvatarGeneratorTheme(
-    // Приложение пока всегда тёмное: весь UI (лента, навигация, онбординг) свёрстан под
-    // тёмную палитру AppColors, а окно — под тёмный windowBackground. Поэтому
-    // не следуем системной теме и не берём dynamic color, иначе на устройстве
-    // в светлой теме Material-цвета «поплыли» бы на тёмных поверхностях.
     // TODO: вернуть isSystemInDarkTheme()/dynamicColor, когда будет светлая тема.
     darkTheme: Boolean = true,
     dynamicColor: Boolean = false,

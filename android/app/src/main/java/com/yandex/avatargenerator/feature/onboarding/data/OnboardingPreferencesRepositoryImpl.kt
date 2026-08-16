@@ -17,8 +17,6 @@ internal class OnboardingPreferencesRepositoryImpl(
 
     override val hasSeenOnboarding: Flow<Boolean> = dataStore.data
         .catch { throwable ->
-            // Повреждённый файл настроек не должен ронять приложение:
-            // считаем, что онбординг ещё не показывали.
             if (throwable is IOException) emit(emptyPreferences())
             else throw throwable
         }

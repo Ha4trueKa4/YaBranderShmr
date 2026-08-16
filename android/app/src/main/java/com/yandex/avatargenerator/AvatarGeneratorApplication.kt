@@ -30,7 +30,6 @@ class AvatarGeneratorApplication : Application(), SingletonImageLoader.Factory, 
         }
     }
 
-    // Тот же клиент, что у Ktor — общий пул соединений и таймауты для API и картинок.
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .components { add(OkHttpNetworkFetcherFactory(okHttpClient)) }

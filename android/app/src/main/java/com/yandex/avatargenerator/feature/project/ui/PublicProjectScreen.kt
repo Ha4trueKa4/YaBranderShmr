@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -42,6 +41,7 @@ import com.yandex.avatargenerator.feature.project.data.MockPublicProjectReposito
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProject
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectAuthor
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectRelatedItem
+import com.yandex.avatargenerator.feature.project.ui.components.PublicProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.util.publishedLabel
 import com.yandex.avatargenerator.ui.components.BrandAvatar
 import com.yandex.avatargenerator.ui.components.BrandErrorState
@@ -55,14 +55,10 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-// Декоративный градиент hero-баннера по макету (violet → cyan → pink, слева направо):
-// виден, пока грузится превью проекта или если превью нет. Розовый — точечное
-// значение баннера, вне палитры AppColors.
 private val HeroGradient = Brush.horizontalGradient(
-    listOf(AppColors.Accent, AppColors.AccentCyan, Color(0xFFEC4899)),
+    listOf(AppColors.Accent, AppColors.AccentCyan, AppColors.AccentPink),
 )
 
-// Заглушка превью карточек «More from this creator» — на токенах палитры.
 private val PreviewGradient = Brush.horizontalGradient(
     listOf(AppColors.Accent, AppColors.AccentCyan),
 )
@@ -91,9 +87,7 @@ internal fun PublicProjectScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        PublicProjectUiState.Loading -> PublicProjectCenteredBox(modifier) {
-            CircularProgressIndicator(color = AppColors.Accent)
-        }
+        PublicProjectUiState.Loading -> PublicProjectSkeleton(modifier)
 
         PublicProjectUiState.Error -> PublicProjectCenteredBox(modifier) {
             BrandErrorState(
@@ -218,8 +212,6 @@ private fun PublicProjectHero(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        // «Стекло» имитируем полупрозрачной подложкой и тонким светлым бордером —
-        // backdrop-blur из макета в Compose портативно не воспроизвести.
         val badgeShape = RoundedCornerShape(AppShape.full)
         Text(
             text = badge,
@@ -359,8 +351,6 @@ private fun PublicProjectRelated(
             text = stringResource(R.string.public_project_related_title),
             style = AppTypography.label.copy(fontWeight = FontWeight.Bold),
         )
-        // Раскладываем по два в ряд. Списка сюда приходит немного (подборка),
-        // поэтому обычные Row внутри Column, без LazyGrid — экран и так скроллится.
         items.chunked(2).forEach { rowItems ->
             Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.s)) {
                 rowItems.forEach { item ->
@@ -370,7 +360,6 @@ private fun PublicProjectRelated(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                // Нечётный хвост: пустая ячейка держит ширину карточки в ряду.
                 if (rowItems.size == 1) Box(modifier = Modifier.weight(1f))
             }
         }
@@ -434,8 +423,6 @@ private fun PublicProjectRelatedCard(
         }
     }
 }
-
-// --- Preview -----------------------------------------------------------------
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14, heightDp = 960)
 @Composable

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -17,6 +16,7 @@ import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.project.data.MockChatRepository
 import com.yandex.avatargenerator.feature.project.ui.components.ChatInputBar
 import com.yandex.avatargenerator.feature.project.ui.components.ChatTimeline
+import com.yandex.avatargenerator.feature.project.ui.components.ProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.components.ProjectTopBar
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -77,8 +77,6 @@ private fun ProjectContent(
             .fillMaxSize()
             .background(AppColors.Background),
     ) {
-        // Пока диалог не загружен, названия проекта нет — показываем плейсхолдер,
-        // чтобы шапка со стрелкой «назад» была на месте с первого кадра.
         val title = when (uiState) {
             is ProjectUiState.Content -> uiState.title
             else -> stringResource(R.string.project_title_placeholder)
@@ -94,9 +92,11 @@ private fun ProjectContent(
         )
 
         when (uiState) {
-            ProjectUiState.Loading -> ProjectCenteredBox {
-                CircularProgressIndicator(color = AppColors.Accent)
-            }
+            ProjectUiState.Loading -> ProjectSkeleton(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
 
             ProjectUiState.Error -> ProjectCenteredBox {
                 BrandErrorState(
@@ -107,11 +107,8 @@ private fun ProjectContent(
             }
 
             is ProjectUiState.Content -> {
-                // Пустая лента у нового проекта — просто пустая область,
-                // поле ввода при этом доступно.
                 ChatTimeline(
                     messages = uiState.messages,
-                    // weight(1f) — лента забирает всё место между шапкой и вводом.
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -141,8 +138,6 @@ private fun ProjectCenteredBox(content: @Composable () -> Unit) {
         content()
     }
 }
-
-// --- Preview -----------------------------------------------------------------
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
 @Composable

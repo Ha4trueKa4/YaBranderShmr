@@ -1,28 +1,27 @@
 package com.yandex.avatargenerator.feature.profile.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.profile.ui.components.ProfileHeader
-import com.yandex.avatargenerator.ui.components.BrandSecondaryButton
+import com.yandex.avatargenerator.feature.profile.ui.components.ProfileSkeleton
+import com.yandex.avatargenerator.ui.components.BrandEmptyState
+import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.ProjectCard
 import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.components.masonryAspectRatio
@@ -64,20 +63,20 @@ fun ProfileScreen(
     ) {
         when (val current = state) {
             is ProfileUiState.Loading ->
-                CircularProgressIndicator(
-                    color = AppColors.Accent,
-                    modifier = Modifier.align(Alignment.Center),
-                )
+                ProfileSkeleton(modifier = Modifier.fillMaxSize())
 
             is ProfileUiState.Error ->
-                ProfileError(onRetry = viewModel::load, modifier = Modifier.align(Alignment.Center))
+                BrandErrorState(
+                    title = stringResource(R.string.profile_error_title),
+                    retryLabel = stringResource(R.string.profile_error_retry),
+                    onRetry = viewModel::load,
+                    modifier = Modifier.align(Alignment.Center),
+                )
 
             is ProfileUiState.Content ->
                 ProfileContent(
                     state = current,
                     onProjectClick = onProjectClick,
-                    // Чужой профиль — кнопка подписки (обрабатывается ViewModel);
-                    // свой — внешний коллбэк (переход к редактированию).
                     onActionClick = {
                         if (current.isOwnProfile) onActionClick() else viewModel.toggleFollow()
                     },
@@ -95,12 +94,8 @@ private fun ProfileContent(
 ) {
     ProjectMasonryGrid(
         modifier = modifier.fillMaxSize(),
-        // Без верхнего отступа: обложка шапки уходит под край экрана.
         contentPadding = PaddingValues(start = AppSpacing.m, end = AppSpacing.m, bottom = AppSpacing.m),
     ) {
-        // Карточки отступают от краёв на AppSpacing.m (горизонтальный contentPadding
-        // грида), а обложка/дивайдер шапки — доходят до краёв экрана. Через
-        // bleedHorizontally «пробиваем» этот отступ у шапки.
         item(span = StaggeredGridItemSpan.FullLine) {
             ProfileHeader(
                 profile = state.profile,
@@ -111,14 +106,22 @@ private fun ProfileContent(
         }
 
         item(span = StaggeredGridItemSpan.FullLine) {
-            // Грид уже добавляет verticalItemSpacing с обеих сторон; сверху заголовка
-            // добавляем ещё AppSpacing.xxs по макету.
             ProjectsSectionTitle(modifier = Modifier.padding(top = AppSpacing.xxs))
         }
 
         if (state.projects.isEmpty()) {
             item(span = StaggeredGridItemSpan.FullLine, contentType = "empty") {
-                EmptyProjects(isOwnProfile = state.isOwnProfile)
+                BrandEmptyState(
+                    title = stringResource(
+                        if (state.isOwnProfile) R.string.profile_empty_own_title
+                        else R.string.profile_empty_other_title,
+                    ),
+                    subtitle = stringResource(
+                        if (state.isOwnProfile) R.string.profile_empty_own_subtitle
+                        else R.string.profile_empty_other_subtitle,
+                    ),
+                    modifier = Modifier.padding(vertical = AppSpacing.xl),
+                )
             }
         } else {
             items(
@@ -128,31 +131,13 @@ private fun ProfileContent(
             ) { project ->
                 ProjectCard(
                     title = project.title,
-                    authorName = project.author.displayName,
                     previewUrl = project.previewUrl,
-                    authorAvatarUrl = project.author.avatarUrl,
                     aspectRatio = masonryAspectRatio(project.id),
                     onClick = { onProjectClick(project.id) },
-                    // Автор всех карточек — владелец этого профиля; тап по автору
-                    // никуда не ведёт (мы уже на его профиле).
-                    onAuthorClick = {},
                 )
             }
         }
     }
-}
-
-/** Заглушка на месте сетки, когда у пользователя ещё нет проектов. */
-@Composable
-private fun EmptyProjects(isOwnProfile: Boolean, modifier: Modifier = Modifier) {
-    Text(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = AppSpacing.xl),
-        text = if (isOwnProfile) "You haven't created any projects yet" else "No projects yet",
-        style = AppTypography.body.copy(color = AppColors.TextMuted),
-        textAlign = TextAlign.Center,
-    )
 }
 
 /**
@@ -177,22 +162,7 @@ private fun Modifier.bleedHorizontally(bleed: Dp): Modifier = layout { measurabl
 private fun ProjectsSectionTitle(modifier: Modifier = Modifier) {
     Text(
         modifier = modifier,
-        text = "PROJECTS",
+        text = stringResource(R.string.profile_projects_section),
         style = AppTypography.label.copy(color = AppColors.TextMuted, fontWeight = FontWeight.SemiBold),
     )
-}
-
-@Composable
-private fun ProfileError(onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.padding(AppSpacing.xl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.s),
-    ) {
-        Text(
-            text = "Couldn't load profile",
-            style = AppTypography.body.copy(fontWeight = FontWeight.Bold),
-        )
-        BrandSecondaryButton(text = "Retry", onClick = onRetry)
-    }
 }

@@ -46,12 +46,10 @@ internal fun OnboardingScreen(
     )
     val scope = rememberCoroutineScope()
 
-    // Пейджер — источник правды при свайпе; сообщаем позицию во ViewModel.
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect(onPageChanged)
     }
 
-    // На первой странице системная «назад» уходит из приложения — BackHandler выключен.
     BackHandler(enabled = pagerState.currentPage > 0) {
         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
     }

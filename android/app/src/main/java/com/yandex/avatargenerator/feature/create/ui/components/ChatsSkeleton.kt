@@ -28,7 +28,6 @@ import com.yandex.avatargenerator.ui.theme.AppSpacing
  */
 @Composable
 internal fun ChatsSkeleton(modifier: Modifier = Modifier) {
-    // Один brush на все строки — так мерцание в списке остаётся синхронным.
     val brush = rememberBrandShimmerBrush()
 
     Column(
@@ -52,7 +51,6 @@ private fun SkeletonRow(brush: Brush) {
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Размеры заглушек точечные — повторяют геометрию реальной строки.
         BrandSkeletonBox(
             brush = brush,
             shape = RoundedCornerShape(AppShape.s),

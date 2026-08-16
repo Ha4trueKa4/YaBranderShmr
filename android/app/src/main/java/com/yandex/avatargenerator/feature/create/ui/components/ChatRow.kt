@@ -44,15 +44,11 @@ internal fun ChatRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        // .clip() строго до .background() и .clickable() — иначе фон и ripple
-        // вылезут за скруглённые углы.
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(AppShape.m))
             .background(AppColors.Surface)
             .clickable(
-                // Именно onClickLabel, а не contentDescription на строке: строка
-                // уже озвучивает название и время, а перекрывать их описанием нельзя.
                 onClickLabel = stringResource(R.string.chats_open_chat_description),
                 onClick = onClick,
             )
@@ -60,7 +56,6 @@ internal fun ChatRow(
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 56.dp — размер плитки по макету, точечное значение вне шкалы отступов.
         ChatThumbnail(chatId = chat.id, modifier = Modifier.size(56.dp))
 
         Column(
@@ -69,7 +64,6 @@ internal fun ChatRow(
         ) {
             Text(
                 text = chat.title,
-                // Название в макете жирнее обычного body — берём токен и меняем только начертание.
                 style = AppTypography.body.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -83,7 +77,6 @@ internal fun ChatRow(
 
         Icon(
             painter = painterResource(R.drawable.ic_arrow_right),
-            // Декоративная: смысл строки озвучивает название чата.
             contentDescription = null,
             tint = AppColors.TextPrimary,
             modifier = Modifier.size(24.dp),

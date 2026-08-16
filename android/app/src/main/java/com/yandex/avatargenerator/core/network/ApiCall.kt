@@ -23,20 +23,18 @@ suspend fun <T> apiCall(block: suspend () -> T): T =
     try {
         block()
     } catch (cancellation: CancellationException) {
-        throw cancellation // отмена корутины — не ошибка сети
+        throw cancellation
     } catch (network: NetworkException) {
-        throw network // уже доменная ошибка, иначе завернулась бы в Unknown
+        throw network
     } catch (response: ResponseException) {
         throw response.toNetworkException()
     } catch (serialization: SerializationException) {
         throw NetworkException.Serialization(serialization)
     } catch (convert: ContentConvertException) {
-        // Ktor заворачивает ошибку разбора в свой тип, не наследник SerializationException
         throw NetworkException.Serialization(convert)
     } catch (transformation: NoTransformationFoundException) {
         throw NetworkException.Serialization(transformation)
     } catch (exception: Exception) {
-        // Именно Exception: Error должен долетать до крэш-репортера как есть
         throw when {
             exception.isTimeout() -> NetworkException.Timeout(exception)
             exception.isConnectionFailure() -> NetworkException.NoConnection(exception)

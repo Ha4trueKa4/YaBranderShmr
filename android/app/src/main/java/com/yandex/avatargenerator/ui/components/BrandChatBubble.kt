@@ -55,8 +55,6 @@ fun BrandChatBubble(
     )
     val background = if (isOutgoing) AppColors.Accent else AppColors.SurfaceVariant
     val foreground = if (isOutgoing) AppColors.OnAccent else AppColors.TextPrimary
-    // На фиолетовом пузыре время в макете чёрное — читается плохо; берём белый
-    // с понижённой прозрачностью. У входящего — приглушённый серый, как в макете.
     val timeColor = if (isOutgoing) AppColors.OnAccent.copy(alpha = 0.7f) else AppColors.TextMuted
 
     Column(

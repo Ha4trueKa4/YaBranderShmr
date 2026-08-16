@@ -22,8 +22,6 @@ internal fun ChatThumbnail(
     chatId: String,
     modifier: Modifier = Modifier,
 ) {
-    // remember(chatId) — чтобы не считать хеш на каждой рекомпозиции.
-    // Int.mod (а не %) даёт неотрицательный остаток при отрицательном хеше.
     val gradient = remember(chatId) {
         ChatsColors.ThumbnailGradients[chatId.hashCode().mod(ChatsColors.ThumbnailGradients.size)]
     }

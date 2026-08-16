@@ -44,7 +44,6 @@ fun BrandTextLink(
         },
         style = AppTypography.body.copy(color = AppColors.TextSecondary),
         textAlign = TextAlign.Center,
-        // Без ripple: подсветка прямоугольника во всю ширину текста выглядит грубо.
         modifier = modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,

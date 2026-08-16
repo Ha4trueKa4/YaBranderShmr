@@ -54,8 +54,6 @@ fun BrandTextField(
 ) {
     val isError = errorMessage != null
     val borderColor = if (isError) AppColors.Error else AppColors.Border
-    // Однострочное поле центрирует содержимое по вертикали; многострочное —
-    // прижимает к верху и добавляет вертикальный отступ, чтобы текст не липнул к рамке.
     val contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart
 
     Column(modifier = modifier) {

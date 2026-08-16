@@ -45,7 +45,7 @@ object HttpClientFactory {
         baseUrl: String = ApiConfig.BaseUrl,
         enableLogging: Boolean = BuildConfig.NETWORK_LOGGING,
     ): HttpClient = HttpClient(OkHttp.create { preconfigured = okHttpClient }) {
-        expectSuccess = true // не-2xx → ResponseException, её разбирает apiCall()
+        expectSuccess = true
 
         install(ContentNegotiation) {
             json(json)

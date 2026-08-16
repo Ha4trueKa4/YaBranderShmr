@@ -21,21 +21,18 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
  */
 internal object OnboardingDefaults {
 
-    // --- общее ---
     val ScreenHorizontalPadding = AppSpacing.l
     val BottomBarPadding = AppSpacing.m
 
     /** Место под индикатор страниц: страницы резервируют его снизу, чтобы контент не налезал. */
     val BottomContentReserve = AppSpacing.xxxl
 
-    // --- индикатор страниц ---
     val DotSize = 8.dp
     val ActiveDotWidth = 24.dp
     val DotSpacing = AppSpacing.xs
     val ActiveDotColor = AppColors.OnAccent
     val InactiveDotColor = AppColors.OnAccent.copy(alpha = 0.25f)
 
-    // --- страница 1: welcome ---
     val WelcomeHorizontalPadding = AppSpacing.xl
     val WelcomeContentSpacing = AppSpacing.xl
     val WelcomeBrandTextSpacing = AppSpacing.s
@@ -54,7 +51,6 @@ internal object OnboardingDefaults {
     )
     val BrandSubtitleStyle = AppTypography.body.copy(color = AppColors.OnAccent.copy(alpha = 0.8f))
 
-    // --- страница 2: how it works ---
     val PageTitleSpacing = 40.dp
     val StepsSpacing = 28.dp
     val StepRowSpacing = AppSpacing.m
@@ -71,7 +67,6 @@ internal object OnboardingDefaults {
     /** Подпись шага — [AppTypography.label] тем же кеглем, но обычным начертанием. */
     val StepSubtitleStyle = AppTypography.label.copy(fontWeight = FontWeight.Normal)
 
-    // --- страница 3: get started ---
     val GetStartedContentSpacing = AppSpacing.xl
     val IllustrationWidth = 300.dp
     val IllustrationHeight = 320.dp
@@ -85,15 +80,8 @@ internal object OnboardingDefaults {
 
     val CtaGroupSpacing = 20.dp
 
-    /** Cyan в центре → purple по краю. Промежуточные стопы взяты из макета. */
-    val GlowBrush = Brush.radialGradient(
-        0.0f to AppColors.AccentCyan,
-        0.125f to Color(0xFF15A7D7),
-        0.25f to Color(0xFF2497DA),
-        0.5f to Color(0xFF4178E1),
-        0.75f to Color(0xFF5F59E7),
-        1.0f to AppColors.Accent,
-    )
+    /** Cyan в центре → purple по краю. Палитра свечения — токен [AppColors.OnboardingGlow]. */
+    val GlowBrush = AppColors.OnboardingGlow
 
     val MockupBrandNameStyle = AppTypography.heading3.copy(fontWeight = FontWeight.Bold)
 

@@ -142,6 +142,20 @@
         <item quantity="other">Published %1$d days ago</item>
     </plurals>
 
+    <!-- Профиль (свой/чужой) -->
+    <string name="profile_handle">\@%1$s</string>
+    <string name="profile_stats">%1$d Projects · %2$s Followers · %3$d Following</string>
+    <string name="profile_action_edit">Edit Profile</string>
+    <string name="profile_action_following">Following</string>
+    <string name="profile_action_follow">Follow</string>
+    <string name="profile_projects_section">PROJECTS</string>
+    <string name="profile_empty_own_title">No projects yet</string>
+    <string name="profile_empty_own_subtitle">Start a new project to see your work here</string>
+    <string name="profile_empty_other_title">No projects yet</string>
+    <string name="profile_empty_other_subtitle">This user hasn\'t published anything yet</string>
+    <string name="profile_error_title">Couldn\'t load profile</string>
+    <string name="profile_error_retry">Retry</string>
+
     <!-- Относительное время: подписи строк чата.
          Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->
     <string name="chats_time_just_now">just now</string>

@@ -76,7 +76,6 @@ private fun FeedTabItem(
             ),
             modifier = Modifier.padding(vertical = AppSpacing.s),
         )
-        // Нижний индикатор активной вкладки: 2dp — точечное значение по макету.
         Box(
             modifier = Modifier
                 .padding(bottom = AppSpacing.s)

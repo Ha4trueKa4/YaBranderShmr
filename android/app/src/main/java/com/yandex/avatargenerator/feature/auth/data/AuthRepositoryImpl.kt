@@ -76,7 +76,6 @@ class AuthRepositoryImpl(
                 }.body<AuthResponseDto>()
             }
         } catch (unauthorized: NetworkException.Unauthorized) {
-            // Не «сессия протухла», а неверная пара логин/пароль: токена ещё нет
             throw AuthException.InvalidCredentials(unauthorized)
         } catch (clientError: NetworkException.ClientError) {
             // Формат email сервер отвергает и на входе — показываем ошибку под

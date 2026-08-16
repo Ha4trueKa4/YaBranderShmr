@@ -51,26 +51,15 @@ fun AvatarGeneratorApp(
     val isAuthorized = rememberIsAuthorized()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
-    // Узел ещё не определён (первый кадр либо флаги не прочитаны) — ориентируемся
-    // на будущий стартовый экран: верхнеуровневым он будет только у авторизованного
-    // (гость стартует на онбординге или входе, а они не вкладки).
-    val showBottomBar = currentDestination.isTopLevel() ?: (isAuthorized == true)
-    // Тот же приём для полноэкранного режима: до готовности бэкстека онбординг
-    // будет открыт ровно тогда, когда токена нет и флаг ещё не выставлен.
+    val showBottomBar = currentDestination.isOnAnyRoute(BottomBarDetailRoutes) ||
+        (currentDestination.isTopLevel() ?: (isAuthorized == true))
     val isFullBleed = currentDestination?.isOnRoute(Destination.Onboarding.route)
         ?: (isAuthorized == false && hasSeenOnboarding == false)
-    // Экран проекта уходит под системную навигацию: фон поля ввода должен
-    // доходить до нижнего края экрана (безрамочный низ). Нижний инсет он
-    // обрабатывает сам — Scaffold отдаёт ему только верхний.
     val isBottomFullBleed = currentDestination.isOnRoute(Destination.Project.route)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = AppColors.Background,
-        // Онбординг занимает всё окно: у него полноэкранный градиент, а отступы
-        // от системных баров каждая его страница ставит сама (windowInsetsPadding).
-        // Если те же инсеты раздаст ещё и Scaffold — сверху и снизу появится
-        // полоса containerColor, а отступы страниц удвоятся.
         contentWindowInsets = when {
             isFullBleed -> WindowInsets(0)
             isBottomFullBleed -> ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top)
@@ -85,17 +74,12 @@ fun AvatarGeneratorApp(
             }
         },
     ) { innerPadding ->
-        // Пока флаги не прочитаны (null) — держим пустой фон Scaffold, иначе
-        // стартовый экран выберется наугад.
         val startDestination = rememberStartDestination(hasSeenOnboarding, isAuthorized)
 
         if (startDestination != null) {
             AppNavHost(
                 navController = navController,
                 startDestination = startDestination,
-                // consumeWindowInsets обязателен вместе с padding (см. KDoc Scaffold):
-                // без него вложенный windowInsetsPadding отсчитает системные бары
-                // второй раз поверх уже добавленного отступа.
                 modifier = Modifier
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding),
@@ -142,6 +126,12 @@ private fun rememberStartDestination(
 /** Маршруты верхнеуровневых вкладок; константа — считается один раз, не на каждой рекомпозиции. */
 private val TopLevelRoutes: Set<String> =
     TopLevelDestination.entries.mapTo(HashSet()) { it.destination.route }
+
+/** Витрины (не вкладки), на которых нижняя панель всё равно показывается: публичный проект и чужой профиль. */
+private val BottomBarDetailRoutes: Set<String> = setOf(
+    Destination.PublicProject.route,
+    Destination.UserProfile.route,
+)
 
 /**
  * Является ли текущий узел одной из верхнеуровневых вкладок.
