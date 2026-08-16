@@ -498,6 +498,10 @@ export type GetProjectsByIdResponse =
 
 export type PatchProjectsByIdData = {
   body: {
+    /**
+     * Название проекта
+     */
+    name?: string
     is_public?: boolean
     /**
      * Чистая SVG-разметка проекта

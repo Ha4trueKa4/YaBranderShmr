@@ -204,6 +204,7 @@ export const zGetProjectsByIdPath = z.object({
 export const zGetProjectsByIdResponse = zProject
 
 export const zPatchProjectsByIdBody = z.object({
+  name: z.string().optional(),
   is_public: z.boolean().optional(),
   data: z.string().optional(),
 })

@@ -7,16 +7,20 @@ import styles from '../EditorToolbar.module.css'
 import { ProjectRenameModal } from './ProjectRenameModal'
 
 interface ProjectTitleProps {
-  onSubmit: (projectName: string) => void
+  onSubmit: (projectName: string) => Promise<void>
   title: string
 }
 
 export function ProjectTitle({ onSubmit, title }: ProjectTitleProps) {
   const [isRenameModalOpen, setRenameModalOpen] = useState(false)
 
-  function handleSubmit(projectName: string) {
-    onSubmit(projectName)
-    setRenameModalOpen(false)
+  async function handleSubmit(projectName: string) {
+    try {
+      await onSubmit(projectName)
+      setRenameModalOpen(false)
+    } catch {
+      // Сообщение об ошибке уже показывает родительский компонент.
+    }
   }
 
   return (
