@@ -51,6 +51,11 @@ public:
   userver::formats::json::Value GetChatHistory(const std::string& project_id);
 
 private:
+  /// @brief Сырой project.chat_history одним запросом (jsonb напрямую, без
+  ///        ::text каста и повторного парсинга) — общий код для
+  ///        GetChatHistory и GetRecentUserPrompts.
+  userver::formats::json::Value FetchChatHistoryJson(const std::string& project_id);
+
   /// @brief Последние limit текстов запросов пользователя (без ответов
   ///        модели), от старых к новым — контекст для промпта LLM.
   std::vector<std::string> GetRecentUserPrompts(const std::string& project_id, std::size_t limit);

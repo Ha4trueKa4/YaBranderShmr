@@ -1,8 +1,8 @@
 #include "project_manager_component.h"
 #include <userver/formats/json/inline.hpp>
-#include <userver/formats/json/serialize.hpp>
 #include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
 
 namespace ya_brander::components {
 
@@ -111,15 +111,19 @@ namespace {
 constexpr std::size_t kHistoryPromptLimit = 10;
 }  // namespace
 
-std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
-    const std::string& project_id, std::size_t limit) {
+userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
+    const std::string& project_id) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT chat_history::text AS chat_history FROM projects WHERE id = $1::uuid",
+        "SELECT chat_history FROM projects WHERE id = $1::uuid",
         project_id);
-    if (res.IsEmpty()) return {};
+    if (res.IsEmpty()) return userver::formats::json::MakeArray();
+    return res[0]["chat_history"].As<userver::formats::json::Value>();
+}
 
-    auto history_json = userver::formats::json::FromString(res[0]["chat_history"].As<std::string>());
+std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
+    const std::string& project_id, std::size_t limit) {
+    auto history_json = FetchChatHistoryJson(project_id);
 
     std::vector<std::string> prompts;
     for (const auto& entry : history_json) {
@@ -146,12 +150,7 @@ void ProjectManagerComponent::AppendChatExchange(const std::string& project_id,
 }
 
 userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT chat_history::text AS chat_history FROM projects WHERE id = $1::uuid",
-        project_id);
-    if (res.IsEmpty()) return userver::formats::json::MakeArray();
-    return userver::formats::json::FromString(res[0]["chat_history"].As<std::string>());
+    return FetchChatHistoryJson(project_id);
 }
 
 std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model) {
