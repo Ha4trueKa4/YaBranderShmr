@@ -51,7 +51,8 @@ fun AvatarGeneratorApp(
     val isAuthorized = rememberIsAuthorized()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
-    val showBottomBar = currentDestination.isTopLevel() ?: (isAuthorized == true)
+    val showBottomBar = currentDestination.isOnAnyRoute(BottomBarDetailRoutes) ||
+        (currentDestination.isTopLevel() ?: (isAuthorized == true))
     val isFullBleed = currentDestination?.isOnRoute(Destination.Onboarding.route)
         ?: (isAuthorized == false && hasSeenOnboarding == false)
     val isBottomFullBleed = currentDestination.isOnRoute(Destination.Project.route)
@@ -125,6 +126,12 @@ private fun rememberStartDestination(
 /** Маршруты верхнеуровневых вкладок; константа — считается один раз, не на каждой рекомпозиции. */
 private val TopLevelRoutes: Set<String> =
     TopLevelDestination.entries.mapTo(HashSet()) { it.destination.route }
+
+/** Витрины (не вкладки), на которых нижняя панель всё равно показывается: публичный проект и чужой профиль. */
+private val BottomBarDetailRoutes: Set<String> = setOf(
+    Destination.PublicProject.route,
+    Destination.UserProfile.route,
+)
 
 /**
  * Является ли текущий узел одной из верхнеуровневых вкладок.
