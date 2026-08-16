@@ -5,7 +5,8 @@ import java.time.Instant
 /**
  * Публичный проект (брендбук) в ленте.
  *
- * @property previewUrl растеризованное превью проекта (PNG), отдаётся бэкендом.
+ * @property previewUrl превью последней версии проекта (SVG из S3); пустая
+ *   строка, если превью ещё не сгенерировано.
  * @property publishedAt момент публикации, для сортировки и отображения даты.
  */
 data class FeedProject(

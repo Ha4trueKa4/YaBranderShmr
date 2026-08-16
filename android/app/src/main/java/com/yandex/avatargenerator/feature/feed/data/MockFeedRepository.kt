@@ -1,6 +1,7 @@
 package com.yandex.avatargenerator.feature.feed.data
 
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedAuthor
+import com.yandex.avatargenerator.feature.feed.domain.model.FeedPage
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
 import kotlinx.coroutines.delay
@@ -17,15 +18,17 @@ class MockFeedRepository(
     private val networkDelayMillis: Long = 700L,
 ) : FeedRepository {
 
-    override suspend fun getFeed(tab: FeedTab, page: Int, pageSize: Int): List<FeedProject> {
+    /** Курсор мока — смещение следующего элемента строкой (`"20"`). */
+    override suspend fun getFeed(tab: FeedTab, cursor: String?, limit: Int): FeedPage {
         delay(networkDelayMillis)
 
         val total = totalItemsFor(tab)
-        val from = page * pageSize
-        if (from >= total) return emptyList()
-        val to = minOf(from + pageSize, total)
+        val from = cursor?.toIntOrNull() ?: 0
+        if (from >= total) return FeedPage(emptyList(), nextCursor = null)
+        val to = minOf(from + limit, total)
 
-        return (from until to).map { index -> buildProject(tab, index) }
+        val projects = (from until to).map { index -> buildProject(tab, index) }
+        return FeedPage(projects, nextCursor = if (to < total) to.toString() else null)
     }
 
     private fun buildProject(tab: FeedTab, index: Int): FeedProject {
