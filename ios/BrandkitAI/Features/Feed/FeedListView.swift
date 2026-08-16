@@ -1,18 +1,25 @@
 import SwiftUI
 
 struct FeedListView: View {
+    var isActive: Bool = true
     var onOpenProject: (UUID) -> Void
 
     @State private var viewModel: FeedListViewModel
 
-    init(scope: FeedScope, onOpenProject: @escaping (UUID) -> Void = { _ in }) {
+    init(
+        scope: FeedScope,
+        isActive: Bool = true,
+        onOpenProject: @escaping (UUID) -> Void = { _ in }
+    ) {
+        self.isActive = isActive
         self.onOpenProject = onOpenProject
         _viewModel = State(initialValue: FeedListViewModel(scope: scope))
     }
 
     var body: some View {
         content
-            .task {
+            .task(id: isActive) {
+                guard isActive else { return }
                 await viewModel.loadInitial()
             }
     }

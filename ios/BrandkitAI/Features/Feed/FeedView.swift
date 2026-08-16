@@ -13,7 +13,11 @@ struct FeedView: View {
             FeedTabPickerView(selection: $selectedTab)
 
             FeedPagerView(selection: $selectedTab) { tab in
-                FeedListView(scope: tab.scope, onOpenProject: onOpenProject)
+                FeedListView(
+                    scope: tab.scope,
+                    isActive: selectedTab == tab,
+                    onOpenProject: onOpenProject
+                )
             }
         }
     }
