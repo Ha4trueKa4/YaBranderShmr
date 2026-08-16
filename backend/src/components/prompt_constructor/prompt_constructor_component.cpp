@@ -15,16 +15,17 @@ PromptConstructorComponent::PromptConstructorComponent(
       vector_search_(context.FindComponent<VectorSearchComponent>()) {}
 
 LlmPrompt PromptConstructorComponent::BuildGenerationPrompt(
-    const std::string& user_message) const {
+    const std::string& user_message, const std::vector<std::string>& history) const {
   const auto examples = vector_search_.FindSimilar(user_message, 10);
-  return prompt_template::BuildGenerationPrompt(user_message, examples);
+  return prompt_template::BuildGenerationPrompt(user_message, examples, history);
 }
 
 LlmPrompt PromptConstructorComponent::BuildEditPrompt(
     const std::string& current_state,
-    const std::string& user_message) const {
+    const std::string& user_message,
+    const std::vector<std::string>& history) const {
   const auto examples = vector_search_.FindSimilar(user_message, 10);
-  return prompt_template::BuildEditPrompt(current_state, user_message, examples);
+  return prompt_template::BuildEditPrompt(current_state, user_message, examples, history);
 }
 
 userver::yaml_config::Schema PromptConstructorComponent::GetStaticConfigSchema() {

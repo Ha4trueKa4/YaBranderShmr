@@ -1,6 +1,8 @@
 #include "project_manager_component.h"
+#include <userver/formats/json/inline.hpp>
 #include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
 
 namespace ya_brander::components {
 
@@ -105,20 +107,72 @@ if (!data.empty()) {
     );
 }
 
+namespace {
+constexpr std::size_t kHistoryPromptLimit = 10;
+}  // namespace
+
+userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
+    const std::string& project_id) {
+    auto res = pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kSlave,
+        "SELECT chat_history FROM projects WHERE id = $1::uuid",
+        project_id);
+    if (res.IsEmpty()) return userver::formats::json::MakeArray();
+    return res[0]["chat_history"].As<userver::formats::json::Value>();
+}
+
+std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
+    const std::string& project_id, std::size_t limit) {
+    auto history_json = FetchChatHistoryJson(project_id);
+
+    std::vector<std::string> prompts;
+    for (const auto& entry : history_json) {
+        if (entry["role"].As<std::string>("") == "user") {
+            prompts.push_back(entry["text"].As<std::string>(""));
+        }
+    }
+    if (prompts.size() > limit) {
+        prompts.erase(prompts.begin(), prompts.end() - static_cast<std::ptrdiff_t>(limit));
+    }
+    return prompts;
+}
+
+void ProjectManagerComponent::AppendChatExchange(const std::string& project_id,
+                                                  const std::string& user_message,
+                                                  const std::string& version_id) {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
+        "  jsonb_build_object('role', 'user', 'text', $2::text, 'created_at', NOW()),"
+        "  jsonb_build_object('role', 'assistant', 'version_id', $3::text, 'created_at', NOW())"
+        "), updated_at = NOW() WHERE id = $1::uuid",
+        project_id, user_message, version_id);
+}
+
+userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
+    return FetchChatHistoryJson(project_id);
+}
+
 std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+
+    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
+    for (auto& past_message : history) {
+        past_message = EscapeXml(past_message);
+    }
+
+    std::string safe_prompt = EscapeXml(prompt);
+
     LlmPrompt full_prompt;
-
-	std::string safe_prompt = EscapeXml(prompt);
-
     if (current_state.empty() || current_state == kDefaultSvg) {
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt);
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
     }else {
-        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt);
+        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
     }
     auto new_data = llm_client_.SendPrompt(full_prompt, 10000, model, 0.1);
-    version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
-    return version_storage_.GetLatestVersionUrl(project_id);;
+    std::string version_id = version_storage_.SaveVersion(project_id, new_data); // ЗАГЛУШКА, ТРЕБУЕТСЯ ФУНКЦИЯ
+    AppendChatExchange(project_id, prompt, version_id);
+    return version_storage_.GetLatestVersionUrl(project_id);
 }
 
 std::vector<models::Version> ProjectManagerComponent::ListVersions(

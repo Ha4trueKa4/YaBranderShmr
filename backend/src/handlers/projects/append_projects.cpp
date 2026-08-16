@@ -5,6 +5,7 @@
 
 #include "create_project.h"
 #include "get_project.h"
+#include "get_project_chat.h"
 #include "patch_project.h"
 #include "delete_project.h"
 #include "generate_project.h"
@@ -28,6 +29,7 @@ void AppendProjects(userver::components::ComponentList& component_list) {
 
       .Append<handlers::CreateProjectHandler>()
       .Append<handlers::GetProjectHandler>()
+      .Append<handlers::GetProjectChatHandler>()
       .Append<handlers::PatchProjectHandler>()
       .Append<handlers::DeleteProjectHandler>()
       .Append<handlers::GenerateProjectHandler>()

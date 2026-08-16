@@ -462,7 +462,7 @@ namespace ya_brander::components {
                    {"Content-Type", "application/json"}});
 
         // Увеличиваем таймауты для SSL
-        request.timeout(120000);  // 120 секунд
+        request.timeout(240000);  // 120 секунд
 
         request.data(json_data);
 

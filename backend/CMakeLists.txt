@@ -86,6 +86,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/svg_validation_error_response.hpp
         src/handlers/projects/delete_project.cpp
         src/handlers/projects/generate_project.cpp
+        src/handlers/projects/get_project_chat.cpp
         src/handlers/projects/versions/get_version.cpp
         src/handlers/projects/versions/restore_version.cpp
         src/handlers/projects/versions/list_versions.cpp
