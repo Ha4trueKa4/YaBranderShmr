@@ -33,9 +33,8 @@ class ProfileViewModel(
         _uiState.value = ProfileUiState.Loading
         viewModelScope.launch {
             _uiState.value = runCatching {
-                val profile = repository.getProfile(userId)
-                val projects = repository.getUserProjects(userId)
-                ProfileUiState.Content(profile, projects, isOwnProfile)
+                val details = repository.getProfile(userId)
+                ProfileUiState.Content(details.profile, details.projects, isOwnProfile)
             }.getOrElse { ProfileUiState.Error }
         }
     }

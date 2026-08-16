@@ -13,4 +13,6 @@ data class ProjectDescriptionDto(
     @SerialName("is_public") val isPublic: Boolean? = null,
     /** ISO 8601 date-time строкой; парсинг в дату — на стороне маппера. */
     @SerialName("created_at") val createdAt: String? = null,
+    /** S3-ссылка на превью проекта (SVG); отсутствует у пустого проекта. */
+    @SerialName("url") val url: String? = null,
 )

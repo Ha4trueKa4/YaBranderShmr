@@ -1,20 +1,15 @@
 package com.yandex.avatargenerator.feature.profile.domain
 
-import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
-import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
+import com.yandex.avatargenerator.feature.profile.domain.model.ProfileDetails
 
 /**
  * Источник данных профиля пользователя.
  *
- * Проекты профиля отдаём тем же типом [FeedProject], что и лента, — карточка
- * ([com.yandex.avatargenerator.ui.components.ProjectCard]) и сетка
- * переиспользуются как есть.
+ * `GET /users/{id}` возвращает профиль и его проекты в одном ответе, поэтому и
+ * здесь это один вызов — [ProfileDetails].
  */
 interface ProfileRepository {
 
-    /** Профиль по id. Соответствует `GET /users/{id}`. */
-    suspend fun getProfile(userId: String): UserProfile
-
-    /** Проекты пользователя. Соответствует `GET /users/{id}/projects`. */
-    suspend fun getUserProjects(userId: String): List<FeedProject>
+    /** Профиль и его проекты по id. Соответствует `GET /users/{id}`. */
+    suspend fun getProfile(userId: String): ProfileDetails
 }
