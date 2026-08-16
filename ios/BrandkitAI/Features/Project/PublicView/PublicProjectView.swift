@@ -31,7 +31,6 @@ struct PublicProjectView: View {
                 projectDetails
             }
         }
-        .scrollIndicators(.hidden)
         .customNavigationBar(onBack: onBack)
         .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -118,14 +117,28 @@ struct PublicProjectView: View {
 
             Spacer()
 
-            Button(viewModel.isFollowing ? "Following" : "Follow") {
+            Button {
                 viewModel.toggleFollowing()
+            } label: {
+                Text(viewModel.isFollowing ? "Following" : "Follow")
+                    .contentTransition(.opacity)
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.isFollowing)
             }
             .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(viewModel.isFollowing ? Color.accentColor : .white)
             .padding(.horizontal, 18)
             .frame(height: 36)
-            .background(Color.accentColor, in: Capsule())
+            .background(
+                viewModel.isFollowing ? Color.clear : Color.accentColor,
+                in: Capsule()
+            )
+            .overlay {
+                Capsule()
+                    .stroke(Color.accentColor, lineWidth: 1.5)
+                    .opacity(viewModel.isFollowing ? 1 : 0)
+            }
+            .buttonStyle(FollowButtonStyle())
+            .animation(.easeInOut(duration: 0.2), value: viewModel.isFollowing)
         }
     }
 
@@ -167,6 +180,18 @@ struct PublicProjectView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct FollowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(
+                .spring(duration: 0.22, bounce: 0.25),
+                value: configuration.isPressed
+            )
     }
 }
 
