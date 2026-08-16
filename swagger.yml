@@ -457,6 +457,14 @@ paths:
   /projects/{id}/generate:
     post:
       summary: Изменение/генерация проекта с помощью ИИ
+      description: >
+        Генерирует (если у проекта ещё нет версий) либо правит (иначе) SVG по
+        запросу пользователя. В промпт модели автоматически подмешивается
+        история последних 10 предыдущих запросов пользователя по этому же
+        проекту (без ответов модели) — как контекст, не как повторное задание.
+        При успешной генерации пара "запрос пользователя + ссылка на созданную
+        версию" добавляется в историю чата проекта, доступную через
+        GET /projects/{id}/chat.
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -624,6 +632,46 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
+  /projects/{id}/chat:
+    get:
+      summary: История чата проекта
+      description: >
+        Возвращает всю историю запросов пользователя и ответов ассистента по
+        проекту, в порядке добавления. Доступна только автору проекта — даже
+        если проект публичный (публичность открывает только текущую версию
+        через /projects/{id}, но не историю чата — так же, как и с
+        /projects/{id}/versions). Ответы ассистента отдаются не самим SVG и не
+        прямой ссылкой (та имеет срок годности), а идентификатором версии —
+        фронт/мобилка сверяются со своим локальным кэшем по version_id (он
+        совпадает с id из GET /projects/{id}/versions) и только при промахе
+        кэша идут за свежей ссылкой в GET /projects/{id}/versions/{version_id}.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: История чата проекта
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chat_history:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: Вы авторизованы, но не автор проекта
+        '404':
+          description: Проект не найден
 
   /feed:
     get:
@@ -892,6 +940,31 @@ components:
           format: date-time
           example: "2026-08-15T00:01:55.123456+00:00"
 
+
+    ChatMessage:
+      type: object
+      description: >
+        Одно сообщение в истории чата проекта. Пользовательские сообщения
+        несут текст запроса (text), сообщения ассистента — идентификатор
+        созданной версии (version_id) вместо самого SVG или ссылки на него.
+      required:
+        - role
+        - created_at
+      properties:
+        role:
+          type: string
+          enum: [ user, assistant ]
+        text:
+          type: string
+          description: "Только для role=user — текст запроса пользователя"
+          example: "Добавь логотип с изображением кружки"
+        version_id:
+          type: string
+          description: "Только для role=assistant — id созданной версии проекта"
+          example: "5a4e8657-151f-4088-a660-ac99b15994b7"
+        created_at:
+          type: string
+          format: date-time
 
     VersionUrl:
       type: object
