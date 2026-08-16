@@ -13,8 +13,7 @@ import androidx.compose.ui.graphics.Color
  * токенах app-wide MaterialTheme color scheme и раздавать через MaterialTheme.
  */
 internal object AppColors {
-    // ВАЖНО: при изменении Background синхронно правь @color/window_background
-    // (colors.xml) — это же значение для windowBackground до отрисовки Compose.
+    // При изменении Background синхронно правь @color/window_background (colors.xml).
     val Background = Color(0xFF0F0F14)
     val Surface = Color(0xFF1A1A24)
     val SurfaceVariant = Color(0xFF22222F)
@@ -54,7 +53,6 @@ internal object AppColors {
         1.0f to Accent,
     )
 
-    // Плейсхолдеры скелетона загрузки (shimmer).
     val ShimmerBase = Color(0xFF27272A)
     val ShimmerHighlight = Color(0xFF3F3F46)
 }

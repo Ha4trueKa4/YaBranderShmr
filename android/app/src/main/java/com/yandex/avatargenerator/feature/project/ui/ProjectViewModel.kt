@@ -54,9 +54,6 @@ internal class ProjectViewModel(
 
         _uiState.update { if (it is ProjectUiState.Content) it.copy(draft = "") else it }
         viewModelScope.launch {
-            // Отдельно ошибку отправки не показываем: снекбара в дизайн-системе нет,
-            // а сваливать весь экран в Error из-за одного сообщения — хуже. Чтобы
-            // текст всё же не пропал, возвращаем его в поле ввода при провале.
             // TODO: индикация неотправленного сообщения со статусом и повтором.
             chatRepository.sendMessage(projectId, text).fold(
                 onSuccess = { message ->
@@ -69,8 +66,6 @@ internal class ProjectViewModel(
                     }
                 },
                 onFailure = {
-                    // Пользователь мог начать набирать новое, пока шла отправка, — тогда
-                    // старый текст не возвращаем, чтобы не перетереть ввод.
                     _uiState.update { current ->
                         if (current is ProjectUiState.Content && current.draft.isEmpty()) {
                             current.copy(draft = text)
@@ -86,8 +81,6 @@ internal class ProjectViewModel(
     private fun load() {
         _uiState.value = ProjectUiState.Loading
         viewModelScope.launch {
-            // Проект и диалог грузим параллельно; репозитории отдают Result, а не
-            // бросают. Провал любого из двух — общий Error (экран показывает повтор).
             val (projectResult, chatResult) = coroutineScope {
                 val project = async { projectRepository.getProject(projectId) }
                 val chat = async { chatRepository.getChat(projectId) }

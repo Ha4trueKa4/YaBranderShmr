@@ -77,8 +77,6 @@ fun ProfileScreen(
                 ProfileContent(
                     state = current,
                     onProjectClick = onProjectClick,
-                    // Чужой профиль — кнопка подписки (обрабатывается ViewModel);
-                    // свой — внешний коллбэк (переход к редактированию).
                     onActionClick = {
                         if (current.isOwnProfile) onActionClick() else viewModel.toggleFollow()
                     },
@@ -96,12 +94,8 @@ private fun ProfileContent(
 ) {
     ProjectMasonryGrid(
         modifier = modifier.fillMaxSize(),
-        // Без верхнего отступа: обложка шапки уходит под край экрана.
         contentPadding = PaddingValues(start = AppSpacing.m, end = AppSpacing.m, bottom = AppSpacing.m),
     ) {
-        // Карточки отступают от краёв на AppSpacing.m (горизонтальный contentPadding
-        // грида), а обложка/дивайдер шапки — доходят до краёв экрана. Через
-        // bleedHorizontally «пробиваем» этот отступ у шапки.
         item(span = StaggeredGridItemSpan.FullLine) {
             ProfileHeader(
                 profile = state.profile,
@@ -112,8 +106,6 @@ private fun ProfileContent(
         }
 
         item(span = StaggeredGridItemSpan.FullLine) {
-            // Грид уже добавляет verticalItemSpacing с обеих сторон; сверху заголовка
-            // добавляем ещё AppSpacing.xxs по макету.
             ProjectsSectionTitle(modifier = Modifier.padding(top = AppSpacing.xxs))
         }
 
@@ -137,8 +129,6 @@ private fun ProfileContent(
                 key = { it.id },
                 contentType = { "project" },
             ) { project ->
-                // Автор всех карточек — владелец профиля, он уже показан в шапке;
-                // в карточках имя/аватар не дублируем (authorName не передаём).
                 ProjectCard(
                     title = project.title,
                     previewUrl = project.previewUrl,

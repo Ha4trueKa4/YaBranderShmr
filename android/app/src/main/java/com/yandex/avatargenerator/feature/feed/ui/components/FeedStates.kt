@@ -20,10 +20,6 @@ import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 
-// Футер masonry-сетки: состояния подгрузки следующей страницы.
-// Первичные пустое состояние и ошибка живут в дизайн-системе (BrandEmptyState /
-// BrandErrorState) — здесь осталась только специфика пагинации ленты.
-
 /** Индикатор подгрузки следующей страницы. */
 @Composable
 fun FeedAppendLoading(modifier: Modifier = Modifier) {
@@ -52,9 +48,6 @@ fun FeedAppendError(
             .padding(AppSpacing.xs),
         contentAlignment = Alignment.Center,
     ) {
-        // Кликабельный текст вместо material3.TextButton (в фичах не используем сырые
-        // кнопки). Без ripple — как в BrandTextLink дизайн-системы. minimumInteractiveComponentSize
-        // держит тач-таргет ≥48dp, который давал TextButton.
         Text(
             text = stringResource(R.string.feed_append_error_retry),
             style = AppTypography.body.copy(color = AppColors.Accent),

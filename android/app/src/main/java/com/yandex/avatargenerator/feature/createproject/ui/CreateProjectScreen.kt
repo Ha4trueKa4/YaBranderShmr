@@ -60,9 +60,6 @@ internal fun CreateProjectScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Одноразовые события навигации собираем только пока экран не ниже STARTED —
-    // иначе событие, пришедшее в фоне (генерация занимает ~1.5 с), дёрнуло бы
-    // navigate на остановленном NavController.
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -101,10 +98,6 @@ private fun CreateProjectContent(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
-            // Поднимаем контент над клавиатурой: приложение edge-to-edge, окно не
-            // ресайзится, поэтому инсет IME отрабатываем сами — иначе кнопка «Сгенерировать»
-            // уезжает под клавиатуру. Инсеты системных баров уже сняты Scaffold'ом
-            // (consumeWindowInsets), так что двойного отступа не будет.
             .imePadding(),
     ) {
         CreateProjectTopBar(onBack = onBack)
@@ -134,7 +127,6 @@ private fun CreateProjectContent(
                 onValueChange = onDescriptionChange,
                 placeholder = stringResource(R.string.create_project_description_placeholder),
                 singleLine = false,
-                // 140.dp — минимальная высота поля-описания по макету, точечное значение вне шкалы отступов.
                 height = 140.dp,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
@@ -168,7 +160,6 @@ private fun CreateProjectContent(
                 leadingIcon = {
                     if (uiState.isSubmitting) {
                         CircularProgressIndicator(
-                            // 18.dp / 2.dp — размеры индикатора внутри кнопки, точечные значения вне шкалы.
                             modifier = Modifier.size(18.dp),
                             color = AppColors.OnAccent,
                             strokeWidth = 2.dp,
@@ -176,10 +167,8 @@ private fun CreateProjectContent(
                     } else {
                         Icon(
                             painter = painterResource(R.drawable.ic_generate),
-                            // Декоративная: доступность обеспечивает текст рядом.
                             contentDescription = null,
                             tint = AppColors.OnAccent,
-                            // 20.dp — размер иконки по макету, точечное значение вне шкалы отступов.
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -199,7 +188,6 @@ private fun CreateProjectTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // 56.dp — высота шапки по макету, точечное значение вне шкалы отступов.
                 .height(56.dp)
                 .padding(horizontal = AppSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,

@@ -77,8 +77,6 @@ private fun ProjectContent(
             .fillMaxSize()
             .background(AppColors.Background),
     ) {
-        // Пока диалог не загружен, названия проекта нет — показываем плейсхолдер,
-        // чтобы шапка со стрелкой «назад» была на месте с первого кадра.
         val title = when (uiState) {
             is ProjectUiState.Content -> uiState.title
             else -> stringResource(R.string.project_title_placeholder)
@@ -95,7 +93,6 @@ private fun ProjectContent(
 
         when (uiState) {
             ProjectUiState.Loading -> ProjectSkeleton(
-                // Скелетон занимает всё место между шапкой и (отсутствующим) вводом.
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -110,11 +107,8 @@ private fun ProjectContent(
             }
 
             is ProjectUiState.Content -> {
-                // Пустая лента у нового проекта — просто пустая область,
-                // поле ввода при этом доступно.
                 ChatTimeline(
                     messages = uiState.messages,
-                    // weight(1f) — лента забирает всё место между шапкой и вводом.
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -144,8 +138,6 @@ private fun ProjectCenteredBox(content: @Composable () -> Unit) {
         content()
     }
 }
-
-// --- Preview -----------------------------------------------------------------
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
 @Composable

@@ -58,8 +58,6 @@ internal fun relativeTimeLabel(
         elapsed.toHours() < HOURS_PER_DAY -> RelativeTimeLabel.Hours(elapsed.toHours().toInt())
         elapsed.toDays() < DAYS_PER_WEEK -> RelativeTimeLabel.Days(elapsed.toDays().toInt())
         else -> RelativeTimeLabel.AbsoluteDate(
-            // Locale.ENGLISH, а не системная: весь текст экрана английский по макету
-            // (см. strings.xml), иначе месяц в дате выбивался бы из общего вида.
             AbsoluteDateFormatter.withZone(zone).format(instant),
         )
     }

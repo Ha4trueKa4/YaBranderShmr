@@ -37,7 +37,6 @@ import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
-// Точечные размеры по макету, вне шкалы отступов.
 private val PillMinHeight = 40.dp
 private val SendButtonSize = 40.dp
 private val SendIconSize = 20.dp
@@ -85,11 +84,6 @@ internal fun ChatInputBar(
             ChatInputSendButton(enabled = draft.isNotBlank(), onClick = onSendClick)
         }
 
-        // Область системной навигации в том же фоне; сам «хват» рисует система.
-        // Берём bottom от safeDrawing, то есть max(навигация, клавиатура), а не
-        // навигацию отдельно плюс imePadding на экране: инсет клавиатуры уже
-        // включает в себя полосу навигации, и сумма дала бы лишний зазор между
-        // клавиатурой и полем ввода. На устройствах без нижнего инсета — 0dp.
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
@@ -123,7 +117,6 @@ private fun ChatInputDraftField(
             onValueChange = onDraftChange,
             textStyle = AppTypography.body,
             cursorBrush = SolidColor(AppColors.Accent),
-            // Длинный запрос к ИИ — обычное дело, но бесконечно расти поле не должно.
             maxLines = 4,
             modifier = Modifier.fillMaxWidth(),
         )

@@ -74,7 +74,6 @@ private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
         )
         Column(
             modifier = Modifier.padding(AppSpacing.s),
-            // Точечные значения без токена (радиус/интервал плейсхолдеров) — по макету.
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             BrandSkeletonBox(

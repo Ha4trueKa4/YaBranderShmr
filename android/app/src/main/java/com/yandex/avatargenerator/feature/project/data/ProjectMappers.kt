@@ -13,7 +13,6 @@ internal fun ProjectDto.toDomain(): Project = Project(
     authorId = authorId,
     name = name.orMalformed("name"),
     description = description,
-    // Отсутствие поля трактуем как приватный — задокументированный дефолт.
     isPublic = isPublic ?: false,
     createdAt = createdAt?.toInstantOrNull(),
     url = url,

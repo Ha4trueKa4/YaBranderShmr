@@ -25,8 +25,6 @@ import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 
-// Геометрия повторяет PublicProjectContent: hero 300dp, строка автора, заголовок,
-// две кнопки экспорта, разделитель и сетка «More from this creator» 2×2.
 private val HeroHeight = 300.dp
 private val RelatedPreviewHeight = 100.dp
 
@@ -105,7 +103,6 @@ private fun AuthorRowSkeleton(brush: Brush, modifier: Modifier = Modifier) {
                 BrandSkeletonBox(modifier = Modifier.width(80.dp).height(10.dp), brush = brush)
             }
         }
-        // Пилюля подписки.
         BrandSkeletonBox(
             modifier = Modifier.width(76.dp).height(28.dp),
             brush = brush,

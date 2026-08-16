@@ -19,13 +19,9 @@ import org.koin.dsl.module
 val networkModule = module {
     single<Json> { ApiJson }
 
-    // Один объект под двумя типами: репозиторий авторизации пишет токен,
-    // клиент только читает. Хранилище зашифрованное — сессия переживает
-    // перезапуск приложения.
     single<AuthTokenStore> { EncryptedAuthTokenStore(androidContext()) }
     single<AuthTokenProvider> { get<AuthTokenStore>() }
 
-    // Общий с Coil клиент — см. HttpClientFactory.
     single<OkHttpClient> { createSharedOkHttpClient() }
 
     single<HttpClient> {

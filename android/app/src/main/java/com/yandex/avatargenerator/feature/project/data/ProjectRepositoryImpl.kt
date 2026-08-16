@@ -45,7 +45,5 @@ class ProjectRepositoryImpl(
         apiCall { client.delete(projectPath(id)) }
     }
 
-    // id может прийти из ссылки/навигации — кодируем сегмент, чтобы спецсимвол
-    // не сломал путь запроса.
     private fun projectPath(id: String): String = "$ProjectsPath/${id.encodeURLPathPart()}"
 }

@@ -86,7 +86,6 @@ fun ProfileHeader(
             )
         }
 
-        // Разделитель между шапкой и сеткой проектов (как на экране ленты).
         HorizontalDivider(color = AppColors.Border)
     }
 }
@@ -94,8 +93,6 @@ fun ProfileHeader(
 /** Градиентная обложка с [BrandAvatar], наезжающим на её нижний край. */
 @Composable
 private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Modifier) {
-    // Аватар 56 + кольцо 3dp с каждой стороны = 62; центрируем его на нижнем крае
-    // обложки (120dp): выступ = 62/2 = 31, поэтому offset = 120−31, высота = 120+31.
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -109,7 +106,6 @@ private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Mod
                 .background(AppColors.AccentGradient),
         )
 
-        // Кольцо цвета фона отделяет аватар от градиента обложки.
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)

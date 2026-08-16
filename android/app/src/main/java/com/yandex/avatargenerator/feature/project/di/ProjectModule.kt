@@ -14,10 +14,7 @@ import org.koin.dsl.module
 val projectModule = module {
     single<ChatRepository> { MockChatRepository() }
     single<ProjectRepository> { ProjectRepositoryImpl(client = get()) }
-    // Публичный проект пока на моке: автора и подборку работ бэкенд не отдаёт.
     single<PublicProjectRepository> { MockPublicProjectRepository() }
-    // projectId известен только в момент открытия экрана — передаём его
-    // параметром (parametersOf в koinViewModel), а не резолвим из графа.
     viewModel { (projectId: String) -> ProjectViewModel(get(), get(), projectId) }
     viewModel { (projectId: String) -> PublicProjectViewModel(get(), projectId) }
 }

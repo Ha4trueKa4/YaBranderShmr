@@ -19,13 +19,10 @@ import com.yandex.avatargenerator.ui.components.rememberBrandShimmerBrush
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 
-// Скелетон повторяет геометрию [ChatTimeline]/[BrandChatBubble]: пузыри по краям,
-// «хвостик» (слабое скругление нижнего угла) со стороны своего края экрана.
 private val BubbleTail = 4.dp
 
 private data class SkeletonBubble(val isOutgoing: Boolean, val width: Dp, val height: Dp)
 
-// Форма ленты диалога: входящее слева, исходящее справа, разные размеры.
 private val SkeletonBubbles = listOf(
     SkeletonBubble(isOutgoing = false, width = 220.dp, height = 56.dp),
     SkeletonBubble(isOutgoing = true, width = 170.dp, height = 40.dp),

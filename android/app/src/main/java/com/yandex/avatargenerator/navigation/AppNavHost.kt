@@ -90,8 +90,6 @@ fun AppNavHost(
 
         composable(Destination.Feed.route) {
             FeedScreen(
-                // Из ленты открываем витрину публичного проекта (только просмотр),
-                // а не редактор — редактор доступен из «Создать»/своего профиля.
                 onProjectClick = { projectId ->
                     navController.navigate(Destination.PublicProject.createRoute(projectId))
                 },
@@ -105,7 +103,6 @@ fun AppNavHost(
         composable(Destination.Create.route) {
             ChatsScreen(
                 onChatClick = { chatId ->
-                    // Чат = проект: id строки — это projectId экрана проекта.
                     navController.navigate(Destination.Project.createRoute(chatId))
                 },
                 onNewProject = {
@@ -119,8 +116,6 @@ fun AppNavHost(
             CreateProjectScreen(
                 onBack = { navController.popBackStack() },
                 onProjectCreated = { projectId ->
-                    // Форму создания из бэкстека убираем: «назад» с экрана проекта
-                    // возвращает к списку чатов, а не к уже отправленной форме.
                     navController.navigate(Destination.Project.createRoute(projectId)) {
                         popUpTo(Destination.CreateProject.route) { inclusive = true }
                         launchSingleTop = true
@@ -131,12 +126,6 @@ fun AppNavHost(
         }
 
         composable(Destination.Profile.route) {
-            // Свой профиль (вкладка): id берём из сохранённой сессии.
-            //
-            // До появления id экран не рисуем вовсе: ProfileViewModel получает
-            // userId через parametersOf, а параметры Koin использует только при
-            // первом создании ViewModel — с заглушкой она бы навсегда осталась
-            // с чужим id.
             val currentUser = rememberCurrentUser()
             if (currentUser != null) {
                 ProfileScreen(
@@ -149,9 +138,6 @@ fun AppNavHost(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                // Сессия есть, а профиля нет — так у всех, кто вошёл до появления
-                // хранилища пользователя. Дозаполнить нечем: ручки `/auth/me` в
-                // API нет, поэтому честно просим войти заново.
                 ProfileWithoutSessionState(modifier = Modifier.fillMaxSize())
             }
         }
@@ -194,8 +180,6 @@ fun AppNavHost(
             ProfileScreen(
                 userId = userId,
                 isOwnProfile = false,
-                // Чужой профиль: проекты открываем витриной (только просмотр),
-                // как из ленты; редактор — только для своих проектов.
                 onProjectClick = { projectId ->
                     navController.navigate(Destination.PublicProject.createRoute(projectId))
                 },

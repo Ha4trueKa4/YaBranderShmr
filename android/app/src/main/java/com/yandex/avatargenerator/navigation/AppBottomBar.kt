@@ -73,8 +73,6 @@ fun AppBottomBar(
             }
         }
 
-        // Область системной навигации (жест/кнопки) в том же фоне; сам «хват»
-        // рисует система (edge-to-edge). На устройствах без нижнего inset — 0dp.
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
@@ -96,7 +94,6 @@ private fun NavItem(
     Column(
         modifier = modifier
             .width(56.dp)
-            // Убрана анимация выделения таба, а то чот не красиво было
             .selectable(
                 selected = selected,
                 interactionSource = null,
@@ -109,7 +106,7 @@ private fun NavItem(
     ) {
         Icon(
             painter = painterResource(tab.iconRes),
-            contentDescription = null, // подпись озвучивает Text ниже
+            contentDescription = null,
             tint = tint,
             modifier = Modifier.size(20.dp),
         )
