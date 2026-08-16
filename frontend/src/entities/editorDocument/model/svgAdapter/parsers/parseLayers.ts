@@ -269,13 +269,13 @@ function getUnsupportedReason(element: Element): string | null {
 }
 
 function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
-  const unsupportedReason = getUnsupportedReason(element)
-
-  if (unsupportedReason) {
-    return createLockedRawNode(element, unsupportedReason, warnings)
-  }
-
   try {
+    const unsupportedReason = getUnsupportedReason(element)
+
+    if (unsupportedReason) {
+      return createLockedRawNode(element, unsupportedReason, warnings)
+    }
+
     if (element.localName === 'g') {
       const group: EditorGroup = {
         ...parseBase(element),
@@ -294,12 +294,16 @@ function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
 
     return parseShape(element)
   } catch (error) {
-    if (!(error instanceof SvgParseError)) {
-      throw error
-    }
-
-    return createLockedRawNode(element, error.message, warnings)
+    return createLockedRawNode(element, getParseFailureReason(error), warnings)
   }
+}
+
+function getParseFailureReason(error: unknown): string {
+  if (error instanceof SvgParseError) {
+    return error.message
+  }
+
+  return 'Unable to parse SVG node'
 }
 
 function createLockedRawNode(

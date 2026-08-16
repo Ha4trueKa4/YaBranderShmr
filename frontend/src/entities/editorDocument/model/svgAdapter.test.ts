@@ -362,6 +362,44 @@ describe('parseSvg', () => {
     })
   })
 
+  it('keeps malformed supported nodes as raw layers without aborting import', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <circle id="invalid-radius" cx="250" cy="250" r="not-a-number" />
+        <rect id="editable" x="0" y="0" width="500" height="500" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'invalid-radius', isLocked: true, type: 'raw' },
+      { id: 'editable', isLocked: false, type: 'shape' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'invalid-radius',
+      elementName: 'circle',
+      reason: 'SVG attribute r on <circle> must be a number',
+    })
+  })
+
+  it('preserves invalid supported definitions without aborting import', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <defs>
+          <linearGradient id="incomplete-gradient"><stop offset="0%" /></linearGradient>
+        </defs>
+        <rect id="editable" x="0" y="0" width="500" height="500" />
+      </svg>
+    `)
+
+    expect(result.document.definitions).toMatchObject({
+      rawSvg: expect.stringContaining('incomplete-gradient'),
+    })
+    expect(result.document.layers).toMatchObject([
+      { id: 'editable', isLocked: false, type: 'shape' },
+    ])
+  })
+
   it('removes unsafe SVG content before parsing editable layers', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
