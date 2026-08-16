@@ -9,7 +9,7 @@ import Foundation
 final class ProjectsViewModel {
     private(set) var items: [ProjectListItem] = ProjectListItem.mocks
 
-    let title = "Chats"
+    let title = "Projects"
 
     var isEmpty: Bool { items.isEmpty }
 

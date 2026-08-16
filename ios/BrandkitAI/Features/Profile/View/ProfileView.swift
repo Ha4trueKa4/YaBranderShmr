@@ -79,15 +79,17 @@ struct ProfileView: View {
                 stats
 
                 if isCurrentUser {
-                    Button("Edit Profile", action: onEditProfile)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.horizontal, 20)
-                        .frame(height: 36)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.accentColor, lineWidth: 1)
-                        }
+                    Button(action: onEditProfile) {
+                        Text("Edit Profile")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.accentColor)
+                            .padding(.horizontal, 20)
+                            .frame(height: 36)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.accentColor, lineWidth: 1)
+                            }
+                    }
                 }
             }
             .padding(.horizontal, 16)
