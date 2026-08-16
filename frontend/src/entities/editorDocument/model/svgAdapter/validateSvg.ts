@@ -15,7 +15,6 @@ const unsupportedElementNames = new Set([
   'set',
   'style',
   'symbol',
-  'tspan',
   'use',
 ])
 

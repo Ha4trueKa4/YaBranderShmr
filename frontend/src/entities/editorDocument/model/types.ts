@@ -32,6 +32,7 @@ export type TextStyle = {
   fontStyle?: 'italic' | 'normal'
   fontWeight?: number
   letterSpacing?: number
+  lineHeight?: number
   textAnchor?: 'end' | 'middle' | 'start'
 }
 

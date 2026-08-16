@@ -73,7 +73,8 @@ export const TextProperties = observer(function TextProperties({
       <p className={styles.sectionTitle}>Text</p>
       <div className={styles.field}>
         <span>Content</span>
-        <Input
+        <textarea
+          className={styles.textarea}
           maxLength={1000}
           onChange={(event) => onContentChange(event.target.value)}
           value={layer.text}

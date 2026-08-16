@@ -36,4 +36,26 @@ describe('serializeSvg', () => {
     )
     expect(parseSvg(serialized)).toEqual(document)
   })
+
+  it('serializes multiline text as tspans and imports it as one text layer', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <text id="title" x="50" y="80" font-size="20">First line</text>
+      </svg>
+    `)
+    const title = document.layers[0]
+
+    if (title?.type !== 'text') {
+      throw new Error('Expected a text layer')
+    }
+
+    title.text = 'First line\nSecond line'
+    title.style.lineHeight = 26
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain('<tspan dy="0" x="50">First line</tspan>')
+    expect(serialized).toContain('<tspan dy="26" x="50">Second line</tspan>')
+    expect(parseSvg(serialized)).toEqual(document)
+  })
 })

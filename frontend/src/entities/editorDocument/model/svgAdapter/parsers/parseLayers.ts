@@ -5,6 +5,7 @@ import type {
   EditorRawNode,
   EditorShape,
   EditorText,
+  TextStyle,
 } from '../../types'
 import { SvgParseError } from '../errors'
 import type { SvgImportWarning } from '../types'
@@ -101,6 +102,8 @@ const attributeNamesByElement = {
     'y',
   ]),
 } as const
+
+const tspanAttributeNames = new Set(['dy', 'x'])
 
 function parseBase(element: Element): EditorElementBase {
   const id =
@@ -214,14 +217,42 @@ function parseShape(element: Element): EditorShape {
 }
 
 function parseText(element: Element): EditorText {
+  const tspans = Array.from(element.children)
+  const style = parseTextStyle(element)
+
   return {
     ...parseBase(element),
-    style: parseTextStyle(element),
-    text: element.textContent ?? '',
+    style: {
+      ...style,
+      ...(getTextLineHeight(tspans, style) ?? {}),
+    },
+    text:
+      tspans.length > 0
+        ? tspans.map((tspan) => tspan.textContent ?? '').join('\n')
+        : (element.textContent ?? ''),
     type: 'text',
     x: parseNumberAttribute(element, 'x', 0),
     y: parseNumberAttribute(element, 'y', 0),
   }
+}
+
+function getTextLineHeight(
+  tspans: Element[],
+  style: TextStyle,
+): Pick<TextStyle, 'lineHeight'> | undefined {
+  const lineTspan = tspans.slice(1).find((tspan) => tspan.hasAttribute('dy'))
+
+  if (!lineTspan) {
+    return undefined
+  }
+
+  const lineHeight = parseNumberAttribute(lineTspan, 'dy')
+
+  if (lineHeight <= 0) {
+    throw new SvgParseError('SVG <tspan> dy must be greater than zero')
+  }
+
+  return { lineHeight: lineHeight || style.fontSize * 1.2 }
 }
 
 function createRawNode(element: Element): EditorRawNode {
@@ -247,8 +278,8 @@ function getUnsupportedReason(element: Element): string | null {
     return `Unsupported SVG element: ${element.localName}`
   }
 
-  if (element.localName === 'text' && element.children.length > 0) {
-    return 'Text with nested SVG elements is not editable'
+  if (element.localName === 'text' && !hasSupportedTextContent(element)) {
+    return 'Text with unsupported nested SVG elements is not editable'
   }
 
   const supportedAttributes =
@@ -265,7 +296,33 @@ function getUnsupportedReason(element: Element): string | null {
     }
   }
 
+  if (element.localName === 'text') {
+    for (const tspan of Array.from(element.children)) {
+      for (const attribute of Array.from(tspan.attributes)) {
+        if (!tspanAttributeNames.has(attribute.name)) {
+          return `Unsupported SVG attribute on <tspan>: ${attribute.name}`
+        }
+      }
+    }
+  }
+
   return null
+}
+
+function hasSupportedTextContent(element: Element): boolean {
+  if (element.localName !== 'text' || element.children.length === 0) {
+    return true
+  }
+
+  return (
+    Array.from(element.children).every(
+      (child) => child.localName === 'tspan',
+    ) &&
+    Array.from(element.childNodes).every(
+      (child) =>
+        child.nodeType !== Node.TEXT_NODE || !child.textContent?.trim(),
+    )
+  )
 }
 
 function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {

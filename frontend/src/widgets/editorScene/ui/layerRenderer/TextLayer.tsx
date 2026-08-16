@@ -9,10 +9,36 @@ interface TextLayerProps {
   onSelect: () => void
 }
 
+function getLines(text: string, lineHeight: number) {
+  const occurrences = new Map<string, number>()
+  let isFirstLine = true
+
+  return text.split('\n').map((content) => {
+    const occurrence = (occurrences.get(content) ?? 0) + 1
+
+    occurrences.set(content, occurrence)
+
+    const line = {
+      content,
+      dy: isFirstLine ? 0 : lineHeight,
+      key: `${content}-${occurrence}`,
+    }
+
+    isFirstLine = false
+
+    return line
+  })
+}
+
 export const TextLayer = observer(function TextLayer({
   node,
   onSelect,
 }: TextLayerProps) {
+  const lines = getLines(
+    node.text,
+    node.style.lineHeight ?? node.style.fontSize * 1.2,
+  )
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: SVG canvas elements are selected with a pointer.
     <text
@@ -30,7 +56,13 @@ export const TextLayer = observer(function TextLayer({
       x={node.x}
       y={node.y}
     >
-      {node.text}
+      {lines.length === 1
+        ? node.text
+        : lines.map((line) => (
+            <tspan dy={line.dy} key={line.key} x={node.x}>
+              {line.content}
+            </tspan>
+          ))}
     </text>
   )
 })
