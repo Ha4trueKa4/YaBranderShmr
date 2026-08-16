@@ -9,6 +9,6 @@ import org.koin.dsl.module
 val profileModule = module {
     single<ProfileRepository> { MockProfileRepository() }
     viewModel { (userId: String, isOwnProfile: Boolean) ->
-        ProfileViewModel(get(), userId, isOwnProfile)
+        ProfileViewModel(get(), get(), userId, isOwnProfile)
     }
 }

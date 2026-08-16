@@ -29,10 +29,14 @@ internal class PublicProjectViewModel(
     fun retry() = load()
 
     /**
-     * Переключает подписку на автора оптимистично, локально по состоянию.
+     * Переключает подписку на автора локально, без сети.
      *
-     * Сетевого вызова пока нет (`POST/DELETE /users/{id}/subscribe` подключится
-     * с бэкендом) — экрану достаточно увидеть смену вида кнопки Follow/Following.
+     * Экран целиком живёт на [com.yandex.avatargenerator.feature.project.data
+     * .MockPublicProjectRepository] — бэкенд по `GET /projects/{id}` пока не
+     * отдаёт ни автора, ни его реальный id. Дёргать `POST/DELETE
+     * /users/{id}/subscribe` с mock-id бессмысленно (сервер вернёт ошибку),
+     * поэтому сетевую подписку подключим здесь вместе с сетевой витриной; сейчас
+     * достаточно смены вида кнопки Follow/Following.
      */
     fun toggleFollow() {
         _uiState.update { state ->
