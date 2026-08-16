@@ -11,6 +11,15 @@
   background: var(--color-surface);
 }
 
+.viewWorkspace {
+  grid-template-areas:
+    "toolbar"
+    "scene"
+    "status";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 4rem minmax(0, 1fr) 1.75rem;
+}
+
 .toolbar {
   grid-area: toolbar;
   border-bottom: 1px solid var(--color-border);

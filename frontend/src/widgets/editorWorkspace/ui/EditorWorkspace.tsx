@@ -9,7 +9,9 @@ import {
   projectSvgQueryKey,
   useUpdateProjectMetadataMutation,
 } from '@entities/project'
+import { useCreateProjectMutation } from '@features/projectCreate'
 import { getApiErrorMessage } from '@shared/api/api'
+import { cn } from '@shared/lib'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { EditorScene } from '@widgets/editorScene'
@@ -24,12 +26,14 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 import { MobileInspector } from './mobileInspector'
 
 interface EditorWorkspaceProps {
+  canEdit: boolean
   document: EditorDocument
   projectId: string
   projectName: string
 }
 
 export const EditorWorkspace = observer(function EditorWorkspace({
+  canEdit,
   document,
   projectId,
   projectName: initialProjectName,
@@ -39,10 +43,16 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const toast = useToast()
   const [projectName, setProjectName] = useState(initialProjectName)
   const [editorStore] = useState(() => new EditorStore(document))
+  const [savedProjectSvg, setSavedProjectSvg] = useState(() =>
+    serializeSvg(document),
+  )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
+  const [isCopyingProject, setIsCopyingProject] = useState(false)
   const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
     useUpdateProjectMetadataMutation()
+  const { isPending: isCreatingProjectCopy, mutateAsync: createProject } =
+    useCreateProjectMutation()
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
@@ -74,11 +84,20 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
 
   async function handleSaveVersion() {
+    const projectSvg = serializeSvg(editorStore.document)
+
+    if (projectSvg === savedProjectSvg) {
+      toast.error('There are no changes to save.')
+
+      return
+    }
+
     try {
       await saveProjectVersion({
-        data: serializeSvg(editorStore.document),
+        data: projectSvg,
         projectId,
       })
+      setSavedProjectSvg(projectSvg)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
         queryClient.invalidateQueries({
@@ -88,6 +107,31 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       toast.info('Project version saved.')
     } catch (error) {
       toast.error(getApiErrorMessage(error))
+    }
+  }
+
+  async function handleCreateCopy() {
+    setIsCopyingProject(true)
+
+    try {
+      const createdProject = await createProject({
+        name: projectName,
+      })
+
+      if (!createdProject.id) {
+        throw new TypeError('Created project ID is missing')
+      }
+
+      await saveProjectVersion({
+        data: serializeSvg(editorStore.document),
+        projectId: createdProject.id,
+      })
+      navigate(`/projects/${createdProject.id}`, { viewTransition: true })
+      toast.info('Project copy created.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    } finally {
+      setIsCopyingProject(false)
     }
   }
 
@@ -107,6 +151,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const inspectorProps = {
     onShapeFillChange: editorStore.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.setShapeFillOpacity,
+    onShapeOpacityChange: editorStore.setShapeOpacity,
+    onShapePositionChange: editorStore.setShapePosition,
     onTextAnchorChange: editorStore.setTextAnchor,
     onTextContentChange: editorStore.setTextContent,
     onTextFillColorChange: editorStore.setTextFillColor,
@@ -119,10 +165,13 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
 
   return (
-    <section className={styles.workspace}>
+    <section className={cn(styles.workspace, !canEdit && styles.viewWorkspace)}>
       <div className={styles.toolbar}>
         <EditorToolbar
+          canEdit={canEdit}
+          isCreatingProjectCopy={isCopyingProject || isCreatingProjectCopy}
           isSavingVersion={isSavingProjectVersion}
+          onCreateCopy={handleCreateCopy}
           onEditProjectName={handleProjectNameSubmit}
           onExport={handleToolbarAction}
           onOpenProfile={() =>
@@ -138,34 +187,44 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           projectName={projectName}
         />
       </div>
-      <aside className={styles.layers}>
-        <LayersPanel
-          expandedGroupIds={editorStore.expandedGroupIds}
-          nodes={editorStore.document.layers}
-          onSelectNode={editorStore.setSelectedNode}
-          onToggleGroup={editorStore.toggleGroup}
-          onToggleVisibility={handleToggleVisibility}
-          selectedNodeId={editorStore.selectedNodeId}
-        />
-      </aside>
+      {canEdit && (
+        <aside className={styles.layers}>
+          <LayersPanel
+            expandedGroupIds={editorStore.expandedGroupIds}
+            nodes={editorStore.document.layers}
+            onSelectNode={editorStore.setSelectedNode}
+            onToggleGroup={editorStore.toggleGroup}
+            onToggleVisibility={handleToggleVisibility}
+            selectedNodeId={editorStore.selectedNodeId}
+          />
+        </aside>
+      )}
       <div className={styles.scene}>
         <EditorScene
           document={editorStore.document}
+          isReadOnly={!canEdit}
           onSelectNode={handleSceneSelectNode}
+          onShapePositionChange={editorStore.setShapePosition}
+          onTextPositionChange={editorStore.setTextPosition}
           renderVersion={sceneRenderVersion}
+          selectedNode={editorStore.selectedNode}
         />
       </div>
-      <aside className={styles.inspector}>
-        <InspectorPanel {...inspectorProps} />
-      </aside>
+      {canEdit && (
+        <aside className={styles.inspector}>
+          <InspectorPanel {...inspectorProps} />
+        </aside>
+      )}
       <div className={styles.status}>
         <EditorStatusBar />
       </div>
-      <MobileInspector
-        {...inspectorProps}
-        isOpen={isMobileInspectorOpen}
-        onClose={() => setIsMobileInspectorOpen(false)}
-      />
+      {canEdit && (
+        <MobileInspector
+          {...inspectorProps}
+          isOpen={isMobileInspectorOpen}
+          onClose={() => setIsMobileInspectorOpen(false)}
+        />
+      )}
     </section>
   )
 })
