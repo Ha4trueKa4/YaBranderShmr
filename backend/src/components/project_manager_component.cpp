@@ -183,7 +183,7 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     }else {
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
     }
-    auto new_data = llm_client_.SendPrompt(full_prompt, 10000, model, 0.1);
+    auto new_data = llm_client_.SendPrompt(full_prompt, 50000, model, 0.1);
     std::string version_id = version_storage_.SaveVersion(project_id, new_data);
     AppendChatExchange(project_id, prompt, version_id);
     return version_storage_.GetLatestVersionUrl(project_id);
