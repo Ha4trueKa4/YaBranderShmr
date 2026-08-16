@@ -159,6 +159,60 @@ paths:
                 code: "USER_NOT_FOUND"
                 message: "Пользователь не найден"
 
+    patch:
+      summary: Обновить nickname пользователя
+      description: Пользователь может изменить nickname только собственного профиля.
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор пользователя
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: Nickname успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserProfileResponse'
+        '400':
+          description: Некорректный UUID или nickname
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: Попытка изменить чужой профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Nickname уже занят другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
   /users/{id}/subscribe:
     post:
       summary: Подписаться на пользователя
@@ -400,6 +454,12 @@ paths:
             schema:
               type: object
               properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Новое название проекта
+                  example: "Новое название проекта"
                 is_public:
                   type: boolean
                 data:
@@ -421,6 +481,12 @@ paths:
             auth-мидлварь при невалидном/просроченном JWT.
         '404':
           description: Проект не найден
+        '400':
+          description: Название проекта пустое или превышает 255 символов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '500':
           description: Внутренняя ошибка сервера
 
@@ -778,6 +844,31 @@ components:
           type: boolean
           description: "Подписан ли текущий авторизованный пользователь на этого пользователя. Отсутствует при запросе собственного профиля."
           example: true
+
+    UpdateUserProfileRequest:
+      type: object
+      required:
+        - nickname
+      properties:
+        nickname:
+          type: string
+          minLength: 3
+          maxLength: 64
+          description: Новый уникальный nickname пользователя
+          example: "new_nickname"
+
+    UpdateUserProfileResponse:
+      type: object
+      required:
+        - id
+        - nickname
+      properties:
+        id:
+          type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        nickname:
+          type: string
+          example: "new_nickname"
 
     Project:
       type: object
