@@ -73,6 +73,7 @@ export function EditorProjectPage() {
           <EditorWorkspace
             document={parsedDocument.document}
             key={projectId}
+            projectId={projectId}
             projectName={projectQuery.data.name ?? 'Untitled project'}
           />
         )}

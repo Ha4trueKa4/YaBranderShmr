@@ -86,6 +86,10 @@
   margin-left: auto;
 }
 
+.saveVersion {
+  width: 7.75rem;
+}
+
 .avatar {
   background: transparent;
   border: 0;
