@@ -1,0 +1,204 @@
+.layout {
+  display: none;
+}
+
+@media (width < 640px) {
+  .layout {
+    display: grid;
+    grid-template-rows: calc(4.5rem + env(safe-area-inset-top)) minmax(0, 1fr) auto auto;
+    min-height: 100dvh;
+    background: var(--color-bg);
+  }
+
+  .header {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    padding: env(safe-area-inset-top) var(--space-3) 0;
+  }
+
+  .headerButton {
+    color: var(--color-text-primary);
+  }
+
+  .backIcon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .moreIcon {
+    font-size: 1.125rem;
+    letter-spacing: 0.1rem;
+  }
+
+  .menuAnchor {
+    position: relative;
+  }
+
+  .title {
+    display: grid;
+    justify-items: center;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .title span {
+    color: var(--color-accent-primary);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .title strong {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: var(--font-size-body);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scene {
+    min-height: 0;
+  }
+
+  .selectionActions,
+  .canvasControls {
+    display: flex;
+    align-items: center;
+    justify-self: center;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .selectionActions {
+    gap: var(--space-3);
+    min-height: 3.5rem;
+    margin: var(--space-3) 0 var(--space-5);
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-pill);
+  }
+
+  .selectionActions button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+    padding: 0;
+  }
+
+  .selectionActions > span {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--color-border);
+  }
+
+  .selectionActions .deleteAction {
+    color: var(--color-error);
+  }
+
+  .selectionActions p {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-caption);
+  }
+
+  .fillDot {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--color-accent-primary);
+  }
+
+  .canvasControls {
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    padding: var(--space-2);
+    border-radius: var(--radius-pill);
+  }
+
+  .canvasControls > span {
+    width: 1px;
+    height: 1.5rem;
+    margin: 0 var(--space-1);
+    background: var(--color-border);
+  }
+
+  .canvasControls img {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .fillSwatch {
+    width: 3.25rem;
+    height: 3.25rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  .canvasControls .activeTool,
+  .canvasControls .activeTool:hover {
+    background: var(--color-accent-primary);
+    color: var(--color-text-inverse);
+  }
+
+  .fitIcon {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .propertiesTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 3.5rem;
+    border: 1px solid var(--color-border);
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .propertiesTrigger span,
+  .doneButton {
+    color: var(--color-accent-primary);
+  }
+
+  .doneButton {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .colorPickerContent {
+    display: grid;
+    justify-content: center;
+    padding: var(--space-4);
+  }
+}
+
+@media (width < 360px) {
+  .header {
+    grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+    padding-right: var(--space-2);
+    padding-left: var(--space-2);
+  }
+
+  .backIcon {
+    font-size: 1.75rem;
+  }
+
+  .title span {
+    font-size: 0.625rem;
+  }
+}

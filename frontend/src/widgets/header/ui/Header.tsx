@@ -81,7 +81,7 @@ export const Header = observer(function Header({
               to={AppRoute.Profile}
               viewTransition
             >
-              My projects
+              <span className={styles.projectsLabel}>My projects</span>
             </NavLink>
           )}
         </nav>

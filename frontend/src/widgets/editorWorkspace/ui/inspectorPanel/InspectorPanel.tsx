@@ -26,6 +26,26 @@ interface InspectorPanelProps {
   onTextFontWeightChange: (nodeId: string, fontWeight: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   selectedNode: EditorNode | null
+  showHeader?: boolean
+}
+
+function InspectorHeader({
+  label,
+  showHeader,
+}: {
+  label?: string
+  showHeader: boolean
+}) {
+  if (!showHeader) {
+    return null
+  }
+
+  return (
+    <div className={styles.header}>
+      <h2>Inspector</h2>
+      {label && <span className={styles.typeLabel}>{label}</span>}
+    </div>
+  )
 }
 
 export function InspectorPanel({
@@ -42,13 +62,12 @@ export function InspectorPanel({
   onTextFontWeightChange,
   onTextPositionChange,
   selectedNode,
+  showHeader = true,
 }: InspectorPanelProps) {
   if (!selectedNode) {
     return (
       <section className={styles.panel}>
-        <div className={styles.header}>
-          <h2>Inspector</h2>
-        </div>
+        <InspectorHeader showHeader={showHeader} />
         <div className={styles.content}>
           <p>Select a layer to edit its properties.</p>
         </div>
@@ -59,12 +78,10 @@ export function InspectorPanel({
   if (selectedNode.type === 'group') {
     return (
       <section className={styles.panel}>
-        <div className={styles.header}>
-          <h2>Inspector</h2>
-          <span className={styles.typeLabel}>
-            {getLayerPresentation(selectedNode).label}
-          </span>
-        </div>
+        <InspectorHeader
+          label={getLayerPresentation(selectedNode).label}
+          showHeader={showHeader}
+        />
         <div className={styles.content}>
           <GroupProperties layer={selectedNode} />
         </div>
@@ -75,12 +92,10 @@ export function InspectorPanel({
   if (selectedNode.type === 'raw') {
     return (
       <section className={styles.panel}>
-        <div className={styles.header}>
-          <h2>Inspector</h2>
-          <span className={styles.typeLabel}>
-            {getLayerPresentation(selectedNode).label}
-          </span>
-        </div>
+        <InspectorHeader
+          label={getLayerPresentation(selectedNode).label}
+          showHeader={showHeader}
+        />
         <div className={styles.content}>
           <p>
             This SVG layer is locked because its features are not editable yet.
@@ -93,12 +108,10 @@ export function InspectorPanel({
   if (selectedNode.type === 'shape') {
     return (
       <section className={styles.panel}>
-        <div className={styles.header}>
-          <h2>Inspector</h2>
-          <span className={styles.typeLabel}>
-            {getLayerPresentation(selectedNode).label}
-          </span>
-        </div>
+        <InspectorHeader
+          label={getLayerPresentation(selectedNode).label}
+          showHeader={showHeader}
+        />
         <div className={styles.content}>
           <ShapeProperties
             layer={selectedNode}
@@ -120,12 +133,10 @@ export function InspectorPanel({
 
   return (
     <section className={styles.panel}>
-      <div className={styles.header}>
-        <h2>Inspector</h2>
-        <span className={styles.typeLabel}>
-          {getLayerPresentation(selectedNode).label}
-        </span>
-      </div>
+      <InspectorHeader
+        label={getLayerPresentation(selectedNode).label}
+        showHeader={showHeader}
+      />
       <div className={styles.content}>
         <TextProperties
           layer={selectedNode}

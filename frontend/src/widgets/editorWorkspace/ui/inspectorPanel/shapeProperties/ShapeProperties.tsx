@@ -1,5 +1,4 @@
 import type { EditorShape, Paint } from '@entities/editorDocument'
-import { Range } from '@shared/ui'
 import { observer } from 'mobx-react-lite'
 
 import { FillProperty } from '../components/FillProperty'
@@ -31,7 +30,6 @@ export const ShapeProperties = observer(function ShapeProperties({
   layer,
   onFillChange,
   onFillOpacityChange,
-  onOpacityChange,
   onPositionChange,
 }: ShapePropertiesProps) {
   return (
@@ -62,20 +60,6 @@ export const ShapeProperties = observer(function ShapeProperties({
         onOpacityChange={onFillOpacityChange}
         opacity={layer.style.fillOpacity}
       />
-      <div className={styles.field}>
-        <div className={styles.rangeHeader}>
-          <span>Layer opacity</span>
-          <strong>{Math.round(layer.opacity * 100)}%</strong>
-        </div>
-        <Range
-          max={100}
-          min={0}
-          onChange={(event) =>
-            onOpacityChange(Number(event.target.value) / 100)
-          }
-          value={Math.round(layer.opacity * 100)}
-        />
-      </div>
       <StrokeProperty stroke={paintToLabel(layer.style.stroke)} />
     </div>
   )

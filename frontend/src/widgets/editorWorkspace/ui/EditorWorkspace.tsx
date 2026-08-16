@@ -11,7 +11,6 @@ import {
 } from '@entities/project'
 import { useCreateProjectMutation } from '@features/projectCreate'
 import { getApiErrorMessage } from '@shared/api/api'
-import { cn } from '@shared/lib'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { EditorScene } from '@widgets/editorScene'
@@ -19,11 +18,12 @@ import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './EditorWorkspace.module.css'
+import { EditorDesktopLayout } from './editorDesktopLayout/EditorDesktopLayout'
+import { EditorMobileLayout } from './editorMobileLayout/EditorMobileLayout'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
-import { MobileInspector } from './mobileInspector'
 
 interface EditorWorkspaceProps {
   canEdit: boolean
@@ -142,10 +142,6 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleSceneSelectNode(nodeId: string) {
     editorStore.setSelectedNode(nodeId)
-
-    if (window.matchMedia('(width < 640px)').matches) {
-      setIsMobileInspectorOpen(true)
-    }
   }
 
   const inspectorProps = {
@@ -165,30 +161,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
 
   return (
-    <section className={cn(styles.workspace, !canEdit && styles.viewWorkspace)}>
-      <div className={styles.toolbar}>
-        <EditorToolbar
-          canEdit={canEdit}
-          isCreatingProjectCopy={isCopyingProject || isCreatingProjectCopy}
-          isSavingVersion={isSavingProjectVersion}
-          onCreateCopy={handleCreateCopy}
-          onEditProjectName={handleProjectNameSubmit}
-          onExport={handleToolbarAction}
-          onOpenProfile={() =>
-            navigate(AppRoute.Profile, { viewTransition: true })
-          }
-          onPanTool={handleToolbarAction}
-          onRedo={handleToolbarAction}
-          onSaveVersion={handleSaveVersion}
-          onSelectTool={handleToolbarAction}
-          onUndo={handleToolbarAction}
-          onZoomIn={handleToolbarAction}
-          onZoomOut={handleToolbarAction}
-          projectName={projectName}
-        />
-      </div>
-      {canEdit && (
-        <aside className={styles.layers}>
+    <section className={styles.workspace}>
+      <EditorDesktopLayout
+        canEdit={canEdit}
+        inspector={<InspectorPanel {...inspectorProps} />}
+        layers={
           <LayersPanel
             expandedGroupIds={editorStore.expandedGroupIds}
             nodes={editorStore.document.layers}
@@ -197,34 +174,66 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             onToggleVisibility={handleToggleVisibility}
             selectedNodeId={editorStore.selectedNodeId}
           />
-        </aside>
-      )}
-      <div className={styles.scene}>
-        <EditorScene
-          document={editorStore.document}
-          isReadOnly={!canEdit}
-          onSelectNode={handleSceneSelectNode}
-          onShapePositionChange={editorStore.setShapePosition}
-          onTextPositionChange={editorStore.setTextPosition}
-          renderVersion={sceneRenderVersion}
-          selectedNode={editorStore.selectedNode}
-        />
-      </div>
-      {canEdit && (
-        <aside className={styles.inspector}>
-          <InspectorPanel {...inspectorProps} />
-        </aside>
-      )}
-      <div className={styles.status}>
-        <EditorStatusBar />
-      </div>
-      {canEdit && (
-        <MobileInspector
-          {...inspectorProps}
-          isOpen={isMobileInspectorOpen}
-          onClose={() => setIsMobileInspectorOpen(false)}
-        />
-      )}
+        }
+        scene={
+          <EditorScene
+            document={editorStore.document}
+            isReadOnly={!canEdit}
+            onSelectNode={handleSceneSelectNode}
+            onShapePositionChange={editorStore.setShapePosition}
+            onTextPositionChange={editorStore.setTextPosition}
+            renderVersion={sceneRenderVersion}
+            selectedNode={editorStore.selectedNode}
+          />
+        }
+        status={<EditorStatusBar />}
+        toolbar={
+          <EditorToolbar
+            canEdit={canEdit}
+            isCreatingProjectCopy={isCopyingProject || isCreatingProjectCopy}
+            isSavingVersion={isSavingProjectVersion}
+            onCreateCopy={handleCreateCopy}
+            onEditProjectName={handleProjectNameSubmit}
+            onExport={handleToolbarAction}
+            onOpenProfile={() =>
+              navigate(AppRoute.Profile, { viewTransition: true })
+            }
+            onPanTool={handleToolbarAction}
+            onRedo={handleToolbarAction}
+            onSaveVersion={handleSaveVersion}
+            onSelectTool={handleToolbarAction}
+            onUndo={handleToolbarAction}
+            onZoomIn={handleToolbarAction}
+            onZoomOut={handleToolbarAction}
+            projectName={projectName}
+          />
+        }
+      />
+      <EditorMobileLayout
+        {...inspectorProps}
+        canEdit={canEdit}
+        isCreatingProjectCopy={isCopyingProject || isCreatingProjectCopy}
+        isSavingVersion={isSavingProjectVersion}
+        isPropertiesOpen={isMobileInspectorOpen}
+        onBack={() => navigate(-1)}
+        onCloseProperties={() => setIsMobileInspectorOpen(false)}
+        onCreateCopy={handleCreateCopy}
+        onExport={handleToolbarAction}
+        onOpenProperties={() => setIsMobileInspectorOpen(true)}
+        onSaveVersion={handleSaveVersion}
+        projectName={projectName}
+        scene={
+          <EditorScene
+            document={editorStore.document}
+            isReadOnly={!canEdit}
+            onSelectNode={handleSceneSelectNode}
+            onShapePositionChange={editorStore.setShapePosition}
+            onTextPositionChange={editorStore.setTextPosition}
+            renderVersion={sceneRenderVersion}
+            selectedNode={editorStore.selectedNode}
+          />
+        }
+      />
     </section>
   )
 })
