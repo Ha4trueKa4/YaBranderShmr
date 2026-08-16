@@ -16,16 +16,6 @@ struct ProjectsView: View {
                     ProjectRow(item: item) {
                         onOpenChat(item)
                     }
-                    .swipeActions(
-                        edge: .trailing,
-                        allowsFullSwipe: true
-                    ) {
-                        Button(role: .destructive) {
-                            viewModel.delete(item)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
                     .listRowInsets(
                         EdgeInsets(
                             top: 6,
@@ -35,6 +25,7 @@ struct ProjectsView: View {
                         )
                     )
                 }
+                .onDelete(perform: viewModel.delete)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }

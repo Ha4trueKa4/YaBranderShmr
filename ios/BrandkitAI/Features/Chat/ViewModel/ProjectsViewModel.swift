@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// Данные экрана списка чатов.
 ///
@@ -17,7 +17,7 @@ final class ProjectsViewModel {
         items = ProjectListItem.mocks
     }
 
-    func delete(_ item: ProjectListItem) {
-        items.removeAll { $0.id == item.id }
+    func delete(at offsets: IndexSet) {
+        items.remove(atOffsets: offsets)
     }
 }
