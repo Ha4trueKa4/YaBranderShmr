@@ -9,8 +9,8 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
- * Временный мок диалога с ИИ для разработки UI до готовности бэкенда:
- * отдаёт ленту из макета и имитирует сетевую задержку.
+ * Мок диалога с ИИ — только для `@Preview` и ручной проверки вёрстки: в графе
+ * Koin его больше нет, боевой источник — [ChatRepositoryImpl].
  *
  * @param networkDelayMillis имитация задержки загрузки — чтобы видеть Loading.
  * @param sendDelayMillis имитация задержки отправки.
@@ -27,7 +27,9 @@ class MockChatRepository(
 
     override suspend fun getChat(projectId: String): Result<ProjectChat> {
         delay(networkDelayMillis)
-        return Result.success(ProjectChat(id = projectId, title = title, messages = messages))
+        return Result.success(
+            ProjectChat(id = projectId, title = title, isPublic = false, messages = messages),
+        )
     }
 
     /**
@@ -49,7 +51,11 @@ class MockChatRepository(
 
         const val DEFAULT_TITLE: String = "Orion Brand AI"
 
-        /** Лента ровно по макету: все четыре вида сообщений видны сразу. */
+        /**
+         * Лента ровно по макету: все четыре вида сообщений видны сразу.
+         * Порядок «ответ ИИ → разделитель версии» — тот же, что собирает
+         * [buildChatTimeline] из настоящей истории.
+         */
         fun defaultMessages(now: Instant = Instant.now()): List<ChatMessage> = listOf(
             ChatMessage.System.ProjectCreated(id = "system-created"),
             ChatMessage.Outgoing(
@@ -59,11 +65,16 @@ class MockChatRepository(
             ),
             ChatMessage.Incoming(
                 id = "in-1",
-                text = "I've initialized the generation! Here is a sneak peek of your Orion branding asset:",
+                versionId = "version-1",
                 sentAt = now.minus(11, ChronoUnit.MINUTES),
-                imageUrl = "https://placehold.co/248x100/7C3AED/FFFFFF/png",
+                previewUrl = "https://placehold.co/248x100/7C3AED/FFFFFF/png",
             ),
-            ChatMessage.System.VersionSaved(id = "system-version-1", version = "1.2"),
+            ChatMessage.System.VersionSaved(
+                id = "system-version-1",
+                version = "1",
+                versionId = "version-1",
+                createdAt = now.minus(11, ChronoUnit.MINUTES),
+            ),
             ChatMessage.Outgoing(
                 id = "out-2",
                 text = "Make the mark rounder and try a cyan accent.",
@@ -71,9 +82,15 @@ class MockChatRepository(
             ),
             ChatMessage.Incoming(
                 id = "in-2",
-                text = "Done — softer geometry with a cyan highlight:",
+                versionId = "version-2",
                 sentAt = now.minus(3, ChronoUnit.MINUTES),
-                imageUrl = "https://placehold.co/248x100/06B6D4/FFFFFF/png",
+                previewUrl = "https://placehold.co/248x100/06B6D4/FFFFFF/png",
+            ),
+            ChatMessage.System.VersionSaved(
+                id = "system-version-2",
+                version = "2",
+                versionId = "version-2",
+                createdAt = now.minus(3, ChronoUnit.MINUTES),
             ),
         )
     }

@@ -46,6 +46,11 @@ internal class FakeChatRepository(
 
     companion object {
         val SENT_AT: Instant = Instant.parse("2026-08-12T11:32:00Z")
-        val EMPTY_CHAT = ProjectChat(id = "project-1", title = "Project", messages = emptyList())
+        val EMPTY_CHAT = ProjectChat(
+            id = "project-1",
+            title = "Project",
+            isPublic = false,
+            messages = emptyList(),
+        )
     }
 }
