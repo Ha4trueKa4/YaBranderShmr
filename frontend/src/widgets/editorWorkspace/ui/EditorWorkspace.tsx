@@ -107,7 +107,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         <EditorScene
           document={editorStore.document}
           onSelectNode={editorStore.setSelectedNode}
+          onShapePositionChange={editorStore.setShapePosition}
           renderVersion={sceneRenderVersion}
+          selectedNode={editorStore.selectedNode}
         />
       </div>
       <aside className={styles.inspector}>

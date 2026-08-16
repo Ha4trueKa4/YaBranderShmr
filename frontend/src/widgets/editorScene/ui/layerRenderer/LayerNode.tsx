@@ -1,4 +1,6 @@
-import type { EditorNode } from '@entities/editorDocument'
+import type { EditorNode, EditorShape } from '@entities/editorDocument'
+import { observer } from 'mobx-react-lite'
+import type { PointerEvent as ReactPointerEvent, RefCallback } from 'react'
 
 import { getTransformValue } from './model/getTransformValue'
 import { ShapeLayer } from './ShapeLayer'
@@ -7,9 +9,23 @@ import { TextLayer } from './TextLayer'
 interface LayerNodeProps {
   node: EditorNode
   onSelectNode: (nodeId: string) => void
+  onShapePointerDown: (
+    node: EditorShape,
+    event: ReactPointerEvent<SVGGElement>,
+  ) => void
+  onShapePointerMove: (event: ReactPointerEvent<SVGGElement>) => void
+  onShapePointerUp: (event: ReactPointerEvent<SVGGElement>) => void
+  registerShapeElement: (nodeId: string) => RefCallback<SVGGElement>
 }
 
-export function LayerNode({ node, onSelectNode }: LayerNodeProps) {
+export const LayerNode = observer(function LayerNode({
+  node,
+  onSelectNode,
+  onShapePointerDown,
+  onShapePointerMove,
+  onShapePointerUp,
+  registerShapeElement,
+}: LayerNodeProps) {
   if (!node.isVisible) {
     return null
   }
@@ -18,7 +34,15 @@ export function LayerNode({ node, onSelectNode }: LayerNodeProps) {
     return (
       <g opacity={node.opacity} transform={getTransformValue(node.transform)}>
         {node.children.map((child) => (
-          <LayerNode key={child.id} node={child} onSelectNode={onSelectNode} />
+          <LayerNode
+            key={child.id}
+            node={child}
+            onSelectNode={onSelectNode}
+            onShapePointerDown={onShapePointerDown}
+            onShapePointerMove={onShapePointerMove}
+            onShapePointerUp={onShapePointerUp}
+            registerShapeElement={registerShapeElement}
+          />
         ))}
       </g>
     )
@@ -34,9 +58,16 @@ export function LayerNode({ node, onSelectNode }: LayerNodeProps) {
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: SVG canvas elements are selected with a pointer.
-    <g onClick={() => onSelectNode(node.id)} style={{ cursor: 'pointer' }}>
+    <g
+      data-editor-node-id={node.id}
+      onPointerCancel={onShapePointerUp}
+      onPointerDown={(event) => onShapePointerDown(node, event)}
+      onPointerMove={onShapePointerMove}
+      onPointerUp={onShapePointerUp}
+      ref={registerShapeElement(node.id)}
+      style={{ cursor: node.isLocked ? 'not-allowed' : 'grab' }}
+    >
       <ShapeLayer node={node} />
     </g>
   )
-}
+})

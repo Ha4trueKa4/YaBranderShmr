@@ -21,6 +21,10 @@ function roundToStep(value: number, step: number) {
   return Math.round(value / step) * step
 }
 
+function formatValue(value: number) {
+  return Math.round(value * 100) / 100
+}
+
 export function ScrubbableNumberInput({
   axis = 'horizontal',
   min,
@@ -101,7 +105,7 @@ export function ScrubbableNumberInput({
       onChange={(event) => handleInputChange(event.target.value)}
       step={step}
       type="number"
-      value={value}
+      value={formatValue(value)}
     />
   )
 }
