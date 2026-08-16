@@ -5,65 +5,24 @@
 namespace ya_brander::components::prompt_template {
 namespace {
 
-constexpr std::string_view kSharedInstructions = R"PROMPT(Ты — AI-редактор SVG-графики.
+constexpr std::string_view kSharedInstructions = R"PROMPT(
+SVG: промпт-контракт для генерации
+Верни только полный SVG-документ: от открывающего <svg> до закрывающего
+</svg>. Не добавляй Markdown, пояснения или кодовые блоки.
 
-ФОРМАТ ОТВЕТА:
-- Верни ровно один полный SVG-документ.
-- Ответ должен начинаться с <svg и заканчиваться </svg>.
-- Не добавляй Markdown, XML-декларацию, DOCTYPE, XML-комментарии, вступления, пояснения или заключения.
-- Не используй пользовательские XML-сущности. В тексте применяй только стандартные экранирования &amp;, &lt;, &gt;, &quot; и &apos;.
+Обязательно:
 
-КОРНЕВОЙ ЭЛЕМЕНТ И ХОЛСТ:
-- Документ должен содержать ровно один корневой элемент <svg>.
-- Укажи на нём xmlns="http://www.w3.org/2000/svg" и корректный viewBox из четырёх конечных чисел: minX minY width height.
-- width и height внутри viewBox должны быть больше нуля; координаты и размеры задавай без единиц измерения.
-- Не добавляй атрибуты width и height на корневой элемент: размер холста определяется только viewBox.
-
-СЛОИ И ИДЕНТИФИКАТОРЫ:
-- Каждый визуальный элемент и каждая редактируемая группа должны иметь уникальный стабильный id.
-- Формат id: ^[a-z][a-z0-9-]{0,63}$.
-- Каждая группа-слой <g> должна иметь data-editor-layer="true" и может иметь понятный атрибут data-name.
-- Новому элементу назначай новый уникальный id; не используй случайные или автоматически меняющиеся id.
-- Порядок дочерних элементов определяет порядок отрисовки: расположенный ниже элемент отображается выше.
-- Максимальная глубина вложенности групп — 16.
-
-РАЗРЕШЁННЫЕ ЭЛЕМЕНТЫ:
-- Контейнеры: svg только как корневой элемент и g.
-- Фигуры: path, rect, circle, ellipse, line, polyline, polygon.
-- Текст: text и tspan.
-- Градиенты: defs, linearGradient, radialGradient и stop.
-- Любые другие элементы запрещены. В частности, не используй script, style, foreignObject, iframe, image, use, symbol, marker, filter, mask, clipPath, анимации и SMIL-элементы.
-
-РАЗРЕШЁННЫЕ АТРИБУТЫ:
-- Служебные: xmlns, viewBox, id, data-editor-layer, data-name и transform.
-- Геометрия: x, y, x1, y1, x2, y2, cx, cy, r, rx, ry, width, height, d, points и offset.
-- Оформление: fill, fill-opacity, stroke, stroke-opacity, stroke-width, stroke-linecap, stroke-linejoin, opacity, font-family, font-size, font-weight, font-style, text-anchor, stop-color и stop-opacity.
-- Не используй другие атрибуты, в том числе class, style, href, xlink:href и любые обработчики событий вида on*.
-
-ГЕОМЕТРИЯ И ОФОРМЛЕНИЕ:
-- Все числа должны быть конечными; запрещены NaN и Infinity.
-- Не используй проценты, единицы px, em, rem, cm и CSS-вычисления.
-- В d элемента path используй только команды M, L, H, V, C, S, Q, T, A, Z в верхнем или нижнем регистре.
-- Цвета задавай только как #RGB, #RRGGBB, #RRGGBBAA, none или локальную ссылку на градиент url(#gradient-id).
-- Не используй CSS, атрибут style или блок <style>.
-
-ПРЕОБРАЗОВАНИЯ:
-- В transform разрешены только translate, затем rotate, затем scale; отсутствующие операции можно пропустить.
-- Используй форму transform="translate(tx ty) rotate(angle cx cy) scale(sx sy)".
-- sx и sy должны быть больше нуля, angle задаётся в градусах.
-- Запрещены matrix, skewX, skewY, CSS transform и transform-origin.
-
-ТЕКСТ:
-- Элемент text может содержать только текстовые узлы и tspan; у редактируемого text должен быть уникальный id.
-- Позицию текста задавай через x и y.
-- Разрешённые font-family: Arial, Helvetica, Inter, Roboto, sans-serif, serif и monospace.
-- Не используй textPath, HTML, ссылки или внешние шрифты.
-- Экранируй специальные XML-символы; длина текста одного элемента — не более 1000 символов.
-
-БЕЗОПАСНОСТЬ И ОГРАНИЧЕНИЯ:
-- Запрещены внешние URL, URL со схемой data: и любые внешние ресурсы во всех атрибутах.
-- Разрешены только локальные ссылки на объявленные в этом документе градиенты через url(#gradient-id).
-- Документ должен содержать не более 500 SVG-элементов и занимать не более 256 КиБ.)PROMPT";
+SVG должен быть корректным XML и иметь один корневой элемент <svg> в
+пространстве имён http://www.w3.org/2000/svg.
+У корня должен быть viewBox из четырёх чисел, с положительными шириной и
+высотой. Предпочтительный холст: viewBox="0 0 500 500".
+Не используй JavaScript, обработчики событий (on...), HTML,
+foreignObject, iframe, внешние URL и сетевые ресурсы.
+Не ссылайся на внешние файлы. Если используется ссылка по ID, она должна
+вести на элемент этого же SVG.
+Сохраняй текущие элементы и их id, если они всё ещё имеют тот же смысл.
+Новому элементу дай новый уникальный id.
+)PROMPT";
 
 constexpr std::string_view kGenerationInstructions = R"PROMPT(
 
@@ -144,7 +103,7 @@ LlmPrompt BuildGenerationPrompt(
     const std::vector<std::string>& history) {
   LlmPrompt prompt;
   prompt.instructions = kSharedInstructions;
-  prompt.instructions += kGenerationInstructions;
+  // prompt.instructions += kGenerationInstructions;
   prompt.instructions += kTrustBoundaryInstructions;
 
   prompt.input =

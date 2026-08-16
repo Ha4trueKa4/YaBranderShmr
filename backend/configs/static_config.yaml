@@ -136,6 +136,12 @@ components_manager:
     # ==========================================
     # HTTP Хендлеры (Контроллеры проектов)
     # ==========================================
+    handler-models-get:
+      path: /api/v1/models
+      method: GET
+      task_processor: main-task-processor
+      api-url: $yandex-gpt-models-url
+
     handler-projects-create:
       path: /api/v1/projects
       method: POST

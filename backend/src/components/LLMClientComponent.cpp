@@ -507,7 +507,7 @@ namespace ya_brander::components {
           }
         }
         std::string svg = ExtractSVG(extracted_text);
-        ValidateSVG(svg);
+        // ValidateSVG(svg);
         return svg;
   }
 

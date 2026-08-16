@@ -4,25 +4,26 @@
 #include <userver/clients/http/middlewares/pipeline_component.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/server/handlers/ping.hpp>
-#include <userver/server/middlewares/cors.hpp>
 #include <userver/server/handlers/tests_control.hpp>
+#include <userver/server/middlewares/cors.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/utils/daemon_run.hpp>
 #include "./components/auth_checker.hpp"
-#include "./handlers/auth/register_handler.hpp"
 #include "./handlers/auth/login_handler.hpp"
+#include "./handlers/auth/register_handler.hpp"
 #include "handlers/check/check.hpp"
+#include "handlers/get_models/get_models.hpp"
 #include "handlers/projects/append_projects.h"
 
-#include "handlers/test_llm_handler/test_llm_handler.hpp"
-#include "components/version_storage/version_storage_component_impl.hpp"
-#include "components/subscription_storage/subscription_storage_component.h"
 #include "./handlers/users/append_users.hpp"
-#include "components/vector_search_component.h"
-#include "handlers/test_vector_search/test_vector_search_handler.hpp"
-#include "handlers/feed/get_feed.h"
 #include "components/object_storage/s3_object_storage_component.hpp"
+#include "components/subscription_storage/subscription_storage_component.h"
+#include "components/vector_search_component.h"
+#include "components/version_storage/version_storage_component_impl.hpp"
+#include "handlers/feed/get_feed.h"
+#include "handlers/test_llm_handler/test_llm_handler.hpp"
+#include "handlers/test_vector_search/test_vector_search_handler.hpp"
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
@@ -50,6 +51,7 @@ int main(int argc, char* argv[]) {
 
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);
+    ya_brander::handlers::AppendGetModels(component_list);
     // ya_brander::AppendAuth(component_list);
     ya_brander::AppendProjects(component_list);
     ya_brander::AppendUsers(component_list);
