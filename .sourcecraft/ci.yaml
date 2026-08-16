@@ -31,21 +31,18 @@ on:
 
 workflows:
   # Проверка компиляции backend на этапе pull request:
-  # инкрементальная cmake-сборка в раннере (без docker, без публикации образа).
+  # только docker build (без публикации образа и без затирания тега latest).
   build-backend-check:
     tasks:
-      - name: compile
+      - name: build
         cubes:
           - name: run-build-backend-check
-            gitlab_workflow: .sourcecraft/build-backend-compile.yaml
+            gitlab_workflow: .sourcecraft/build-backend-check.yaml
+            env:
+              YC_SA_JSON: ${{ secrets.YC_SA_JSON }}
 
-  # Сборка + деплой backend.
-  # ВАЖНО: compile и build-image объединены в ОДИН файл (.sourcecraft/build-backend.yaml,
-  # stages: compile -> build) и запускаются одним кубом — так артефакты (бинарник ya_brander
-  # + configs) передаются штатным механизмом GitLab CI внутри одного пайплайна. Раньше compile
-  # был отдельным кубом со своим gitlab_workflow, из-за чего build-image стартовал с пустым
-  # backend/build/ и падал на COPY (needs в ci.yaml управляет только порядком кубов SourceCraft,
-  # а не передачей артефактов между независимыми пайплайнами).
+  # Сборка + публикация образа в registry, затем деплой — строго по порядку
+  # (задание deploy стартует только после успешного завершения задания build).
   build-and-deploy-backend:
     tasks:
       - name: build
@@ -90,6 +87,7 @@ workflows:
               - corepack prepare pnpm@11.16.0 --activate
               - pnpm install --frozen-lockfile
               - pnpm check
+              - pnpm test
               - pnpm build
 
           - name: upload-static-site

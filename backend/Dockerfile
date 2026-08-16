@@ -1,42 +1,33 @@
-# Тонкий рантайм-образ backend (C++/userver).
-#
-# Бинарник ya_brander НЕ собирается здесь. Он компилируется инкрементально в CI-раннере
-# (.sourcecraft/build-backend-compile.yaml) с персистентным кэшем backend/build/ и попадает
-# в build-контекст через CI-артефакт (backend/build/ya_brander). Этот Dockerfile лишь
-# упаковывает готовый бинарник + конфиги в минимальный runtime на ubuntu:22.04.
-#
-# Требуемые файлы в build-контексте (backend/):
-#   build/ya_brander   — собранный бинарник (из артефакта compile-задания);
-#   configs/           — конфиги сервиса.
-FROM ubuntu:22.04
+# SYNTAX directive обязательна для BuildKit mounts
+# syntax=docker/dockerfile:1
 
-# Рантайм-зависимости бинарника (ldd): базовые boost/curl/libpq и пр.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libstdc++6 libpq5 libldap-2.5-0 ca-certificates \
-        libboost-atomic1.74.0 \
-        libboost-iostreams1.74.0 \
-        libboost-filesystem1.74.0 \
-        libboost-program-options1.74.0 \
-        libboost-stacktrace1.74.0 \
-        libcurl4 \
-        libc-ares2 \
-        libev4 \
-        libnghttp2-14 \
-        libcrypto++8 \
-        libjemalloc2 \
-        libre2-9 \
-        libfmt8 \
-        libcctz2 \
-        libyaml-cpp0.7 \
-    && rm -rf /var/lib/apt/lists/*
+# ---- стадия сборки: берем образ из локального YCR ----
+FROM cr.yandex/crpso93aahtuvujb7jlk/userver-pg:v3.0 AS build
+
+WORKDIR /build
+
+COPY CMakeLists.txt Makefile requirements.txt ./
+COPY configs ./configs
+
+# Кэшируем конфигурацию CMake
+RUN --mount=type=cache,target=/build/build \
+    cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+COPY src ./src
+
+# Кэшируем скомпилированные .o файлы: пересобираются только изменённые файлы
+RUN --mount=type=cache,target=/build/build \
+    cmake --build build -j$(nproc) --target ya_brander && \
+    cp /build/build/ya_brander /tmp/ya_brander
+
+# ---- стадия рантайма: берем готовый образ с библиотеками ----
+FROM cr.yandex/crpso93aahtuvujb7jlk/ya-brander-runtime-base:latest
 
 WORKDIR /app
 
-# Готовый бинарник и конфиги из build-контекста.
-COPY build/ya_brander /usr/local/bin/ya_brander
-COPY configs /etc/ya_brander
+COPY --from=build /tmp/ya_brander /usr/local/bin/ya_brander
+COPY --from=build /build/configs /etc/ya_brander
 
-# Проверка, что все динамические зависимости удовлетворены.
 RUN ldd /usr/local/bin/ya_brander 2>&1 | tee /tmp/ldd.log && \
     if grep -q "not found" /tmp/ldd.log; then cat /tmp/ldd.log; exit 1; else echo "All dependencies satisfied"; fi
 

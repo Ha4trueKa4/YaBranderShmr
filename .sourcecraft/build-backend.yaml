@@ -1,67 +1,19 @@
-# Backend (C++/userver): инкрементальная компиляция + публикация тонкого образа.
-#
-# ВАЖНО: compile и build-image объединены в ОДИН workflow-файл (одну GitLab-CI-подобную
-# "среду"), потому что артефакты (artifacts:) передаются штатно только между job'ами
-# ОДНОГО пайплайна. Раньше compile и build-image были в разных .yaml-файлах, каждый
-# подключался как отдельный gitlab_workflow-куб в ci.yaml — `needs:` в ci.yaml управляет
-# только порядком запуска кубов SourceCraft, но не передаёт artifacts между двумя
-# независимыми пайплайнами. Из-за этого build-image стартовал с пустым backend/build/
-# и падал на `COPY build/ya_brander` (not found).
-#
-# cmake выполняется в раннере (не внутри docker build) с персистентным кэшем backend/build/
-# через `cache:` — компилируются только изменённые .cpp. Dockerfile тонкий, просто копирует
-# готовый бинарник.
-
 stages:
-  - compile
   - build
 
 variables:
   REGISTRY: cr.yandex/crpso93aahtuvujb7jlk
   IMAGE: ya-brander
-  # Зеркало userver-тулчейна в своём Yandex CR вместо ghcr.io — см. build-backend-compile.yaml
-  # для инструкции по одноразовому зеркалированию. Pull из cr.yandex рядом с раннером
-  # заметно быстрее внешнего ghcr.io (в тестовом прогоне pull занял 6.13 из 8.83 мин job'а).
-  TOOLCHAIN_IMAGE: cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
+  REMOTE_APP_DIR: team-05-project-konstruktor-avatarok-dlya-rabochikh-chatov-vizitok-i-profilei
 
-compile:
-  stage: compile
-  image: $TOOLCHAIN_IMAGE
-  cache:
-    key:
-      files:
-        - backend/CMakeLists.txt
-        # Добавьте сюда файлы управления зависимостями, если появятся
-        # (conanfile.txt, vcpkg.json и т.п.) — иначе смена состава библиотек
-        # не инвалидирует кэш.
-    paths:
-      - backend/build/
-  script:
-    - cd backend
-    # `-B` на существующем build/ переиспользует объектные файлы — перекомпилируются
-    # только изменённые исходники (инкрементально).
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release
-    - cmake --build build -j$(nproc) --target ya_brander
-    - cd ..
-  artifacts:
-    paths:
-      - backend/build/ya_brander
-      - backend/configs
-    expire_in: 1 day
-
-build-image:
+build:
   stage: build
   image: docker:latest
   services:
     - docker:dind
-  needs: ["compile"]
-  script:
-    # Логин ДО build — --cache-from тянет из приватного CR, без логина будет 401.
+  variables:
+    DOCKER_BUILDKIT: "1"
+script:
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    # Команда на одной строке — `\`-переносы в этом раннере ломают разбор аргументов.
-    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
-    - docker push $REGISTRY/$IMAGE:$CI_COMMIT_SHA
-    - docker tag $REGISTRY/$IMAGE:$CI_COMMIT_SHA $REGISTRY/$IMAGE:latest
-    - docker push $REGISTRY/$IMAGE:latest
-    # Локальный тег по SHA больше не нужен (в CR он остаётся для откатов).
-    - docker rmi $REGISTRY/$IMAGE:$CI_COMMIT_SHA
+    - docker buildx create --use
+    - docker buildx build --push --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -t $REGISTRY/$IMAGE:latest -f backend/Dockerfile backend/
