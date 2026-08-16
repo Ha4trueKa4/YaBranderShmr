@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,23 +53,33 @@ import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
+import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 // Декоративный градиент hero-баннера по макету (violet → cyan → pink, слева направо):
 // виден, пока грузится превью проекта или если превью нет. Розовый — точечное
 // значение баннера, вне палитры AppColors. AppColors — @Composable-геттеры (зависят
-// от темы), поэтому градиент собирается функцией, а не top-level val.
+// от темы), поэтому градиент собирается функцией, а не top-level val;
+// remember по палитре — чтобы Brush не пересобирался на каждой рекомпозиции.
 @Composable
-private fun heroGradient() = Brush.horizontalGradient(
-listOf(AppColors.Accent, AppColors.AccentCyan, Color(0xFFEC4899)),
-)
+private fun heroGradient(): Brush {
+    val colors = LocalAppColorScheme.current
+    return remember(colors) {
+        Brush.horizontalGradient(
+            listOf(colors.accent, colors.accentCyan, Color(0xFFEC4899)),
+        )
+    }
+}
 
 // Заглушка превью карточек «More from this creator» — на токенах палитры.
 @Composable
-private fun previewGradient() = Brush.horizontalGradient(
-    listOf(AppColors.Accent, AppColors.AccentCyan),
-)
+private fun previewGradient(): Brush {
+    val colors = LocalAppColorScheme.current
+    return remember(colors) {
+        Brush.horizontalGradient(listOf(colors.accent, colors.accentCyan))
+    }
+}
 
 private val HeroHeight = 300.dp
 private val RelatedPreviewHeight = 100.dp

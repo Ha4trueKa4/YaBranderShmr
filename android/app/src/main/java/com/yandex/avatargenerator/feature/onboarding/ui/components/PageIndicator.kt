@@ -1,11 +1,14 @@
 package com.yandex.avatargenerator.feature.onboarding.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -21,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
 import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
 /**
@@ -72,10 +76,15 @@ internal fun PageIndicator(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+// Фон берём из палитры, а не хардкодим в @Preview: цвет точек тоже зависит от темы,
+// и на прибитом тёмном фоне светлый вариант выглядел бы «тёмным по тёмному».
+@Preview(name = "Light")
+@Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PageIndicatorPreview() {
     AvatarGeneratorTheme {
-        PageIndicator(pageCount = 3, currentPage = 1, color = AppColors.TextPrimary)
+        Box(modifier = Modifier.background(AppColors.Background).padding(AppSpacing.m)) {
+            PageIndicator(pageCount = 3, currentPage = 1, color = AppColors.TextPrimary)
+        }
     }
 }
