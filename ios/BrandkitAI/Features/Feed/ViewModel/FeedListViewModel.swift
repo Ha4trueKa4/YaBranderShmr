@@ -14,6 +14,7 @@ final class FeedListViewModel {
 
     private var nextCursor: String?
     private var hasMore = true
+    private var generation = 0
     private let scope: FeedScope
     private let service: any FeedServiceProtocol
 
@@ -24,7 +25,6 @@ final class FeedListViewModel {
 
     var isEmpty: Bool { items.isEmpty }
 
-    // Первая загрузка: повторный вызов `.task` (возврат на экран) списка не сбрасывает.
     func loadInitial() async {
         guard items.isEmpty, !isLoading else { return }
         await reload()
@@ -35,33 +35,34 @@ final class FeedListViewModel {
         await reload()
     }
 
-    // Дозагрузка при приближении к концу списка.
     func loadMoreIfNeeded(after item: FeedItem) {
         guard hasMore, !isLoading, !isLoadingMore,
               items.suffix(Self.prefetchDistance).contains(item)
         else { return }
 
+        let startedGeneration = generation
         isLoadingMore = true
         Task {
+            defer { isLoadingMore = false }
             do {
                 let page = try await service.fetchPage(
                     scope: scope,
                     cursor: nextCursor,
                     limit: Self.pageSize
                 )
-                // Между refresh и дозагрузкой возможна гонка — дубли отсеиваем.
+                guard startedGeneration == generation else { return }
+
                 let knownIDs = Set(items.map(\.id))
                 items += page.items.filter { !knownIDs.contains($0.id) }
                 apply(cursor: page.nextCursor)
             } catch {
-                // Ошибку дозагрузки не показываем поверх готового списка:
-                // при следующем скролле попробуем ещё раз.
+                
             }
-            isLoadingMore = false
         }
     }
 
     private func reload() async {
+        generation += 1
         isLoading = true
         errorMessage = nil
         do {
