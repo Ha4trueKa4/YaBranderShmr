@@ -101,6 +101,33 @@ export type Error = {
   message?: string
 }
 
+/**
+ * Метаданные одной версии проекта (без ключей объектного хранилища).
+ */
+export type VersionInfo = {
+  /**
+   * Идентификатор версии (UUID). Используется в /versions/{version_id}.
+   */
+  id?: string
+  /**
+   * Порядковый номер версии в рамках проекта.
+   */
+  version_num?: number
+  created_at?: string
+}
+
+/**
+ * Ответ с id версии и ссылкой на её объект. У /versions/{version_id} это просмотр выбранной версии; у /restore — новая (созданная откатом) версия.
+ *
+ */
+export type VersionUrl = {
+  version_id?: string
+  /**
+   * Временная presigned-ссылка на SVG-объект версии.
+   */
+  url?: string
+}
+
 export type PostAuthRegisterData = {
   body: RegisterRequest
   path?: never
@@ -517,6 +544,7 @@ export type PatchProjectsByIdResponse =
 export type PostProjectsByIdGenerateData = {
   body: {
     prompt: string
+    model?: string
   }
   path: {
     id: string
@@ -557,6 +585,132 @@ export type PostProjectsByIdGenerateResponses = {
 
 export type PostProjectsByIdGenerateResponse =
   PostProjectsByIdGenerateResponses[keyof PostProjectsByIdGenerateResponses]
+
+export type GetProjectsByIdVersionsData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/projects/{id}/versions'
+}
+
+export type GetProjectsByIdVersionsErrors = {
+  /**
+   * Отсутствует или некорректен JWT (анонимный запрос)
+   */
+  401: unknown
+  /**
+   * Вы авторизованы, но не автор проекта. История приватна независимо от публичности проекта. Также этим кодом отвечает auth-мидлварь при невалидном/просроченном JWT.
+   *
+   */
+  403: unknown
+  /**
+   * Проект не найден
+   */
+  404: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+}
+
+export type GetProjectsByIdVersionsResponses = {
+  /**
+   * Список версий проекта
+   */
+  200: {
+    versions?: Array<VersionInfo>
+  }
+}
+
+export type GetProjectsByIdVersionsResponse =
+  GetProjectsByIdVersionsResponses[keyof GetProjectsByIdVersionsResponses]
+
+export type GetProjectsByIdVersionsByVersionIdData = {
+  body?: never
+  path: {
+    id: string
+    /**
+     * Идентификатор версии (UUID), из поля id ответа /versions
+     */
+    version_id: string
+  }
+  query?: never
+  url: '/projects/{id}/versions/{version_id}'
+}
+
+export type GetProjectsByIdVersionsByVersionIdErrors = {
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Вы авторизованы, но не автор проекта (или невалидный JWT)
+   */
+  403: unknown
+  /**
+   * Проект не найден, либо версия не существует / не принадлежит этому проекту
+   */
+  404: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+}
+
+export type GetProjectsByIdVersionsByVersionIdResponses = {
+  /**
+   * Ссылка на объект версии
+   */
+  200: VersionUrl
+}
+
+export type GetProjectsByIdVersionsByVersionIdResponse =
+  GetProjectsByIdVersionsByVersionIdResponses[keyof GetProjectsByIdVersionsByVersionIdResponses]
+
+export type PostProjectsByIdVersionsByVersionIdRestoreData = {
+  body?: never
+  path: {
+    id: string
+    /**
+     * Идентификатор версии (UUID), к которой откатываемся
+     */
+    version_id: string
+  }
+  query?: never
+  url: '/projects/{id}/versions/{version_id}/restore'
+}
+
+export type PostProjectsByIdVersionsByVersionIdRestoreErrors = {
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Вы авторизованы, но не автор проекта (или невалидный JWT)
+   */
+  403: unknown
+  /**
+   * Проект не найден, либо версия не существует / не принадлежит этому проекту
+   */
+  404: unknown
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+}
+
+export type PostProjectsByIdVersionsByVersionIdRestoreResponses = {
+  /**
+   * Откат выполнен. Возвращает id созданной новой версии и свежую ссылку на неё, чтобы фронт мог сразу её отрисовать.
+   *
+   */
+  200: VersionUrl
+}
+
+export type PostProjectsByIdVersionsByVersionIdRestoreResponse =
+  PostProjectsByIdVersionsByVersionIdRestoreResponses[keyof PostProjectsByIdVersionsByVersionIdRestoreResponses]
 
 export type GetFeedData = {
   body?: never
