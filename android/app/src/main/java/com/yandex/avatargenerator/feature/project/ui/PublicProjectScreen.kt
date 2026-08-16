@@ -212,20 +212,23 @@ private fun PublicProjectHero(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        val badgeShape = RoundedCornerShape(AppShape.full)
-        Text(
-            text = badge,
-            style = AppTypography.caption.copy(
-                color = AppColors.TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-            ),
-            modifier = Modifier
-                .padding(AppSpacing.l)
-                .clip(badgeShape)
-                .background(Color.Black.copy(alpha = 0.4f))
-                .border(1.dp, Color.White.copy(alpha = 0.1f), badgeShape)
-                .padding(horizontal = AppSpacing.s, vertical = 6.dp),
-        )
+        // Метка есть не всегда: сетевой контракт её не отдаёт (см. PublicProjectMappers).
+        if (badge.isNotBlank()) {
+            val badgeShape = RoundedCornerShape(AppShape.full)
+            Text(
+                text = badge,
+                style = AppTypography.caption.copy(
+                    color = AppColors.TextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                modifier = Modifier
+                    .padding(AppSpacing.l)
+                    .clip(badgeShape)
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), badgeShape)
+                    .padding(horizontal = AppSpacing.s, vertical = 6.dp),
+            )
+        }
     }
 }
 
@@ -257,12 +260,15 @@ private fun PublicProjectAuthorRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = author.role,
-                    style = AppTypography.caption,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // Роль в сетевом контракте отсутствует — пустую строку не рисуем.
+                if (author.role.isNotBlank()) {
+                    Text(
+                        text = author.role,
+                        style = AppTypography.caption,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
         PublicProjectFollowButton(isFollowing = author.isFollowing, onClick = onFollowClick)

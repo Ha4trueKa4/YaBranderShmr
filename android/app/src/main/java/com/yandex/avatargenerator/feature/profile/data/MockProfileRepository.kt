@@ -3,6 +3,7 @@ package com.yandex.avatargenerator.feature.profile.data
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedAuthor
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.profile.domain.ProfileRepository
+import com.yandex.avatargenerator.feature.profile.domain.model.ProfileDetails
 import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -17,11 +18,11 @@ class MockProfileRepository(
     private val networkDelayMillis: Long = 600L,
 ) : ProfileRepository {
 
-    override suspend fun getProfile(userId: String): UserProfile {
+    override suspend fun getProfile(userId: String): ProfileDetails {
         delay(networkDelayMillis)
 
         val rnd = Random(userId.hashCode())
-        return UserProfile(
+        val profile = UserProfile(
             id = userId,
             displayName = "Sarah Chen",
             handle = "sarahchen",
@@ -32,27 +33,23 @@ class MockProfileRepository(
             followingCount = 45,
             isFollowing = false,
         )
-    }
-
-    override suspend fun getUserProjects(userId: String): List<FeedProject> {
-        delay(networkDelayMillis)
-
         val author = FeedAuthor(
             id = userId,
             displayName = "Sarah Chen",
             avatarUrl = "https://i.pravatar.cc/150?u=$userId",
         )
-        return (0 until PROJECT_COUNT).map { index ->
+        val projects = (0 until PROJECT_COUNT).map { index ->
             val seed = "$userId-$index"
-            val rnd = Random(seed.hashCode())
+            val projectRnd = Random(seed.hashCode())
             FeedProject(
                 id = seed,
-                title = PROJECT_NAMES[rnd.nextInt(PROJECT_NAMES.size)],
+                title = PROJECT_NAMES[projectRnd.nextInt(PROJECT_NAMES.size)],
                 previewUrl = "https://picsum.photos/seed/$seed/600/600",
                 author = author,
                 publishedAt = Instant.now().minus(index.toLong(), ChronoUnit.DAYS),
             )
         }
+        return ProfileDetails(profile = profile, projects = projects)
     }
 
     private companion object {

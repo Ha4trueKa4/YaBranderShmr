@@ -9,6 +9,7 @@ import com.yandex.avatargenerator.feature.feed.di.feedModule
 import com.yandex.avatargenerator.feature.onboarding.di.onboardingModule
 import com.yandex.avatargenerator.feature.profile.di.profileModule
 import com.yandex.avatargenerator.feature.project.di.projectModule
+import com.yandex.avatargenerator.feature.subscription.di.subscriptionModule
 
 /**
  * Полный граф зависимостей приложения: общие [coreModule] и [networkModule]
@@ -25,4 +26,5 @@ val appModules = listOf(
     createProjectModule,
     profileModule,
     projectModule,
+    subscriptionModule,
 )
