@@ -6,8 +6,9 @@ import styles from './FillProperty.module.css'
 interface FillPropertyProps {
   fill: string
   onFillChange: (fill: string) => void
-  onOpacityChange: (opacity: number) => void
+  onOpacityChange?: (opacity: number) => void
   opacity?: number
+  title?: string
 }
 
 export function FillProperty({
@@ -15,6 +16,7 @@ export function FillProperty({
   onFillChange,
   onOpacityChange,
   opacity = 1,
+  title = 'Fill',
 }: FillPropertyProps) {
   const [draftFill, setDraftFill] = useState(fill)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
@@ -60,12 +62,12 @@ export function FillProperty({
   }
 
   function handleOpacityChange(opacityPercent: number) {
-    onOpacityChange(opacityPercent / 100)
+    onOpacityChange?.(opacityPercent / 100)
   }
 
   return (
     <section className={styles.property}>
-      <p className={styles.title}>Fill</p>
+      <p className={styles.title}>{title}</p>
       <div className={styles.colorValue}>
         <div className={styles.colorControl} ref={colorControlRef}>
           <ColorSwatch
@@ -83,16 +85,22 @@ export function FillProperty({
           <p className={styles.colorName}>Violet Primary</p>
         </div>
       </div>
-      <div className={styles.opacityHeader}>
-        <span>Opacity</span>
-        <strong>{opacityPercent}%</strong>
-      </div>
-      <Range
-        max="100"
-        min="0"
-        onChange={(event) => handleOpacityChange(Number(event.target.value))}
-        value={opacityPercent}
-      />
+      {onOpacityChange && (
+        <>
+          <div className={styles.opacityHeader}>
+            <span>Opacity</span>
+            <strong>{opacityPercent}%</strong>
+          </div>
+          <Range
+            max="100"
+            min="0"
+            onChange={(event) =>
+              handleOpacityChange(Number(event.target.value))
+            }
+            value={opacityPercent}
+          />
+        </>
+      )}
     </section>
   )
 }

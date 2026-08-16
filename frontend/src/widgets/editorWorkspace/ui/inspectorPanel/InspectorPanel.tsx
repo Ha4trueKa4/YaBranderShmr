@@ -9,12 +9,34 @@ import { TextProperties } from './textProperties/TextProperties'
 interface InspectorPanelProps {
   onShapeFillChange: (nodeId: string, color: string) => void
   onShapeFillOpacityChange: (nodeId: string, opacity: number) => void
+  onTextAnchorChange: (
+    nodeId: string,
+    textAnchor: 'end' | 'middle' | 'start',
+  ) => void
+  onTextContentChange: (nodeId: string, text: string) => void
+  onTextFillColorChange: (nodeId: string, color: string) => void
+  onTextFontFamilyChange: (nodeId: string, fontFamily: string) => void
+  onTextFontSizeChange: (nodeId: string, fontSize: number) => void
+  onTextFontStyleChange: (
+    nodeId: string,
+    fontStyle: 'italic' | 'normal',
+  ) => void
+  onTextFontWeightChange: (nodeId: string, fontWeight: number) => void
+  onTextPositionChange: (nodeId: string, x: number, y: number) => void
   selectedNode: EditorNode | null
 }
 
 export function InspectorPanel({
   onShapeFillChange,
   onShapeFillOpacityChange,
+  onTextAnchorChange,
+  onTextContentChange,
+  onTextFillColorChange,
+  onTextFontFamilyChange,
+  onTextFontSizeChange,
+  onTextFontStyleChange,
+  onTextFontWeightChange,
+  onTextPositionChange,
   selectedNode,
 }: InspectorPanelProps) {
   if (!selectedNode) {
@@ -95,7 +117,31 @@ export function InspectorPanel({
         </span>
       </div>
       <div className={styles.content}>
-        <TextProperties layer={selectedNode} />
+        <TextProperties
+          layer={selectedNode}
+          onAnchorChange={(textAnchor) =>
+            onTextAnchorChange(selectedNode.id, textAnchor)
+          }
+          onContentChange={(text) => onTextContentChange(selectedNode.id, text)}
+          onFillColorChange={(color) =>
+            onTextFillColorChange(selectedNode.id, color)
+          }
+          onFontFamilyChange={(fontFamily) =>
+            onTextFontFamilyChange(selectedNode.id, fontFamily)
+          }
+          onFontSizeChange={(fontSize) =>
+            onTextFontSizeChange(selectedNode.id, fontSize)
+          }
+          onFontStyleChange={(fontStyle) =>
+            onTextFontStyleChange(selectedNode.id, fontStyle)
+          }
+          onFontWeightChange={(fontWeight) =>
+            onTextFontWeightChange(selectedNode.id, fontWeight)
+          }
+          onPositionChange={(x, y) =>
+            onTextPositionChange(selectedNode.id, x, y)
+          }
+        />
       </div>
     </section>
   )

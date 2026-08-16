@@ -1,4 +1,5 @@
 import type { EditorText } from '@entities/editorDocument'
+import { observer } from 'mobx-react-lite'
 
 import { getPaintValue } from './model/getPaintValue'
 import { getTransformValue } from './model/getTransformValue'
@@ -8,7 +9,10 @@ interface TextLayerProps {
   onSelect: () => void
 }
 
-export function TextLayer({ node, onSelect }: TextLayerProps) {
+export const TextLayer = observer(function TextLayer({
+  node,
+  onSelect,
+}: TextLayerProps) {
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: SVG canvas elements are selected with a pointer.
     <text
@@ -29,4 +33,4 @@ export function TextLayer({ node, onSelect }: TextLayerProps) {
       {node.text}
     </text>
   )
-}
+})

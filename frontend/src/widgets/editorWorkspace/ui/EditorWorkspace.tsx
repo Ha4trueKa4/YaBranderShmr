@@ -79,6 +79,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         <InspectorPanel
           onShapeFillChange={editorStore.setShapeFillColor}
           onShapeFillOpacityChange={editorStore.setShapeFillOpacity}
+          onTextAnchorChange={editorStore.setTextAnchor}
+          onTextContentChange={editorStore.setTextContent}
+          onTextFillColorChange={editorStore.setTextFillColor}
+          onTextFontFamilyChange={editorStore.setTextFontFamily}
+          onTextFontSizeChange={editorStore.setTextFontSize}
+          onTextFontStyleChange={editorStore.setTextFontStyle}
+          onTextFontWeightChange={editorStore.setTextFontWeight}
+          onTextPositionChange={editorStore.setTextPosition}
           selectedNode={editorStore.selectedNode}
         />
       </aside>
