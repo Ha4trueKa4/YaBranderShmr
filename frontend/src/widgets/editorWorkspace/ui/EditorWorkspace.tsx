@@ -1,5 +1,17 @@
 import { AppRoute } from '@app/providers/router/routes'
-import { type EditorDocument, EditorStore } from '@entities/editorDocument'
+import {
+  type EditorDocument,
+  EditorStore,
+  serializeSvg,
+} from '@entities/editorDocument'
+import {
+  projectQueryKey,
+  projectSvgQueryKey,
+  useUpdateProjectMetadataMutation,
+} from '@entities/project'
+import { getApiErrorMessage } from '@shared/api/api'
+import { useToast } from '@shared/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
@@ -12,26 +24,48 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 
 interface EditorWorkspaceProps {
   document: EditorDocument
+  projectId: string
   projectName: string
 }
 
 export const EditorWorkspace = observer(function EditorWorkspace({
   document,
+  projectId,
   projectName: initialProjectName,
 }: EditorWorkspaceProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const toast = useToast()
   const [projectName, setProjectName] = useState(initialProjectName)
   const [editorStore] = useState(() => new EditorStore(document))
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
+  const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
+    useUpdateProjectMetadataMutation()
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
   }
 
   function handleProjectNameSubmit(nextProjectName: string) {
-    // TODO: сохранять название через API, когда PATCH /projects/{id}
-    // будет поддерживать поле name.
     setProjectName(nextProjectName)
+  }
+
+  async function handleSaveVersion() {
+    try {
+      await saveProjectVersion({
+        data: serializeSvg(editorStore.document),
+        projectId,
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
+        queryClient.invalidateQueries({
+          queryKey: projectSvgQueryKey(projectId),
+        }),
+      ])
+      toast.info('Project version saved.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    }
   }
 
   function handleToggleVisibility(nodeId: string) {
@@ -43,6 +77,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     <section className={styles.workspace}>
       <div className={styles.toolbar}>
         <EditorToolbar
+          isSavingVersion={isSavingProjectVersion}
           onEditProjectName={handleProjectNameSubmit}
           onExport={handleToolbarAction}
           onOpenProfile={() =>
@@ -50,7 +85,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           }
           onPanTool={handleToolbarAction}
           onRedo={handleToolbarAction}
-          onSaveVersion={handleToolbarAction}
+          onSaveVersion={handleSaveVersion}
           onSelectTool={handleToolbarAction}
           onUndo={handleToolbarAction}
           onZoomIn={handleToolbarAction}
