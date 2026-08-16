@@ -35,6 +35,24 @@ const document: EditorDocument = {
       transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 },
       type: 'group',
     },
+    {
+      id: 'title',
+      isLocked: false,
+      isVisible: true,
+      name: 'Title',
+      opacity: 1,
+      style: {
+        fill: { type: 'color', value: '#111111' },
+        fontFamily: 'Inter',
+        fontSize: 24,
+        textAnchor: 'middle',
+      },
+      text: 'Initial title',
+      transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 },
+      type: 'text',
+      x: 50,
+      y: 20,
+    },
   ],
   width: 100,
 }
@@ -105,6 +123,35 @@ describe('EditorStore selection', () => {
 
     expect(store.selectedNode).toMatchObject({
       style: { fillOpacity: 0.4 },
+    })
+  })
+
+  it('changes editable text properties', () => {
+    const store = new EditorStore(document)
+
+    store.setTextContent('title', 'Updated title')
+    store.setTextFillColor('title', '#6C3BFF')
+    store.setTextFontFamily('title', 'Roboto')
+    store.setTextFontSize('title', 36)
+    store.setTextFontStyle('title', 'italic')
+    store.setTextFontWeight('title', 700)
+    store.setTextAnchor('title', 'start')
+    store.setTextPosition('title', 30, 40)
+    store.setSelectedNode('title')
+
+    expect(store.selectedNode).toMatchObject({
+      style: {
+        fill: { type: 'color', value: '#6C3BFF' },
+        fontFamily: 'Roboto',
+        fontSize: 36,
+        fontStyle: 'italic',
+        fontWeight: 700,
+        textAnchor: 'start',
+      },
+      text: 'Updated title',
+      type: 'text',
+      x: 30,
+      y: 40,
     })
   })
 })

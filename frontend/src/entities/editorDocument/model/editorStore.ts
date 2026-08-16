@@ -3,7 +3,9 @@ import { makeAutoObservable } from 'mobx'
 import { setNodeVisibility } from './commands/setNodeVisibility'
 import { toggleNodeVisibility } from './commands/toggleNodeVisibility'
 import { findAncestorGroupIds, findNode } from './tree/findNode'
-import type { EditorDocument, EditorNode } from './types'
+import type { EditorDocument, EditorNode, TextStyle } from './types'
+
+const maximumTextLength = 1_000
 
 /**
  * Состояние взаимодействия с редактором.
@@ -72,6 +74,77 @@ export class EditorStore {
     node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
   }
 
+  setTextContent(nodeId: string, text: string) {
+    const node = this.getEditableText(nodeId)
+
+    if (node) {
+      node.text = text.slice(0, maximumTextLength)
+    }
+  }
+
+  setTextFillColor(nodeId: string, color: string) {
+    const node = this.getEditableText(nodeId)
+
+    if (node) {
+      node.style.fill = { type: 'color', value: color }
+    }
+  }
+
+  setTextFontFamily(nodeId: string, fontFamily: string) {
+    const node = this.getEditableText(nodeId)
+
+    if (node) {
+      node.style.fontFamily = fontFamily
+    }
+  }
+
+  setTextFontSize(nodeId: string, fontSize: number) {
+    const node = this.getEditableText(nodeId)
+
+    if (node && Number.isFinite(fontSize) && fontSize > 0) {
+      node.style.fontSize = fontSize
+    }
+  }
+
+  setTextFontStyle(
+    nodeId: string,
+    fontStyle: NonNullable<TextStyle['fontStyle']>,
+  ) {
+    const node = this.getEditableText(nodeId)
+
+    if (node) {
+      node.style.fontStyle = fontStyle
+    }
+  }
+
+  setTextFontWeight(nodeId: string, fontWeight: number) {
+    const node = this.getEditableText(nodeId)
+
+    if (node && Number.isFinite(fontWeight) && fontWeight > 0) {
+      node.style.fontWeight = fontWeight
+    }
+  }
+
+  setTextAnchor(
+    nodeId: string,
+    textAnchor: NonNullable<TextStyle['textAnchor']>,
+  ) {
+    const node = this.getEditableText(nodeId)
+
+    if (node) {
+      node.style.textAnchor = textAnchor
+    }
+  }
+
+  setTextPosition(nodeId: string, x: number, y: number) {
+    const node = this.getEditableText(nodeId)
+
+    if (node && Number.isFinite(x) && Number.isFinite(y)) {
+      node.x = x
+      node.y = y
+    }
+  }
+
   isGroupExpanded(groupId: string): boolean {
     return this.expandedGroupIds.has(groupId)
   }
@@ -84,5 +157,11 @@ export class EditorStore {
     }
 
     this.expandedGroupIds.add(groupId)
+  }
+
+  private getEditableText(nodeId: string) {
+    const node = findNode(this.document.layers, nodeId)
+
+    return node?.type === 'text' && !node.isLocked ? node : null
   }
 }
