@@ -3,6 +3,7 @@ import { Input } from '@shared/ui'
 import { observer } from 'mobx-react-lite'
 
 import { FillProperty } from '../components/FillProperty'
+import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
 import styles from '../Properties.module.css'
 
 const fontFamilies = [
@@ -83,17 +84,16 @@ export const TextProperties = observer(function TextProperties({
       <div className={styles.fieldGrid}>
         <div className={styles.field}>
           <span>X</span>
-          <Input
-            onChange={(event) => handlePositionChange('x', event.target.value)}
-            type="number"
+          <ScrubbableNumberInput
+            onValueChange={(value) => handlePositionChange('x', String(value))}
             value={layer.x}
           />
         </div>
         <div className={styles.field}>
           <span>Y</span>
-          <Input
-            onChange={(event) => handlePositionChange('y', event.target.value)}
-            type="number"
+          <ScrubbableNumberInput
+            axis="vertical"
+            onValueChange={(value) => handlePositionChange('y', String(value))}
             value={layer.y}
           />
         </div>

@@ -64,3 +64,23 @@
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 20%, transparent);
 }
+
+.scrubHandle {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.scrubHandleVertical {
+  cursor: ns-resize;
+}
+
+.scrubField :global(input[type="number"]) {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.scrubField :global(input[type="number"])::-webkit-inner-spin-button,
+.scrubField :global(input[type="number"])::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
