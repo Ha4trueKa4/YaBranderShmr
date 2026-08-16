@@ -1,5 +1,6 @@
 import Foundation
 
+#if DEBUG
 /// Мок сервиса профилей для превью и тестов.
 nonisolated struct MockUserProfileService: UserProfileService {
     let profile: UserProfile
@@ -8,22 +9,23 @@ nonisolated struct MockUserProfileService: UserProfileService {
         self.profile = profile
     }
 
-    func profile(for id: String) async throws -> UserProfile {
+    func profile(for id: UUID) async throws -> UserProfile {
         profile
     }
 
     private static func makeSample() -> UserProfile {
         UserProfile(
-            id: "123e4567-e89b-12d3-a456-426614174000",
+            id: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000") ?? UUID(),
             name: "Alex Morgan",
             subscribersCount: 340,
             subscriptionsCount: 28,
             isSubscribed: nil,
             projects: [
-                UserProject(id: "p1", name: "Orion Labs", url: nil),
-                UserProject(id: "p2", name: "Cyberpunk Identity", url: nil),
-                UserProject(id: "p3", name: "Aether Brand", url: nil)
+                UserProject(id: UUID(), name: "Orion Labs", url: nil),
+                UserProject(id: UUID(), name: "Cyberpunk Identity", url: nil),
+                UserProject(id: UUID(), name: "Aether Brand", url: nil)
             ]
         )
     }
 }
+#endif

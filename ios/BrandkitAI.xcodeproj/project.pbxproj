@@ -18,7 +18,7 @@
 		F0B8FF2D302E069E00BCF3F3 /* Exceptions for "BrandkitAI" folder in "BrandkitAI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				Config/Info.plist,
 			);
 			target = 934BA49230271DF100E90FD1 /* BrandkitAI */;
 		};
@@ -276,7 +276,7 @@
 				DEVELOPMENT_TEAM = FBM24VVDN6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BrandkitAI/Info.plist;
+				INFOPLIST_FILE = BrandkitAI/Config/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -314,7 +314,7 @@
 				DEVELOPMENT_TEAM = FBM24VVDN6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BrandkitAI/Info.plist;
+				INFOPLIST_FILE = BrandkitAI/Config/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

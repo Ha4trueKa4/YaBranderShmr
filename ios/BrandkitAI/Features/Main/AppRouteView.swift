@@ -1,11 +1,5 @@
 import SwiftUI
 
-/// Единственное место, где маршрут превращается в экран и где переходы экранов
-/// подключаются к роутеру. Сами экраны о навигации не знают — они лишь зовут
-/// свои колбэки.
-///
-/// - Note: временные `UUID()` ниже — заглушки на месте будущих данных.
-///   Все они собраны здесь, чтобы при подключении API править одно место.
 struct AppRouteView: View {
     @Environment(AppRouter.self) private var router
     @Environment(SessionStore.self) private var session
@@ -50,7 +44,7 @@ struct AppRouteView: View {
             ProfileView(
                 session: session,
                 isCurrentUser: false,
-                userID: userID.uuidString,
+                userID: userID,
                 onBack: { router.pop() },
                 onOpenProject: { router.push(.projectEditor(projectID: UUID())) }
             )

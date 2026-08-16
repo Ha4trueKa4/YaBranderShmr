@@ -52,28 +52,11 @@ private struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-struct LinkButton: View {
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.tint)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 #Preview {
-    VStack(spacing: 16) {
-        PrimaryButton(title: "Sign in") {}
-        LinkButton(title: "Forgot password?") {}
-    }
-    .padding(24)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color(.systemBackground))
-    .tint(Color.accentColor)
-    .preferredColorScheme(.dark)
+    PrimaryButton(title: "Sign in") {}
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
+        .tint(Color.accentColor)
+        .preferredColorScheme(.dark)
 }

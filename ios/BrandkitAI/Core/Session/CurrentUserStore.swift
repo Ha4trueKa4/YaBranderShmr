@@ -13,8 +13,8 @@ final class CurrentUserStore: CurrentUserService {
         static let name = "currentUser.name"
     }
 
-    private(set) var id: String? {
-        didSet { UserDefaults.standard.set(id, forKey: Key.id) }
+    private(set) var id: UUID? {
+        didSet { UserDefaults.standard.set(id?.uuidString, forKey: Key.id) }
     }
 
     private(set) var name: String? {
@@ -28,6 +28,7 @@ final class CurrentUserStore: CurrentUserService {
         self.tokenStore = tokenStore
         self.userProfileService = userProfileService
         self.id = UserDefaults.standard.string(forKey: Key.id)
+            .flatMap(UUID.init(uuidString:))
         self.name = UserDefaults.standard.string(forKey: Key.name)
     }
 
@@ -48,7 +49,7 @@ final class CurrentUserStore: CurrentUserService {
         await refreshName(for: userID)
     }
 
-    func save(id: String, name: String?) {
+    func save(id: UUID, name: String?) {
         self.id = id
         self.name = name
     }
@@ -58,7 +59,7 @@ final class CurrentUserStore: CurrentUserService {
         name = nil
     }
 
-    private func refreshName(for id: String) async {
+    private func refreshName(for id: UUID) async {
         do {
             let profile = try await userProfileService.profile(for: id)
             guard self.id == id else { return }

@@ -69,11 +69,9 @@ final class FeedListViewModel {
             let page = try await service.fetchPage(scope: scope, cursor: nil, limit: Self.pageSize)
             items = page.items
             apply(cursor: page.nextCursor)
-        } catch is CancellationError {
-            // Экран ушёл — молча сворачиваемся.
         } catch {
-            if items.isEmpty {
-                errorMessage = Self.message(for: error)
+            if !Task.isCancelled, items.isEmpty {
+                errorMessage = message(for: error)
             }
         }
         isLoading = false
@@ -84,11 +82,13 @@ final class FeedListViewModel {
         hasMore = cursor != nil
     }
 
-    private static func message(for error: Error) -> String {
+    private func message(for error: Error) -> String {
         if case NetworkError.httpError(let statusCode) = error {
             switch statusCode {
             case 401:
-                return "Sign in to see your subscriptions"
+                return scope == .following
+                    ? "Sign in to see your subscriptions"
+                    : "Please sign in and try again"
             default:
                 return "Server error (\(statusCode))"
             }

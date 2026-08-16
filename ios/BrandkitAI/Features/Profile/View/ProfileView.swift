@@ -12,7 +12,7 @@ struct ProfileView: View {
     init(
         session: SessionStore,
         isCurrentUser: Bool = true,
-        userID: String? = nil,
+        userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
         onOpenProject: @escaping () -> Void = {}
@@ -158,23 +158,20 @@ struct ProfileView: View {
         }
     }
 
+    private static let gridColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
     private var projectsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("PROJECTS")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
 
-            HStack(alignment: .top, spacing: 12) {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.leftProjects) { project in
-                        projectCard(project)
-                    }
-                }
-
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.rightProjects) { project in
-                        projectCard(project)
-                    }
+            LazyVGrid(columns: Self.gridColumns, spacing: 12) {
+                ForEach(viewModel.projects) { project in
+                    projectCard(project)
                 }
             }
         }

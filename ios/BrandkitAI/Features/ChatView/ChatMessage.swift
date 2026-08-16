@@ -1,17 +1,5 @@
 import Foundation
 
-enum ChatMessageType: Equatable {
-    case user
-    case assistant
-    case system
-    case saveMessage
-}
-
-enum ChatMessageAttachment: Equatable {
-    case none
-    case mockImage
-}
-
 struct ChatMessage: Identifiable {
     let id: UUID
     let type: ChatMessageType
