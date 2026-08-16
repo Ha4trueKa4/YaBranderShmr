@@ -78,21 +78,35 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
 }
 
 void ProjectManagerComponent::UpdateProject(
-    const std::string& id, std::optional<bool> is_public, std::string data) {
-if (is_public.has_value()) {
+    const std::string& id, std::optional<std::string> name,
+    std::optional<bool> is_public, std::string data) {
+  if (name.has_value()) {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "UPDATE projects SET name = $2, updated_at = NOW() "
+        "WHERE id = $1::uuid",
+        id, *name);
+  }
+  if (is_public.has_value()) {
     if (is_public.value()) {
-        version_storage_.SetLatestAcl(id, true);
-        pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE projects SET is_private=false, updated_at=NOW() WHERE id=$1::uuid", id);
+      version_storage_.SetLatestAcl(id, true);
+      pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kMaster,
+          "UPDATE projects SET is_private=false, updated_at=NOW() "
+          "WHERE id=$1::uuid",
+          id);
     } else {
-        pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE projects SET is_private=true, updated_at=NOW() WHERE id=$1::uuid", id);
-        version_storage_.SetLatestAcl(id, false);
+      pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kMaster,
+          "UPDATE projects SET is_private=true, updated_at=NOW() "
+          "WHERE id=$1::uuid",
+          id);
+      version_storage_.SetLatestAcl(id, false);
     }
-}
-if (!data.empty()) {
+  }
+  if (!data.empty()) {
     version_storage_.SaveVersion(id, data);
-}
+  }
 }
 
     void ProjectManagerComponent::DeleteProject(const std::string& id) {

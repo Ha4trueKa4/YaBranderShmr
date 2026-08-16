@@ -257,6 +257,14 @@ components_manager:
         types:
           - jwt
 
+    handler-users-patch:
+      path: /api/v1/users/{id}
+      method: PATCH
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt
+
     handler-users-subscribers-get:
       path: /api/v1/users/{id}/subscribers
       method: GET
@@ -272,4 +280,3 @@ components_manager:
       auth:
         types:
           - jwt
-

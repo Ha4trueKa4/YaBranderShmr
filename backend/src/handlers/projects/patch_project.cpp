@@ -32,13 +32,24 @@ userver::formats::json::Value PatchProjectHandler::HandleRequestJsonThrow(
     return {};
   }
 
+  std::optional<std::string> name;
   std::optional<bool> is_public;
   std::string data;
 
+  if (body.HasMember("name")) name = body["name"].As<std::string>();
   if (body.HasMember("is_public")) is_public = body["is_public"].As<bool>();
   if (body.HasMember("data")) data = body["data"].As<std::string>();
 
-  project_manager_.UpdateProject(id, is_public, data);
+  if (name.has_value() && (name->empty() || name->size() > 255)) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+    userver::formats::json::ValueBuilder err;
+    err["code"] = "INVALID_NAME";
+    err["message"] = "Name must be 1-255 chars";
+    err["field"] = "name";
+    return err.ExtractValue();
+  }
+
+  project_manager_.UpdateProject(id, name, is_public, data);
 
   auto updated = project_manager_.GetProject(id);
 
