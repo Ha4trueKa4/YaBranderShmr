@@ -7,6 +7,7 @@ interface EditorSceneProps {
   document: EditorDocument
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onTextPositionChange: (nodeId: string, x: number, y: number) => void
   renderVersion: number
   selectedNode: EditorNode | null
 }
@@ -15,6 +16,7 @@ export function EditorScene({
   document,
   onSelectNode,
   onShapePositionChange,
+  onTextPositionChange,
   renderVersion,
   selectedNode,
 }: EditorSceneProps) {
@@ -24,6 +26,7 @@ export function EditorScene({
         document={document}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
+        onTextPositionChange={onTextPositionChange}
         renderVersion={renderVersion}
         selectedNode={selectedNode}
       />

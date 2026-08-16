@@ -2,6 +2,7 @@ import type {
   EditorDocument,
   EditorNode,
   EditorShape,
+  EditorText,
 } from '@entities/editorDocument'
 import {
   type PointerEvent as ReactPointerEvent,
@@ -19,6 +20,7 @@ interface SceneFrameProps {
   document: EditorDocument
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onTextPositionChange: (nodeId: string, x: number, y: number) => void
   renderVersion: number
   selectedNode: EditorNode | null
 }
@@ -26,6 +28,7 @@ interface SceneFrameProps {
 type PointerPosition = { x: number; y: number }
 
 type DragState = {
+  elementType: 'shape' | 'text'
   nodeId: string
   pointerId: number
   startPointerPosition: PointerPosition
@@ -58,28 +61,29 @@ export function SceneFrame({
   document,
   onSelectNode,
   onShapePositionChange,
+  onTextPositionChange,
   renderVersion,
   selectedNode,
 }: SceneFrameProps) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
-  const shapeElementsReference = useRef(new Map<string, SVGGElement>())
+  const editableElementsReference = useRef(new Map<string, SVGGElement>())
 
-  const getShapeElement = useCallback(
-    (nodeId: string) => shapeElementsReference.current.get(nodeId),
+  const getEditableElement = useCallback(
+    (nodeId: string) => editableElementsReference.current.get(nodeId),
     [],
   )
 
-  const registerShapeElement = useCallback(
+  const registerEditableElement = useCallback(
     (nodeId: string): RefCallback<SVGGElement> =>
       (element) => {
         if (element) {
-          shapeElementsReference.current.set(nodeId, element)
+          editableElementsReference.current.set(nodeId, element)
 
           return
         }
 
-        shapeElementsReference.current.delete(nodeId)
+        editableElementsReference.current.delete(nodeId)
       },
     [],
   )
@@ -110,6 +114,7 @@ export function SceneFrame({
       event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       dragStateReference.current = {
+        elementType: 'shape',
         nodeId: node.id,
         pointerId: event.pointerId,
         startPointerPosition: pointerPosition,
@@ -117,6 +122,42 @@ export function SceneFrame({
           x: node.transform.x,
           y: node.transform.y,
         },
+      }
+    },
+    [onSelectNode],
+  )
+
+  const handleTextPointerDown = useCallback(
+    (node: EditorText, event: ReactPointerEvent<SVGGElement>) => {
+      if (event.button !== 0) {
+        return
+      }
+
+      onSelectNode(node.id)
+      const svg = svgReference.current
+
+      if (node.isLocked || !svg) {
+        return
+      }
+
+      const pointerPosition = getSvgPointerPosition(
+        svg,
+        event.clientX,
+        event.clientY,
+      )
+
+      if (!pointerPosition) {
+        return
+      }
+
+      event.preventDefault()
+      event.currentTarget.setPointerCapture(event.pointerId)
+      dragStateReference.current = {
+        elementType: 'text',
+        nodeId: node.id,
+        pointerId: event.pointerId,
+        startPointerPosition: pointerPosition,
+        startTransformPosition: { x: node.x, y: node.y },
       }
     },
     [onSelectNode],
@@ -142,21 +183,26 @@ export function SceneFrame({
       }
 
       event.preventDefault()
-      onShapePositionChange(
-        dragState.nodeId,
-        roundCoordinate(
-          dragState.startTransformPosition.x +
-            pointerPosition.x -
-            dragState.startPointerPosition.x,
-        ),
-        roundCoordinate(
-          dragState.startTransformPosition.y +
-            pointerPosition.y -
-            dragState.startPointerPosition.y,
-        ),
+      const x = roundCoordinate(
+        dragState.startTransformPosition.x +
+          pointerPosition.x -
+          dragState.startPointerPosition.x,
       )
+      const y = roundCoordinate(
+        dragState.startTransformPosition.y +
+          pointerPosition.y -
+          dragState.startPointerPosition.y,
+      )
+
+      if (dragState.elementType === 'shape') {
+        onShapePositionChange(dragState.nodeId, x, y)
+
+        return
+      }
+
+      onTextPositionChange(dragState.nodeId, x, y)
     },
-    [onShapePositionChange],
+    [onShapePositionChange, onTextPositionChange],
   )
 
   const handleShapePointerUp = useCallback(
@@ -189,11 +235,12 @@ export function SceneFrame({
           onShapePointerDown={handleShapePointerDown}
           onShapePointerMove={handleShapePointerMove}
           onShapePointerUp={handleShapePointerUp}
+          onTextPointerDown={handleTextPointerDown}
           renderVersion={renderVersion}
-          registerShapeElement={registerShapeElement}
+          registerEditableElement={registerEditableElement}
         />
         <SelectionOverlay
-          getShapeElement={getShapeElement}
+          getEditableElement={getEditableElement}
           selectedNode={selectedNode}
         />
         <TransformHandles />

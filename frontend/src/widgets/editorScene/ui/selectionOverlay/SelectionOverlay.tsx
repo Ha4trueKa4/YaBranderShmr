@@ -1,6 +1,6 @@
 import type { EditorNode } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
-import { useLayoutEffect, useMemo, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 
 import {
   getSelectionBounds,
@@ -10,50 +10,63 @@ import styles from './SelectionOverlay.module.css'
 
 const selectionPadding = 4
 
+function hasSameBounds(
+  firstBounds: SelectionBounds | null,
+  secondBounds: SelectionBounds | null,
+) {
+  return (
+    firstBounds?.height === secondBounds?.height &&
+    firstBounds?.width === secondBounds?.width &&
+    firstBounds?.x === secondBounds?.x &&
+    firstBounds?.y === secondBounds?.y
+  )
+}
+
 interface SelectionOverlayProps {
-  getShapeElement: (nodeId: string) => SVGGElement | undefined
+  getEditableElement: (nodeId: string) => SVGGElement | undefined
   selectedNode: EditorNode | null
 }
 
 export const SelectionOverlay = observer(function SelectionOverlay({
-  getShapeElement,
+  getEditableElement,
   selectedNode,
 }: SelectionOverlayProps) {
   const [bounds, setBounds] = useState<SelectionBounds | null>(null)
-  const selectedShape = selectedNode?.type === 'shape' ? selectedNode : null
-  const selectionTarget = useMemo(() => {
-    if (!selectedShape) {
-      return null
-    }
-
-    return {
-      element: getShapeElement(selectedShape.id),
-      transform: {
-        rotation: selectedShape.transform.rotation,
-        scaleX: selectedShape.transform.scaleX,
-        scaleY: selectedShape.transform.scaleY,
-        x: selectedShape.transform.x,
-        y: selectedShape.transform.y,
-      },
-    }
-  }, [
-    getShapeElement,
-    selectedShape,
-    selectedShape?.transform.rotation,
-    selectedShape?.transform.scaleX,
-    selectedShape?.transform.scaleY,
-    selectedShape?.transform.x,
-    selectedShape?.transform.y,
-  ])
+  const selectedElement =
+    selectedNode?.type === 'shape' || selectedNode?.type === 'text'
+      ? selectedNode
+      : null
+  const selectionTarget = selectedElement
+    ? {
+        element: getEditableElement(selectedElement.id),
+        position:
+          selectedElement.type === 'text'
+            ? { x: selectedElement.x, y: selectedElement.y }
+            : undefined,
+        transform: {
+          rotation: selectedElement.transform.rotation,
+          scaleX: selectedElement.transform.scaleX,
+          scaleY: selectedElement.transform.scaleY,
+          x: selectedElement.transform.x,
+          y: selectedElement.transform.y,
+        },
+      }
+    : null
 
   useLayoutEffect(() => {
     if (!selectionTarget) {
-      setBounds(null)
+      setBounds((currentBounds) =>
+        hasSameBounds(currentBounds, null) ? currentBounds : null,
+      )
 
       return
     }
 
-    setBounds(getSelectionBounds(selectionTarget.element))
+    const nextBounds = getSelectionBounds(selectionTarget.element)
+
+    setBounds((currentBounds) =>
+      hasSameBounds(currentBounds, nextBounds) ? currentBounds : nextBounds,
+    )
   }, [selectionTarget])
 
   if (!bounds) {

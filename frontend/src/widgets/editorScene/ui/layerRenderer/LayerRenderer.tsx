@@ -1,4 +1,8 @@
-import type { EditorDocument, EditorShape } from '@entities/editorDocument'
+import type {
+  EditorDocument,
+  EditorShape,
+  EditorText,
+} from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 import type { PointerEvent as ReactPointerEvent, RefCallback } from 'react'
 
@@ -14,8 +18,12 @@ interface LayerRendererProps {
   ) => void
   onShapePointerMove: (event: ReactPointerEvent<SVGGElement>) => void
   onShapePointerUp: (event: ReactPointerEvent<SVGGElement>) => void
+  onTextPointerDown: (
+    node: EditorText,
+    event: ReactPointerEvent<SVGGElement>,
+  ) => void
   renderVersion: number
-  registerShapeElement: (nodeId: string) => RefCallback<SVGGElement>
+  registerEditableElement: (nodeId: string) => RefCallback<SVGGElement>
 }
 
 export const LayerRenderer = observer(function LayerRenderer({
@@ -24,8 +32,9 @@ export const LayerRenderer = observer(function LayerRenderer({
   onShapePointerDown,
   onShapePointerMove,
   onShapePointerUp,
+  onTextPointerDown,
   renderVersion: _renderVersion,
-  registerShapeElement,
+  registerEditableElement,
 }: LayerRendererProps) {
   return (
     <>
@@ -38,7 +47,8 @@ export const LayerRenderer = observer(function LayerRenderer({
           onShapePointerDown={onShapePointerDown}
           onShapePointerMove={onShapePointerMove}
           onShapePointerUp={onShapePointerUp}
-          registerShapeElement={registerShapeElement}
+          onTextPointerDown={onTextPointerDown}
+          registerEditableElement={registerEditableElement}
         />
       ))}
     </>

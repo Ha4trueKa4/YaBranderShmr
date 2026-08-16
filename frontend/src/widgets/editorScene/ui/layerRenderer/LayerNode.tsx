@@ -1,4 +1,8 @@
-import type { EditorNode, EditorShape } from '@entities/editorDocument'
+import type {
+  EditorNode,
+  EditorShape,
+  EditorText,
+} from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 import type { PointerEvent as ReactPointerEvent, RefCallback } from 'react'
 
@@ -15,7 +19,11 @@ interface LayerNodeProps {
   ) => void
   onShapePointerMove: (event: ReactPointerEvent<SVGGElement>) => void
   onShapePointerUp: (event: ReactPointerEvent<SVGGElement>) => void
-  registerShapeElement: (nodeId: string) => RefCallback<SVGGElement>
+  onTextPointerDown: (
+    node: EditorText,
+    event: ReactPointerEvent<SVGGElement>,
+  ) => void
+  registerEditableElement: (nodeId: string) => RefCallback<SVGGElement>
 }
 
 export const LayerNode = observer(function LayerNode({
@@ -24,7 +32,8 @@ export const LayerNode = observer(function LayerNode({
   onShapePointerDown,
   onShapePointerMove,
   onShapePointerUp,
-  registerShapeElement,
+  onTextPointerDown,
+  registerEditableElement,
 }: LayerNodeProps) {
   if (!node.isVisible) {
     return null
@@ -41,7 +50,8 @@ export const LayerNode = observer(function LayerNode({
             onShapePointerDown={onShapePointerDown}
             onShapePointerMove={onShapePointerMove}
             onShapePointerUp={onShapePointerUp}
-            registerShapeElement={registerShapeElement}
+            onTextPointerDown={onTextPointerDown}
+            registerEditableElement={registerEditableElement}
           />
         ))}
       </g>
@@ -54,7 +64,19 @@ export const LayerNode = observer(function LayerNode({
   }
 
   if (node.type === 'text') {
-    return <TextLayer node={node} onSelect={() => onSelectNode(node.id)} />
+    return (
+      <g
+        data-editor-node-id={node.id}
+        onPointerCancel={onShapePointerUp}
+        onPointerDown={(event) => onTextPointerDown(node, event)}
+        onPointerMove={onShapePointerMove}
+        onPointerUp={onShapePointerUp}
+        ref={registerEditableElement(node.id)}
+        style={{ cursor: node.isLocked ? 'not-allowed' : 'grab' }}
+      >
+        <TextLayer node={node} />
+      </g>
+    )
   }
 
   return (
@@ -64,7 +86,7 @@ export const LayerNode = observer(function LayerNode({
       onPointerDown={(event) => onShapePointerDown(node, event)}
       onPointerMove={onShapePointerMove}
       onPointerUp={onShapePointerUp}
-      ref={registerShapeElement(node.id)}
+      ref={registerEditableElement(node.id)}
       style={{ cursor: node.isLocked ? 'not-allowed' : 'grab' }}
     >
       <ShapeLayer node={node} />
