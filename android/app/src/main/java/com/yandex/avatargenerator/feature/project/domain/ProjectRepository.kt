@@ -3,13 +3,28 @@ package com.yandex.avatargenerator.feature.project.domain
 import com.yandex.avatargenerator.feature.project.domain.model.Project
 
 /**
- * Чтение и изменение одного проекта: `GET`/`PATCH`/`DELETE /projects/{id}`.
+ * Создание, чтение и изменение проекта: `POST /projects` плюс
+ * `GET`/`PATCH`/`DELETE /projects/{id}`.
  *
  * Методы возвращают [Result] и не бросают исключений (кроме отмены корутины):
  * при ошибке в [Result.failure] лежит доменная
  * [com.yandex.avatargenerator.core.domain.NetworkException]. Разбор — во ViewModel.
  */
 interface ProjectRepository {
+
+    /**
+     * `POST /projects` — создаёт пустой проект и отдаёт его целиком (в ответе
+     * тот же `Project`, что и у [getProject], только без `url`: SVG появится
+     * после первой генерации). Требует `Bearer`.
+     *
+     * Экран создания живёт в `feature/createproject`, но своего репозитория не
+     * заводит: ответ — та же доменная модель, а DTO выше `data/` своей фичи не
+     * поднимаются, поэтому метод здесь.
+     *
+     * @param description бриф бренда; пустая строка допустима — бэкенд читает
+     *  поле с дефолтом `""`. Пустой [name] бэкенд отвергает как `ClientError(400)`.
+     */
+    suspend fun createProject(name: String, description: String): Result<Project>
 
     /**
      * `GET /projects/{id}`. Авторизация опциональна: публичный проект доступен

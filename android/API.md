@@ -173,32 +173,46 @@ API_INTEGRATION=1 ./gradlew :app:testDebugUnitTest --tests '*AuthApiIntegrationT
 `Ivan@mail.ru` и `ivan@mail.ru` — два разных аккаунта, а вход «тем же» адресом
 даёт 401. Автокапитализация на клавиатуре телефона делает это регулярно.
 
-### `GET` / `PATCH` / `DELETE /projects/{id}`
+### `POST /projects` и `GET` / `PATCH` / `DELETE /projects/{id}`
 
-`ProjectRepository` (`feature/project`): `getProject`, `updateProject`,
-`deleteProject`. Клиент инъектит готовый `HttpClient`, каждый вызов — в
-`apiCall { }`. Методы возвращают `Result` и не бросают (кроме отмены корутины):
-при ошибке в `failure` лежит `NetworkException`, разбор — во ViewModel.
+`ProjectRepository` (`feature/project`): `createProject`, `getProject`,
+`updateProject`, `deleteProject`. Клиент инъектит готовый `HttpClient`, каждый
+вызов — в `apiCall { }`. Методы возвращают `Result` и не бросают (кроме отмены
+корутины): при ошибке в `failure` лежит `NetworkException`, разбор — во ViewModel.
 
 | Метод | Поведение |
 | --- | --- |
+| `createProject(name, description)` | `POST /projects`, тело `{name, description}`, ответ `201` + тот же `Project`. Требует `Bearer`. Пустой `name` → `400 ClientError` (клиент до этого не доводит: кнопка неактивна) |
 | `getProject(id)` | `GET`, отдаёт доменный `Project`. `Bearer` опционален (публичный проект доступен без токена). `404 → NotFound`, `403 → Forbidden` |
 | `updateProject(id, isPublic?, canvas?)` | `PATCH`, тела в ответе нет. `null`-аргумент = «не трогать поле» (`explicitNulls = false`). Требует `Bearer`, `403` не автор |
 | `deleteProject(id)` | `DELETE`, тела в ответе нет. Требует `Bearer` |
 
-`getProject` маппит `ProjectDto → Project` в `data/ProjectMappers.kt`. `id` и
-`name` в доменной модели не-nullable: их отсутствие в ответе — сломанный
-контракт, маппер бросает `NetworkException.Serialization`. Отсутствие
-`is_public` трактуется как приватный (задокументированный дефолт).
+`description` в теле создания — не опциональное поле: бэкенд читает его с
+дефолтом `""`, поэтому пустое описание уходит пустой строкой, а не пропадает.
+
+**Создание живёт здесь, а не в `feature/createproject`.** У формы создания
+своего репозитория нет: ответ `POST /projects` — это тот же `ProjectDto` и та
+же доменная модель `Project`, а DTO выше `data/` своей фичи не поднимаются.
+`CreateProjectViewModel` инъектит `ProjectRepository` из `projectModule`
+(прецедент такой кросс-фичевой зависимости по `domain/` уже есть:
+`ProfileRepository` отдаёт `FeedProject` из `feature/feed`).
+
+`createProject` и `getProject` маппят `ProjectDto → Project` в
+`data/ProjectMappers.kt`. `id` и `name` в доменной модели не-nullable: их
+отсутствие в ответе — сломанный контракт, маппер бросает
+`NetworkException.Serialization`. Отсутствие `is_public` трактуется как
+приватный (задокументированный дефолт).
 
 `data` — это **SVG-строка** (не объект), плюс есть `url` (S3-ссылка на объект,
 пусто у пустого проекта). Прежние `ProjectDataDto`/`ProjectCanvas` моделировали
 `data` объектом — это расходилось с контрактом, поэтому убраны. У профиля
 `ProjectDescriptionDto` поле `url` пока не заведено — отдельная правка.
 
-Вживую **не проверено**: стенд не отдаёт id живого проекта (`POST /projects`
-падает 500, см. ниже), поэтому интеграционного теста нет. Контракт покрыт
-`ProjectRepositoryImplTest` на `MockEngine`. На UI слой пока не заведён.
+Вживую **не проверено**: на 13.08 `POST /projects` падал 500 (заглушка
+сохранения в S3), поэтому id живого проекта было не получить и интеграционного
+теста нет. Контракт покрыт `ProjectRepositoryImplTest` на `MockEngine`. На UI
+заведено только создание: форма `feature/createproject` уходит на экран проекта
+с настоящим id из ответа. Перед приёмкой стенд перепроверить.
 
 ## Состояние стенда
 
@@ -226,7 +240,6 @@ DTO готовы, репозиториев и вызовов пока нет. П
 | Метод | Запрос | Ответ | DTO |
 | --- | --- | --- | --- |
 | `GET /users/{id}` | — | `UserProfile` + `projects` | `feature/profile/data/dto/UserProfileResponseDto` |
-| `POST /projects` | `name`, `description` | `Project` | `feature/project/data/dto/CreateProjectRequestDto`, `ProjectDto` |
 | `POST /projects/{id}/generate` | `prompt` | `{ data: SVG-строка }` | `GenerateProjectRequestDto` (тело ответа — DTO ещё нет) |
 
 Авторизация: `Bearer` обязателен для `POST /projects`, `PATCH`, `DELETE` и

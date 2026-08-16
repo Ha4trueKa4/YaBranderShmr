@@ -23,7 +23,7 @@ android {
         // Локальный бэкенд поднимают через -PapiBaseUrl=... (на эмуляторе
         // машина разработчика — это 10.0.2.2, а не localhost).
         val apiBaseUrl = providers.gradleProperty("apiBaseUrl")
-            .getOrElse("http://158.160.187.118:8080/api/v1/")
+            .getOrElse("http://158.160.155.144:8080/api/v1/")
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
 
         // Значение по умолчанию здесь, иначе новый build type уронит компиляцию
