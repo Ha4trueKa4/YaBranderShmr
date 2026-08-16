@@ -20,6 +20,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         config.timeoutIntervalForResource = timeout
         self.session = URLSession(configuration: config)
     }
+    
+    static let shared = NetworkClient(baseURL: APIConfig.baseURL)
 
     func request<Response: Decodable & Sendable>(
         _ method: HTTPMethod,

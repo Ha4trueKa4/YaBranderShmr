@@ -54,7 +54,11 @@ struct FeedPreviewImage: View {
         }
 
         do {
-            let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
+            let request = URLRequest(
+                url: url,
+                cachePolicy: .returnCacheDataElseLoad,
+                timeoutInterval: 15
+            )
             let (data, _) = try await URLSession.shared.data(for: request)
 
             guard let node = SVGParser.parse(data: data) else {

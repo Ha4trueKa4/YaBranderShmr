@@ -42,12 +42,11 @@ final class SessionStore {
     let userProfileService: any UserProfileService
 
     init(
-        baseURL: String = APIConfig.baseURL,
+        networkClient: NetworkClient = NetworkClient.shared,
         currentUserService: (any CurrentUserService)? = nil,
         userProfileService: (any UserProfileService)? = nil
     ) {
         let tokenStore = TokenStore()
-        let networkClient = NetworkClient(baseURL: baseURL, tokenStore: tokenStore)
         let profileService = userProfileService ?? RemoteUserProfileService(networkClient: networkClient)
         self.tokenStore = tokenStore
         self.networkClient = networkClient

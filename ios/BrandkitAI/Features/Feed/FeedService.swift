@@ -11,7 +11,7 @@ nonisolated protocol FeedServiceProtocol: Sendable {
 nonisolated final class FeedService: FeedServiceProtocol {
     private let client: NetworkClientProtocol
 
-    init(client: NetworkClientProtocol = NetworkClient(baseURL: APIConfig.baseURL)) {
+    init(client: NetworkClientProtocol = NetworkClient.shared) {
         self.client = client
     }
 

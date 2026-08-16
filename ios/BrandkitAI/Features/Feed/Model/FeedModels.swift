@@ -58,26 +58,28 @@ nonisolated struct FeedItemDTO: Decodable, Sendable {
 
 extension FeedPage {
     /// Элементы с некорректными UUID пропускаются, а не роняют всю страницу.
-    init(dto: FeedResponseDTO) {
+    nonisolated init(dto: FeedResponseDTO) {
         items = dto.items.compactMap(FeedItem.init(dto:))
         nextCursor = dto.nextCursor
     }
 }
 
 extension FeedItem {
-    nonisolated private static let isoFormatter: ISO8601DateFormatter = {
+    // `unsafe` — формальность для компилятора: тип не помечен Sendable,
+    // но ISO8601DateFormatter документированно потокобезопасен.
+    nonisolated(unsafe) private static let isoFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
 
-    nonisolated private static let isoFormatterNoFraction: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let isoFormatterNoFraction: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
 
-    init?(dto: FeedItemDTO) {
+    nonisolated init?(dto: FeedItemDTO) {
         guard let id = UUID(uuidString: dto.id),
               let authorID = UUID(uuidString: dto.authorID)
         else { return nil }
