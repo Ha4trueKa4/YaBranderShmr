@@ -24,6 +24,17 @@
   gap: var(--space-2);
 }
 
+.rangeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rangeHeader strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
 .select {
   width: 100%;
   min-height: 2.5rem;
@@ -39,4 +50,48 @@
 .select:focus {
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 20%, transparent);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 5rem;
+  overflow-y: auto;
+  resize: vertical;
+  scrollbar-width: none;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: 0;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.textarea::-webkit-scrollbar {
+  display: none;
+}
+
+.textarea:focus {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 20%, transparent);
+}
+
+.scrubHandle {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.scrubHandleVertical {
+  cursor: ns-resize;
+}
+
+.scrubField :global(input[type="number"]) {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.scrubField :global(input[type="number"])::-webkit-inner-spin-button,
+.scrubField :global(input[type="number"])::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }

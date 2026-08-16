@@ -126,6 +126,19 @@ describe('EditorStore selection', () => {
     })
   })
 
+  it('changes a shape position through its transform and common opacity', () => {
+    const store = new EditorStore(document)
+
+    store.setShapePosition('wheel', 12, -8)
+    store.setShapeOpacity('wheel', 0.6)
+    store.setSelectedNode('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      opacity: 0.6,
+      transform: { x: 12, y: -8 },
+    })
+  })
+
   it('changes editable text properties', () => {
     const store = new EditorStore(document)
 

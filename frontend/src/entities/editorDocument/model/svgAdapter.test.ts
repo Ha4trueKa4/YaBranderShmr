@@ -185,23 +185,19 @@ describe('parseSvg', () => {
     })
   })
 
-  it('preserves text with nested fragments as a locked SVG layer', () => {
-    const result = importSvg(`
+  it('parses tspan lines as one editable text layer', () => {
+    const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-        <text id="title" x="20" y="40">Hello <tspan fill="#6C3BFF">world</tspan></text>
+        <text id="title" x="20" y="40" font-size="20"><tspan x="20" dy="0">Hello</tspan><tspan x="20" dy="24">world</tspan></text>
       </svg>
     `)
 
-    expect(result.document.layers[0]).toMatchObject({
+    expect(document.layers[0]).toMatchObject({
       id: 'title',
-      isLocked: true,
-      type: 'raw',
-    })
-    expect(result.warnings).toContainEqual({
-      code: 'locked-raw-node',
-      editorId: 'title',
-      elementName: 'text',
-      reason: 'Text with nested SVG elements is not editable',
+      isLocked: false,
+      style: { lineHeight: 24 },
+      text: 'Hello\nworld',
+      type: 'text',
     })
   })
 

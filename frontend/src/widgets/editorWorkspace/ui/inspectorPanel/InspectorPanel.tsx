@@ -9,6 +9,8 @@ import { TextProperties } from './textProperties/TextProperties'
 interface InspectorPanelProps {
   onShapeFillChange: (nodeId: string, color: string) => void
   onShapeFillOpacityChange: (nodeId: string, opacity: number) => void
+  onShapeOpacityChange: (nodeId: string, opacity: number) => void
+  onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextAnchorChange: (
     nodeId: string,
     textAnchor: 'end' | 'middle' | 'start',
@@ -29,6 +31,8 @@ interface InspectorPanelProps {
 export function InspectorPanel({
   onShapeFillChange,
   onShapeFillOpacityChange,
+  onShapeOpacityChange,
+  onShapePositionChange,
   onTextAnchorChange,
   onTextContentChange,
   onTextFillColorChange,
@@ -101,6 +105,12 @@ export function InspectorPanel({
             onFillChange={(color) => onShapeFillChange(selectedNode.id, color)}
             onFillOpacityChange={(opacity) =>
               onShapeFillOpacityChange(selectedNode.id, opacity)
+            }
+            onOpacityChange={(opacity) =>
+              onShapeOpacityChange(selectedNode.id, opacity)
+            }
+            onPositionChange={(x, y) =>
+              onShapePositionChange(selectedNode.id, x, y)
             }
           />
         </div>

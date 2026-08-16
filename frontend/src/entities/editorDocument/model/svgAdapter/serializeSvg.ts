@@ -113,6 +113,26 @@ function serializeTextStyle(style: TextStyle): Record<string, AttributeValue> {
   }
 }
 
+function serializeTextContent(node: EditorText): string {
+  const lines = node.text.split('\n')
+
+  if (lines.length === 1) {
+    return escapeText(node.text)
+  }
+
+  const lineHeight = node.style.lineHeight ?? node.style.fontSize * 1.2
+
+  return lines
+    .map(
+      (line, index) =>
+        `<tspan${serializeAttributes({
+          dy: index === 0 ? 0 : lineHeight,
+          x: node.x,
+        })}>${escapeText(line)}</tspan>`,
+    )
+    .join('')
+}
+
 function serializeShape(node: EditorShape): string {
   const { type: _type, ...geometry } = node.geometry
   const attributes = {
@@ -132,7 +152,7 @@ function serializeText(node: EditorText): string {
     y: node.y,
   }
 
-  return `<text${serializeAttributes(attributes)}>${escapeText(node.text)}</text>`
+  return `<text${serializeAttributes(attributes)}>${serializeTextContent(node)}</text>`
 }
 
 function serializeGroup(node: EditorGroup): string {

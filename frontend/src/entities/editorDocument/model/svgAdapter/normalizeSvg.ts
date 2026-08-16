@@ -7,7 +7,7 @@ export function normalizeSvg(root: Element): SvgImportWarning[] {
   const generatedNameCounters = new Map<string, number>()
 
   for (const element of root.querySelectorAll('*')) {
-    if (element.closest('defs')) {
+    if (element.closest('defs') || element.localName === 'tspan') {
       continue
     }
 
