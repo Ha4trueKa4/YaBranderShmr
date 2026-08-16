@@ -21,6 +21,7 @@ import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
+import { MobileInspector } from './mobileInspector'
 
 interface EditorWorkspaceProps {
   document: EditorDocument
@@ -39,6 +40,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [projectName, setProjectName] = useState(initialProjectName)
   const [editorStore] = useState(() => new EditorStore(document))
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
+  const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
     useUpdateProjectMetadataMutation()
 
@@ -94,6 +96,28 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setSceneRenderVersion((version) => version + 1)
   }
 
+  function handleSceneSelectNode(nodeId: string) {
+    editorStore.setSelectedNode(nodeId)
+
+    if (window.matchMedia('(width < 640px)').matches) {
+      setIsMobileInspectorOpen(true)
+    }
+  }
+
+  const inspectorProps = {
+    onShapeFillChange: editorStore.setShapeFillColor,
+    onShapeFillOpacityChange: editorStore.setShapeFillOpacity,
+    onTextAnchorChange: editorStore.setTextAnchor,
+    onTextContentChange: editorStore.setTextContent,
+    onTextFillColorChange: editorStore.setTextFillColor,
+    onTextFontFamilyChange: editorStore.setTextFontFamily,
+    onTextFontSizeChange: editorStore.setTextFontSize,
+    onTextFontStyleChange: editorStore.setTextFontStyle,
+    onTextFontWeightChange: editorStore.setTextFontWeight,
+    onTextPositionChange: editorStore.setTextPosition,
+    selectedNode: editorStore.selectedNode,
+  }
+
   return (
     <section className={styles.workspace}>
       <div className={styles.toolbar}>
@@ -127,33 +151,21 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       <div className={styles.scene}>
         <EditorScene
           document={editorStore.document}
-          onSelectNode={editorStore.setSelectedNode}
-          onShapePositionChange={editorStore.setShapePosition}
-          onTextPositionChange={editorStore.setTextPosition}
+          onSelectNode={handleSceneSelectNode}
           renderVersion={sceneRenderVersion}
-          selectedNode={editorStore.selectedNode}
         />
       </div>
       <aside className={styles.inspector}>
-        <InspectorPanel
-          onShapeFillChange={editorStore.setShapeFillColor}
-          onShapeFillOpacityChange={editorStore.setShapeFillOpacity}
-          onShapeOpacityChange={editorStore.setShapeOpacity}
-          onShapePositionChange={editorStore.setShapePosition}
-          onTextAnchorChange={editorStore.setTextAnchor}
-          onTextContentChange={editorStore.setTextContent}
-          onTextFillColorChange={editorStore.setTextFillColor}
-          onTextFontFamilyChange={editorStore.setTextFontFamily}
-          onTextFontSizeChange={editorStore.setTextFontSize}
-          onTextFontStyleChange={editorStore.setTextFontStyle}
-          onTextFontWeightChange={editorStore.setTextFontWeight}
-          onTextPositionChange={editorStore.setTextPosition}
-          selectedNode={editorStore.selectedNode}
-        />
+        <InspectorPanel {...inspectorProps} />
       </aside>
       <div className={styles.status}>
         <EditorStatusBar />
       </div>
+      <MobileInspector
+        {...inspectorProps}
+        isOpen={isMobileInspectorOpen}
+        onClose={() => setIsMobileInspectorOpen(false)}
+      />
     </section>
   )
 })
