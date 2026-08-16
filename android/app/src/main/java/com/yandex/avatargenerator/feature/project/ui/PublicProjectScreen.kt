@@ -57,13 +57,16 @@ import org.koin.core.parameter.parametersOf
 
 // Декоративный градиент hero-баннера по макету (violet → cyan → pink, слева направо):
 // виден, пока грузится превью проекта или если превью нет. Розовый — точечное
-// значение баннера, вне палитры AppColors.
-private val HeroGradient = Brush.horizontalGradient(
-    listOf(AppColors.Accent, AppColors.AccentCyan, Color(0xFFEC4899)),
+// значение баннера, вне палитры AppColors. AppColors — @Composable-геттеры (зависят
+// от темы), поэтому градиент собирается функцией, а не top-level val.
+@Composable
+private fun heroGradient() = Brush.horizontalGradient(
+listOf(AppColors.Accent, AppColors.AccentCyan, Color(0xFFEC4899)),
 )
 
 // Заглушка превью карточек «More from this creator» — на токенах палитры.
-private val PreviewGradient = Brush.horizontalGradient(
+@Composable
+private fun previewGradient() = Brush.horizontalGradient(
     listOf(AppColors.Accent, AppColors.AccentCyan),
 )
 
@@ -207,7 +210,7 @@ private fun PublicProjectHero(
         modifier = modifier
             .fillMaxWidth()
             .height(HeroHeight)
-            .background(HeroGradient),
+            .background(heroGradient()),
         contentAlignment = Alignment.BottomStart,
     ) {
         if (previewUrl != null) {
@@ -396,7 +399,7 @@ private fun PublicProjectRelatedCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(RelatedPreviewHeight)
-                .background(PreviewGradient),
+                .background(previewGradient()),
         ) {
             if (item.previewUrl != null) {
                 AsyncImage(
