@@ -13,7 +13,7 @@ build:
     - docker:dind
   variables:
     DOCKER_BUILDKIT: "1"
-script:
+  script:
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
     - docker buildx create --use
     - docker buildx build --push --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache --cache-to=type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -t $REGISTRY/$IMAGE:latest -f backend/Dockerfile backend/
