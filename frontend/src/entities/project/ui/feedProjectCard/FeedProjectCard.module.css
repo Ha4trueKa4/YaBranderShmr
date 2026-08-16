@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: grid;
   gap: var(--space-4);
   padding: var(--space-3);
@@ -7,6 +8,10 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+}
+
+.preview img {
+  background: var(--color-surface-elevated);
 }
 
 .content {
@@ -18,6 +23,17 @@
 .content h3 {
   margin: 0;
   font-size: var(--font-size-h3);
+}
+
+.projectLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.projectLink::after {
+  position: absolute;
+  inset: 0;
+  content: "";
 }
 
 .meta,
@@ -39,6 +55,8 @@
 }
 
 .avatarLink {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   text-decoration: none;
 }

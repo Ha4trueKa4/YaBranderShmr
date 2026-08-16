@@ -8,6 +8,10 @@ export interface ApiRequestOptions<Body = unknown>
   body?: Body | FormData
 }
 
+interface ApiClientOptions {
+  getAccessToken?: () => string | null
+}
+
 export class ApiError extends Error {
   public readonly status: number
   public readonly response: unknown
@@ -20,7 +24,10 @@ export class ApiError extends Error {
   }
 }
 
-export function createApiClient(baseUrl: string) {
+export function createApiClient(
+  baseUrl: string,
+  { getAccessToken }: ApiClientOptions = {},
+) {
   return async function apiRequest<Response, Body = unknown>(
     path: string,
     options: ApiRequestOptions<Body> = {},
@@ -41,8 +48,13 @@ export function createApiClient(baseUrl: string) {
     })
 
     const headers = new Headers(initialHeaders)
+    const accessToken = getAccessToken?.()
 
     headers.set('Accept', 'application/json')
+
+    if (accessToken && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${accessToken}`)
+    }
 
     const isFormData =
       typeof FormData !== 'undefined' && body instanceof FormData
@@ -62,16 +74,35 @@ export function createApiClient(baseUrl: string) {
 
     const response = await fetch(url, requestInit)
 
-    const contentType = response.headers.get('content-type') ?? ''
-
-    const responseData = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text()
+    const responseData = await parseResponseData(response)
 
     if (!response.ok) {
       throw new ApiError(response.status, responseData)
     }
 
     return responseData as Response
+  }
+}
+
+async function parseResponseData(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+
+  const responseText = await response.text()
+
+  try {
+    const responseData = JSON.parse(responseText)
+
+    console.warn('API response has an unexpected Content-Type', {
+      contentType,
+      endpoint: response.url,
+    })
+
+    return responseData
+  } catch {
+    return responseText
   }
 }

@@ -1,7 +1,8 @@
 export {
   zAuthResponse,
   zDeleteProjectsByIdPath,
-  zError,
+  zDeleteProjectsByIdResponse,
+  zGetFeedResponse,
   zGetProjectsByIdPath,
   zGetProjectsByIdResponse,
   zGetUsersByIdPath,
@@ -19,7 +20,6 @@ export {
   zPostProjectsByIdGenerateResponse,
   zPostProjectsResponse,
   zProject,
-  zProjectDescription,
   zRegisterRequest,
   zUserProfile,
   zValidationError,

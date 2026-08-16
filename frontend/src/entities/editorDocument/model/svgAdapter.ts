@@ -1,8 +1,10 @@
+import { importSvg, parseSvg } from './svgAdapter/parseSvg'
+import { serializeSvg } from './svgAdapter/serializeSvg'
+import type { SvgImportResult, SvgImportWarning } from './svgAdapter/types'
 import type { EditorDocument } from './types'
 
-export function parseSvg(_svg: string): EditorDocument {
-  throw new Error('SVG parsing is not implemented yet')
-}
+export type { SvgImportResult, SvgImportWarning }
+export { importSvg, parseSvg, serializeSvg }
 
 export interface SvgAdapter {
   parse: (svg: string) => EditorDocument

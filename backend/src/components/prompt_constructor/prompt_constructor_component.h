@@ -7,6 +7,7 @@
 #include <userver/formats/json/value.hpp>
 
 #include "../vector_search_component.h"
+#include "../llm_prompt.hpp"
 
 namespace ya_brander::components {
 
@@ -19,12 +20,12 @@ public:
 
   /// @param history Предыдущие запросы пользователя по этому проекту
   ///        (без ответов модели), от старых к новым.
-  std::string BuildGenerationPrompt(const std::string& user_message,
-                                    const std::vector<std::string>& history = {}) const;
+  LlmPrompt BuildGenerationPrompt(const std::string& user_message,
+                                  const std::vector<std::string>& history = {}) const;
 
-  std::string BuildEditPrompt(const std::string& current_state,
-                              const std::string& user_message,
-                              const std::vector<std::string>& history = {}) const;
+  LlmPrompt BuildEditPrompt(const std::string& current_state,
+                            const std::string& user_message,
+                            const std::vector<std::string>& history = {}) const;
 
   static userver::yaml_config::Schema GetStaticConfigSchema();
 
@@ -34,4 +35,4 @@ private:
 
 void AppendPromptConstructor(userver::components::ComponentList& component_list);
 
-} // namespace ya_brander::components
+}  // namespace ya_brander::components

@@ -1,30 +1,42 @@
 import { AppRoute } from '@app/providers/router/routes'
-import { EditorStore } from '@entities/editorDocument'
+import { type EditorDocument, EditorStore } from '@entities/editorDocument'
 import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { editorFixture } from '../model/editorFixture'
 import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
 
-export const EditorWorkspace = observer(function EditorWorkspace() {
+interface EditorWorkspaceProps {
+  document: EditorDocument
+  projectName: string
+}
+
+export const EditorWorkspace = observer(function EditorWorkspace({
+  document,
+  projectName: initialProjectName,
+}: EditorWorkspaceProps) {
   const navigate = useNavigate()
-  // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
-  // Сейчас editorFixture временно заменяет ответ API, чтобы можно было проверять UI.
-  const [editorStore] = useState(
-    () => new EditorStore(editorFixture, 'icon-shape', ['logo']),
-  )
+  const [projectName, setProjectName] = useState(initialProjectName)
+  const [editorStore] = useState(() => new EditorStore(document))
+  const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
   }
 
-  function handleProjectNameSubmit(_projectName: string) {
-    // TODO: сохранить название проекта после подключения editorStore.
+  function handleProjectNameSubmit(nextProjectName: string) {
+    // TODO: сохранять название через API, когда PATCH /projects/{id}
+    // будет поддерживать поле name.
+    setProjectName(nextProjectName)
+  }
+
+  function handleToggleVisibility(nodeId: string) {
+    editorStore.toggleNodeVisibility(nodeId)
+    setSceneRenderVersion((version) => version + 1)
   }
 
   return (
@@ -33,7 +45,9 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
         <EditorToolbar
           onEditProjectName={handleProjectNameSubmit}
           onExport={handleToolbarAction}
-          onOpenProfile={() => navigate(AppRoute.Profile)}
+          onOpenProfile={() =>
+            navigate(AppRoute.Profile, { viewTransition: true })
+          }
           onPanTool={handleToolbarAction}
           onRedo={handleToolbarAction}
           onSaveVersion={handleToolbarAction}
@@ -41,22 +55,32 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
           onUndo={handleToolbarAction}
           onZoomIn={handleToolbarAction}
           onZoomOut={handleToolbarAction}
-          // TODO: передавать название загруженного Project вместо временного значения.
-          projectName="Orion Labs"
+          projectName={projectName}
         />
       </div>
       <aside className={styles.layers}>
         <LayersPanel
+          expandedGroupIds={editorStore.expandedGroupIds}
           nodes={editorStore.document.layers}
-          onSelectLayer={editorStore.setSelectedLayer}
-          selectedLayerId={editorStore.selectedLayerId}
+          onSelectNode={editorStore.setSelectedNode}
+          onToggleGroup={editorStore.toggleGroup}
+          onToggleVisibility={handleToggleVisibility}
+          selectedNodeId={editorStore.selectedNodeId}
         />
       </aside>
       <div className={styles.scene}>
-        <EditorScene />
+        <EditorScene
+          document={editorStore.document}
+          onSelectNode={editorStore.setSelectedNode}
+          renderVersion={sceneRenderVersion}
+        />
       </div>
       <aside className={styles.inspector}>
-        <InspectorPanel selectedLayer={editorStore.selectedLayer} />
+        <InspectorPanel
+          onShapeFillChange={editorStore.setShapeFillColor}
+          onShapeFillOpacityChange={editorStore.setShapeFillOpacity}
+          selectedNode={editorStore.selectedNode}
+        />
       </aside>
       <div className={styles.status}>
         <EditorStatusBar />

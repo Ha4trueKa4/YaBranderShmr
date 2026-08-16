@@ -1,4 +1,15 @@
-export { useProjectQuery, useProjectsQuery } from './api/queries'
+export { getProjectSvg } from './api/getProjectSvg'
+export {
+  projectQueryKey,
+  projectSvgQueryKey,
+  useDeleteProjectMutation,
+  useFeedQuery,
+  useProjectQuery,
+  useProjectSvgQuery,
+  userProfileQueryKey,
+  useUpdateProjectMetadataMutation,
+  useUserProfileQuery,
+} from './api/queries'
 export type { FeedProject, PublicProfileProject } from './model/types'
 export type { FeedProjectCardProps } from './ui/feedProjectCard'
 export { FeedProjectCard } from './ui/feedProjectCard'

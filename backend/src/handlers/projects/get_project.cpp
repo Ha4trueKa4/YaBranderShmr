@@ -1,13 +1,15 @@
 #include "get_project.h"
-#include <userver/formats/json/serialize.hpp>
 #include <userver/utils/datetime.hpp>
 
 namespace ya_brander::handlers {
 
 GetProjectHandler::GetProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+    : HttpHandlerJsonBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
-std::string GetProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+userver::formats::json::Value GetProjectHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
+    userver::server::request::RequestContext& context) const {
   const auto& id = request.GetPathArg("id");
   auto project = project_manager_.GetProject(id);
 
@@ -34,10 +36,14 @@ std::string GetProjectHandler::HandleRequestThrow(const userver::server::http::H
   res["name"] = project->name;
   res["description"] = project->description;
   res["is_public"] = project->is_public;
-  res["created_at"] = userver::utils::datetime::Timestring(project->created_at);
-  res["data"] = project->data;
+  res["created_at"] = userver::utils::datetime::Timestring(
+      project->created_at, userver::utils::datetime::kDefaultTimezone,
+      userver::utils::datetime::kRfc3339Format);
+  if (!project->url.empty()) {
+      res["url"] = project->url;
+  }
 
-  return userver::formats::json::ToString(res.ExtractValue());
+  return res.ExtractValue();
 }
 
 }

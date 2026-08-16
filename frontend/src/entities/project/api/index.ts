@@ -1,8 +1,18 @@
+export { deleteProject } from './deleteProject'
 export { getProject } from './getProject'
-export { getProjects } from './getProjects'
+export { getProjectSvg } from './getProjectSvg'
+export { getUserProfile } from './getProjects'
 export {
+  feedQueryKey,
   projectQueryKey,
-  projectsQueryKey,
+  projectSvgQueryKey,
+  useDeleteProjectMutation,
+  useFeedQuery,
   useProjectQuery,
-  useProjectsQuery,
+  useProjectSvgQuery,
+  userProfileQueryKey,
+  useUpdateProjectMetadataMutation,
+  useUserProfileQuery,
 } from './queries'
+export type { UpdateProjectMetadataInput } from './updateProject'
+export { updateProject } from './updateProject'

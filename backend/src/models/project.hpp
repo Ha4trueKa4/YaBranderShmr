@@ -12,13 +12,7 @@ struct Project {
   std::string description;
   bool is_public;
   std::chrono::system_clock::time_point created_at;
-  std::string data;
-};
-
-/// @brief Результат генерации/правки SVG через LLM.
-struct GenerationResult {
-  std::string version_id;
-  std::string data;
+  std::string url;
 };
 
 } // namespace ya_brander::models

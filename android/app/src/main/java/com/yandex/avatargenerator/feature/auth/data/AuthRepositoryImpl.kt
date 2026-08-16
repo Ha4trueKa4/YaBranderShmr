@@ -10,25 +10,44 @@ import com.yandex.avatargenerator.feature.auth.data.dto.RegisterRequestDto
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
 import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
 import com.yandex.avatargenerator.feature.auth.domain.model.AuthSession
+import com.yandex.avatargenerator.feature.auth.domain.model.AuthUser
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 private const val RegisterPath = "auth/register"
 private const val LoginPath = "auth/login"
 private const val BadRequestCode = 400
 private const val ConflictCode = 409
 
+/** Типовой ответ валидации у многих бэкендов; тело такое же, как у `400`. */
+private const val UnprocessableEntityCode = 422
+
+/**
+ * Единственный тип токена, который умеет подставлять `HttpClient`
+ * (`HttpClientFactory` пишет `Authorization: Bearer …` строкой).
+ */
+private const val BearerTokenType = "bearer"
+
 /**
  * Вход и регистрация через API. Токен кладём в [AuthTokenStore] сразу после
- * успешного ответа — дальше его подставляет `HttpClient` сам.
+ * успешного ответа — дальше его подставляет `HttpClient` сам, а пользователя из
+ * того же ответа — в [AuthUserStore]: ручки `/auth/me` в API нет, и это
+ * единственный источник своего id.
  */
 class AuthRepositoryImpl(
     private val client: HttpClient,
     private val tokenStore: AuthTokenStore,
+    private val userStore: AuthUserStore,
 ) : AuthRepository {
+
+    override val isAuthorized: Flow<Boolean> = tokenStore.token.map { it != null }
+
+    override val currentUser: Flow<AuthUser?> = userStore.user
 
     override suspend fun register(email: String, password: String, nickname: String): AuthSession {
         val response = try {
@@ -44,7 +63,7 @@ class AuthRepositoryImpl(
                 }.body<AuthResponseDto>()
             }
         } catch (clientError: NetworkException.ClientError) {
-            throw clientError.toRegistrationFailure()
+            throw clientError.toFieldFailure()
         }
         return response.toSessionAndRemember()
     }
@@ -59,17 +78,33 @@ class AuthRepositoryImpl(
         } catch (unauthorized: NetworkException.Unauthorized) {
             // Не «сессия протухла», а неверная пара логин/пароль: токена ещё нет
             throw AuthException.InvalidCredentials(unauthorized)
+        } catch (clientError: NetworkException.ClientError) {
+            // Формат email сервер отвергает и на входе — показываем ошибку под
+            // полем, а не общее «что-то пошло не так».
+            throw clientError.toFieldFailure()
         }
         return response.toSessionAndRemember()
     }
 
     override suspend fun logout() {
         tokenStore.clear()
+        userStore.clear()
     }
 
     private suspend fun AuthResponseDto.toSessionAndRemember(): AuthSession {
-        tokenStore.update(accessToken)
-        return toDomain()
+        val session = toDomain()
+        // Заголовок собирается строкой "Bearer $token": другой тип токена молча
+        // сломал бы все защищённые запросы — лучше упасть здесь и сразу.
+        if (!session.tokenType.equals(BearerTokenType, ignoreCase = true)) {
+            throw NetworkException.Serialization(
+                IllegalStateException(
+                    "Ожидали token_type=Bearer, сервер прислал \"${session.tokenType}\"",
+                ),
+            )
+        }
+        tokenStore.update(session.accessToken)
+        userStore.save(session.user)
+        return session
     }
 }
 
@@ -79,9 +114,13 @@ class AuthRepositoryImpl(
  */
 private fun String.normalizeEmail(): String = trim().lowercase(Locale.ROOT)
 
-/** Достаёт поле формы из тела `400` и `409`. Прочие 4xx отдаём как есть. */
-private suspend fun NetworkException.ClientError.toRegistrationFailure(): Exception {
-    if (code != BadRequestCode && code != ConflictCode) return this
+/**
+ * Достаёт поле формы из тела `400`, `422` и `409`. Прочие 4xx отдаём как есть.
+ * Общий для входа и регистрации: формат email сервер проверяет на обеих ручках.
+ */
+private suspend fun NetworkException.ClientError.toFieldFailure(): Exception {
+    val isRejected = code == BadRequestCode || code == UnprocessableEntityCode
+    if (!isRejected && code != ConflictCode) return this
 
     val validationError = validationError()
     val field = when (validationError?.code) {
@@ -95,6 +134,6 @@ private suspend fun NetworkException.ClientError.toRegistrationFailure(): Except
     return if (code == ConflictCode) {
         AuthException.RegistrationConflict(field, serverMessage, this)
     } else {
-        AuthException.RegistrationRejected(field, serverMessage, this)
+        AuthException.FieldRejected(field, serverMessage, this)
     }
 }

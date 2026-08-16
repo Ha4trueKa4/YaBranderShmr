@@ -1,7 +1,7 @@
 import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
 import brandMark from '@shared/assets/brandmark.svg'
-import { cn } from '@shared/lib'
+import { cn, getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
 import { observer } from 'mobx-react-lite'
 import { NavLink, useNavigate } from 'react-router-dom'
@@ -17,13 +17,34 @@ export const Header = observer(function Header({
 }: HeaderProps) {
   const navigate = useNavigate()
   const isAuthorized = authStore.isAuthorized
+  const session = authStore.getSession
+
+  function handleSignInClick() {
+    document.documentElement.dataset.navigationTransition = 'auth'
+    navigate('/auth', { viewTransition: true })
+
+    requestAnimationFrame(() => {
+      const transition = document.activeViewTransition
+
+      if (!transition) {
+        delete document.documentElement.dataset.navigationTransition
+
+        return
+      }
+
+      void transition.finished.then(
+        () => delete document.documentElement.dataset.navigationTransition,
+        () => delete document.documentElement.dataset.navigationTransition,
+      )
+    })
+  }
 
   return (
     <header className={styles.header}>
       <div className={cn(styles.content, fullWidth && styles.contentFullWidth)}>
         <button
           className={styles.brand}
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/', { viewTransition: true })}
           type="button"
         >
           <img alt="" src={brandMark} />
@@ -35,6 +56,7 @@ export const Header = observer(function Header({
               cn(styles.navigationLink, isActive && styles.navigationLinkActive)
             }
             to={AppRoute.EditorCreate}
+            viewTransition
           >
             Generate
             <span className={styles.generateIcon} />
@@ -44,6 +66,7 @@ export const Header = observer(function Header({
               cn(styles.navigationLink, isActive && styles.navigationLinkActive)
             }
             to={AppRoute.Feed}
+            viewTransition
           >
             Feed
           </NavLink>
@@ -56,25 +79,29 @@ export const Header = observer(function Header({
                 )
               }
               to={AppRoute.Profile}
+              viewTransition
             >
               My projects
             </NavLink>
           )}
         </nav>
-        {isAuthorized ? (
+        {isAuthorized && session ? (
           <button
             className={styles.avatar}
-            onClick={() => navigate(AppRoute.Profile)}
+            onClick={() => navigate(AppRoute.Profile, { viewTransition: true })}
             type="button"
           >
-            <Avatar initials="OL" />
+            <span>@{session.user.nickname}</span>
+            <Avatar initials={getAvatarInitials(session.user.nickname)} />
           </button>
         ) : (
           <div className={styles.actions}>
-            <Button onClick={() => navigate('/auth')} variant="ghost">
+            <Button onClick={handleSignInClick} variant="ghost">
               Sign in
             </Button>
-            <Button onClick={() => navigate('/auth')}>Get started</Button>
+            <Button onClick={() => navigate('/auth', { viewTransition: true })}>
+              Get started
+            </Button>
           </div>
         )}
       </div>

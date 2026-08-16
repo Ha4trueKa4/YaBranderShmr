@@ -3,9 +3,12 @@
 namespace ya_brander::handlers {
 
 DeleteProjectHandler::DeleteProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+    : HttpHandlerJsonBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
 
-std::string DeleteProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+userver::formats::json::Value DeleteProjectHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
+    userver::server::request::RequestContext& context) const {
   std::string* user_id = context.GetDataOptional<std::string>("user_id");
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -25,7 +28,9 @@ std::string DeleteProjectHandler::HandleRequestThrow(const userver::server::http
   }
 
   project_manager_.DeleteProject(id);
-  return R"({"message": "Project deleted successfully"})";
+  userver::formats::json::ValueBuilder res;
+  res["message"] = "Project deleted successfully";
+  return res.ExtractValue();
 }
 
 }

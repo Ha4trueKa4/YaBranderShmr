@@ -14,6 +14,7 @@ struct ChatView: View {
     @State private var viewModel = ChatViewModel()
     @State private var messageText = ""
     @State private var didFinishInitialLoad = false
+    @State private var isPrivacyPickerPresented = false
     @FocusState private var isInputFocused: Bool
 
     private let bottomAnchor = "chat-bottom"
@@ -73,12 +74,49 @@ struct ChatView: View {
             }
         }
             .customNavigationBar(title: title, onBack: onBack)
+            .toolbar {
+                privacyToolbarItem
+            }
             .safeAreaInset(edge: .top) {
                 Rectangle()
                     .foregroundStyle(.border)
                     .frame(height: 1)
                     .background(Color.background)
             }
+            .sheet(isPresented: $isPrivacyPickerPresented) {
+                @Bindable var viewModel = viewModel
+                PrivacyPicker(selection: $viewModel.privacy)
+            }
+    }
+
+    @ToolbarContentBuilder
+    private var privacyToolbarItem: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarTrailing) {
+                privacyButton
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarTrailing) {
+                privacyButton
+            }
+        }
+    }
+
+    private var privacyButton: some View {
+        Button {
+            isPrivacyPickerPresented = true
+        } label: {
+            Text(viewModel.privacy.shortTitle)
+                .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+            .background(Color(.secondarySystemBackground), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .accessibilityLabel("Project visibility: \(viewModel.privacy.shortTitle)")
+        .accessibilityHint("Opens project visibility settings")
     }
 
     private func inputBar(using proxy: ScrollViewProxy) -> some View {

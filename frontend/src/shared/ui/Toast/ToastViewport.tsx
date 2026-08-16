@@ -1,4 +1,4 @@
-import { createPortal } from 'react-dom'
+import { Portal } from '@shared/ui/Portal'
 import styles from './Toast.module.css'
 import { ToastItem } from './ToastItem'
 import type { Toast } from './toast.types'
@@ -9,12 +9,13 @@ type ToastViewportProps = {
 }
 
 export function ToastViewport({ onDismiss, toasts }: ToastViewportProps) {
-  return createPortal(
-    <div className={styles.viewport}>
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} onDismiss={onDismiss} toast={toast} />
-      ))}
-    </div>,
-    document.body,
+  return (
+    <Portal>
+      <div className={styles.viewport}>
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} onDismiss={onDismiss} toast={toast} />
+        ))}
+      </div>
+    </Portal>
   )
 }

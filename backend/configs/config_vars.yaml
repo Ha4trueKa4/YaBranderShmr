@@ -10,3 +10,4 @@ dbconnection: 'postgresql://ya_brander_user:password@localhost:5432/ya_brander_d
 dbconnection-vector: 'postgresql://user:password@service-vector-postgres:5432/vector_db'
 yandex-gpt-url: 'https://ai.api.cloud.yandex.net/v1/responses'
 yandex-embedding-url: 'https://llm.api.cloud.yandex.net/foundationModels/v1/textEmbedding'
+s3-endpoint: 'storage.yandexcloud.net'

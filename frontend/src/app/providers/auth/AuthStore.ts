@@ -20,6 +20,10 @@ class AuthStore {
     return Boolean(this.session)
   }
 
+  get getSession() {
+    return this.session
+  }
+
   signIn(session: AuthSession) {
     setStoredSession(session)
     this.session = session

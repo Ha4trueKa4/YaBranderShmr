@@ -24,7 +24,8 @@ def pgsql_local(service_source_dir, pgsql_local_create):
     )
     db1_only = {k: v for k, v in databases.items() if k == 'db-1'}
     return pgsql_local_create(list(db1_only.values()))
-        
+
+
 def _get_connection_string(conn_info):
     for attr in ('connection_string', 'dsn', 'uri'):
         if hasattr(conn_info, attr):
@@ -54,4 +55,38 @@ def userver_pg_config(pgsql_local):
         conn_str = _get_connection_string(pgsql_local['db-1'])
         config_vars['dbconnection'] = conn_str
         config_vars['dbconnection-vector'] = conn_str
+
     return _patch_config
+
+
+@pytest.fixture(autouse=True)
+def mock_s3(mockserver):
+    """Глобальный мок для Yandex S3. Перехватывает запросы от S3ObjectStorageComponent"""
+
+    # Используем чистую строку без 'r' и '^', так как prefix=True
+    @mockserver.handler('/ya-brander-svg/', prefix=True)
+    def _mock_s3_handler(request):
+        if request.method == 'PUT':
+            return mockserver.make_response(status=200)
+        elif request.method == 'DELETE':
+            return mockserver.make_response(status=204)
+        elif request.method == 'GET':
+            return mockserver.make_response('<svg>mocked from s3</svg>', status=200)
+        return mockserver.make_response(status=405)
+
+    return _mock_s3_handler
+
+
+@pytest.fixture(autouse=True)
+def mock_yandex_gpt(mockserver):
+    """Фейковый сервер Yandex GPT"""
+
+    @mockserver.json_handler("/yandex-gpt-mock")
+    def _mock_generate(request):
+        return {
+            "output": [
+                {"content": [{"text": '<svg><circle/></svg>'}]}
+            ]
+        }
+
+    return _mock_generate

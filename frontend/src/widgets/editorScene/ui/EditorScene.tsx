@@ -1,11 +1,26 @@
+import type { EditorDocument } from '@entities/editorDocument'
+
 import styles from './EditorScene.module.css'
 import { SceneFrame } from './sceneFrame/SceneFrame'
 
-export function EditorScene() {
+interface EditorSceneProps {
+  document: EditorDocument
+  onSelectNode: (nodeId: string) => void
+  renderVersion: number
+}
+
+export function EditorScene({
+  document,
+  onSelectNode,
+  renderVersion,
+}: EditorSceneProps) {
   return (
     <section className={styles.scene}>
-      {/* Сцена читает document и viewport из editorStore; SceneFrame отвечает только за артборд. */}
-      <SceneFrame />
+      <SceneFrame
+        document={document}
+        onSelectNode={onSelectNode}
+        renderVersion={renderVersion}
+      />
     </section>
   )
 }

@@ -5,7 +5,7 @@
 
 #include <userver/components/component_config.hpp>
 #include <userver/components/component_context.hpp>
-#include <userver/server/handlers/http_handler_base.hpp>
+#include <userver/server/handlers/http_handler_json_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/component.hpp>
 
@@ -13,15 +13,16 @@
 #include "../../components/version_storage/version_storage_component.hpp"
 
 namespace ya_brander::handlers {
-class GetUserProfileHandler final : public userver::server::handlers::HttpHandlerBase {
+class GetUserProfileHandler final : public userver::server::handlers::HttpHandlerJsonBase {
 public:
   static constexpr std::string_view kName = "handler-users-get";
 
   GetUserProfileHandler(const userver::components::ComponentConfig& config,
                         const userver::components::ComponentContext& context);
 
-  std::string HandleRequestThrow(
+  userver::formats::json::Value HandleRequestJsonThrow(
       const userver::server::http::HttpRequest& request,
+      const userver::formats::json::Value& request_json,
       userver::server::request::RequestContext& context) const override;
 
 private:

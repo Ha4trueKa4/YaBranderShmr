@@ -1,4 +1,4 @@
-import { api } from '@shared/api/api'
+import { api, parseApiResponse } from '@shared/api/api'
 import {
   type AuthResponse,
   type RegisterRequest,
@@ -13,5 +13,5 @@ export async function register(body: RegisterRequest): Promise<AuthResponse> {
     body: validBody,
   })
 
-  return zPostAuthRegisterResponse.parse(response)
+  return parseApiResponse(zPostAuthRegisterResponse, response, '/auth/register')
 }

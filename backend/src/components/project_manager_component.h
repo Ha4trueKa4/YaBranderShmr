@@ -30,7 +30,17 @@ public:
 
   void DeleteProject(const std::string& id);
 
-  models::GenerationResult GenerateAI(const std::string& project_id, const std::string& prompt);
+  std::string GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model);
+
+  std::vector<models::Version> ListVersions(const std::string& project_id);
+
+  std::string GetVersionUrl(const std::string& project_id,
+                          const std::string& version_id);
+
+  std::string RestoreVersion(const std::string& project_id,
+                           const std::string& version_id);
+
+  std::string GetLatestVersionUrl(const std::string& project_id);
 
   /// @brief Возвращает историю чата проекта как есть (JSON-массив).
   /// @details Каждый элемент — либо сообщение пользователя ({"role":"user",

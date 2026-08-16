@@ -1,12 +1,22 @@
 #include "generate_project.h"
+#include "svg_validation_error_response.hpp"
+
 #include <userver/formats/json/serialize.hpp>
+#include <userver/logging/log.hpp>
 
 namespace ya_brander::handlers {
 
-GenerateProjectHandler::GenerateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-    : HttpHandlerBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+namespace {
+constexpr std::size_t kMaxPromptLength = 1500;
+}
 
-std::string GenerateProjectHandler::HandleRequestThrow(const userver::server::http::HttpRequest& request, userver::server::request::RequestContext& context) const {
+GenerateProjectHandler::GenerateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
+    : HttpHandlerJsonBase(config, context), project_manager_(context.FindComponent<components::ProjectManagerComponent>()) {}
+
+userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value& body,
+    userver::server::request::RequestContext& context) const {
   std::string* user_id = context.GetDataOptional<std::string>("user_id");
   if (!user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -25,21 +35,48 @@ std::string GenerateProjectHandler::HandleRequestThrow(const userver::server::ht
     return {};
   }
 
-  auto body = userver::formats::json::FromString(request.RequestBody());
   std::string prompt = body["prompt"].As<std::string>("");
+  std::string model = body["model"].As<std::string>("deepseek-v4-flash/latest");
 
   if (prompt.empty()) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-    return R"({"message": "Prompt cannot be empty"})";
+    userver::formats::json::ValueBuilder err;
+    err["message"] = "Prompt cannot be empty";
+    return err.ExtractValue();
   }
 
-  auto generation = project_manager_.GenerateAI(id, prompt);
+  if (prompt.size() > kMaxPromptLength) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+    userver::formats::json::ValueBuilder err;
+    err["message"] = "Prompt is too long (max 1500 characters)";
+    return err.ExtractValue();
+  }
 
   userver::formats::json::ValueBuilder res;
-  res["version_id"] = generation.version_id;
-  res["data"] = generation.data;
+  try {
+      std::string new_url = project_manager_.GenerateAI(id, prompt, model);
 
-  return userver::formats::json::ToString(res.ExtractValue());
+    if (!new_url.empty()) {
+      res["url"] = new_url;
+    }
+
+  }catch (const components::SVGValidationError& error) {
+      request.SetResponseStatus(
+          userver::server::http::HttpStatus::kUnprocessableEntity);
+    userver::formats::json::ValueBuilder err;
+    err["message"] = error.what();
+    return err.ExtractValue();
+  }catch (const std::exception& e) {
+    // Логируем реальную причину падения
+    LOG_ERROR() << "AI generation failed for project_id=" << id << ": " << e.what();
+    // Отдаем клиенту 503 статус вместо краша
+    request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
+    userver::formats::json::ValueBuilder err;
+    err["message"] = "Generation service is temporarily unavailable. Please try again later.";
+    return err.ExtractValue();
+  }
+
+  return res.ExtractValue();
 }
 
-}
+}  // namespace ya_brander::handlers
