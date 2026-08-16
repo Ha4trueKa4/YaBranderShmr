@@ -174,10 +174,10 @@ private fun androidx.navigation.NavDestination?.isTopLevel(): Boolean? {
  */
 private fun NavHostController.navigateToTab(tab: TopLevelDestination) {
     val route = tab.destination.route
-    val inBackStack = currentBackStack.value.any { it.destination.isOnRoute(route) }
-    if (inBackStack) {
-        popBackStack(route, inclusive = false)
-    } else {
+    // popBackStack сам возвращает false, если корня вкладки в стеке ещё нет, —
+    // тогда переходим на неё стандартным паттерном. Так обходимся публичным API
+    // (чтение currentBackStack помечено @RestrictedApi).
+    if (!popBackStack(route, inclusive = false)) {
         navigate(route) {
             popUpTo(graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
