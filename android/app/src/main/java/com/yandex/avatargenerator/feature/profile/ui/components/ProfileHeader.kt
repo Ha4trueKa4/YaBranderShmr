@@ -120,17 +120,20 @@ private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Mod
 }
 
 @Composable
-private fun NameBlock(displayName: String, handle: String, modifier: Modifier = Modifier) {
+private fun NameBlock(displayName: String, handle: String?, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs),
     ) {
         Text(text = displayName, style = AppTypography.heading3)
-        Text(
-            text = stringResource(R.string.profile_handle, handle),
-            style = AppTypography.label.copy(color = AppColors.TextMuted),
-        )
+        // Никнейма нет в контракте профиля — строку не рисуем, пока не появится.
+        if (handle != null) {
+            Text(
+                text = stringResource(R.string.profile_handle, handle),
+                style = AppTypography.label.copy(color = AppColors.TextMuted),
+            )
+        }
     }
 }
 

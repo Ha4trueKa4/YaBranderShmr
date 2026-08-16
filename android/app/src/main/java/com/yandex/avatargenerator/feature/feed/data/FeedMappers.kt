@@ -37,7 +37,7 @@ private fun FeedItemDto.toDomainOrNull(): FeedProject? {
         // Пустая строка допустима по контракту — превью ещё не сгенерировано.
         previewUrl = previewUrl.orEmpty(),
         author = FeedAuthor(id = authorId, displayName = authorLogin, avatarUrl = null),
-        publishedAt = createdAt?.toInstantOrNull() ?: Instant.EPOCH,
+        publishedAt = createdAt?.toInstantOrNull(),
     )
 }
 

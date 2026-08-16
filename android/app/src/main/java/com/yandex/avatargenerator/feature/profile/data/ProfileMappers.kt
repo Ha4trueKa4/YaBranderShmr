@@ -14,8 +14,9 @@ import java.time.ZoneOffset
  * DTO выше `data/` не поднимаются: маппинг живёт здесь.
  *
  * Контракт `GET /users/{id}` беднее макета: `bio`, `avatar` и отдельного
- * `handle` в нём нет. До появления полей на бэкенде подставляем пустые дефолты
- * (`bio = ""`, `avatarUrl = null`, `handle = name`), а не выдумываем значения.
+ * `handle` в нём нет. До появления полей на бэкенде — пустые значения
+ * (`bio = ""`, `avatarUrl = null`, `handle = null`, UI скрывает недостающее),
+ * а не выдумываем данные (имя как никнейм показало бы его дважды).
  */
 internal fun UserProfileResponseDto.toDomain(userId: String): ProfileDetails {
     val id = id ?: userId
@@ -23,7 +24,7 @@ internal fun UserProfileResponseDto.toDomain(userId: String): ProfileDetails {
     val profile = UserProfile(
         id = id,
         displayName = displayName,
-        handle = displayName,
+        handle = null,
         bio = "",
         avatarUrl = null,
         projectsCount = projects?.size ?: 0,
@@ -50,7 +51,7 @@ private fun ProjectDescriptionDto.toFeedProjectOrNull(author: FeedAuthor): FeedP
         title = name,
         previewUrl = url.orEmpty(),
         author = author,
-        publishedAt = createdAt?.toInstantOrNull() ?: Instant.EPOCH,
+        publishedAt = createdAt?.toInstantOrNull(),
     )
 }
 
