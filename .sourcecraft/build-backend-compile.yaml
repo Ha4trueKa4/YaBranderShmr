@@ -1,22 +1,28 @@
-# Инкрементальная сборка backend (C++/userver).
+# Проверка компиляции backend на pull request: только cmake, без docker и без публикации.
+# Используется отдельно от build-backend.yaml (там compile+build объединены в одном
+# пайплайне) — здесь compile самодостаточен, дальше передавать артефакты некуда.
 #
-# Раньше cmake выполнялся ВНУТРИ `docker build` (см. исходный Dockerfile): каждый прогон
-# был холодной сборкой, т.к. docker:dind в SourceCraft стартует без персистентного хранилища,
-# а `docker buildx --driver docker-container` (и его `--mount=type=cache`) недоступен.
+# ОДНОРАЗОВАЯ НАСТРОЙКА: зеркалируйте userver-тулчейн в свой Yandex CR, чтобы не тянуть
+# его каждый раз из внешнего ghcr.io (в тестовом прогоне pull занял 6.13 из 8.83 мин —
+# основное узкое место, не сама компиляция). Выполнить один раз локально или в CI:
 #
-# Теперь cmake запускается НАПОСРЕДСТВЕННО в раннере (образ с userver-тулчейном), а каталог
-# backend/build/ персистится между прогонами через GitLab `cache`. `cmake --build` перекомпилирует
-# только изменившиеся .cpp. Dockerfile становится тонким — просто копирует готовый бинарник.
+#   docker pull ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
+#   docker tag ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0 \
+#     cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
+#   echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
+#   docker push cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
 #
-# Ключ кэша привязан к CMakeLists.txt (конфигурация): правки только в src/ НЕ сбрасывают кэш,
-# поэтому инкрементальная пересборка действительно работает. Менять CMakeLists.txt редко —
-# при его изменении кэш корректно «протухает» и пересобирается с нуля.
+# После этого при выходе новой версии userver-образа зеркало нужно обновлять вручную.
+
 stages:
   - compile
 
+variables:
+  TOOLCHAIN_IMAGE: cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
+
 compile:
   stage: compile
-  image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
+  image: $TOOLCHAIN_IMAGE
   cache:
     key:
       files:
@@ -25,16 +31,12 @@ compile:
       - backend/build/
   script:
     - cd backend
-    # `-B` на уже существующем build/ пере-конфигурирует и переиспользует объектные файлы,
-    # т.е. перекомпилируются только изменённые исходники (инкрементально).
     - cmake -B build -DCMAKE_BUILD_TYPE=Release
     - cmake --build build -j$(nproc) --target ya_brander
     - cd ..
-  # Артефакты передаются следующему заданию (сборка тонкого docker-образа):
-  #   - собранный бинарник ya_brander;
-  #   - конфиги (COPY configs в Dockerfile).
+  # PR-гейт: артефакты не нужны дальше, но полезны для отладки упавшей сборки.
   artifacts:
     paths:
       - backend/build/ya_brander
-      - backend/configs
     expire_in: 1 day
+    when: always

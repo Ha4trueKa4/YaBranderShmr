@@ -1,3 +1,16 @@
+# Деплой backend на VM по SSH: docker pull + docker run.
+#
+# Исправлено по сравнению с прошлой версией:
+# 1. Раньше `docker pull ... && docker rm -f ya-brander || true && ...` — из-за одинакового
+#    приоритета && и || в bash, провал `docker pull` "проглатывался" следующим `|| true`
+#    и скрипт тихо продолжал деплой со старым локальным образом. Теперь `set -e` в начале
+#    remote-скрипта: любая обязательная команда (mkdir, запись .env, login, pull) обрывает
+#    деплой при ошибке; необязательные шаги (rm старого контейнера, создание сети) явно
+#    завершаются `|| true`, чтобы не мешать set -e.
+# 2. Было 2 отдельных SSH-соединения (передача .env + деплой) — теперь один SSH-вызов:
+#    .env передаётся как base64 внутри самой remote-команды, без промежуточного файла
+#    и второго хендшейка.
+
 stages:
   - deploy
 
@@ -14,19 +27,20 @@ deploy:
   script:
     - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key
     - >
-      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY"
-      | base64 -w0 > /tmp/env_b64
-    - >
-      cat /tmp/env_b64 | ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
-      "mkdir -p ~/$REMOTE_APP_DIR/backend && base64 -d > ~/$REMOTE_APP_DIR/backend/.env"
-    - rm -f /tmp/env_b64
+      ENV_B64=$(printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\n'
+      "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY" | base64 -w0)
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
-        docker system prune -af --filter \"until=24h\" &&
-        echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex &&
-        docker pull $REGISTRY/$IMAGE:latest &&
-        docker rm -f ya-brander || true &&
-        docker network create ya-brander-net || true &&
-        (docker inspect service-postgres >/dev/null 2>&1 && docker network connect ya-brander-net service-postgres || true) &&
-        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
+      set -e &&
+      mkdir -p ~/$REMOTE_APP_DIR/backend &&
+      echo '$ENV_B64' | base64 -d > ~/$REMOTE_APP_DIR/backend/.env &&
+      docker system prune -af --filter 'until=24h' &&
+      echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex &&
+      docker pull $REGISTRY/$IMAGE:latest &&
+      (docker rm -f ya-brander || true) &&
+      (docker network create ya-brander-net || true) &&
+      (docker inspect service-postgres >/dev/null 2>&1 && docker network connect ya-brander-net service-postgres || true) &&
+      docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
       "
+    - unset ENV_B64
+    - rm -f /tmp/deploy_key

@@ -1,19 +1,42 @@
+# Проверка компиляции backend на pull request: только cmake, без docker и без публикации.
+# Используется отдельно от build-backend.yaml (там compile+build объединены в одном
+# пайплайне) — здесь compile самодостаточен, дальше передавать артефакты некуда.
+#
+# ОДНОРАЗОВАЯ НАСТРОЙКА: зеркалируйте userver-тулчейн в свой Yandex CR, чтобы не тянуть
+# его каждый раз из внешнего ghcr.io (в тестовом прогоне pull занял 6.13 из 8.83 мин —
+# основное узкое место, не сама компиляция). Выполнить один раз локально или в CI:
+#
+#   docker pull ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
+#   docker tag ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0 \
+#     cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
+#   echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
+#   docker push cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
+#
+# После этого при выходе новой версии userver-образа зеркало нужно обновлять вручную.
+
 stages:
-  - build
+  - compile
 
 variables:
-  REGISTRY: cr.yandex/crpso93aahtuvujb7jlk
-  IMAGE: ya-brander
-  REMOTE_APP_DIR: team-05-project-konstruktor-avatarok-dlya-rabochikh-chatov-vizitok-i-profilei
+  TOOLCHAIN_IMAGE: cr.yandex/crpso93aahtuvujb7jlk/userver-toolchain:v3.0
 
-build-check:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
+compile:
+  stage: compile
+  image: $TOOLCHAIN_IMAGE
+  cache:
+    key:
+      files:
+        - backend/CMakeLists.txt
+    paths:
+      - backend/build/
   script:
-    # Проверка компиляции: собираем образ, НЕ публикуем и НЕ трогаем тег latest.
-    # --cache-from (read-only) без --cache-to, чтобы PR не перезаписывал кэш main.
-    # Логин до сборки — кэш тянется из приватного CR. Команда на одной строке.
-    - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    - docker build --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    - cd backend
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - cmake --build build -j$(nproc) --target ya_brander
+    - cd ..
+  # PR-гейт: артефакты не нужны дальше, но полезны для отладки упавшей сборки.
+  artifacts:
+    paths:
+      - backend/build/ya_brander
+    expire_in: 1 day
+    when: always
