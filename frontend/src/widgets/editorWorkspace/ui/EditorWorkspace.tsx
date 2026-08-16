@@ -114,6 +114,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         <InspectorPanel
           onShapeFillChange={editorStore.setShapeFillColor}
           onShapeFillOpacityChange={editorStore.setShapeFillOpacity}
+          onShapeOpacityChange={editorStore.setShapeOpacity}
+          onShapePositionChange={editorStore.setShapePosition}
           onTextAnchorChange={editorStore.setTextAnchor}
           onTextContentChange={editorStore.setTextContent}
           onTextFillColorChange={editorStore.setTextFillColor}

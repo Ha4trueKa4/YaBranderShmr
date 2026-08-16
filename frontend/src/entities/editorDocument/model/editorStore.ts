@@ -55,9 +55,9 @@ export class EditorStore {
   }
 
   setShapeFillColor(nodeId: string, color: string) {
-    const node = findNode(this.document.layers, nodeId)
+    const node = this.getEditableShape(nodeId)
 
-    if (node?.type !== 'shape') {
+    if (!node) {
       return
     }
 
@@ -65,13 +65,34 @@ export class EditorStore {
   }
 
   setShapeFillOpacity(nodeId: string, opacity: number) {
-    const node = findNode(this.document.layers, nodeId)
+    const node = this.getEditableShape(nodeId)
 
-    if (node?.type !== 'shape') {
+    if (!node || !Number.isFinite(opacity)) {
       return
     }
 
     node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
+  }
+
+  setShapeOpacity(nodeId: string, opacity: number) {
+    const node = this.getEditableShape(nodeId)
+
+    if (!node || !Number.isFinite(opacity)) {
+      return
+    }
+
+    node.opacity = Math.min(Math.max(opacity, 0), 1)
+  }
+
+  setShapePosition(nodeId: string, x: number, y: number) {
+    const node = this.getEditableShape(nodeId)
+
+    if (!node || !Number.isFinite(x) || !Number.isFinite(y)) {
+      return
+    }
+
+    node.transform.x = x
+    node.transform.y = y
   }
 
   setTextContent(nodeId: string, text: string) {
@@ -163,5 +184,11 @@ export class EditorStore {
     const node = findNode(this.document.layers, nodeId)
 
     return node?.type === 'text' && !node.isLocked ? node : null
+  }
+
+  private getEditableShape(nodeId: string) {
+    const node = findNode(this.document.layers, nodeId)
+
+    return node?.type === 'shape' && !node.isLocked ? node : null
   }
 }
