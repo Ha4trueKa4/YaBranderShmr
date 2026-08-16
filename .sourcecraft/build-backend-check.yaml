@@ -15,5 +15,6 @@ build-check:
     DOCKER_BUILDKIT: "1"
   script:
     - echo "$YC_SA_JSON" | docker login --username json_key --password-stdin cr.yandex
-    - docker buildx create --use
+    - docker context create ci-context
+    - docker buildx create --use ci-context
     - docker buildx build --load --provenance=false --sbom=false --cache-from=type=registry,ref=$REGISTRY/$IMAGE:cache -t $REGISTRY/$IMAGE:$CI_COMMIT_SHA -f backend/Dockerfile backend/
