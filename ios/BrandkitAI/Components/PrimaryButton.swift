@@ -22,13 +22,13 @@ struct PrimaryButton: View {
             HStack(spacing: 10) {
                 if isLoading {
                     ProgressView()
-                        .tint(.white)
+                        .tint(Color(.onAccent))
                 }
 
                 Text(isLoading ? "Please wait..." : title)
                     .font(.headline)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color(.onAccent))
             .frame(maxWidth: .infinity)
             .frame(height: 52)
         }

@@ -138,7 +138,7 @@ struct ChatView: View {
             } label: {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(.onAccent))
                     .frame(width: 40, height: 40)
                     .background(.tint, in: Circle())
             }

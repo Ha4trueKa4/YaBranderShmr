@@ -7,7 +7,7 @@ struct NewProjectButton: View {
         Button(action: action) {
             Label("New project", systemImage: "plus")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(.onAccent))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
                 .background(.tint, in: .rect(cornerRadius: 14))

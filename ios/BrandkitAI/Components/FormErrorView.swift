@@ -11,14 +11,14 @@ struct FormErrorView: View {
             Image(systemName: "exclamationmark.triangle.fill")
         }
         .font(.footnote)
-        .foregroundStyle(.red)
+        .foregroundStyle(Color(.error))
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.red.opacity(0.12), in: .rect(cornerRadius: 12))
+        .background(Color(.error).opacity(0.12), in: .rect(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                .stroke(Color(.error).opacity(0.35), lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
         .transition(.move(edge: .top).combined(with: .opacity))

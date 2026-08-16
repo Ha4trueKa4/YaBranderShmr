@@ -124,14 +124,14 @@ struct ProfileView: View {
                 .frame(width: 44, height: 44)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.white)
+        .foregroundStyle(Color(.onAccent))
         .accessibilityLabel("Sign out")
     }
 
     private var avatar: some View {
         Text(viewModel.initials)
             .font(.system(size: 19, weight: .bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Color(.onAccent))
             .frame(width: 64, height: 64)
             .background(Color(.endGradient), in: .circle)
             .overlay { Circle().stroke(Color(.background), lineWidth: 3) }
