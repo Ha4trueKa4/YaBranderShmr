@@ -4,7 +4,6 @@ import Foundation
 ///
 /// Сейчас отдаёт моки; когда появится сеть, здесь же будет загрузка,
 /// состояния загрузки/ошибки и обновление списка.
-@MainActor
 @Observable
 final class ProjectsViewModel {
     private(set) var items: [ProjectListItem] = ProjectListItem.mocks
@@ -16,5 +15,9 @@ final class ProjectsViewModel {
     /// TODO: заменить на загрузку с бэкенда.
     func load() {
         items = ProjectListItem.mocks
+    }
+
+    func delete(_ item: ProjectListItem) {
+        items.removeAll { $0.id == item.id }
     }
 }
