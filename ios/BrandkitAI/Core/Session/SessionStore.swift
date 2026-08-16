@@ -42,12 +42,11 @@ final class SessionStore {
     let userProfileService: any UserProfileService
 
     init(
-        baseURL: String = "http://158.160.187.118:8080/api/v1",
+        networkClient: NetworkClient = NetworkClient.shared,
         currentUserService: (any CurrentUserService)? = nil,
         userProfileService: (any UserProfileService)? = nil
     ) {
         let tokenStore = TokenStore()
-        let networkClient = NetworkClient(baseURL: baseURL, tokenStore: tokenStore)
         let profileService = userProfileService ?? RemoteUserProfileService(networkClient: networkClient)
         self.tokenStore = tokenStore
         self.networkClient = networkClient
@@ -74,7 +73,7 @@ final class SessionStore {
 
     func signIn(email: String, password: String) {
         authenticate(
-            path: "/auth/login",
+            endpoint: .login,
             body: LoginRequest(email: email, password: password),
             operation: .signIn
         )
@@ -82,7 +81,7 @@ final class SessionStore {
 
     func register(email: String, password: String, nickname: String) {
         authenticate(
-            path: "/auth/register",
+            endpoint: .register,
             body: RegisterRequest(email: email, password: password, nickname: nickname),
             operation: .register
         )
@@ -94,7 +93,7 @@ final class SessionStore {
     }
 
     private func authenticate<Request: Encodable & Sendable>(
-        path: String,
+        endpoint: APIEndpoint,
         body: Request,
         operation: AuthOperation
     ) {
@@ -112,7 +111,7 @@ final class SessionStore {
             do {
                 let response: AuthResponse = try await client.request(
                     .post,
-                    path: path,
+                    endpoint,
                     authorization: .none,
                     body: body
                 )

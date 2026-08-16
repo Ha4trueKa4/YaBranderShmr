@@ -41,8 +41,9 @@ struct MainShellView: View {
         case .feed:
             FeedView(
                 // TODO: экрана поиска ещё нет — кнопка в шапке пока без перехода.
-                // TODO: id придёт из модели карточки, когда лента поедет на данные.
-                onOpenProject: { router.push(.publicProject(projectID: UUID()), in: .feed) }
+                onOpenProject: { id in
+                    router.push(.publicProject(projectID: id), in: .feed)
+                }
             )
 
         case .create:
