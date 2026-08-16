@@ -5,6 +5,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.svg.SvgDecoder
 import com.yandex.avatargenerator.di.appModules
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -30,9 +31,13 @@ class AvatarGeneratorApplication : Application(), SingletonImageLoader.Factory, 
         }
     }
 
-    // Тот же клиент, что у Ktor — общий пул соединений и таймауты для API и картинок.
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory(okHttpClient)) }
+            .components {
+                // Превью проектов приходят SVG (последняя версия из S3) — без
+                // этого декодера Coil качает файл, но не рисует его.
+                add(SvgDecoder.Factory())
+                add(OkHttpNetworkFetcherFactory(okHttpClient))
+            }
             .build()
 }

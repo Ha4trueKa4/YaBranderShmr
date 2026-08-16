@@ -23,7 +23,7 @@ android {
         // Локальный бэкенд поднимают через -PapiBaseUrl=... (на эмуляторе
         // машина разработчика — это 10.0.2.2, а не localhost).
         val apiBaseUrl = providers.gradleProperty("apiBaseUrl")
-            .getOrElse("http://158.160.187.118:8080/api/v1/")
+            .getOrElse("http://158.160.155.144:8080/api/v1/")
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
 
         // Значение по умолчанию здесь, иначе новый build type уронит компиляцию
@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.svg)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
@@ -76,6 +77,7 @@ dependencies {
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.security.crypto)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)

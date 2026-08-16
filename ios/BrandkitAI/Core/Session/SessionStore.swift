@@ -32,23 +32,48 @@ final class SessionStore {
     private(set) var errorField: AuthField?
     private(set) var lastSuccessfulOperation: AuthOperation?
 
-    private let tokenStore = TokenStore()
+    private let tokenStore: TokenStore
     private let networkClient: NetworkClient
     private var authenticationTask: Task<Void, Never>?
     private var authenticationRequestID = UUID()
 
-    init(baseURL: String = "http://158.160.187.118:8080/api/v1") {
-        networkClient = NetworkClient(baseURL: baseURL, tokenStore: tokenStore)
+    /// Данные авторизованного пользователя (id + имя) и доступ к профилям.
+    let currentUserService: any CurrentUserService
+    let userProfileService: any UserProfileService
+
+    init(
+        networkClient: NetworkClient = NetworkClient.shared,
+        currentUserService: (any CurrentUserService)? = nil,
+        userProfileService: (any UserProfileService)? = nil
+    ) {
+        let tokenStore = TokenStore()
+        let profileService = userProfileService ?? RemoteUserProfileService(networkClient: networkClient)
+        self.tokenStore = tokenStore
+        self.networkClient = networkClient
+        self.userProfileService = profileService
+        self.currentUserService = currentUserService ?? CurrentUserStore(
+            tokenStore: tokenStore,
+            userProfileService: profileService
+        )
     }
 
     /// Проверка на входе: вызывается один раз при запуске.
+    ///
+    /// Если токена нет или его срок жизни истёк — разлогиниваемся: очищаем
+    /// Keychain и хранилище пользователя, чтобы не показывать «залогинен»
+    /// с нерабочим токеном.
     func restore() {
-        state = tokenStore.accessToken?.isEmpty == false ? .signedIn : .signedOut
+        if let token = tokenStore.accessToken, !token.isEmpty, !JWTDecoder.isExpired(token) {
+            state = .signedIn
+            Task { await currentUserService.restore() }
+        } else {
+            signOut()
+        }
     }
 
     func signIn(email: String, password: String) {
         authenticate(
-            path: "/auth/login",
+            endpoint: .login,
             body: LoginRequest(email: email, password: password),
             operation: .signIn
         )
@@ -56,7 +81,7 @@ final class SessionStore {
 
     func register(email: String, password: String, nickname: String) {
         authenticate(
-            path: "/auth/register",
+            endpoint: .register,
             body: RegisterRequest(email: email, password: password, nickname: nickname),
             operation: .register
         )
@@ -68,7 +93,7 @@ final class SessionStore {
     }
 
     private func authenticate<Request: Encodable & Sendable>(
-        path: String,
+        endpoint: APIEndpoint,
         body: Request,
         operation: AuthOperation
     ) {
@@ -86,7 +111,7 @@ final class SessionStore {
             do {
                 let response: AuthResponse = try await client.request(
                     .post,
-                    path: path,
+                    endpoint,
                     authorization: .none,
                     body: body
                 )
@@ -100,6 +125,7 @@ final class SessionStore {
                 guard store.save(response.accessToken) else {
                     throw NetworkError.tokenStorageError
                 }
+                self.currentUserService.save(id: response.user.id, name: response.user.nickname)
                 self.lastSuccessfulOperation = operation
                 self.state = .signedIn
                 self.isLoading = false
@@ -127,6 +153,7 @@ final class SessionStore {
         authenticationTask = nil
         isLoading = false
         tokenStore.clear()
+        currentUserService.clear()
         clearError()
         state = .signedOut
     }

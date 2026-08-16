@@ -11,17 +11,27 @@ struct ProjectsView: View {
         VStack(spacing: 0) {
             header
 
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.items) { item in
-                        ProjectRow(item: item) {
-                            onOpenChat(item)
-                        }
+            List {
+                ForEach(viewModel.items) { item in
+                    ProjectRow(item: item) {
+                        onOpenChat(item)
                     }
+                    .listRowInsets(
+                        EdgeInsets(
+                            top: 6,
+                            leading: 16,
+                            bottom: 6,
+                            trailing: 16
+                        )
+                    )
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
+                .onDelete(perform: viewModel.delete)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .contentMargins(.top, 6, for: .scrollContent)
         }
         .brandBackground()
         .overlay(alignment: .bottomTrailing) {

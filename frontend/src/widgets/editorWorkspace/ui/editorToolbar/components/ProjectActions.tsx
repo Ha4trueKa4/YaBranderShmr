@@ -5,12 +5,14 @@ import chevronDown from '../assets/chevronDown.svg'
 import styles from '../EditorToolbar.module.css'
 
 interface ProjectActionsProps {
+  isSavingVersion: boolean
   onExport: () => void
   onOpenProfile: () => void
   onSaveVersion: () => void
 }
 
 export function ProjectActions({
+  isSavingVersion,
   onExport,
   onOpenProfile,
   onSaveVersion,
@@ -21,6 +23,7 @@ export function ProjectActions({
     <div className={styles.projectActions}>
       <Button
         className={styles.saveVersion}
+        loading={isSavingVersion}
         onClick={onSaveVersion}
         variant="secondary"
       >

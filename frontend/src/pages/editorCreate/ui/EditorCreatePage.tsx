@@ -1,10 +1,18 @@
 import { authStore } from '@app/providers/auth'
 import {
+  getProjectSvg,
+  projectQueryKey,
+  projectSvgQueryKey,
+} from '@entities/project'
+import { useGenerateProjectMutation } from '@features/editorGenerate'
+import {
   type ProjectDraft,
   pendingGenerationStore,
   useCreateProjectMutation,
 } from '@features/projectCreate'
-import type { Project } from '@shared/api/types'
+import { getApiErrorMessage } from '@shared/api/api'
+import { useToast } from '@shared/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useEffect, useState } from 'react'
@@ -16,30 +24,63 @@ import styles from './EditorCreatePage.module.css'
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const toast = useToast()
   const isAuthorized = authStore.isAuthorized
   const [description, setDescription] = useState('')
-
-  const handleProjectCreated = useCallback(
-    (project: Project) => {
-      if (!project.id) {
-        return
-      }
-
-      // TODO: после создания вызывать feature генерации, а затем открывать проект.
-      navigate(`/projects/${project.id}`, { viewTransition: true })
-    },
-    [navigate],
-  )
-
-  const { isPending: isCreatingProjectPending, mutate: createProject } =
+  const [isGenerationInProgress, setGenerationInProgress] = useState(false)
+  const { isPending: isCreatingProjectPending, mutateAsync: createProject } =
     useCreateProjectMutation()
+  const {
+    isPending: isGeneratingProjectPending,
+    mutateAsync: generateProject,
+  } = useGenerateProjectMutation()
+
+  const isGenerationPending =
+    isCreatingProjectPending ||
+    isGeneratingProjectPending ||
+    isGenerationInProgress
 
   const startGeneration = useCallback(
-    (draft: ProjectDraft) => {
+    async (draft: ProjectDraft) => {
       setDescription(draft.description)
-      createProject(draft, { onSuccess: handleProjectCreated })
+      setGenerationInProgress(true)
+
+      try {
+        const project = await createProject(draft)
+
+        if (!project.id) {
+          toast.error('Unable to create the project. Please try again.')
+          return
+        }
+
+        const generatedProject = await generateProject({
+          projectId: project.id,
+          prompt: draft.description,
+        })
+        const generatedProjectUrl = generatedProject.url
+
+        if (!generatedProjectUrl) {
+          toast.error('The generated project is unavailable. Please try again.')
+          return
+        }
+
+        queryClient.setQueryData(projectQueryKey(project.id), {
+          ...project,
+          url: generatedProjectUrl,
+        })
+        await queryClient.fetchQuery({
+          queryKey: projectSvgQueryKey(project.id),
+          queryFn: () => getProjectSvg(generatedProjectUrl),
+        })
+        navigate(`/projects/${project.id}`, { viewTransition: true })
+      } catch (error) {
+        toast.error(getApiErrorMessage(error))
+      } finally {
+        setGenerationInProgress(false)
+      }
     },
-    [createProject, handleProjectCreated],
+    [createProject, generateProject, navigate, queryClient, toast],
   )
 
   function handleGenerate(draft: ProjectDraft) {
@@ -50,7 +91,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       return
     }
 
-    startGeneration(draft)
+    void startGeneration(draft)
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthorized is updated by MobX observer.
@@ -62,14 +103,14 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     const draft = pendingGenerationStore.take()
 
     if (draft) {
-      startGeneration(draft)
+      void startGeneration(draft)
     }
   }, [isAuthorized, startGeneration])
 
   return (
     <main className={styles.page}>
       <Header />
-      {isCreatingProjectPending ? (
+      {isGenerationPending ? (
         <EditorGeneratingState description={description} />
       ) : (
         <EditorEmptyState onGenerate={handleGenerate} />

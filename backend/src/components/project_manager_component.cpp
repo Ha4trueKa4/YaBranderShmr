@@ -1,12 +1,31 @@
 #include "project_manager_component.h"
+#include <userver/formats/json/inline.hpp>
+#include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
 
 namespace ya_brander::components {
 
 const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-  <g>
-  </g>
 </svg>)SVG";
+
+namespace {
+std::string EscapeXml(const std::string& input) {
+    std::string output;
+    output.reserve(input.size() * 1.1);
+    for (char c : input) {
+        switch (c) {
+            case '<': output += "&lt;"; break;
+            case '>': output += "&gt;"; break;
+            case '&': output += "&amp;"; break;
+            case '"': output += "&quot;"; break;
+            case '\'': output += "&apos;"; break;
+            default: output += c; break;
+        }
+    }
+    return output;
+}
+} // namespace
 
 ProjectManagerComponent::ProjectManagerComponent(
     const userver::components::ComponentConfig& config,
@@ -27,7 +46,6 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
     auto row = res[0];
     std::string project_id = row["id"].As<std::string>();
     LOG_INFO() << "Created project with ID: " << project_id;
-
     version_storage_.SaveVersion(project_id, kDefaultSvg);
 
 	std::string url = version_storage_.GetLatestVersionUrl(project_id);
@@ -60,21 +78,35 @@ std::optional<models::Project> ProjectManagerComponent::GetProject(const std::st
 }
 
 void ProjectManagerComponent::UpdateProject(
-    const std::string& id, std::optional<bool> is_public, std::string data) {
-if (is_public.has_value()) {
+    const std::string& id, std::optional<std::string> name,
+    std::optional<bool> is_public, std::string data) {
+  if (name.has_value()) {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "UPDATE projects SET name = $2, updated_at = NOW() "
+        "WHERE id = $1::uuid",
+        id, *name);
+  }
+  if (is_public.has_value()) {
     if (is_public.value()) {
-        version_storage_.SetLatestAcl(id, true);
-        pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE projects SET is_private=false, updated_at=NOW() WHERE id=$1::uuid", id);
+      version_storage_.SetLatestAcl(id, true);
+      pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kMaster,
+          "UPDATE projects SET is_private=false, updated_at=NOW() "
+          "WHERE id=$1::uuid",
+          id);
     } else {
-        pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE projects SET is_private=true, updated_at=NOW() WHERE id=$1::uuid", id);
-        version_storage_.SetLatestAcl(id, false);
+      pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kMaster,
+          "UPDATE projects SET is_private=true, updated_at=NOW() "
+          "WHERE id=$1::uuid",
+          id);
+      version_storage_.SetLatestAcl(id, false);
     }
-}
-if (!data.empty()) {
+  }
+  if (!data.empty()) {
     version_storage_.SaveVersion(id, data);
-}
+  }
 }
 
     void ProjectManagerComponent::DeleteProject(const std::string& id) {
@@ -89,17 +121,90 @@ if (!data.empty()) {
     );
 }
 
-std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id);
-    std::string full_prompt;
+namespace {
+constexpr std::size_t kHistoryPromptLimit = 10;
+}  // namespace
 
-    if (current_state.empty() || current_state == kDefaultSvg) {
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(prompt);
-    }else {
-        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, prompt);
+userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
+    const std::string& project_id) {
+    auto res = pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kSlave,
+        "SELECT chat_history FROM projects WHERE id = $1::uuid",
+        project_id);
+    if (res.IsEmpty()) return userver::formats::json::MakeArray();
+    return res[0]["chat_history"].As<userver::formats::json::Value>();
+}
+
+std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
+    const std::string& project_id, std::size_t limit) {
+    auto history_json = FetchChatHistoryJson(project_id);
+
+    std::vector<std::string> prompts;
+    for (const auto& entry : history_json) {
+        if (entry["role"].As<std::string>("") == "user") {
+            prompts.push_back(entry["text"].As<std::string>(""));
+        }
     }
-    auto new_data = llm_client_.SendPrompt(full_prompt, 500, "yandexgpt-lite/latest", 0.1);
-    version_storage_.SaveVersion(project_id, new_data);
+    if (prompts.size() > limit) {
+        prompts.erase(prompts.begin(), prompts.end() - static_cast<std::ptrdiff_t>(limit));
+    }
+    return prompts;
+}
+
+void ProjectManagerComponent::AppendChatExchange(const std::string& project_id,
+                                                  const std::string& user_message,
+                                                  const std::string& version_id) {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
+        "  jsonb_build_object('role', 'user', 'text', $2::text, 'created_at', NOW()),"
+        "  jsonb_build_object('role', 'assistant', 'version_id', $3::text, 'created_at', NOW())"
+        "), updated_at = NOW() WHERE id = $1::uuid",
+        project_id, user_message, version_id);
+}
+
+userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
+    return FetchChatHistoryJson(project_id);
+}
+
+std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model) {
+    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+
+    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
+    for (auto& past_message : history) {
+        past_message = EscapeXml(past_message);
+    }
+
+    std::string safe_prompt = EscapeXml(prompt);
+
+    LlmPrompt full_prompt;
+    if (current_state.empty() || current_state == kDefaultSvg) {
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
+    }else {
+        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
+    }
+    auto new_data = llm_client_.SendPrompt(full_prompt, 50000, model, 0.1);
+    std::string version_id = version_storage_.SaveVersion(project_id, new_data);
+    AppendChatExchange(project_id, prompt, version_id);
+    return version_storage_.GetLatestVersionUrl(project_id);
+}
+
+std::vector<models::Version> ProjectManagerComponent::ListVersions(
+const std::string& project_id) {
+    return version_storage_.ListVersions(project_id);
+}
+
+std::string ProjectManagerComponent::GetVersionUrl(
+    const std::string& project_id, const std::string& version_id) {
+    return version_storage_.GetVersionUrl(project_id, version_id);
+}
+
+std::string ProjectManagerComponent::RestoreVersion(
+    const std::string& project_id, const std::string& version_id) {
+    return version_storage_.RestoreVersion(project_id, version_id);
+}
+
+std::string ProjectManagerComponent::GetLatestVersionUrl(const std::string& project_id) {
     return version_storage_.GetLatestVersionUrl(project_id);
 }
 

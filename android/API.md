@@ -42,8 +42,9 @@ core/network/
   ApiJson.kt              общая настройка Json
   HttpClientFactory.kt    сборка единственного HttpClient
   AuthTokenProvider.kt    чтение токена (нужно клиенту)
-  AuthTokenStore.kt       чтение + запись (нужно репозиторию авторизации)
-  InMemoryAuthTokenStore.kt
+  AuthTokenStore.kt       чтение + запись + Flow токена (репозиторий авторизации)
+  EncryptedAuthTokenStore.kt  боевое хранилище: EncryptedSharedPreferences
+  InMemoryAuthTokenStore.kt   только для тестов
   ApiCall.kt              apiCall { } — маппинг ошибок Ktor в доменные
   NetworkException.kt     разбор тела ошибки в ValidationErrorDto
   HttpMethod.kt           какие методы можно повторять
@@ -101,10 +102,13 @@ API_INTEGRATION=1 ./gradlew :app:testDebugUnitTest --tests '*AuthApiIntegrationT
 | Ответ | Поведение |
 | --- | --- |
 | 201 | `AuthSession`, токен сохраняется в `AuthTokenStore` |
-| 400 | `AuthException.RegistrationRejected(field)` — значение отверг сервер |
+| 400, 422 | `AuthException.FieldRejected(field)` — значение отверг сервер |
 | 409 | `AuthException.RegistrationConflict(field)` — email или никнейм заняты |
 
-Поле формы берётся из `ValidationError.code`, у обоих статусов тело одинаковое:
+`422 Unprocessable Entity` разбирается так же, как `400`: это типовой ответ
+валидации, и тело у него то же самое.
+
+Поле формы берётся из `ValidationError.code`, у всех этих статусов тело одинаковое:
 
 | Код | Поле |
 | --- | --- |
@@ -126,14 +130,38 @@ API_INTEGRATION=1 ./gradlew :app:testDebugUnitTest --tests '*AuthApiIntegrationT
 | Ответ | Поведение |
 | --- | --- |
 | 200 | `AuthSession`, токен сохраняется в `AuthTokenStore` |
+| 400, 422 | `AuthException.FieldRejected(field)` — тем же разбором `ValidationError`, что и регистрация |
 | 401 | `AuthException.InvalidCredentials` — неверная пара логин/пароль, а не «сессия протухла»; токен не трогаем |
 
 `AuthRepository.logout()` — локальный сброс токена, ручки на бэкенде нет.
 
 Токен кладёт в хранилище сам репозиторий: дальше `HttpClient` подставляет
 заголовок на каждом запросе, и вызывающему коду не нужно об этом помнить.
-Хранится он пока в памяти процесса (`InMemoryAuthTokenStore`) — перезапуск
-приложения разлогинивает.
+Хранится он в `EncryptedSharedPreferences` (ключ — в Android Keystore,
+`EncryptedAuthTokenStore`) и переживает перезапуск приложения. Файл читается
+один раз лениво, дальше значение отдаётся из кэша: клиент спрашивает токен на
+каждом запросе, а каждое чтение — расшифровка через Keystore.
+`InMemoryAuthTokenStore` остался для тестов, где Android-контекста нет.
+
+Пользователя из того же ответа (`id`, `email`, `nickname`) репозиторий кладёт в
+`AuthUserStore` — общий `DataStore<Preferences>` из `coreModule`, без шифрования:
+это не секрет доступа, а идентификаторы, которые и так видны в любом ответе API.
+Наружу он виден как `AuthRepository.currentUser: Flow<AuthUser?>`; вкладка
+профиля берёт из него свой `userId`, потому что ручки `/auth/me` в API нет.
+
+**Рассинхрон «токен есть, пользователя нет».** Токен и профиль лежат в разных
+хранилищах, поэтому состояние `isAuthorized == true` при `currentUser == null`
+возможно — и оно ровно у всех, кто вошёл до появления `AuthUserStore`.
+Дозаполнить нечем (`/auth/me` нет, `GET /users/{id}` не реализована), поэтому
+вкладка профиля в этом случае показывает пустое состояние «войдите заново».
+Принудительного разлогина нет — он относится к обработке протухшего токена,
+которой пока нет вовсе.
+
+Наличие сессии наружу отдаёт `AuthRepository.isAuthorized: Flow<Boolean>` —
+по нему навигация выбирает стартовый экран. Проверки валидности сохранённого
+токена при старте нет (ручки `/auth/me` в API нет), авто-разлогина по 401/403
+и logout в UI тоже пока нет: сменить аккаунт можно только через «Очистить
+данные» в настройках Android.
 
 ### Нормализация email
 
@@ -145,32 +173,115 @@ API_INTEGRATION=1 ./gradlew :app:testDebugUnitTest --tests '*AuthApiIntegrationT
 `Ivan@mail.ru` и `ivan@mail.ru` — два разных аккаунта, а вход «тем же» адресом
 даёт 401. Автокапитализация на клавиатуре телефона делает это регулярно.
 
-### `GET` / `PATCH` / `DELETE /projects/{id}`
+### `POST /projects` и `GET` / `PATCH` / `DELETE /projects/{id}`
 
-`ProjectRepository` (`feature/project`): `getProject`, `updateProject`,
-`deleteProject`. Клиент инъектит готовый `HttpClient`, каждый вызов — в
-`apiCall { }`. Методы возвращают `Result` и не бросают (кроме отмены корутины):
-при ошибке в `failure` лежит `NetworkException`, разбор — во ViewModel.
+`ProjectRepository` (`feature/project`): `createProject`, `getProject`,
+`updateProject`, `deleteProject`. Клиент инъектит готовый `HttpClient`, каждый
+вызов — в `apiCall { }`. Методы возвращают `Result` и не бросают (кроме отмены
+корутины): при ошибке в `failure` лежит `NetworkException`, разбор — во ViewModel.
 
 | Метод | Поведение |
 | --- | --- |
+| `createProject(name, description)` | `POST /projects`, тело `{name, description}`, ответ `201` + тот же `Project`. Требует `Bearer`. Пустой `name` → `400 ClientError` (клиент до этого не доводит: кнопка неактивна) |
 | `getProject(id)` | `GET`, отдаёт доменный `Project`. `Bearer` опционален (публичный проект доступен без токена). `404 → NotFound`, `403 → Forbidden` |
 | `updateProject(id, isPublic?, canvas?)` | `PATCH`, тела в ответе нет. `null`-аргумент = «не трогать поле» (`explicitNulls = false`). Требует `Bearer`, `403` не автор |
 | `deleteProject(id)` | `DELETE`, тела в ответе нет. Требует `Bearer` |
 
-`getProject` маппит `ProjectDto → Project` в `data/ProjectMappers.kt`. `id` и
-`name` в доменной модели не-nullable: их отсутствие в ответе — сломанный
-контракт, маппер бросает `NetworkException.Serialization`. Отсутствие
-`is_public` трактуется как приватный (задокументированный дефолт).
+`description` в теле создания — не опциональное поле: бэкенд читает его с
+дефолтом `""`, поэтому пустое описание уходит пустой строкой, а не пропадает.
+
+**Создание живёт здесь, а не в `feature/createproject`.** У формы создания
+своего репозитория нет: ответ `POST /projects` — это тот же `ProjectDto` и та
+же доменная модель `Project`, а DTO выше `data/` своей фичи не поднимаются.
+`CreateProjectViewModel` инъектит `ProjectRepository` из `projectModule`
+(прецедент такой кросс-фичевой зависимости по `domain/` уже есть:
+`ProfileRepository` отдаёт `FeedProject` из `feature/feed`).
+
+`createProject` и `getProject` маппят `ProjectDto → Project` в
+`data/ProjectMappers.kt`. `id` и `name` в доменной модели не-nullable: их
+отсутствие в ответе — сломанный контракт, маппер бросает
+`NetworkException.Serialization`. Отсутствие `is_public` трактуется как
+приватный (задокументированный дефолт).
 
 `data` — это **SVG-строка** (не объект), плюс есть `url` (S3-ссылка на объект,
 пусто у пустого проекта). Прежние `ProjectDataDto`/`ProjectCanvas` моделировали
 `data` объектом — это расходилось с контрактом, поэтому убраны. У профиля
 `ProjectDescriptionDto` поле `url` пока не заведено — отдельная правка.
 
-Вживую **не проверено**: стенд не отдаёт id живого проекта (`POST /projects`
-падает 500, см. ниже), поэтому интеграционного теста нет. Контракт покрыт
-`ProjectRepositoryImplTest` на `MockEngine`. На UI слой пока не заведён.
+Вживую **не проверено**: на 13.08 `POST /projects` падал 500 (заглушка
+сохранения в S3), поэтому id живого проекта было не получить и интеграционного
+теста нет. Контракт покрыт `ProjectRepositoryImplTest` на `MockEngine`. На UI
+заведено только создание: форма `feature/createproject` уходит на экран проекта
+с настоящим id из ответа. Перед приёмкой стенд перепроверить.
+
+### Версии проекта: `GET /versions`, `GET /versions/{id}`, `POST /restore`
+
+`VersionsRepository` (`feature/project`): `getVersions`, `getVersionUrl`,
+`restoreVersion`. Отдельный репозиторий, а не методы в `ProjectRepository`:
+у версий свой ресурс, свои DTO и своя политика доступа. Как и везде — `apiCall`
+внутри, `Result` наружу.
+
+| Метод | Поведение |
+| --- | --- |
+| `getVersions(projectId)` | `GET /projects/{id}/versions`, ответ `{versions: [{id, version_num, created_at}]}`. Порядок серверный (`ORDER BY version_num DESC`, новые сверху), на клиенте не пересортировываем. Пагинации нет — приходят все версии |
+| `getVersionUrl(projectId, versionId)` | `GET /projects/{id}/versions/{versionId}`, ответ `{version_id, url}`. Отдаём наружу только `url`: `version_id` — эхо пути, нового знания в нём нет |
+| `restoreVersion(projectId, versionId)` | `POST /projects/{id}/versions/{versionId}/restore`, ответ `{version_id, url}` → доменный `VersionRestore` |
+
+**История приватна даже у публичного проекта.** Все три ручки требуют `Bearer`
+и сверяют `author_id` с пользователем из токена: не автор → `403 Forbidden`
+без исключений по `is_public`. Нет проекта или версии → `404 NotFound`,
+нет заголовка `Authorization` → `401`.
+
+**Тела ошибки у этих ручек нет.** В отличие от `create`/`delete`, хендлеры
+версий отвечают голым статусом (`SetResponseStatus(...); return {};`) — ключа
+`message` в ответе не будет, и `NetworkException.serverMessage` останется
+`null`. Разбор ошибки в UI должен опираться на тип, а не на текст.
+
+**Откат не перематывает историю, а удлиняет её.** `restore` читает старую
+версию и сохраняет её содержимое как новую (`version_num = MAX + 1`), поэтому
+`version_id` в ответе — это id **новой** версии, а не той, к которой
+откатывались. После отката список версий надо перезапросить: номера новой
+версии в ответе нет.
+
+**Тело у `POST /restore` — `{}`, а не пустое.** Полей запрос не имеет, но
+хендлер наследует `HttpHandlerJsonBase` и парсит тело как JSON до собственной
+логики. Отдельный DTO ради этого не заводим — шлём константный `TextContent`.
+
+**Ретраев на `restore` нет** и быть не должно: политика `installApiRetry`
+повторяет только `GET`/`HEAD` (`core/network/HttpMethod.isRetryable`). Повтор
+после 5xx от шлюза создал бы второй откат, то есть лишнюю версию. Закреплено
+тестом `restoreVersion не повторяется при 5xx`.
+
+`url` в ответах версий — **presigned S3-ссылка с TTL в час**
+(`presigned-url-ttl-seconds: 3600`), кроме `restore` у публичного проекта: там
+отдаётся публичная ссылка. Хранить её дольше часа бессмысленно — протухнет в
+403 от S3.
+
+Ссылки в списке версий нет вообще: чтобы показать превью каждой версии, нужен
+отдельный запрос на каждую. Отсюда решение в чате — показывать превью только у
+последней версии (её `url` уже есть в `GET /projects/{id}`). Бэкенду заведён
+тикет: отдавать `url` прямо в элементах списка.
+
+`created_at` версии сериализуется явно, `%Y-%m-%dT%H:%M:%S%Ez` в UTC — то есть
+`2026-08-16T12:34:56+00:00`, с офсетом, а не с `Z`, и без миллисекунд. Разбирает
+его общий `data/InstantParsing.kt` (вынесен из `ProjectMappers`, чтобы обе
+фичевые мапперы не расходились в трактовке). Кривой формат даёт `null`, а не
+ошибку; отсутствие `id` или `version_num` — наоборот, `Serialization`.
+
+Разбирать этот формат обязан `OffsetDateTime.parse`, а не `Instant.parse`:
+офсет вместо `Z` последний принимает только с JDK 12, а на устройстве
+`java.time` берётся из libcore (десугаринг не подключён, minSdk = 26) — на
+Android 8–13 это OpenJDK 8/11, где строка с `+00:00` падает. Проверено на
+1.8.0_501. Unit-тесты идут на JDK 17 и такую ошибку не показывают, поэтому
+порядок веток в парсере менять нельзя.
+
+Ещё одно расхождение: невалидный UUID в пути бэкенд не валидирует, каст
+`$1::uuid` падает в необработанное исключение → `500`. Клиент id из своих
+ответов и берёт, но заводить их руками нельзя.
+
+UI версий в этом PR нет — только сетевой слой; экран истории и откат
+отдельной задачей. Вживую не проверено (см. состояние стенда), контракт покрыт
+`VersionsRepositoryImplTest` на `MockEngine`.
 
 ## Состояние стенда
 
@@ -198,7 +309,6 @@ DTO готовы, репозиториев и вызовов пока нет. П
 | Метод | Запрос | Ответ | DTO |
 | --- | --- | --- | --- |
 | `GET /users/{id}` | — | `UserProfile` + `projects` | `feature/profile/data/dto/UserProfileResponseDto` |
-| `POST /projects` | `name`, `description` | `Project` | `feature/project/data/dto/CreateProjectRequestDto`, `ProjectDto` |
 | `POST /projects/{id}/generate` | `prompt` | `{ data: SVG-строка }` | `GenerateProjectRequestDto` (тело ответа — DTO ещё нет) |
 
 Авторизация: `Bearer` обязателен для `POST /projects`, `PATCH`, `DELETE` и

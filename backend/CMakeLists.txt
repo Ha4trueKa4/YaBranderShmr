@@ -4,6 +4,13 @@ project(ya_brander CXX)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 include(FetchContent)
+
+FetchContent_Declare(
+        pugixml
+        GIT_REPOSITORY https://github.com/zeux/pugixml.git
+        GIT_TAG v1.14
+)
+
 FetchContent_Declare(
         nlohmann_json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -19,6 +26,8 @@ FetchContent_Declare(
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 set(JSON_Install OFF CACHE INTERNAL "")
 set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(pugixml)
 FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
@@ -64,19 +73,30 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/test_llm_handler/test_llm_handler.hpp
         src/components/LLMClientComponent.hpp
         src/components/LLMClientComponent.cpp
+        src/components/llm_prompt.hpp
+        src/components/prompt_constructor/prompt_template.hpp
+        src/components/prompt_constructor/prompt_template.cpp
+        src/components/svg_validator.hpp
+        src/components/svg_validator.cpp
         src/components/prompt_constructor/prompt_constructor_component.cpp
         src/components/vector_search_component.h
         src/handlers/projects/create_project.cpp
         src/handlers/projects/get_project.cpp
         src/handlers/projects/patch_project.cpp
+        src/handlers/projects/svg_validation_error_response.hpp
         src/handlers/projects/delete_project.cpp
         src/handlers/projects/generate_project.cpp
+        src/handlers/projects/get_project_chat.cpp
+        src/handlers/projects/versions/get_version.cpp
+        src/handlers/projects/versions/restore_version.cpp
+        src/handlers/projects/versions/list_versions.cpp
         src/components/version_storage/version_storage_component_impl.cpp
         src/handlers/users/append_users.hpp
         src/handlers/users/append_users.cpp
         src/handlers/users/subscription_handlers.hpp
         src/handlers/users/subscription_handlers.cpp
-
+        src/handlers/get_models/get_models.hpp
+        src/handlers/get_models/get_models.cpp
         src/components/vector_search_component.cpp
         src/handlers/test_vector_search/test_vector_search_handler.hpp
         src/handlers/test_vector_search/test_vector_search_handler.cpp
@@ -85,6 +105,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/object_storage/s3_object_storage_component.cpp
         src/components/subscription_storage/subscription_storage_component.cpp
         src/handlers/users/get_user_profile.cpp
+        src/handlers/users/patch_user_profile.cpp
         src/handlers/users/user_subscriptions_handlers.cpp
 )
 
@@ -92,6 +113,7 @@ target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
         nlohmann_json::nlohmann_json
         jwt-cpp
+        pugixml
 )
 target_include_directories(${PROJECT_NAME}_objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

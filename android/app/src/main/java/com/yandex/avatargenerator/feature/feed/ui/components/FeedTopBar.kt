@@ -48,7 +48,6 @@ fun FeedTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            // 6dp — точечный отступ логотипа по макету, вне шкалы AppSpacing.
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

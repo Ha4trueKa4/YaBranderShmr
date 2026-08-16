@@ -1,36 +1,83 @@
 import { AppRoute } from '@app/providers/router/routes'
-import { EditorStore } from '@entities/editorDocument'
+import {
+  type EditorDocument,
+  EditorStore,
+  serializeSvg,
+} from '@entities/editorDocument'
+import {
+  projectQueryKey,
+  projectSvgQueryKey,
+  useUpdateProjectMetadataMutation,
+} from '@entities/project'
+import { getApiErrorMessage } from '@shared/api/api'
+import { useToast } from '@shared/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { editorFixture } from '../model/editorFixture'
 import styles from './EditorWorkspace.module.css'
 import { EditorStatusBar } from './editorStatusBar/EditorStatusBar'
 import { EditorToolbar } from './editorToolbar/EditorToolbar'
 import { InspectorPanel } from './inspectorPanel/InspectorPanel'
 import { LayersPanel } from './layersPanel/LayersPanel'
 
-export const EditorWorkspace = observer(function EditorWorkspace() {
+interface EditorWorkspaceProps {
+  document: EditorDocument
+  projectId: string
+  projectName: string
+}
+
+export const EditorWorkspace = observer(function EditorWorkspace({
+  document,
+  projectId,
+  projectName: initialProjectName,
+}: EditorWorkspaceProps) {
   const navigate = useNavigate()
-  // TODO: получать документ из загруженного Project (`project.data`) и создавать store с ним.
-  // Сейчас editorFixture временно заменяет ответ API, чтобы можно было проверять UI.
-  const [editorStore] = useState(
-    () => new EditorStore(editorFixture, 'icon-shape', ['logo']),
-  )
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [projectName, setProjectName] = useState(initialProjectName)
+  const [editorStore] = useState(() => new EditorStore(document))
+  const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
+  const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
+    useUpdateProjectMetadataMutation()
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
   }
 
-  function handleProjectNameSubmit(_projectName: string) {
-    // TODO: сохранить название проекта после подключения editorStore.
+  function handleProjectNameSubmit(nextProjectName: string) {
+    setProjectName(nextProjectName)
+  }
+
+  async function handleSaveVersion() {
+    try {
+      await saveProjectVersion({
+        data: serializeSvg(editorStore.document),
+        projectId,
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
+        queryClient.invalidateQueries({
+          queryKey: projectSvgQueryKey(projectId),
+        }),
+      ])
+      toast.info('Project version saved.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    }
+  }
+
+  function handleToggleVisibility(nodeId: string) {
+    editorStore.toggleNodeVisibility(nodeId)
+    setSceneRenderVersion((version) => version + 1)
   }
 
   return (
     <section className={styles.workspace}>
       <div className={styles.toolbar}>
         <EditorToolbar
+          isSavingVersion={isSavingProjectVersion}
           onEditProjectName={handleProjectNameSubmit}
           onExport={handleToolbarAction}
           onOpenProfile={() =>
@@ -38,27 +85,50 @@ export const EditorWorkspace = observer(function EditorWorkspace() {
           }
           onPanTool={handleToolbarAction}
           onRedo={handleToolbarAction}
-          onSaveVersion={handleToolbarAction}
+          onSaveVersion={handleSaveVersion}
           onSelectTool={handleToolbarAction}
           onUndo={handleToolbarAction}
           onZoomIn={handleToolbarAction}
           onZoomOut={handleToolbarAction}
-          // TODO: передавать название загруженного Project вместо временного значения.
-          projectName="Orion Labs"
+          projectName={projectName}
         />
       </div>
       <aside className={styles.layers}>
         <LayersPanel
+          expandedGroupIds={editorStore.expandedGroupIds}
           nodes={editorStore.document.layers}
-          onSelectLayer={editorStore.setSelectedLayer}
-          selectedLayerId={editorStore.selectedLayerId}
+          onSelectNode={editorStore.setSelectedNode}
+          onToggleGroup={editorStore.toggleGroup}
+          onToggleVisibility={handleToggleVisibility}
+          selectedNodeId={editorStore.selectedNodeId}
         />
       </aside>
       <div className={styles.scene}>
-        <EditorScene />
+        <EditorScene
+          document={editorStore.document}
+          onSelectNode={editorStore.setSelectedNode}
+          onShapePositionChange={editorStore.setShapePosition}
+          onTextPositionChange={editorStore.setTextPosition}
+          renderVersion={sceneRenderVersion}
+          selectedNode={editorStore.selectedNode}
+        />
       </div>
       <aside className={styles.inspector}>
-        <InspectorPanel selectedLayer={editorStore.selectedLayer} />
+        <InspectorPanel
+          onShapeFillChange={editorStore.setShapeFillColor}
+          onShapeFillOpacityChange={editorStore.setShapeFillOpacity}
+          onShapeOpacityChange={editorStore.setShapeOpacity}
+          onShapePositionChange={editorStore.setShapePosition}
+          onTextAnchorChange={editorStore.setTextAnchor}
+          onTextContentChange={editorStore.setTextContent}
+          onTextFillColorChange={editorStore.setTextFillColor}
+          onTextFontFamilyChange={editorStore.setTextFontFamily}
+          onTextFontSizeChange={editorStore.setTextFontSize}
+          onTextFontStyleChange={editorStore.setTextFontStyle}
+          onTextFontWeightChange={editorStore.setTextFontWeight}
+          onTextPositionChange={editorStore.setTextPosition}
+          selectedNode={editorStore.selectedNode}
+        />
       </aside>
       <div className={styles.status}>
         <EditorStatusBar />

@@ -91,6 +91,7 @@ export const Header = observer(function Header({
             onClick={() => navigate(AppRoute.Profile, { viewTransition: true })}
             type="button"
           >
+            <span>@{session.user.nickname}</span>
             <Avatar initials={getAvatarInitials(session.user.nickname)} />
           </button>
         ) : (

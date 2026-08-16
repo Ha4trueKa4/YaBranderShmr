@@ -31,28 +31,22 @@ export const zUserProfile = z.object({
   is_subscribed: z.boolean().optional(),
 })
 
-export const zProjectDescription = z.object({
+export const zProject = z.object({
   id: z.string().optional(),
   author_id: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
   is_public: z.boolean().optional(),
-  created_at: z.iso.datetime().optional(),
+  created_at: z.iso.datetime({ offset: true }).optional(),
   url: z.string().optional(),
 })
-
-export const zProject = zProjectDescription.and(
-  z.object({
-    data: z.string().optional(),
-  }),
-)
 
 export const zFeedItem = z.object({
   id: z.string().optional(),
   author_id: z.string().optional(),
   author_login: z.string().optional(),
   name: z.string().optional(),
-  created_at: z.iso.datetime().optional(),
+  created_at: z.iso.datetime({ offset: true }).optional(),
   preview_url: z.string().optional(),
 })
 
@@ -82,6 +76,29 @@ export const zAuthError = z.object({
   message: z.string().optional(),
 })
 
+export const zError = z.object({
+  code: z.string().optional(),
+  message: z.string().optional(),
+})
+
+/**
+ * Метаданные одной версии проекта (без ключей объектного хранилища).
+ */
+export const zVersionInfo = z.object({
+  id: z.string().optional(),
+  version_num: z.int().optional(),
+  created_at: z.iso.datetime({ offset: true }).optional(),
+})
+
+/**
+ * Ответ с id версии и ссылкой на её объект. У /versions/{version_id} это просмотр выбранной версии; у /restore — новая (созданная откатом) версия.
+ *
+ */
+export const zVersionUrl = z.object({
+  version_id: z.string().optional(),
+  url: z.string().optional(),
+})
+
 export const zPostAuthRegisterBody = zRegisterRequest
 
 /**
@@ -105,7 +122,7 @@ export const zGetUsersByIdPath = z.object({
  */
 export const zGetUsersByIdResponse = zUserProfile.and(
   z.object({
-    projects: z.array(zProjectDescription).optional(),
+    projects: z.array(zProject).optional(),
   }),
 )
 
@@ -202,6 +219,7 @@ export const zPatchProjectsByIdResponse = zProject
 
 export const zPostProjectsByIdGenerateBody = z.object({
   prompt: z.string(),
+  model: z.string().optional(),
 })
 
 export const zPostProjectsByIdGeneratePath = z.object({
@@ -212,8 +230,40 @@ export const zPostProjectsByIdGeneratePath = z.object({
  * Сгенерированный SVG-код проекта
  */
 export const zPostProjectsByIdGenerateResponse = z.object({
-  data: z.string().optional(),
+  url: z.string().optional(),
 })
+
+export const zGetProjectsByIdVersionsPath = z.object({
+  id: z.string(),
+})
+
+/**
+ * Список версий проекта
+ */
+export const zGetProjectsByIdVersionsResponse = z.object({
+  versions: z.array(zVersionInfo).optional(),
+})
+
+export const zGetProjectsByIdVersionsByVersionIdPath = z.object({
+  id: z.string(),
+  version_id: z.string(),
+})
+
+/**
+ * Ссылка на объект версии
+ */
+export const zGetProjectsByIdVersionsByVersionIdResponse = zVersionUrl
+
+export const zPostProjectsByIdVersionsByVersionIdRestorePath = z.object({
+  id: z.string(),
+  version_id: z.string(),
+})
+
+/**
+ * Откат выполнен. Возвращает id созданной новой версии и свежую ссылку на неё, чтобы фронт мог сразу её отрисовать.
+ *
+ */
+export const zPostProjectsByIdVersionsByVersionIdRestoreResponse = zVersionUrl
 
 export const zGetFeedQuery = z.object({
   scope: z.enum(['discover', 'following']).optional().default('discover'),

@@ -4,40 +4,31 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
+import kotlinx.coroutines.CancellationException
 
 /**
- * [PagingSource] для одной вкладки ленты. Ключ страницы — её номер (с 0).
+ * [PagingSource] для одной вкладки ленты. Ключ страницы — курсор с бэкенда
+ * (`next_cursor`); первая страница — с `null`. Пагинация forward-only, поэтому
+ * `prevKey` всегда `null`, а refresh начинает ленту заново.
  */
 class FeedPagingSource(
     private val repository: FeedRepository,
     private val tab: FeedTab,
-) : PagingSource<Int, FeedProject>() {
+) : PagingSource<String, FeedProject>() {
 
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, FeedProject> {
-        val page = params.key ?: STARTING_PAGE
-        return try {
-            val items = repository.getFeed(tab, page, params.loadSize)
+    override suspend fun load(params: LoadParams<String>): LoadResult<String, FeedProject> =
+        try {
+            val page = repository.getFeed(tab, params.key, params.loadSize)
             LoadResult.Page(
-                data = items,
-                prevKey = if (page == STARTING_PAGE) null else page - 1,
-                nextKey = if (items.isEmpty()) null else page + 1,
+                data = page.projects,
+                prevKey = null,
+                nextKey = page.nextCursor,
             )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             LoadResult.Error(e)
         }
-    }
 
-    override fun getRefreshKey(state: PagingState<Int, FeedProject>): Int? {
-        val anchor = state.anchorPosition ?: return null
-        val closest = state.closestPageToPosition(anchor) ?: return null
-        // prevKey + 1 или nextKey - 1 дают страницу с якорем; ключ не может быть
-        // меньше стартовой страницы. Если оба ключа null (лента в одну страницу) —
-        // обновляемся со стартовой страницы.
-        val key = closest.prevKey?.plus(1) ?: closest.nextKey?.minus(1)
-        return key?.coerceAtLeast(STARTING_PAGE) ?: STARTING_PAGE
-    }
-
-    private companion object {
-        const val STARTING_PAGE = 0
-    }
+    override fun getRefreshKey(state: PagingState<String, FeedProject>): String? = null
 }

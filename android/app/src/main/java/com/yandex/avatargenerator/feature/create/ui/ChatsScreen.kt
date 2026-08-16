@@ -89,8 +89,6 @@ private fun ChatsContent(
         Box(modifier = Modifier.fillMaxSize()) {
             when (uiState) {
                 ChatsUiState.Loading -> ChatsSkeleton(Modifier.fillMaxSize())
-                // Кнопку «New project» в пустом состоянии не дублируем —
-                // плавающая кнопка экрана и так на виду.
                 ChatsUiState.Empty -> BrandEmptyState(
                     title = stringResource(R.string.chats_empty_title),
                     subtitle = stringResource(R.string.chats_empty_subtitle),
@@ -115,10 +113,8 @@ private fun ChatsContent(
                 leadingIcon = {
                     Icon(
                         painter = painterResource(R.drawable.ic_plus),
-                        // Декоративная: доступность обеспечивает текст рядом.
                         contentDescription = null,
                         tint = AppColors.OnAccent,
-                        // 20.dp — размер иконки по макету, точечное значение вне шкалы отступов.
                         modifier = Modifier.size(20.dp),
                     )
                 },
@@ -142,13 +138,10 @@ private fun ChatsList(
             start = AppSpacing.m,
             end = AppSpacing.m,
             top = AppSpacing.s,
-            // Снизу — обычный отступ списка плюс место под плавающую кнопку с её
-            // отступом: иначе последняя строка при прокрутке до конца прячется под ней.
             bottom = AppSpacing.s + BrandButtonDefaults.Height + AppSpacing.m,
         ),
         verticalArrangement = Arrangement.spacedBy(AppSpacing.s),
     ) {
-        // key = id — чтобы Compose переиспользовал строки при обновлении списка.
         items(items = chats, key = { chat -> chat.id }) { chat ->
             ChatRow(
                 chat = chat,
@@ -158,8 +151,6 @@ private fun ChatsList(
         }
     }
 }
-
-// --- Preview -----------------------------------------------------------------
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
 @Composable

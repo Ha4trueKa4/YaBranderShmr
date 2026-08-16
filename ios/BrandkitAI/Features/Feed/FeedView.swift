@@ -2,7 +2,7 @@ import SwiftUI
 
 struct FeedView: View {
     var onOpenSearch: () -> Void = {}
-    var onOpenProject: () -> Void = {}
+    var onOpenProject: (UUID) -> Void = { _ in }
 
     @State private var selectedTab: FeedTab = .all
 
@@ -12,8 +12,12 @@ struct FeedView: View {
 
             FeedTabPickerView(selection: $selectedTab)
 
-            FeedPagerView(selection: $selectedTab) { _ in
-                FeedListView(onOpenProject: onOpenProject)
+            FeedPagerView(selection: $selectedTab) { tab in
+                FeedListView(
+                    scope: tab.scope,
+                    isActive: selectedTab == tab,
+                    onOpenProject: onOpenProject
+                )
             }
         }
     }

@@ -57,6 +57,71 @@ class ProjectRepositoryImplTest {
         headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
     @Test
+    fun `createProject шлёт POST с name и description и разбирает 201`() = runTest {
+        var path: String? = null
+        var method: HttpMethod? = null
+        var body: String? = null
+        val repository = repository { request ->
+            path = request.url.encodedPath
+            method = request.method
+            body = (request.body as TextContent).text
+            respond(ProjectJson, status = HttpStatusCode.Created, headers = jsonHeaders())
+        }
+
+        val project = repository.createProject("Бренд кофейни", "тёмные тона").getOrThrow()
+
+        assertEquals("/api/v1/projects", path)
+        assertEquals(HttpMethod.Post, method)
+        assertEquals("""{"name":"Бренд кофейни","description":"тёмные тона"}""", body)
+        assertEquals("p-1", project.id)
+        assertEquals("Бренд кофейни", project.name)
+    }
+
+    @Test
+    fun `пустое описание уходит пустой строкой, а не пропадает из тела`() = runTest {
+        var body: String? = null
+        val repository = repository { request ->
+            body = (request.body as TextContent).text
+            respond(ProjectJson, status = HttpStatusCode.Created, headers = jsonHeaders())
+        }
+
+        repository.createProject("X", "")
+
+        // Бэкенд читает description с дефолтом "", поэтому поле не опциональное.
+        assertEquals("""{"name":"X","description":""}""", body)
+    }
+
+    @Test
+    fun `400 на createProject превращается в ClientError с кодом`() = runTest {
+        val repository = repository { respondError(HttpStatusCode.BadRequest) }
+
+        val error = repository.createProject("", "").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.ClientError)
+        assertEquals(400, (error as NetworkException.ClientError).code)
+    }
+
+    @Test
+    fun `401 на createProject превращается в Unauthorized`() = runTest {
+        val repository = repository { respondError(HttpStatusCode.Unauthorized) }
+
+        val error = repository.createProject("X", "").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.Unauthorized)
+    }
+
+    @Test
+    fun `ответ createProject без id — это Serialization`() = runTest {
+        val repository = repository {
+            respond("""{"name":"X"}""", status = HttpStatusCode.Created, headers = jsonHeaders())
+        }
+
+        val error = repository.createProject("X", "").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.Serialization)
+    }
+
+    @Test
     fun `getProject разбирает ответ в доменную модель`() = runTest {
         val repository = repository { respond(ProjectJson, headers = jsonHeaders()) }
 

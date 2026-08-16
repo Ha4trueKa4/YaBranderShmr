@@ -25,11 +25,16 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_PROXY_TARGET,
           changeOrigin: true,
         },
+        '/svg-storage': {
+          target: 'https://storage.yandexcloud.net',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/svg-storage/, ''),
+        },
       },
     },
-      test: {
-          environment: 'jsdom',
-          include: ['src/**/*.test.ts'],
-      },
+    test: {
+      environment: 'jsdom',
+      include: ['src/**/*.test.ts'],
+    },
   }
 })

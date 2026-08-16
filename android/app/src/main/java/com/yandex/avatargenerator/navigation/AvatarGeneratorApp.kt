@@ -18,6 +18,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yandex.avatargenerator.feature.auth.ui.rememberIsAuthorized
 import com.yandex.avatargenerator.feature.onboarding.ui.rememberHasSeenOnboarding
 import com.yandex.avatargenerator.ui.theme.AppColors
 
@@ -25,9 +26,9 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  * Корень UI: связывает [NavHostController], нижнюю панель ([AppBottomBar]) и
  * граф ([AppNavHost]).
  *
- * Здесь же выбирается стартовый экран: онбординг при первом запуске, иначе
- * лента. Флаг лежит в DataStore и читается асинхронно, поэтому до первого
- * значения граф не строится.
+ * Здесь же выбирается стартовый экран: лента для авторизованного, онбординг при
+ * первом запуске, иначе вход. Оба флага (сохранённый токен и «онбординг
+ * пройден») читаются асинхронно, поэтому до их первых значений граф не строится.
  *
  * Нижняя панель показывается только на верхнеуровневых вкладках
  * ([TopLevelDestination]); на экранах-деталях (проект, чужой профиль) и на
@@ -47,27 +48,18 @@ fun AvatarGeneratorApp(
     navController: NavHostController = rememberNavController(),
 ) {
     val hasSeenOnboarding = rememberHasSeenOnboarding()
+    val isAuthorized = rememberIsAuthorized()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
-    // Узел ещё не определён (первый кадр либо флаг не прочитан) — ориентируемся
-    // на будущий стартовый экран: верхнеуровневый только если онбординг пройден.
-    val showBottomBar = currentDestination.isTopLevel() ?: (hasSeenOnboarding == true)
-    // Тот же приём для полноэкранного режима: до готовности бэкстека онбординг
-    // будет открыт ровно тогда, когда флаг ещё не выставлен.
+    val showBottomBar = currentDestination.isOnAnyRoute(BottomBarDetailRoutes) ||
+        (currentDestination.isTopLevel() ?: (isAuthorized == true))
     val isFullBleed = currentDestination?.isOnRoute(Destination.Onboarding.route)
-        ?: (hasSeenOnboarding == false)
-    // Экран проекта уходит под системную навигацию: фон поля ввода должен
-    // доходить до нижнего края экрана (безрамочный низ). Нижний инсет он
-    // обрабатывает сам — Scaffold отдаёт ему только верхний.
+        ?: (isAuthorized == false && hasSeenOnboarding == false)
     val isBottomFullBleed = currentDestination.isOnRoute(Destination.Project.route)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = AppColors.Background,
-        // Онбординг занимает всё окно: у него полноэкранный градиент, а отступы
-        // от системных баров каждая его страница ставит сама (windowInsetsPadding).
-        // Если те же инсеты раздаст ещё и Scaffold — сверху и снизу появится
-        // полоса containerColor, а отступы страниц удвоятся.
         contentWindowInsets = when {
             isFullBleed -> WindowInsets(0)
             isBottomFullBleed -> ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top)
@@ -82,17 +74,12 @@ fun AvatarGeneratorApp(
             }
         },
     ) { innerPadding ->
-        // Пока флаг не прочитан (null) — держим пустой фон Scaffold, иначе
-        // стартовый экран выберется наугад.
-        val startDestination = rememberStartDestination(hasSeenOnboarding)
+        val startDestination = rememberStartDestination(hasSeenOnboarding, isAuthorized)
 
         if (startDestination != null) {
             AppNavHost(
                 navController = navController,
                 startDestination = startDestination,
-                // consumeWindowInsets обязателен вместе с padding (см. KDoc Scaffold):
-                // без него вложенный windowInsetsPadding отсчитает системные бары
-                // второй раз поверх уже добавленного отступа.
                 modifier = Modifier
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding),
@@ -102,25 +89,36 @@ fun AvatarGeneratorApp(
 }
 
 /**
- * Стартовый маршрут, зафиксированный по первому прочитанному значению флага
- * «онбординг пройден». `null` — флаг ещё читается, граф строить рано.
+ * Стартовый маршрут, зафиксированный по первым прочитанным значениям флагов
+ * «есть сессия» и «онбординг пройден». `null` — хотя бы один ещё читается,
+ * граф строить рано.
  *
- * Пересчитывать маршрут на каждое значение флага нельзя, хотя соблазнительно:
- * флаг меняется прямо во время сессии — его пишет сам онбординг перед тем, как
- * уйти на регистрацию. А `NavHost` пересобирает граф на каждое новое значение
- * `startDestination`, и `NavController.setGraph` при смене графа чистит бэкстек
- * и уходит на новый стартовый экран. Из-за этого только что открытая регистрация
- * схлопывалась в ленту — экран успевал мелькнуть и пропадал.
+ * Правило: есть токен — сразу лента; нет токена и онбординг не пройден —
+ * онбординг; иначе экран входа. Гостя в ленту не пускаем.
+ *
+ * Пересчитывать маршрут на каждое значение флагов нельзя, хотя соблазнительно:
+ * оба меняются прямо во время сессии — флаг онбординга пишет сам онбординг
+ * перед уходом на регистрацию, а токен появляется в момент успешного входа.
+ * А `NavHost` пересобирает граф на каждое новое значение `startDestination`,
+ * и `NavController.setGraph` при смене графа чистит бэкстек и уходит на новый
+ * стартовый экран. Из-за этого только что открытая регистрация схлопывалась
+ * в ленту — экран успевал мелькнуть и пропадал.
  *
  * `rememberSaveable`, а не `remember`: иначе поворот экрана на регистрации даёт
  * ровно тот же вылет — граф пересоберётся уже с лентой в качестве стартовой.
  */
 @Composable
-private fun rememberStartDestination(hasSeenOnboarding: Boolean?): String? {
+private fun rememberStartDestination(
+    hasSeenOnboarding: Boolean?,
+    isAuthorized: Boolean?,
+): String? {
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
-    if (startDestination == null && hasSeenOnboarding != null) {
-        startDestination =
-            if (hasSeenOnboarding) Destination.Feed.route else Destination.Onboarding.route
+    if (startDestination == null && hasSeenOnboarding != null && isAuthorized != null) {
+        startDestination = when {
+            isAuthorized -> Destination.Feed.route
+            !hasSeenOnboarding -> Destination.Onboarding.route
+            else -> Destination.Login.route
+        }
     }
     return startDestination
 }
@@ -128,6 +126,12 @@ private fun rememberStartDestination(hasSeenOnboarding: Boolean?): String? {
 /** Маршруты верхнеуровневых вкладок; константа — считается один раз, не на каждой рекомпозиции. */
 private val TopLevelRoutes: Set<String> =
     TopLevelDestination.entries.mapTo(HashSet()) { it.destination.route }
+
+/** Витрины (не вкладки), на которых нижняя панель всё равно показывается: публичный проект и чужой профиль. */
+private val BottomBarDetailRoutes: Set<String> = setOf(
+    Destination.PublicProject.route,
+    Destination.UserProfile.route,
+)
 
 /**
  * Является ли текущий узел одной из верхнеуровневых вкладок.
@@ -142,15 +146,42 @@ private fun androidx.navigation.NavDestination?.isTopLevel(): Boolean? {
 }
 
 /**
- * Переход на вкладку по стандартному паттерну bottom-навигации:
- *  - popUpTo стартового узла с сохранением состояния (не копим бэкстек вкладок);
- *  - launchSingleTop — без дублей;
- *  - restoreState — восстанавливаем прокрутку/состояние ранее открытой вкладки.
+ * Переход на вкладку по нажатию нижней панели.
+ *
+ * Если корень вкладки уже в бэкстеке — просто возвращаемся к нему, сбрасывая
+ * всё, что открыто поверх (витрины `PublicProject`/`UserProfile`, форму создания
+ * и т. п.). Так нажатие на вкладку всегда ведёт на её корневой экран: тап по
+ * «Ленте» открывает список ленты, даже если сейчас открыт публичный проект.
+ * Целевой корень при этом не пересоздаётся — его состояние (прокрутка, выбранная
+ * под-вкладка) сохраняется. `Feed` — стартовый узел, он в бэкстеке всегда,
+ * поэтому для ленты эта ветка срабатывает из любого места.
+ *
+ * Если вкладки в бэкстеке ещё нет (первое переключение на неё) — стандартный
+ * паттерн bottom-навигации: popUpTo стартового узла с `saveState` (не копим
+ * бэкстек вкладок), `launchSingleTop` без дублей, `restoreState` — вернуть ранее
+ * сохранённое состояние вкладки.
+ *
+ * Компромисс: вкладка, которую при `popBackStack` снимают с верха (напр.
+ * «Профиль» при возврате на «Ленту»), состояние не сохраняет — при следующем
+ * заходе она откроется заново. Полное сохранение стека каждой вкладки потребовало
+ * бы вложенных nav-графов (по одному на вкладку); при плоском графе такой ценой
+ * платим за гарантию «тап по вкладке всегда открывает её корень».
+ *
+ * Раньше здесь всегда шёл `navigate(..., restoreState = true)`, и вкладка
+ * восстанавливала весь свой сохранённый стек вместе с открытой деталью — тап по
+ * «Ленте» после «лента → проект → другая вкладка» возвращал на проект, а не на
+ * список.
  */
 private fun NavHostController.navigateToTab(tab: TopLevelDestination) {
-    navigate(tab.destination.route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+    val route = tab.destination.route
+    // popBackStack сам возвращает false, если корня вкладки в стеке ещё нет, —
+    // тогда переходим на неё стандартным паттерном. Так обходимся публичным API
+    // (чтение currentBackStack помечено @RestrictedApi).
+    if (!popBackStack(route, inclusive = false)) {
+        navigate(route) {
+            popUpTo(graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 }

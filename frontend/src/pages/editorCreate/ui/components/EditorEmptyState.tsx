@@ -28,13 +28,16 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
                 <div className={styles.inputRow}>
                   <Input
                     {...field}
+                    autoFocus
                     className={styles.input}
                     invalid={Boolean(fieldState.error)}
                     leadingContent={<img alt="" src={sparkles} />}
                     placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
                     ref={field.ref}
                   />
-                  <Button type="submit">Generate</Button>
+                  <Button className={styles.generateButton} type="submit">
+                    Generate
+                  </Button>
                 </div>
                 {fieldState.error && (
                   <p className={styles.error}>{fieldState.error.message}</p>

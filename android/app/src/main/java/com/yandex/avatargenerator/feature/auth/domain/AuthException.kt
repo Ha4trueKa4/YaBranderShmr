@@ -17,10 +17,10 @@ sealed class AuthException(
         AuthException("Invalid email or password", cause)
 
     /**
-     * `400` на `POST /auth/register`: значение не прошло проверку сервера.
-     * Сами правила на клиенте не дублируем — они живут на бэкенде.
+     * `400`/`422` на входе или регистрации: значение поля не прошло проверку
+     * сервера. Сами правила на клиенте не дублируем — они живут на бэкенде.
      */
-    class RegistrationRejected(
+    class FieldRejected(
         val field: Field,
         val serverMessage: String? = null,
         cause: Throwable? = null,

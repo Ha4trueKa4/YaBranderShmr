@@ -44,8 +44,6 @@ sealed class Destination(val route: String) {
 
     /** Экран проекта (WebView-редактор + чат). Аргумент — id проекта. */
     data object Project : Destination("project/{$ARG_PROJECT_ID}") {
-        // Uri.encode: id может содержать спецсимволы URI (/, ?, #, пробел),
-        // иначе маршрут не совпал бы с паттерном. NavType.StringType декодирует.
         fun createRoute(projectId: String): String = "project/${Uri.encode(projectId)}"
     }
 

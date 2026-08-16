@@ -15,9 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
 import com.yandex.avatargenerator.ui.components.BrandAvatar
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
@@ -84,7 +86,6 @@ fun ProfileHeader(
             )
         }
 
-        // Разделитель между шапкой и сеткой проектов (как на экране ленты).
         HorizontalDivider(color = AppColors.Border)
     }
 }
@@ -92,8 +93,6 @@ fun ProfileHeader(
 /** Градиентная обложка с [BrandAvatar], наезжающим на её нижний край. */
 @Composable
 private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Modifier) {
-    // Аватар 56 + кольцо 3dp с каждой стороны = 62; центрируем его на нижнем крае
-    // обложки (120dp): выступ = 62/2 = 31, поэтому offset = 120−31, высота = 120+31.
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -107,7 +106,6 @@ private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Mod
                 .background(AppColors.AccentGradient),
         )
 
-        // Кольцо цвета фона отделяет аватар от градиента обложки.
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -122,14 +120,20 @@ private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Mod
 }
 
 @Composable
-private fun NameBlock(displayName: String, handle: String, modifier: Modifier = Modifier) {
+private fun NameBlock(displayName: String, handle: String?, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs),
     ) {
         Text(text = displayName, style = AppTypography.heading3)
-        Text(text = "@$handle", style = AppTypography.label.copy(color = AppColors.TextMuted))
+        // Никнейма нет в контракте профиля — строку не рисуем, пока не появится.
+        if (handle != null) {
+            Text(
+                text = stringResource(R.string.profile_handle, handle),
+                style = AppTypography.label.copy(color = AppColors.TextMuted),
+            )
+        }
     }
 }
 
@@ -138,7 +142,7 @@ private fun NameBlock(displayName: String, handle: String, modifier: Modifier = 
 private fun StatsRow(projects: Int, followers: Int, following: Int, modifier: Modifier = Modifier) {
     Text(
         modifier = modifier,
-        text = "$projects Projects · ${formatCount(followers)} Followers · $following Following",
+        text = stringResource(R.string.profile_stats, projects, formatCount(followers), following),
         style = AppTypography.label.copy(
             color = AppColors.TextPrimary,
             fontWeight = FontWeight.SemiBold,
@@ -161,9 +165,23 @@ private fun ProfileActionButton(
     modifier: Modifier = Modifier,
 ) {
     when {
-        isOwnProfile -> BrandSecondaryButton(text = "Edit Profile", onClick = onClick, modifier = modifier)
-        isFollowing -> BrandSecondaryButton(text = "Following", onClick = onClick, modifier = modifier)
-        else -> BrandPrimaryButton(text = "Follow", onClick = onClick, modifier = modifier)
+        isOwnProfile -> BrandSecondaryButton(
+            text = stringResource(R.string.profile_action_edit),
+            onClick = onClick,
+            modifier = modifier,
+        )
+
+        isFollowing -> BrandSecondaryButton(
+            text = stringResource(R.string.profile_action_following),
+            onClick = onClick,
+            modifier = modifier,
+        )
+
+        else -> BrandPrimaryButton(
+            text = stringResource(R.string.profile_action_follow),
+            onClick = onClick,
+            modifier = modifier,
+        )
     }
 }
 

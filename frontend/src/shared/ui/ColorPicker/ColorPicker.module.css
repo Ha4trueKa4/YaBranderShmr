@@ -7,6 +7,10 @@
   box-shadow: var(--shadow-md);
 }
 
+.picker :global(.react-colorful) {
+  width: 100%;
+}
+
 .picker :global(.react-colorful__saturation) {
   height: 9rem;
   border-radius: calc(var(--radius-sm) / 2);
@@ -23,4 +27,14 @@
   height: 1rem;
   border: 0.1875rem solid var(--color-surface);
   box-shadow: 0 0 0 1px var(--color-accent-primary);
+}
+
+.hexField {
+  color: var(--color-text-secondary);
+  display: grid;
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  gap: var(--space-1);
+  letter-spacing: 0.04em;
+  margin-top: var(--space-3);
 }

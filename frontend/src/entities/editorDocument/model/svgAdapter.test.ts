@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseSvg } from './svgAdapter'
+import { importSvg, parseSvg } from './svgAdapter'
 
 describe('parseSvg', () => {
   it('rejects invalid SVG markup with multiple root elements', () => {
@@ -9,10 +9,15 @@ describe('parseSvg', () => {
     )
   })
 
-  it('rejects an SVG without a viewBox', () => {
-    expect(() =>
-      parseSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
-    ).toThrow('SVG root must define a viewBox')
+  it('adds a fallback viewBox when it is missing', () => {
+    const result = importSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+
+    expect(result.document).toMatchObject({ height: 1000, width: 1000 })
+    expect(result.warnings).toContainEqual({
+      code: 'missing-view-box',
+      height: 1000,
+      width: 1000,
+    })
   })
 
   it('rejects a root that is not an SVG element', () => {
@@ -58,6 +63,32 @@ describe('parseSvg', () => {
       ],
       width: 500,
     })
+  })
+
+  it('generates type-based names for editable layers without an id', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
+        <rect x="0" y="0" width="400" height="300" fill="#FFFFFF" />
+        <circle cx="100" cy="100" r="50" fill="#000000" />
+        <circle cx="300" cy="100" r="50" fill="#000000" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'shape-1', name: 'rect-1', type: 'shape' },
+      { id: 'shape-2', name: 'circle-1', type: 'shape' },
+      { id: 'shape-3', name: 'circle-2', type: 'shape' },
+    ])
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        { code: 'missing-view-box', height: 300, width: 400 },
+        {
+          code: 'generated-editor-id',
+          editorId: 'shape-1',
+          elementName: 'rect',
+        },
+      ]),
+    )
   })
 
   it('parses groups recursively and converts transform into an object', () => {
@@ -154,14 +185,20 @@ describe('parseSvg', () => {
     })
   })
 
-  it('rejects text with independently styled nested fragments', () => {
-    expect(() =>
-      parseSvg(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-          <text id="title" x="20" y="40">Hello <tspan fill="#6C3BFF">world</tspan></text>
-        </svg>
-      `),
-    ).toThrow('Unsupported SVG element: tspan')
+  it('parses tspan lines as one editable text layer', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <text id="title" x="20" y="40" font-size="20"><tspan x="20" dy="0">Hello</tspan><tspan x="20" dy="24">world</tspan></text>
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      id: 'title',
+      isLocked: false,
+      style: { lineHeight: 24 },
+      text: 'Hello\nworld',
+      type: 'text',
+    })
   })
 
   it('parses a path with its stroke properties', () => {
@@ -193,6 +230,35 @@ describe('parseSvg', () => {
         type: 'shape',
       },
     ])
+  })
+
+  it('keeps a contract editor group and its path editable', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <g data-editor-layer="true" data-name="heart-shape" id="heart-shape">
+          <path id="heart-path" d="M250 420 C120 330 40 150 150 40 C200 40 240 70 250 110 C260 70 300 40 350 40 C410 40 460 80 460 150 C460 240 380 330 250 420 Z" fill="#e74c3c" stroke="#c0392b" stroke-width="6" stroke-linejoin="round" />
+        </g>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        children: [
+          {
+            id: 'heart-path',
+            isLocked: false,
+            shapeType: 'path',
+            type: 'shape',
+          },
+        ],
+        id: 'heart-shape',
+        isLocked: false,
+        type: 'group',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'heart-shape' }),
+    )
   })
 
   it('preserves gradients in definitions and parses an ellipse', () => {
@@ -266,13 +332,92 @@ describe('parseSvg', () => {
     })
   })
 
-  it('rejects an unsupported SVG element', () => {
-    expect(() =>
-      parseSvg(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-          <image id="external-image" href="https://example.com/logo.png" />
-        </svg>
-      `),
-    ).toThrow('Unsupported SVG element: image')
+  it('locks unsupported elements without discarding editable siblings', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <defs>
+          <filter id="shadow"><feGaussianBlur stdDeviation="4" /></filter>
+        </defs>
+        <rect id="editable" x="0" y="0" width="500" height="500" fill="#FFFFFF" />
+        <rect id="locked" x="0" y="0" width="500" height="500" filter="url(#shadow)" />
+      </svg>
+    `)
+
+    expect(result.document.definitions).toMatchObject({
+      rawSvg: expect.stringContaining('<filter'),
+    })
+    expect(result.document.layers).toMatchObject([
+      { id: 'editable', isLocked: false, type: 'shape' },
+      { id: 'locked', isLocked: true, type: 'raw' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'locked',
+      elementName: 'rect',
+      reason: 'Unsupported SVG attribute: filter',
+    })
+  })
+
+  it('keeps malformed supported nodes as raw layers without aborting import', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <circle id="invalid-radius" cx="250" cy="250" r="not-a-number" />
+        <rect id="editable" x="0" y="0" width="500" height="500" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'invalid-radius', isLocked: true, type: 'raw' },
+      { id: 'editable', isLocked: false, type: 'shape' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'invalid-radius',
+      elementName: 'circle',
+      reason: 'SVG attribute r on <circle> must be a number',
+    })
+  })
+
+  it('preserves invalid supported definitions without aborting import', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <defs>
+          <linearGradient id="incomplete-gradient"><stop offset="0%" /></linearGradient>
+        </defs>
+        <rect id="editable" x="0" y="0" width="500" height="500" />
+      </svg>
+    `)
+
+    expect(result.document.definitions).toMatchObject({
+      rawSvg: expect.stringContaining('incomplete-gradient'),
+    })
+    expect(result.document.layers).toMatchObject([
+      { id: 'editable', isLocked: false, type: 'shape' },
+    ])
+  })
+
+  it('removes unsafe SVG content before parsing editable layers', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <script>alert('unsafe')</script>
+        <rect id="safe" x="0" y="0" width="500" height="500" onload="alert('unsafe')" />
+      </svg>
+    `)
+
+    expect(result.document.layers[0]).toMatchObject({
+      id: 'safe',
+      isLocked: false,
+      type: 'shape',
+    })
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        { code: 'removed-unsafe-element', elementName: 'script' },
+        {
+          attributeName: 'onload',
+          code: 'removed-unsafe-attribute',
+          elementName: 'rect',
+        },
+      ]),
+    )
   })
 })

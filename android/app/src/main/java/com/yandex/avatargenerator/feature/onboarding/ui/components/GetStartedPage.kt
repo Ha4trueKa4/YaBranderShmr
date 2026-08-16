@@ -141,8 +141,6 @@ private fun CtaGroup(
             onClick = onGetStartedClick,
             fullWidth = true,
         )
-        // «Already have an account? Sign in» — кликается только целиком:
-        // отдельная кликабельная область на части текста хуже для доступности.
         BrandTextLink(
             text = stringResource(R.string.onboarding_sign_in_prompt),
             actionText = stringResource(R.string.onboarding_sign_in_action),

@@ -1,11 +1,35 @@
+import type { EditorDocument, EditorNode } from '@entities/editorDocument'
+
 import styles from './EditorScene.module.css'
 import { SceneFrame } from './sceneFrame/SceneFrame'
 
-export function EditorScene() {
+interface EditorSceneProps {
+  document: EditorDocument
+  onSelectNode: (nodeId: string) => void
+  onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  renderVersion: number
+  selectedNode: EditorNode | null
+}
+
+export function EditorScene({
+  document,
+  onSelectNode,
+  onShapePositionChange,
+  onTextPositionChange,
+  renderVersion,
+  selectedNode,
+}: EditorSceneProps) {
   return (
     <section className={styles.scene}>
-      {/* Сцена читает document и viewport из editorStore; SceneFrame отвечает только за артборд. */}
-      <SceneFrame />
+      <SceneFrame
+        document={document}
+        onSelectNode={onSelectNode}
+        onShapePositionChange={onShapePositionChange}
+        onTextPositionChange={onTextPositionChange}
+        renderVersion={renderVersion}
+        selectedNode={selectedNode}
+      />
     </section>
   )
 }

@@ -15,9 +15,17 @@ export function FeedProjectCard({ project }: FeedProjectCardProps) {
 
   return (
     <article className={styles.card}>
-      <ProjectPreview imageUrl={project.previewUrl} title={project.name} />
+      <ProjectPreview
+        className={styles.preview}
+        imageUrl={project.previewUrl}
+        title={project.name}
+      />
       <div className={styles.content}>
-        <h3>{project.name}</h3>
+        <h3>
+          <Link className={styles.projectLink} to={`/projects/${project.id}`}>
+            {project.name}
+          </Link>
+        </h3>
         <div className={styles.meta}>
           <div className={styles.author}>
             <Link

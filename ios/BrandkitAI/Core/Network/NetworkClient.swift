@@ -20,6 +20,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         config.timeoutIntervalForResource = timeout
         self.session = URLSession(configuration: config)
     }
+    
+    static let shared = NetworkClient(baseURL: APIConfig.baseURL)
 
     func request<Response: Decodable & Sendable>(
         _ method: HTTPMethod,
@@ -27,17 +29,14 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws -> Response {
+        let bodyData = try encode(body)
         let data = try await execute(
             method: method,
             path: path,
             authorization: authorization,
-            body: body
+            body: bodyData
         )
-        do {
-            return try JSONDecoder().decode(Response.self, from: data)
-        } catch {
-            throw NetworkError.decodingError
-        }
+        return try decode(Response.self, from: data)
     }
 
     func request(
@@ -46,21 +45,69 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?
     ) async throws {
+        let bodyData = try encode(body)
         _ = try await execute(
             method: method,
             path: path,
             authorization: authorization,
-            body: body
+            body: bodyData
+        )
+    }
+
+    func request<Response: Decodable & Sendable>(
+        _ method: HTTPMethod,
+        path: String,
+        authorization: AuthorizationRequirement
+    ) async throws -> Response {
+        let data = try await execute(
+            method: method,
+            path: path,
+            authorization: authorization,
+            body: nil
+        )
+        return try decode(Response.self, from: data)
+    }
+
+    func request(
+        _ method: HTTPMethod,
+        path: String,
+        authorization: AuthorizationRequirement
+    ) async throws {
+        _ = try await execute(
+            method: method,
+            path: path,
+            authorization: authorization,
+            body: nil
         )
     }
 
     // MARK: - Private
 
+    private func decode<Response: Decodable & Sendable>(
+        _ type: Response.Type,
+        from data: Data
+    ) throws -> Response {
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            throw NetworkError.decodingError
+        }
+    }
+
+    private func encode(_ body: (some Encodable & Sendable)?) throws -> Data? {
+        guard let body else { return nil }
+        do {
+            return try JSONEncoder().encode(body)
+        } catch {
+            throw NetworkError.encodingError
+        }
+    }
+
     private func execute(
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: (some Encodable & Sendable)?
+        body: Data?
     ) async throws -> Data {
         let shouldRetry = method == .get
         if !shouldRetry {
@@ -83,7 +130,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: (some Encodable & Sendable)?
+        body: Data?
     ) async throws -> Data {
         guard let url = URL(string: baseURL + path) else {
             throw NetworkError.invalidURL
@@ -109,11 +156,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         if let body {
-            do {
-                urlRequest.httpBody = try JSONEncoder().encode(body)
-            } catch {
-                throw NetworkError.encodingError
-            }
+            urlRequest.httpBody = body
         }
 
         let (data, response) = try await session.data(for: urlRequest)
@@ -150,7 +193,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: (some Encodable & Sendable)?
+        body: Data?
     ) async throws -> Data {
         var attempt = 0
         var delayNs = Self.minDelay

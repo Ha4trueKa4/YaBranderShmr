@@ -1,3 +1,4 @@
+import { cn } from '@shared/lib'
 import type { ReactNode } from 'react'
 
 import { ErrorState } from '../ErrorState'
@@ -10,6 +11,7 @@ export interface AsyncStateProps {
   errorMessage?: string
   isError: boolean
   isPending: boolean
+  loadingClassName?: string
 }
 
 export function AsyncState({
@@ -17,10 +19,11 @@ export function AsyncState({
   errorMessage,
   isError,
   isPending,
+  loadingClassName,
 }: AsyncStateProps) {
   if (isPending) {
     return (
-      <div className={styles.loadingState}>
+      <div className={cn(styles.loadingState, loadingClassName)}>
         <Spinner />
       </div>
     )

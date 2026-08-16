@@ -33,7 +33,6 @@ import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
-// Точечные размеры шапки по макету, вне шкал AppSpacing/AppShape.
 private val BarHeight = 56.dp
 private val IconTouchSize = 40.dp
 private val IconSize = 20.dp

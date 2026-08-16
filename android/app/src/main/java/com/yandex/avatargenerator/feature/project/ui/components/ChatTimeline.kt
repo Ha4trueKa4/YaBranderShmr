@@ -37,21 +37,13 @@ internal fun ChatTimeline(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    // Сколько сообщений уже показано. Храним именно размер, а не флаг «первый
-    // проход»: по нему видно, промотка нужна из-за нового сообщения или лента
-    // просто пересоздалась (поворот экрана) и трогать позицию не надо.
     var renderedCount by rememberSaveable { mutableIntStateOf(0) }
 
-    // Ключ — размер, а не сам список: перерисовка существующего сообщения
-    // (например, дозагрузка картинки) прокрутку дёргать не должна.
     LaunchedEffect(messages.size) {
         if (messages.isEmpty()) return@LaunchedEffect
         when {
-            // Первое открытие: позиционируемся мгновенно, без «проезда» сверху вниз.
             renderedCount == 0 -> listState.scrollToItem(messages.lastIndex)
-            // Сообщение дописали при открытом экране — прокручиваемся с анимацией.
             messages.size > renderedCount -> listState.animateScrollToItem(messages.lastIndex)
-            // Размер не изменился: позицию не трогаем, её восстановил listState.
         }
         renderedCount = messages.size
     }
@@ -60,10 +52,8 @@ internal fun ChatTimeline(
         state = listState,
         modifier = modifier,
         contentPadding = PaddingValues(AppSpacing.m),
-        // 20dp макета округляем до токена: своего 20dp в шкале нет.
         verticalArrangement = Arrangement.spacedBy(AppSpacing.l),
     ) {
-        // key = id — чтобы Compose переиспользовал элементы при дописывании ленты.
         items(items = messages, key = { message -> message.id }) { message ->
             when (message) {
                 is ChatMessage.Outgoing -> Row(

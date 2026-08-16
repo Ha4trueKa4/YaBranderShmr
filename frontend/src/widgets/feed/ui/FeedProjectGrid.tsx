@@ -22,7 +22,6 @@ export function FeedProjectGrid({ filters, projects }: FeedProjectGridProps) {
       project.author.name.toLocaleLowerCase().includes(normalizedQuery)
     )
   })
-
   return (
     <div className={styles.grid}>
       {visibleProjects.map((project) => (

@@ -5,6 +5,7 @@ import { ProjectTitle } from './components/ProjectTitle'
 import styles from './EditorToolbar.module.css'
 
 export interface EditorToolbarProps {
+  isSavingVersion: boolean
   onEditProjectName: (projectName: string) => void
   onExport: () => void
   onOpenProfile: () => void
@@ -19,6 +20,7 @@ export interface EditorToolbarProps {
 }
 
 export function EditorToolbar({
+  isSavingVersion,
   onEditProjectName,
   onExport,
   onOpenProfile,
@@ -56,6 +58,7 @@ export function EditorToolbar({
         onZoomOut={onZoomOut}
       />
       <ProjectActions
+        isSavingVersion={isSavingVersion}
         onExport={onExport}
         onOpenProfile={onOpenProfile}
         onSaveVersion={onSaveVersion}

@@ -30,7 +30,6 @@ internal fun ChatsTopBar(modifier: Modifier = Modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // 56.dp — высота шапки по макету, точечное значение вне шкалы отступов.
                 .height(56.dp)
                 .padding(horizontal = AppSpacing.m),
             verticalAlignment = Alignment.CenterVertically,

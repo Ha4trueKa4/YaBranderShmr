@@ -47,7 +47,6 @@ internal fun ChatSystemTag(text: String, modifier: Modifier = Modifier) {
     ) {
         Icon(
             imageVector = Icons.Filled.AutoAwesome,
-            // Декоративная: смысл несёт текст рядом.
             contentDescription = null,
             tint = AppColors.TextSecondary,
             modifier = Modifier.size(SparkleSize),
