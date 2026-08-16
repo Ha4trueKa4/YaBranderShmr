@@ -6,7 +6,7 @@ import styles from './EditorToolbar.module.css'
 
 export interface EditorToolbarProps {
   isSavingVersion: boolean
-  onEditProjectName: (projectName: string) => void
+  onEditProjectName: (projectName: string) => Promise<void>
   onExport: () => void
   onOpenProfile: () => void
   onPanTool: () => void

@@ -3,12 +3,14 @@ import { type PatchProjectsByIdResponse, zProject } from '@shared/api/types'
 
 export interface UpdateProjectMetadataInput {
   projectId: string
+  name?: string
   is_public?: boolean
   data?: string
 }
 
 export async function updateProject({
   projectId,
+  name,
   is_public,
   data,
 }: UpdateProjectMetadataInput): Promise<PatchProjectsByIdResponse> {
@@ -16,7 +18,7 @@ export async function updateProject({
     `/projects/${encodeURIComponent(projectId)}`,
     {
       method: 'PATCH',
-      body: { is_public, data },
+      body: { data, is_public, name },
     },
   )
 

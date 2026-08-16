@@ -12,7 +12,7 @@ interface OwnProjectsSectionProps {
   onOpenProject: (projectId: string) => void
   onUpdateProjectMetadata: (
     projectId: string,
-    metadata: { isPublic: boolean },
+    metadata: { isPublic: boolean; name: string },
   ) => Promise<void>
   projects: Project[]
 }
@@ -105,15 +105,15 @@ export function OwnProjectsSection({
       {editedProject?.id && (
         <ProjectManagementModal
           onClose={() => setEditedProjectId(null)}
-          onSubmit={async ({ isPublic }) => {
+          onSubmit={async ({ isPublic, name }) => {
             const projectId = editedProject.id
 
             if (!projectId) {
               return
             }
 
-            await onUpdateProjectMetadata(projectId, { isPublic })
-            updateEditedProject({ is_public: isPublic })
+            await onUpdateProjectMetadata(projectId, { isPublic, name })
+            updateEditedProject({ is_public: isPublic, name })
             setEditedProjectId(null)
           }}
           project={editedProject}

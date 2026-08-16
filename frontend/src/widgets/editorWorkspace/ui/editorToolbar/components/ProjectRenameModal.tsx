@@ -9,7 +9,7 @@ import styles from './ProjectRenameModal.module.css'
 interface ProjectRenameModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (projectName: string) => void
+  onSubmit: (projectName: string) => Promise<void>
   projectName: string
 }
 
@@ -47,8 +47,8 @@ export function ProjectRenameModal({
     onClose()
   }
 
-  const submit = form.handleSubmit(({ projectName: nextProjectName }) => {
-    onSubmit(nextProjectName.trim())
+  const submit = form.handleSubmit(async ({ projectName: nextProjectName }) => {
+    await onSubmit(nextProjectName.trim())
   })
 
   return (

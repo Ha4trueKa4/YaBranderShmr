@@ -87,10 +87,14 @@ export function ProfilePage() {
 
   async function handleUpdateProjectMetadata(
     projectId: string,
-    { isPublic }: { isPublic: boolean },
+    { isPublic, name }: { isPublic: boolean; name: string },
   ) {
     try {
-      await updateProjectMetadata({ projectId, is_public: isPublic })
+      await updateProjectMetadata({
+        is_public: isPublic,
+        name,
+        projectId,
+      })
       await queryClient.invalidateQueries({
         queryKey: userProfileQueryKey(userId),
       })

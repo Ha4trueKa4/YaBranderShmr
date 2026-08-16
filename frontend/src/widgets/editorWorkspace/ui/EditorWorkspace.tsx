@@ -46,8 +46,29 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     // TODO: подключить действия после реализации editorStore.
   }
 
-  function handleProjectNameSubmit(nextProjectName: string) {
-    setProjectName(nextProjectName)
+  async function handleProjectNameSubmit(nextProjectName: string) {
+    if (nextProjectName === projectName) {
+      return
+    }
+
+    try {
+      const updatedProject = await saveProjectVersion({
+        name: nextProjectName,
+        projectId,
+      })
+
+      setProjectName(updatedProject.name ?? nextProjectName)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['feed'] }),
+      ])
+      toast.info('Project name updated.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+
+      throw error
+    }
   }
 
   async function handleSaveVersion() {
