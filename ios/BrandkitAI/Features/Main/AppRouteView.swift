@@ -28,8 +28,18 @@ struct AppRouteView: View {
                 }
             )
 
-        case .chat(_, let title):
-            ChatView(title: title, onBack: { router.pop() })
+        case .chat(let projectID, let title):
+            ChatView(
+                title: title,
+                onBack: { router.pop() },
+                onOpenImage: { router.push(.chatImage(projectID: projectID, title: title)) }
+            )
+
+        case .chatImage(let projectID, let title):
+            ChatImagePreviewView(
+                viewModel: ChatImagePreviewViewModel(projectID: projectID, title: title),
+                onBack: { router.pop() }
+            )
 
         case .projectEditor(let projectID):
             ProjectEditorView(
@@ -40,10 +50,12 @@ struct AppRouteView: View {
         case .versionHistory:
             ProjectVersionHistoryView(onBack: { router.pop() })
 
-        case .publicProject:
+        case .publicProject(let projectID):
             PublicProjectView(
+                projectID: projectID,
                 onBack: { router.pop() },
-                onOpenAuthor: { router.push(.profile(userID: UUID())) }
+                onOpenAuthor: { router.push(.profile(userID: UUID())) },
+                onOpenProject: { router.push(.publicProject(projectID: $0)) }
             )
 
         case .profile(let userID):
