@@ -6,7 +6,6 @@ import { getTransformValue } from './model/getTransformValue'
 
 interface TextLayerProps {
   node: EditorText
-  onSelect: () => void
 }
 
 function getLines(text: string, lineHeight: number) {
@@ -30,17 +29,13 @@ function getLines(text: string, lineHeight: number) {
   })
 }
 
-export const TextLayer = observer(function TextLayer({
-  node,
-  onSelect,
-}: TextLayerProps) {
+export const TextLayer = observer(function TextLayer({ node }: TextLayerProps) {
   const lines = getLines(
     node.text,
     node.style.lineHeight ?? node.style.fontSize * 1.2,
   )
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: SVG canvas elements are selected with a pointer.
     <text
       fill={getPaintValue(node.style.fill)}
       fontFamily={node.style.fontFamily}
@@ -49,8 +44,6 @@ export const TextLayer = observer(function TextLayer({
       fontWeight={node.style.fontWeight}
       letterSpacing={node.style.letterSpacing}
       opacity={node.opacity}
-      onClick={onSelect}
-      style={{ cursor: 'pointer' }}
       textAnchor={node.style.textAnchor}
       transform={getTransformValue(node.transform)}
       x={node.x}
