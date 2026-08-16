@@ -3,9 +3,11 @@ package com.yandex.avatargenerator.feature.project.di
 import com.yandex.avatargenerator.feature.project.data.MockChatRepository
 import com.yandex.avatargenerator.feature.project.data.MockPublicProjectRepository
 import com.yandex.avatargenerator.feature.project.data.ProjectRepositoryImpl
+import com.yandex.avatargenerator.feature.project.data.VersionsRepositoryImpl
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
 import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.PublicProjectRepository
+import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
 import com.yandex.avatargenerator.feature.project.ui.PublicProjectViewModel
 import org.koin.core.module.dsl.viewModel
@@ -15,6 +17,7 @@ val projectModule = module {
     single<ChatRepository> { MockChatRepository() }
     single<ProjectRepository> { ProjectRepositoryImpl(client = get()) }
     single<PublicProjectRepository> { MockPublicProjectRepository() }
+    single<VersionsRepository> { VersionsRepositoryImpl(client = get()) }
     viewModel { (projectId: String) -> ProjectViewModel(get(), get(), projectId) }
     viewModel { (projectId: String) -> PublicProjectViewModel(get(), projectId) }
 }
