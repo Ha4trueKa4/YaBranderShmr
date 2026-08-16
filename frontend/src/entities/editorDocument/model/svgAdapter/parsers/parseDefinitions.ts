@@ -86,11 +86,7 @@ export function parseDefinitionsTolerant(
 
       try {
         gradients.push(parseGradient(element))
-      } catch (error) {
-        if (!(error instanceof SvgParseError)) {
-          throw error
-        }
-
+      } catch (_error) {
         rawDefinitions.push(new XMLSerializer().serializeToString(element))
       }
     }
