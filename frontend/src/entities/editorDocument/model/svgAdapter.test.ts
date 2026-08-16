@@ -236,6 +236,35 @@ describe('parseSvg', () => {
     ])
   })
 
+  it('keeps a contract editor group and its path editable', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <g data-editor-layer="true" data-name="heart-shape" id="heart-shape">
+          <path id="heart-path" d="M250 420 C120 330 40 150 150 40 C200 40 240 70 250 110 C260 70 300 40 350 40 C410 40 460 80 460 150 C460 240 380 330 250 420 Z" fill="#e74c3c" stroke="#c0392b" stroke-width="6" stroke-linejoin="round" />
+        </g>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        children: [
+          {
+            id: 'heart-path',
+            isLocked: false,
+            shapeType: 'path',
+            type: 'shape',
+          },
+        ],
+        id: 'heart-shape',
+        isLocked: false,
+        type: 'group',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'heart-shape' }),
+    )
+  })
+
   it('preserves gradients in definitions and parses an ellipse', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">

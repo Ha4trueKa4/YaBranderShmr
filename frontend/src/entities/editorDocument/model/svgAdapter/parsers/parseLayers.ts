@@ -13,6 +13,7 @@ import { parseShapeStyle, parseTextStyle } from './parseStyle'
 import { parseTransform } from './parseTransform'
 
 const commonAttributeNames = new Set([
+  'data-editor-layer',
   'data-editor-id',
   'data-name',
   'data-role',
