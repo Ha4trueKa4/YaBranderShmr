@@ -17,6 +17,10 @@
   background: var(--color-surface);
 }
 
+.previewCompact {
+  min-height: 24rem;
+}
+
 .copy,
 .copyWidthLimited {
   padding: var(--space-6);
@@ -56,13 +60,40 @@
   flex: 1;
 }
 
-@media (width < 640px) {
+@media (width < 720px) {
   .state {
+    grid-template-rows: minmax(0, 1fr) auto;
     width: min(100% - 2rem, 68rem);
-    padding: var(--space-4) 0;
+    min-height: calc(100dvh - 4rem);
+    gap: var(--space-4);
+    padding: var(--space-4) 0 var(--space-6);
   }
 
-  .composer {
-    flex-direction: column;
+  .preview,
+  .previewCompact {
+    min-height: 22rem;
+  }
+
+  .copy,
+  .copyWidthLimited {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .icon {
+    height: 5rem;
+    width: 5rem;
+    margin-bottom: var(--space-4);
+  }
+
+  .copy h1,
+  .copyWidthLimited h1 {
+    font-size: var(--font-size-h3);
+  }
+}
+
+@media (width < 400px) {
+  .preview,
+  .previewCompact {
+    min-height: 19rem;
   }
 }

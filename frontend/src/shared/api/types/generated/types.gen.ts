@@ -39,6 +39,18 @@ export type UserProfile = {
   is_subscribed?: boolean
 }
 
+export type UpdateUserProfileRequest = {
+  /**
+   * Новый уникальный nickname пользователя
+   */
+  nickname: string
+}
+
+export type UpdateUserProfileResponse = {
+  id: string
+  nickname: string
+}
+
 export type Project = {
   id?: string
   author_id?: string
@@ -114,6 +126,23 @@ export type VersionInfo = {
    */
   version_num?: number
   created_at?: string
+}
+
+/**
+ * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — идентификатор созданной версии (version_id) вместо самого SVG или ссылки на него.
+ *
+ */
+export type ChatMessage = {
+  role: 'user' | 'assistant'
+  /**
+   * Только для role=user — текст запроса пользователя
+   */
+  text?: string
+  /**
+   * Только для role=assistant — id созданной версии проекта
+   */
+  version_id?: string
+  created_at: string
 }
 
 /**
@@ -226,6 +255,54 @@ export type GetUsersByIdResponses = {
 
 export type GetUsersByIdResponse =
   GetUsersByIdResponses[keyof GetUsersByIdResponses]
+
+export type PatchUsersByIdData = {
+  body: UpdateUserProfileRequest
+  path: {
+    /**
+     * Идентификатор пользователя
+     */
+    id: string
+  }
+  query?: never
+  url: '/users/{id}'
+}
+
+export type PatchUsersByIdErrors = {
+  /**
+   * Некорректный UUID или nickname
+   */
+  400: ValidationError
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Попытка изменить чужой профиль
+   */
+  403: Error
+  /**
+   * Пользователь не найден
+   */
+  404: Error
+  /**
+   * Nickname уже занят другим пользователем
+   */
+  409: ValidationError
+}
+
+export type PatchUsersByIdError =
+  PatchUsersByIdErrors[keyof PatchUsersByIdErrors]
+
+export type PatchUsersByIdResponses = {
+  /**
+   * Nickname успешно обновлён
+   */
+  200: UpdateUserProfileResponse
+}
+
+export type PatchUsersByIdResponse =
+  PatchUsersByIdResponses[keyof PatchUsersByIdResponses]
 
 export type DeleteUsersByIdSubscribeData = {
   body?: never
@@ -499,7 +576,7 @@ export type GetProjectsByIdResponse =
 export type PatchProjectsByIdData = {
   body: {
     /**
-     * Название проекта
+     * Новое название проекта
      */
     name?: string
     is_public?: boolean
@@ -516,6 +593,10 @@ export type PatchProjectsByIdData = {
 }
 
 export type PatchProjectsByIdErrors = {
+  /**
+   * Название проекта пустое или превышает 255 символов
+   */
+  400: ValidationError
   /**
    * Отсутствует или некорректен JWT
    */
@@ -534,6 +615,9 @@ export type PatchProjectsByIdErrors = {
    */
   500: unknown
 }
+
+export type PatchProjectsByIdError =
+  PatchProjectsByIdErrors[keyof PatchProjectsByIdErrors]
 
 export type PatchProjectsByIdResponses = {
   /**
@@ -715,6 +799,42 @@ export type PostProjectsByIdVersionsByVersionIdRestoreResponses = {
 
 export type PostProjectsByIdVersionsByVersionIdRestoreResponse =
   PostProjectsByIdVersionsByVersionIdRestoreResponses[keyof PostProjectsByIdVersionsByVersionIdRestoreResponses]
+
+export type GetProjectsByIdChatData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/projects/{id}/chat'
+}
+
+export type GetProjectsByIdChatErrors = {
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Вы авторизованы, но не автор проекта
+   */
+  403: unknown
+  /**
+   * Проект не найден
+   */
+  404: unknown
+}
+
+export type GetProjectsByIdChatResponses = {
+  /**
+   * История чата проекта
+   */
+  200: {
+    chat_history?: Array<ChatMessage>
+  }
+}
+
+export type GetProjectsByIdChatResponse =
+  GetProjectsByIdChatResponses[keyof GetProjectsByIdChatResponses]
 
 export type GetFeedData = {
   body?: never
