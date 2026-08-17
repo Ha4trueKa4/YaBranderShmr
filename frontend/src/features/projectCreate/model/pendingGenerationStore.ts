@@ -2,6 +2,7 @@ import { makeAutoObservable } from 'mobx'
 
 export interface ProjectDraft {
   description: string
+  model: string
   name: string
 }
 

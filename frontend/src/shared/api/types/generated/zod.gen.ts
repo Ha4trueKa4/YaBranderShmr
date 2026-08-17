@@ -31,6 +31,15 @@ export const zUserProfile = z.object({
   is_subscribed: z.boolean().optional(),
 })
 
+export const zUpdateUserProfileRequest = z.object({
+  nickname: z.string().min(3).max(64),
+})
+
+export const zUpdateUserProfileResponse = z.object({
+  id: z.string(),
+  nickname: z.string(),
+})
+
 export const zProject = z.object({
   id: z.string().optional(),
   author_id: z.string().optional(),
@@ -91,6 +100,17 @@ export const zVersionInfo = z.object({
 })
 
 /**
+ * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — идентификатор созданной версии (version_id) вместо самого SVG или ссылки на него.
+ *
+ */
+export const zChatMessage = z.object({
+  role: z.enum(['user', 'assistant']),
+  text: z.string().optional(),
+  version_id: z.string().optional(),
+  created_at: z.iso.datetime({ offset: true }),
+})
+
+/**
  * Ответ с id версии и ссылкой на её объект. У /versions/{version_id} это просмотр выбранной версии; у /restore — новая (созданная откатом) версия.
  *
  */
@@ -125,6 +145,17 @@ export const zGetUsersByIdResponse = zUserProfile.and(
     projects: z.array(zProject).optional(),
   }),
 )
+
+export const zPatchUsersByIdBody = zUpdateUserProfileRequest
+
+export const zPatchUsersByIdPath = z.object({
+  id: z.string(),
+})
+
+/**
+ * Nickname успешно обновлён
+ */
+export const zPatchUsersByIdResponse = zUpdateUserProfileResponse
 
 export const zDeleteUsersByIdSubscribePath = z.object({
   id: z.string(),
@@ -204,7 +235,7 @@ export const zGetProjectsByIdPath = z.object({
 export const zGetProjectsByIdResponse = zProject
 
 export const zPatchProjectsByIdBody = z.object({
-  name: z.string().optional(),
+  name: z.string().min(1).max(255).optional(),
   is_public: z.boolean().optional(),
   data: z.string().optional(),
 })
@@ -265,6 +296,17 @@ export const zPostProjectsByIdVersionsByVersionIdRestorePath = z.object({
  *
  */
 export const zPostProjectsByIdVersionsByVersionIdRestoreResponse = zVersionUrl
+
+export const zGetProjectsByIdChatPath = z.object({
+  id: z.string(),
+})
+
+/**
+ * История чата проекта
+ */
+export const zGetProjectsByIdChatResponse = z.object({
+  chat_history: z.array(zChatMessage).optional(),
+})
 
 export const zGetFeedQuery = z.object({
   scope: z.enum(['discover', 'following']).optional().default('discover'),

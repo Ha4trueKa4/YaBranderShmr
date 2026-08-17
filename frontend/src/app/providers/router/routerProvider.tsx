@@ -1,13 +1,8 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { getAuthorizedRoutes, getUnauthorizedRoutes } from './routes'
+import { routes } from './routes'
 
-type AppRouterProps = {
-  isAuthorized?: boolean
-}
+const router = createBrowserRouter(routes)
 
-export function AppRouter({ isAuthorized = false }: AppRouterProps) {
-  const routes = isAuthorized ? getAuthorizedRoutes() : getUnauthorizedRoutes()
-  // Если будут какие-то роли потом, то тут можно передавать роль
-
-  return <RouterProvider router={createBrowserRouter(routes)} />
+export function AppRouter() {
+  return <RouterProvider router={router} />
 }
