@@ -2,7 +2,8 @@
 # Применение SQL-миграций к PostgreSQL.
 #
 # Скрипт идемпотентен: применяет только те миграции из каталога $MIGRATIONS_DIR,
-# которые ещё не были применены. Отслеживание ведётся в таблице schema_migrations.
+# которые ещё не были применены. Отслеживание ведётся в таблице schema_migrations,
+# которая создаётся скриптом автоматически.
 #
 # Параметры задаются переменными окружения (см. значения по умолчанию):
 #   PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, MIGRATIONS_DIR
@@ -25,13 +26,8 @@ psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 
       );'
 
 shopt -s nullglob
-for file in "$MIGRATIONS_DIR"/????_*.sql; do
+for file in "$MIGRATIONS_DIR"/*.sql; do
   version="$(basename "$file")"
-
-  # Пропускаем таблицу-журнал, если вдруг попала в каталог с миграциями.
-  if [[ "$version" == "0000_schema_migrations.sql" ]]; then
-    continue
-  fi
 
   applied="$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc \
     "SELECT 1 FROM schema_migrations WHERE version = '$version'")"
