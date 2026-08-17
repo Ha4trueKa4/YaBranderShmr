@@ -67,6 +67,27 @@ format:
 	find src -name '*pp' -type f | xargs $(CLANG_FORMAT) -i
 	find tests -name '*.py' -type f | xargs autopep8 -i
 
+# ==========================================
+# Миграции базы данных
+# ==========================================
+
+# Применить миграции к основной БД (ya_brander_db_1)
+.PHONY: migrate
+migrate:
+	bash scripts/run_migrations.sh
+
+# Применить миграции к векторной БД (vector_db)
+.PHONY: migrate-vector
+migrate-vector:
+	PGDATABASE=vector_db \
+	PGHOST=service-vector-postgres \
+	MIGRATIONS_DIR=postgresql/migrations/vector-db \
+	bash scripts/run_migrations.sh
+
+# Применить миграции к обеим БД
+.PHONY: migrate-all
+migrate-all: migrate migrate-vector
+
 # Internal hidden targets that are used only in docker environment
 --in-docker-start-debug --in-docker-start-release: --in-docker-start-%: install-%
 	psql 'postgresql://user:password@service-postgres:5432/ya_brander_db_1' -f ./postgresql/data/initial_data.sql

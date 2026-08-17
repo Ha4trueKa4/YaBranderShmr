@@ -15,12 +15,32 @@ services:
     ports:
       - 5432
     volumes:
-      - ./postgresql/schemas/db-1.sql:/docker-entrypoint-initdb.d/01_db-1.sql
-      - ./postgresql/data/initial_data.sql:/docker-entrypoint-initdb.d/02_initial_data.sql
       - pgdata:/var/lib/postgresql/data
     networks:
       - postgres
-  vector-postgres:                         
+
+  migrate:
+    container_name: service-migrate
+    image: postgres:18
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGUSER=user
+      - PGPASSWORD=password
+      - PGDATABASE=ya_brander_db_1
+      - MIGRATIONS_DIR=/postgresql/migrations/db-1
+      - SEED_FILE=/postgresql/data/initial_data.sql
+    volumes:
+      - ./postgresql:/postgresql:ro
+      - ./scripts:/scripts:ro
+    entrypoint: ["bash", "/scripts/run_migrations.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - postgres
+
+  vector-postgres:
     container_name: service-vector-postgres
     image: pgvector/pgvector:pg18
     healthcheck:
@@ -34,11 +54,31 @@ services:
       - POSTGRES_PASSWORD=password
       - PGDATA=/var/lib/postgresql/data
     volumes:
-      - ./postgresql/schemas/vector-db.sql:/docker-entrypoint-initdb.d/01_vector_db.sql
-      - ./postgresql/data/vector_initial_data.sql:/docker-entrypoint-initdb.d/02_vector_initial_data.sql
       - pgvector_data:/var/lib/postgresql/data
     networks:
       - postgres
+
+  migrate-vector:
+    container_name: service-migrate-vector
+    image: pgvector/pgvector:pg18
+    environment:
+      - PGHOST=vector-postgres
+      - PGPORT=5432
+      - PGUSER=user
+      - PGPASSWORD=password
+      - PGDATABASE=vector_db
+      - MIGRATIONS_DIR=/postgresql/migrations/vector-db
+      - SEED_FILE=/postgresql/data/vector_initial_data.sql
+    volumes:
+      - ./postgresql:/postgresql:ro
+      - ./scripts:/scripts:ro
+    entrypoint: ["bash", "/scripts/run_migrations.sh"]
+    depends_on:
+      vector-postgres:
+        condition: service_healthy
+    networks:
+      - postgres
+
   ya_brander-container:
     image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
     privileged: true
@@ -63,10 +103,10 @@ services:
     entrypoint:
       - ./tests/run_as_user.sh
     depends_on:
-      postgres:
-        condition: service_healthy
-      vector-postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      migrate-vector:
+        condition: service_completed_successfully
     networks:
       - postgres
       - default
