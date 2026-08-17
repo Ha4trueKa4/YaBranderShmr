@@ -40,11 +40,7 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value& request_json,
     userver::server::request::RequestContext& context) const {
-  const auto* auth_user_id = context.GetDataOptional<std::string>("user_id");
-  if (!auth_user_id) {
-    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-    return {};
-  }
+  const auto& auth_user_id = context.GetData<std::string>("user_id");
 
   const auto& target_id = request.GetPathArg("id");
 
@@ -59,7 +55,7 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
     }
 
     const auto canonical_target_id = user_result[0]["id"].As<std::string>();
-    if (canonical_target_id != *auth_user_id) {
+    if (canonical_target_id != auth_user_id) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
       return MakeError("FORBIDDEN", "You can only update your own profile");
     }

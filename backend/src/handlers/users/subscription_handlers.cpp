@@ -25,14 +25,10 @@ userver::formats::json::Value SubscribeHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value&,
     userver::server::request::RequestContext& context) const {
-  std::string* user_id = context.GetDataOptional<std::string>("user_id");
-  if (!user_id) {
-    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-    return {};
-  }
+  const auto& user_id = context.GetData<std::string>("user_id");
 
   const auto& target_id = request.GetPathArg("id");
-  if (target_id == *user_id) {
+  if (target_id == user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
     return MakeMessage("Cannot subscribe to yourself");
   }
@@ -41,7 +37,7 @@ userver::formats::json::Value SubscribeHandler::HandleRequestJsonThrow(
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
         "INSERT INTO subscriptions (subscriber_id, target_user_id) VALUES ($1::uuid, $2::uuid) ON CONFLICT DO NOTHING",
-        *user_id, target_id);
+        user_id, target_id);
   } catch (const userver::storages::postgres::ForeignKeyViolation&) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
     return MakeMessage("User not found");
@@ -58,18 +54,14 @@ userver::formats::json::Value UnsubscribeHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value&,
     userver::server::request::RequestContext& context) const {
-  std::string* user_id = context.GetDataOptional<std::string>("user_id");
-  if (!user_id) {
-    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-    return {};
-  }
+  const auto& user_id = context.GetData<std::string>("user_id");
 
   const auto& target_id = request.GetPathArg("id");
 
   pg_cluster_->Execute(
       userver::storages::postgres::ClusterHostType::kMaster,
       "DELETE FROM subscriptions WHERE subscriber_id = $1::uuid AND target_user_id = $2::uuid",
-      *user_id, target_id);
+      user_id, target_id);
 
   return MakeMessage("Unsubscribed successfully");
 }
