@@ -7,10 +7,14 @@ export {
   useProjectQuery,
   useProjectSvgQuery,
   userProfileQueryKey,
+  userSubscribersQueryKey,
+  userSubscriptionsQueryKey,
   useSubscribeToUserMutation,
   useUnsubscribeFromUserMutation,
   useUpdateProjectMetadataMutation,
   useUserProfileQuery,
+  useUserSubscribersQuery,
+  useUserSubscriptionsQuery,
 } from './api/queries'
 export type { FeedProject, PublicProfileProject } from './model/types'
 export type { FeedProjectCardProps } from './ui/feedProjectCard'

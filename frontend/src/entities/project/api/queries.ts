@@ -5,6 +5,8 @@ import { type FeedScope, getFeed } from './getFeed'
 import { getProject } from './getProject'
 import { getProjectSvg } from './getProjectSvg'
 import { getUserProfile } from './getProjects'
+import { getUserSubscribers } from './getUserSubscribers'
+import { getUserSubscriptions } from './getUserSubscriptions'
 import { subscribeToUser } from './subscribeToUser'
 import { unsubscribeFromUser } from './unsubscribeFromUser'
 import { type UpdateProjectMetadataInput, updateProject } from './updateProject'
@@ -16,6 +18,10 @@ export const projectQueryKey = (id: string) => ['project', id] as const
 export const projectSvgQueryKey = (id: string) => ['project-svg', id] as const
 export const userProfileQueryKey = (userId: string | undefined) =>
   ['user-profile', userId] as const
+export const userSubscribersQueryKey = (userId: string | undefined) =>
+  ['user-subscribers', userId] as const
+export const userSubscriptionsQueryKey = (userId: string | undefined) =>
+  ['user-subscriptions', userId] as const
 
 export function useProjectQuery(id: string) {
   return useQuery({
@@ -61,6 +67,24 @@ export function useUserProfileQuery(userId: string) {
   return useQuery({
     queryKey: userProfileQueryKey(userId),
     queryFn: () => getUserProfile(userId),
+    enabled: Boolean(userId),
+    retry: false,
+  })
+}
+
+export function useUserSubscribersQuery(userId: string) {
+  return useQuery({
+    queryKey: userSubscribersQueryKey(userId),
+    queryFn: () => getUserSubscribers(userId),
+    enabled: Boolean(userId),
+    retry: false,
+  })
+}
+
+export function useUserSubscriptionsQuery(userId: string) {
+  return useQuery({
+    queryKey: userSubscriptionsQueryKey(userId),
+    queryFn: () => getUserSubscriptions(userId),
     enabled: Boolean(userId),
     retry: false,
   })

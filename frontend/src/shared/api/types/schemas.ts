@@ -8,6 +8,8 @@ export {
   zGetProjectsByIdResponse,
   zGetUsersByIdPath,
   zGetUsersByIdResponse,
+  zGetUsersByIdSubscribersResponse,
+  zGetUsersByIdSubscriptionsResponse,
   zLoginRequest,
   zPatchProjectsByIdBody,
   zPatchProjectsByIdPath,
