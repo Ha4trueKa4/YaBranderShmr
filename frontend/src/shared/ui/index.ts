@@ -21,6 +21,11 @@ export { FormField } from './FormField'
 export { GenerateIcon } from './GenerateIcon'
 export type { IconButtonProps } from './IconButton'
 export { IconButton } from './IconButton'
+export type {
+  ImageExportFileType,
+  ImageExportModalProps,
+} from './ImageExportModal'
+export { ImageExportModal } from './ImageExportModal'
 export type { InputProps } from './Input'
 export { Input } from './Input'
 export type { PaginationProps } from './Pagination'

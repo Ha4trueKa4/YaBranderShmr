@@ -11,7 +11,12 @@ import {
 } from '@entities/project'
 import { useCreateProjectMutation } from '@features/projectCreate'
 import { getApiErrorMessage } from '@shared/api/api'
-import { ConfirmUnsavedChangeModal, useToast } from '@shared/ui'
+import {
+  ConfirmUnsavedChangeModal,
+  type ImageExportFileType,
+  ImageExportModal,
+  useToast,
+} from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
@@ -33,6 +38,15 @@ interface EditorWorkspaceProps {
 }
 
 const mobileLayoutMediaQuery = '(width < 640px)'
+
+function isEditableElement(target: EventTarget | null) {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  )
+}
 
 function useIsMobileLayout() {
   const [isMobileLayout, setIsMobileLayout] = useState(
@@ -71,6 +85,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
+  const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isCopyingProject, setIsCopyingProject] = useState(false)
   const isLeavingAfterCopyRef = useRef(false)
   const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
@@ -87,6 +102,15 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
+  }
+
+  function handleExport() {
+    setIsImageExportModalOpen(true)
+  }
+
+  function handleImageExport(fileType: ImageExportFileType) {
+    setIsImageExportModalOpen(false)
+    toast.info(`${fileType.toUpperCase()} export is not available yet.`)
   }
 
   async function handleProjectNameSubmit(nextProjectName: string) {
@@ -176,6 +200,44 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     editorStore.setSelectedNode(nodeId)
   }
 
+  const handleDeleteSelection = useCallback(() => {
+    if (!editorStore.deleteSelectedNode()) {
+      return false
+    }
+
+    setIsMobileInspectorOpen(false)
+    setSceneRenderVersion((version) => version + 1)
+
+    return true
+  }, [editorStore])
+
+  useEffect(() => {
+    if (!canEdit) {
+      return
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.key !== 'Backspace' ||
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        isEditableElement(event.target)
+      ) {
+        return
+      }
+
+      if (handleDeleteSelection()) {
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canEdit, handleDeleteSelection])
+
   function handleCancelExit() {
     if (navigationBlocker.state === 'blocked') {
       navigationBlocker.reset()
@@ -227,7 +289,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onBack={() => navigate(-1)}
           onCloseProperties={() => setIsMobileInspectorOpen(false)}
           onCreateCopy={handleCreateCopy}
-          onExport={handleToolbarAction}
+          onDeleteSelection={handleDeleteSelection}
+          onExport={handleExport}
           onOpenProperties={() => setIsMobileInspectorOpen(true)}
           onSaveVersion={handleSaveVersion}
           projectName={projectName}
@@ -256,7 +319,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               isSavingVersion={isSavingProjectVersion}
               onCreateCopy={handleCreateCopy}
               onEditProjectName={handleProjectNameSubmit}
-              onExport={handleToolbarAction}
+              onExport={handleExport}
               onOpenProfile={() =>
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
@@ -276,6 +339,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         isOpen={navigationBlocker.state === 'blocked'}
         onCancel={handleCancelExit}
         onConfirm={handleConfirmExit}
+      />
+      <ImageExportModal
+        isOpen={isImageExportModalOpen}
+        onClose={() => setIsImageExportModalOpen(false)}
+        onExport={handleImageExport}
       />
     </section>
   )

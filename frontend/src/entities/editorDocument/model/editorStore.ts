@@ -1,5 +1,6 @@
 import { makeAutoObservable } from 'mobx'
 
+import { removeNode } from './commands/removeNode'
 import { setNodeVisibility } from './commands/setNodeVisibility'
 import { toggleNodeVisibility } from './commands/toggleNodeVisibility'
 import { findAncestorGroupIds, findNode } from './tree/findNode'
@@ -52,6 +53,22 @@ export class EditorStore {
 
   toggleNodeVisibility(nodeId: string) {
     toggleNodeVisibility(this.document.layers, nodeId)
+  }
+
+  deleteSelectedNode(): boolean {
+    const selectedNode = this.selectedNode
+
+    if (!selectedNode || selectedNode.isLocked) {
+      return false
+    }
+
+    const wasDeleted = removeNode(this.document.layers, selectedNode.id)
+
+    if (wasDeleted) {
+      this.selectedNodeId = null
+    }
+
+    return wasDeleted
   }
 
   setShapeFillColor(nodeId: string, color: string) {

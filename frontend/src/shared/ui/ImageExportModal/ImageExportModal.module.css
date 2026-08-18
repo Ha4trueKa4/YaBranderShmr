@@ -1,0 +1,111 @@
+.overlay {
+  align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-4);
+  position: fixed;
+  z-index: 10;
+}
+
+.backdrop {
+  background: rgb(15 15 20 / 68%);
+  border: 0;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 30rem;
+  padding: var(--space-6);
+  position: relative;
+  width: 100%;
+}
+
+.modal h2 {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-h2);
+  line-height: 1.25;
+  margin: 0 0 var(--space-2);
+}
+
+.description {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-5);
+}
+
+.fileTypes {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.fileType {
+  cursor: pointer;
+}
+
+.fileType input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.fileTypeContent {
+  align-items: center;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-1);
+  grid-template-columns: 4rem minmax(0, 1fr);
+  min-height: 4.5rem;
+  padding: var(--space-3);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.fileTypeContent strong {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+}
+
+.fileTypeContent span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.fileType input:checked + .fileTypeContent {
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--color-accent-primary) 18%, transparent);
+}
+
+.fileType input:focus-visible + .fileTypeContent {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 20%, transparent);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+}
+
+.text {
+    font-size: var(--font-size-body);
+    color: var(--color-text-muted);
+}
+
+@media (width < 640px) {
+  .modal {
+    padding: var(--space-5);
+  }
+}

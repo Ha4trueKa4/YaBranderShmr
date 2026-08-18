@@ -104,6 +104,35 @@ describe('EditorStore selection', () => {
     expect(group.children[0].isVisible).toBe(true)
   })
 
+  it('deletes the selected unlocked node and clears the selection', () => {
+    const store = new EditorStore(structuredClone(document), 'wheel')
+
+    expect(store.deleteSelectedNode()).toBe(true)
+    expect(store.selectedNode).toBeNull()
+
+    const group = store.document.layers[0]
+
+    if (group.type !== 'group') {
+      throw new Error('Expected the first layer to be a group')
+    }
+
+    expect(group.children).toEqual([])
+  })
+
+  it('does not delete a locked selected node', () => {
+    const store = new EditorStore(structuredClone(document), 'title')
+    const selectedNode = store.selectedNode
+
+    if (!selectedNode) {
+      throw new Error('Expected a selected node')
+    }
+
+    selectedNode.isLocked = true
+
+    expect(store.deleteSelectedNode()).toBe(false)
+    expect(store.selectedNode).toMatchObject({ id: 'title' })
+  })
+
   it('changes a shape fill color', () => {
     const store = new EditorStore(document)
 

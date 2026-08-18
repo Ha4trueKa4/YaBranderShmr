@@ -17,6 +17,7 @@ interface EditorMobileLayoutProps
   onBack: () => void
   onCloseProperties: () => void
   onCreateCopy: () => void
+  onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
   onSaveVersion: () => void
@@ -46,6 +47,7 @@ export function EditorMobileLayout({
   onBack,
   onCloseProperties,
   onCreateCopy,
+  onDeleteSelection,
   onExport,
   onOpenProperties,
   onSaveVersion,
@@ -55,6 +57,7 @@ export function EditorMobileLayout({
   ...inspectorProps
 }: EditorMobileLayoutProps) {
   const hasSelection = Boolean(selectedNode)
+  const canDeleteSelection = Boolean(selectedNode && !selectedNode.isLocked)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const fillColor = getFillColor(selectedNode)
 
@@ -85,8 +88,10 @@ export function EditorMobileLayout({
       <div className={styles.scene}>{scene}</div>
       {canEdit && (
         <MobileSelectionActions
+          canDeleteSelection={canDeleteSelection}
           fillColor={fillColor}
           hasSelection={hasSelection}
+          onDeleteSelection={onDeleteSelection}
           onOpenColorPicker={() => setIsColorPickerOpen(true)}
         />
       )}
