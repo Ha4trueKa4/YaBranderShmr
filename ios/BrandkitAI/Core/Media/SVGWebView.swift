@@ -1,16 +1,14 @@
 import SwiftUI
 import WebKit
 
-/// WKWebView-рендер SVG-строки: полная поддержка фильтров, SMIL/CSS-анимаций
-/// и шрифтов — эталонное отображение, как в браузере.
 struct SVGWebView: UIViewRepresentable {
     let svgText: String
     var onRendered: (() -> Void)?
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        // SVG — пользовательский контент; скрипты внутри него не исполняем.
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+        configuration.suppressesIncrementalRendering = true
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.isOpaque = false
