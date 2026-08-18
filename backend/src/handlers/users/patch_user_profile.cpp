@@ -6,21 +6,13 @@
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include "../../utils/errors.hpp"
+
 namespace ya_brander::handlers {
 
-namespace {
+using utils::MakeError;
 
-userver::formats::json::Value MakeError(std::string_view code,
-                                        std::string_view message,
-                                        std::string_view field = {}) {
-  userver::formats::json::ValueBuilder error;
-  error["code"] = std::string(code);
-  error["message"] = std::string(message);
-  if (!field.empty()) {
-    error["field"] = std::string(field);
-  }
-  return error.ExtractValue();
-}
+namespace {
 
 bool IsValidNickname(const std::string& nickname) {
   return nickname.size() >= 3 && nickname.size() <= 64;

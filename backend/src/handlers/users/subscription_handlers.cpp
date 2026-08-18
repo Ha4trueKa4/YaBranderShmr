@@ -5,17 +5,11 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include "../../utils/errors.hpp"
+
 namespace ya_brander::handlers {
 
-namespace {
-
-userver::formats::json::Value MakeMessage(std::string_view message) {
-  userver::formats::json::ValueBuilder builder;
-  builder["message"] = std::string(message);
-  return builder.ExtractValue();
-}
-
-}  // namespace
+using utils::MakeMessage;
 
 SubscribeHandler::SubscribeHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
     : HttpHandlerJsonBase(config, context),

@@ -13,19 +13,16 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include "../../utils/errors.hpp"
+
 namespace ya_brander::auth {
+
+using utils::MakeError;
 
 namespace {
 
 constexpr std::string_view kTokenUrl = "https://oauth.yandex.ru/token";
 constexpr std::string_view kProfileUrl = "https://login.yandex.ru/info?format=json";
-
-userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message) {
-    userver::formats::json::ValueBuilder builder;
-    builder["code"] = std::string(code);
-    builder["message"] = std::string(message);
-    return builder.ExtractValue();
-}
 
 std::string UrlEncode(const std::string& value) {
     static const char* kHex = "0123456789ABCDEF";
@@ -84,7 +81,8 @@ std::string YandexOAuthHandler::ExchangeCodeForToken(const std::string& code) co
     auto response = request.perform();
     if (response->status_code() != 200) {
         throw std::runtime_error("Yandex token exchange failed: HTTP " +
-                                  std::to_string(response->status_code()));
+                                  std::to_string(response->status_code()) +
+                                  ", body: " + response->body());
     }
 
     auto json = userver::formats::json::FromString(response->body());
@@ -182,7 +180,7 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
     const auto code = request_json["code"].As<std::string>("");
     if (code.empty()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeErrorJson("INVALID_CODE", "Authorization code is required");
+        return MakeError("INVALID_CODE", "Authorization code is required");
     }
 
     YandexProfile profile;
@@ -191,12 +189,12 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
         profile = FetchProfile(access_token);
     } catch (const std::exception& ex) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadGateway);
-        return MakeErrorJson("YANDEX_OAUTH_FAILED", ex.what());
+        return MakeError("YANDEX_OAUTH_FAILED", ex.what());
     }
 
     if (profile.email.empty()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeErrorJson("YANDEX_EMAIL_SCOPE_REQUIRED",
+        return MakeError("YANDEX_EMAIL_SCOPE_REQUIRED",
                               "Yandex ID app must request the login:email scope");
     }
 
