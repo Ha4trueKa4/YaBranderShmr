@@ -78,18 +78,19 @@ deploy:
       "
 
     # --- 5. Деплой бэкенда ---
-    # Подключение service-postgres к ya-brander-net делается идемпотентно:
-    # если контейнер уже в сети, повторный docker network connect падает с
-    # «endpoint already exists», поэтому сначала отключаем (с подавлением
-    # ошибки), затем подключаем заново.
+    # Команды разнесены по отдельным строкам (без связок &&), чтобы каждая
+    # выполнялась безусловно: в частности, docker rm -f ya-brander должен
+    # сработать всегда, иначе старый контейнер останется и docker run упадёт
+    # с Conflict. Подключение service-postgres к ya-brander-net идемпотентно:
+    # сначала отключаем (с подавлением ошибки), затем подключаем.
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
-        docker system prune -af --filter \"until=24h\" &&
-        echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex &&
-        docker pull $REGISTRY/$IMAGE:latest &&
-        docker rm -f ya-brander || true &&
-        docker network create ya-brander-net || true &&
-        (docker inspect service-postgres >/dev/null 2>&1 && docker network disconnect ya-brander-net service-postgres 2>/dev/null || true) &&
-        (docker inspect service-postgres >/dev/null 2>&1 && docker network connect ya-brander-net service-postgres || true) &&
+        docker system prune -af --filter \"until=24h\" || true
+        echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex
+        docker pull $REGISTRY/$IMAGE:latest
+        docker rm -f ya-brander || true
+        docker network create ya-brander-net || true
+        docker network disconnect ya-brander-net service-postgres 2>/dev/null || true
+        docker network connect ya-brander-net service-postgres || true
         docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
       "
