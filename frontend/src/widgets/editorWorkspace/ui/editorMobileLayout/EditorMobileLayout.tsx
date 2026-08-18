@@ -1,4 +1,5 @@
 import { BottomSheet, ColorPicker } from '@shared/ui'
+import type { CanvasTool } from '@widgets/editorScene'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
 
@@ -10,6 +11,7 @@ import styles from './EditorMobileLayout.module.css'
 
 interface EditorMobileLayoutProps
   extends ComponentProps<typeof InspectorPanel> {
+  activeTool: CanvasTool
   canEdit: boolean
   isCreatingProjectCopy: boolean
   isSavingVersion: boolean
@@ -21,6 +23,7 @@ interface EditorMobileLayoutProps
   onExport: () => void
   onOpenProperties: () => void
   onSaveVersion: () => void
+  onToolChange: (tool: CanvasTool) => void
   projectName: string
   scene: ReactNode
 }
@@ -40,6 +43,7 @@ function getFillColor(
 }
 
 export function EditorMobileLayout({
+  activeTool,
   canEdit,
   isCreatingProjectCopy,
   isSavingVersion,
@@ -51,6 +55,7 @@ export function EditorMobileLayout({
   onExport,
   onOpenProperties,
   onSaveVersion,
+  onToolChange,
   projectName,
   scene,
   selectedNode,
@@ -98,8 +103,10 @@ export function EditorMobileLayout({
       {canEdit && (
         <>
           <MobileCanvasControls
+            activeTool={activeTool}
             fillColor={fillColor}
             onOpenColorPicker={() => setIsColorPickerOpen(true)}
+            onToolChange={onToolChange}
           />
           <button
             className={styles.propertiesTrigger}

@@ -1,21 +1,21 @@
-import { useState } from 'react'
-import { CanvasControls, type CanvasTool } from './components/CanvasControls'
+import type { CanvasTool } from '@widgets/editorScene'
+import { CanvasControls } from './components/CanvasControls'
 import { ProjectActions } from './components/ProjectActions'
 import { ProjectTitle } from './components/ProjectTitle'
 import styles from './EditorToolbar.module.css'
 
 export interface EditorToolbarProps {
   canEdit: boolean
+  activeTool: CanvasTool
   isCreatingProjectCopy: boolean
   isSavingVersion: boolean
   onCreateCopy: () => void
   onEditProjectName: (projectName: string) => Promise<void>
   onExport: () => void
   onOpenProfile: () => void
-  onPanTool: () => void
+  onToolChange: (tool: CanvasTool) => void
   onRedo: () => void
   onSaveVersion: () => void
-  onSelectTool: () => void
   onUndo: () => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -24,33 +24,21 @@ export interface EditorToolbarProps {
 
 export function EditorToolbar({
   canEdit,
+  activeTool,
   isCreatingProjectCopy,
   isSavingVersion,
   onCreateCopy,
   onEditProjectName,
   onExport,
   onOpenProfile,
-  onPanTool,
+  onToolChange,
   onRedo,
   onSaveVersion,
-  onSelectTool,
   onUndo,
   onZoomIn,
   onZoomOut,
   projectName,
 }: EditorToolbarProps) {
-  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
-
-  function handleSelectTool() {
-    setActiveTool('select')
-    onSelectTool()
-  }
-
-  function handlePanTool() {
-    setActiveTool('pan')
-    onPanTool()
-  }
-
   return (
     <header className={styles.toolbar}>
       <ProjectTitle
@@ -61,9 +49,8 @@ export function EditorToolbar({
       {canEdit && (
         <CanvasControls
           activeTool={activeTool}
-          onPanTool={handlePanTool}
+          onToolChange={onToolChange}
           onRedo={onRedo}
-          onSelectTool={handleSelectTool}
           onUndo={onUndo}
           onZoomIn={onZoomIn}
           onZoomOut={onZoomOut}

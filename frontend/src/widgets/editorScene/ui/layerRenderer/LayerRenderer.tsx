@@ -10,6 +10,7 @@ import { LayerNode } from './LayerNode'
 import { SvgDefinitions } from './SvgDefinitions'
 
 interface LayerRendererProps {
+  canMoveLayers: boolean
   document: EditorDocument
   onSelectNode: (nodeId: string) => void
   onShapePointerDown: (
@@ -27,6 +28,7 @@ interface LayerRendererProps {
 }
 
 export const LayerRenderer = observer(function LayerRenderer({
+  canMoveLayers,
   document,
   onSelectNode,
   onShapePointerDown,
@@ -42,6 +44,7 @@ export const LayerRenderer = observer(function LayerRenderer({
       {document.layers.map((node) => (
         <LayerNode
           key={node.id}
+          canMoveLayers={canMoveLayers}
           node={node}
           onSelectNode={onSelectNode}
           onShapePointerDown={onShapePointerDown}

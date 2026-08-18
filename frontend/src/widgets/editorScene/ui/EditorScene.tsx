@@ -1,9 +1,11 @@
 import type { EditorDocument, EditorNode } from '@entities/editorDocument'
+import type { CanvasTool } from '../model/canvasTool'
 
 import styles from './EditorScene.module.css'
 import { SceneFrame } from './sceneFrame/SceneFrame'
 
 interface EditorSceneProps {
+  activeTool: CanvasTool
   document: EditorDocument
   isReadOnly: boolean
   onSelectNode: (nodeId: string) => void
@@ -14,6 +16,7 @@ interface EditorSceneProps {
 }
 
 export function EditorScene({
+  activeTool,
   document,
   isReadOnly,
   onSelectNode,
@@ -25,6 +28,7 @@ export function EditorScene({
   return (
     <section className={styles.scene}>
       <SceneFrame
+        activeTool={activeTool}
         document={document}
         isReadOnly={isReadOnly}
         onSelectNode={onSelectNode}

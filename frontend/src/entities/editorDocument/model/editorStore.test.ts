@@ -168,6 +168,46 @@ describe('EditorStore selection', () => {
     })
   })
 
+  it('moves the selected editable node by the given offset', () => {
+    const store = new EditorStore(structuredClone(document), 'wheel')
+
+    expect(store.moveSelectedNode(-1, 1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: -1, y: 1 },
+      type: 'shape',
+    })
+
+    store.setSelectedNode('taxi')
+
+    expect(store.moveSelectedNode(1, -1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: 1, y: -1 },
+      type: 'group',
+    })
+
+    store.setSelectedNode('title')
+
+    expect(store.moveSelectedNode(1, -1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({ x: 51, y: 19, type: 'text' })
+  })
+
+  it('does not move a missing or locked selection', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    expect(store.moveSelectedNode(1, 1)).toBe(false)
+
+    store.setSelectedNode('wheel')
+    const selectedNode = store.selectedNode
+
+    if (!selectedNode) {
+      throw new Error('Expected a selected node')
+    }
+
+    selectedNode.isLocked = true
+
+    expect(store.moveSelectedNode(1, 1)).toBe(false)
+  })
+
   it('changes editable text properties', () => {
     const store = new EditorStore(document)
 

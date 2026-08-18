@@ -71,6 +71,35 @@ export class EditorStore {
     return wasDeleted
   }
 
+  moveSelectedNode(offsetX: number, offsetY: number): boolean {
+    const selectedNode = this.selectedNode
+
+    if (
+      !selectedNode ||
+      selectedNode.isLocked ||
+      !Number.isFinite(offsetX) ||
+      !Number.isFinite(offsetY)
+    ) {
+      return false
+    }
+
+    if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
+      selectedNode.transform.x += offsetX
+      selectedNode.transform.y += offsetY
+
+      return true
+    }
+
+    if (selectedNode.type === 'text') {
+      selectedNode.x += offsetX
+      selectedNode.y += offsetY
+
+      return true
+    }
+
+    return false
+  }
+
   setShapeFillColor(nodeId: string, color: string) {
     const node = this.getEditableShape(nodeId)
 
