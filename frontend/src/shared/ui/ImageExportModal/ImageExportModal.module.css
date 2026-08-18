@@ -100,8 +100,8 @@
 }
 
 .text {
-    font-size: var(--font-size-body);
-    color: var(--color-text-muted);
+  font-size: var(--font-size-body);
+  color: var(--color-text-muted);
 }
 
 @media (width < 640px) {
