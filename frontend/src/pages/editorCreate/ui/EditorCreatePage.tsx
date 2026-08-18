@@ -100,6 +100,12 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     void startGeneration(draft)
   }
 
+  function handleUnauthorizedModelSelect() {
+    if (!isAuthorized) {
+      navigate('/auth', { viewTransition: true })
+    }
+  }
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthorized is updated by MobX observer.
   useEffect(() => {
     if (!isAuthorized) {
@@ -119,7 +125,12 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       {isGenerationPending ? (
         <EditorGeneratingState description={description} model={model} />
       ) : (
-        <EditorEmptyState onGenerate={handleGenerate} />
+        <EditorEmptyState
+          onGenerate={handleGenerate}
+          onUnauthorizedModelSelect={
+            isAuthorized ? undefined : handleUnauthorizedModelSelect
+          }
+        />
       )}
     </main>
   )

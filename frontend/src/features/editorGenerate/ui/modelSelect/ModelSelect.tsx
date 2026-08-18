@@ -14,6 +14,7 @@ const viewportPadding = 16
 interface ModelSelectProps {
   disabled?: boolean
   onChange: (model: string) => void
+  onUnauthorizedSelect?: () => void
   value: string
   variant?: 'default' | 'compact'
 }
@@ -21,6 +22,7 @@ interface ModelSelectProps {
 export function ModelSelect({
   disabled = false,
   onChange,
+  onUnauthorizedSelect,
   value,
   variant = 'default',
 }: ModelSelectProps) {
@@ -39,9 +41,16 @@ export function ModelSelect({
 
   const selectedModel =
     options.find((model) => model.id === value) ?? options[0]
-  const isDisabled = disabled || isLoading || isError
+  const isDisabled =
+    disabled || isLoading || (isError && onUnauthorizedSelect === undefined)
 
   function toggleMenu() {
+    if (isError) {
+      onUnauthorizedSelect?.()
+
+      return
+    }
+
     if (isOpen) {
       setIsOpen(false)
 

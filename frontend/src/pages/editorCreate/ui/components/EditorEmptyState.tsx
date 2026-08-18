@@ -11,9 +11,13 @@ interface EditorEmptyStateProps {
     model: string
     name: string
   }) => void
+  onUnauthorizedModelSelect?: () => void
 }
 
-export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
+export function EditorEmptyState({
+  onGenerate,
+  onUnauthorizedModelSelect,
+}: EditorEmptyStateProps) {
   const { form, submit } = useGenerationForm({
     onSubmit: ({ description, model }) =>
       onGenerate({ description, model, name: 'Untitled project' }),
@@ -38,6 +42,7 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
                     onDescriptionChange={field.onChange}
                     onGenerate={submit}
                     onModelChange={modelField.onChange}
+                    onUnauthorizedModelSelect={onUnauthorizedModelSelect}
                   />
                 )}
               />
