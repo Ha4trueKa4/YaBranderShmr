@@ -43,6 +43,13 @@ make docker-clean-data
 
 ---
 
+# Миграции базы данных
+
+Как устроен механизм миграций, как добавить/изменить колонки БД, как миграции
+применяются в CI и чем опасны сид-данные — см. [MIGRATIONS.md](MIGRATIONS.md).
+
+---
+
 # Backend (userver)
 
 C++/userver service. Build and run through Docker only: the image already
