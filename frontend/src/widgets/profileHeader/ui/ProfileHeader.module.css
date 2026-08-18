@@ -84,6 +84,18 @@
   font-weight: var(--font-weight-medium);
 }
 
+.statButton {
+  min-height: auto;
+  padding: var(--space-2) var(--space-5);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.statButton:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .stats dd {
   color: var(--color-text-secondary);
 }

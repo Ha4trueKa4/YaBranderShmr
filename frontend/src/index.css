@@ -59,6 +59,7 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 20%);
   --shadow-md: 0 8px 24px rgb(0 0 0 / 28%);
   --shadow-lg: 0 16px 40px rgb(0 0 0 / 36%);
+  --shadow-card-hover: 0 4px 16px rgb(244 244 245 / 12%);
 
   /* Backward-compatible semantic aliases */
   --border: var(--color-border);
@@ -90,6 +91,7 @@
     --shadow-sm: 0 1px 2px rgb(24 24 27 / 8%);
     --shadow-md: 0 8px 24px rgb(24 24 27 / 12%);
     --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
+    --shadow-card-hover: 0 4px 12px rgb(24 24 27 / 14%);
   }
 }
 

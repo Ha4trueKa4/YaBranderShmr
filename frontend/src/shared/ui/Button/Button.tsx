@@ -9,7 +9,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean
   minWidth?: CSSProperties['minWidth']
   size?: 'sm' | 'md' | 'lg'
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger'
 }
 
 export function Button({
