@@ -7,6 +7,8 @@ export {
   useProjectQuery,
   useProjectSvgQuery,
   userProfileQueryKey,
+  useSubscribeToUserMutation,
+  useUnsubscribeFromUserMutation,
   useUpdateProjectMetadataMutation,
   useUserProfileQuery,
 } from './api/queries'

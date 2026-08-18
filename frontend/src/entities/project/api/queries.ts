@@ -5,6 +5,8 @@ import { type FeedScope, getFeed } from './getFeed'
 import { getProject } from './getProject'
 import { getProjectSvg } from './getProjectSvg'
 import { getUserProfile } from './getProjects'
+import { subscribeToUser } from './subscribeToUser'
+import { unsubscribeFromUser } from './unsubscribeFromUser'
 import { type UpdateProjectMetadataInput, updateProject } from './updateProject'
 
 const projectQueryStaleTime = 60_000
@@ -61,6 +63,20 @@ export function useUserProfileQuery(userId: string) {
     queryFn: () => getUserProfile(userId),
     enabled: Boolean(userId),
     retry: false,
+  })
+}
+
+export function useSubscribeToUserMutation() {
+  return useMutation({
+    mutationKey: ['user', 'subscribe'],
+    mutationFn: (userId: string) => subscribeToUser(userId),
+  })
+}
+
+export function useUnsubscribeFromUserMutation() {
+  return useMutation({
+    mutationKey: ['user', 'unsubscribe'],
+    mutationFn: (userId: string) => unsubscribeFromUser(userId),
   })
 }
 
