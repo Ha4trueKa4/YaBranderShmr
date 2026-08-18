@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
 
 import { deleteProject } from './deleteProject'
 import { type FeedScope, getFeed } from './getFeed'
@@ -104,10 +104,12 @@ export function useUnsubscribeFromUserMutation() {
   })
 }
 
-export function useFeedQuery(scope: FeedScope) {
-  return useQuery({
+export function useFeedInfiniteQuery(scope: FeedScope) {
+  return useInfiniteQuery({
     queryKey: feedQueryKey(scope),
-    queryFn: () => getFeed(scope),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => getFeed(scope, pageParam),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     retry: false,
   })
 }
