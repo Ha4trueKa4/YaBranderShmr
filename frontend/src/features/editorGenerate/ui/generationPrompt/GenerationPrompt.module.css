@@ -49,7 +49,7 @@
 }
 
 .textarea::placeholder {
-  color: var(--color-text-muted);
+  color: color-mix(in srgb, var(--color-text-muted) 72%, transparent);
 }
 
 .actions {

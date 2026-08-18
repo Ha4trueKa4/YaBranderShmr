@@ -9,7 +9,7 @@ export async function subscribeToUser(
 ): Promise<PostUsersByIdSubscribeResponse> {
   const response = await api<unknown>(
     `/users/${encodeURIComponent(userId)}/subscribe`,
-    { method: 'POST' },
+    { method: 'POST', requiresAuth: true },
   )
 
   return parseApiResponse(

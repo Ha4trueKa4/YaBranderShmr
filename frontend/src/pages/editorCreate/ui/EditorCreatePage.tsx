@@ -13,7 +13,7 @@ import {
   pendingGenerationStore,
   useCreateProjectMutation,
 } from '@features/projectCreate'
-import { getApiErrorMessage } from '@shared/api/api'
+import { ApiError, getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { Header } from '@widgets/header'
@@ -50,6 +50,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       setDescription(draft.description)
       setModel(draft.model)
       setGenerationInProgress(true)
+      pendingGenerationStore.save(draft)
 
       try {
         const project = await createProject(draft)
@@ -79,8 +80,13 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           queryKey: projectSvgQueryKey(project.id),
           queryFn: () => getProjectSvg(generatedProjectUrl),
         })
+        pendingGenerationStore.take()
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) {
+          pendingGenerationStore.take()
+        }
+
         toast.error(getApiErrorMessage(error))
       } finally {
         setGenerationInProgress(false)

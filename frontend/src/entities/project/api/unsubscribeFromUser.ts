@@ -9,7 +9,7 @@ export async function unsubscribeFromUser(
 ): Promise<DeleteUsersByIdSubscribeResponse> {
   const response = await api<unknown>(
     `/users/${encodeURIComponent(userId)}/subscribe`,
-    { method: 'DELETE' },
+    { method: 'DELETE', requiresAuth: true },
   )
 
   return parseApiResponse(

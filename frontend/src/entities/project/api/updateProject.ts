@@ -19,6 +19,7 @@ export async function updateProject({
     {
       method: 'PATCH',
       body: { data, is_public, name },
+      requiresAuth: true,
     },
   )
 

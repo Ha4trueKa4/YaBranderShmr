@@ -22,6 +22,7 @@ function getGenerationModelId(modelUri: string): string | null {
 }
 
 export async function getModels(): Promise<GenerationModel[]> {
+  // FIXME: Mark as requiresAuth after the API accepts valid access tokens here.
   const response = await api<unknown>('/models')
   const models = parseApiResponse(zModelsResponse, response, '/models')
 

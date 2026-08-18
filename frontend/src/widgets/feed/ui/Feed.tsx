@@ -1,4 +1,4 @@
-import { useFeedQuery } from '@entities/project'
+import { useFeedInfiniteQuery } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
 import { cn } from '@shared/lib'
 import { AsyncState, Button, Input } from '@shared/ui'
@@ -11,7 +11,17 @@ import { type FeedFilters, FeedProjectGrid } from './FeedProjectGrid'
 export function Feed() {
   const [scope, setScope] = useState<FeedFilters['scope']>('discover')
   const [searchQuery, setSearchQuery] = useState('')
-  const { data, error, isError, isPending } = useFeedQuery(scope)
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isError,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    isPending,
+  } = useFeedInfiniteQuery(scope)
+  const projects = data?.pages.flatMap((page) => page.items) ?? []
 
   return (
     <section className={styles.feed}>
@@ -59,10 +69,24 @@ export function Feed() {
         isError={isError}
         isPending={isPending}
       >
-        <FeedProjectGrid
-          filters={{ scope, searchQuery }}
-          projects={data?.items ?? []}
-        />
+        <FeedProjectGrid filters={{ scope, searchQuery }} projects={projects} />
+
+        {hasNextPage && (
+          <div className={styles.loadMore}>
+            {isFetchNextPageError && (
+              <p className={styles.loadMoreError} role="alert">
+                {getApiErrorMessage(error)}
+              </p>
+            )}
+            <Button
+              loading={isFetchingNextPage}
+              onClick={() => fetchNextPage()}
+              variant="secondary"
+            >
+              {isFetchNextPageError ? 'Retry loading' : 'Load more'}
+            </Button>
+          </div>
+        )}
       </AsyncState>
     </section>
   )

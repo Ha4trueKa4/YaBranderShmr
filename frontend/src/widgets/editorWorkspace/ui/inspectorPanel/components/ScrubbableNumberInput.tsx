@@ -1,4 +1,5 @@
 import { Input } from '@shared/ui'
+import { MoveHorizontal } from 'lucide-react'
 import { type PointerEvent, useRef } from 'react'
 
 import styles from '../Properties.module.css'
@@ -98,7 +99,13 @@ export function ScrubbableNumberInput({
           onPointerMove={handleScrubPointerMove}
           onPointerUp={handleScrubPointerUp}
         >
-          {axis === 'horizontal' ? '↔' : '↕'}
+          <MoveHorizontal
+            aria-hidden="true"
+            className={
+              axis === 'vertical' ? styles.scrubIconVertical : undefined
+            }
+            size={16}
+          />
         </span>
       }
       min={min}

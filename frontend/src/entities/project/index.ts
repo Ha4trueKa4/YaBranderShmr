@@ -3,7 +3,7 @@ export {
   projectQueryKey,
   projectSvgQueryKey,
   useDeleteProjectMutation,
-  useFeedQuery,
+  useFeedInfiniteQuery,
   useProjectQuery,
   useProjectSvgQuery,
   userProfileQueryKey,

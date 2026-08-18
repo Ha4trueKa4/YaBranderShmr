@@ -1,4 +1,5 @@
 import { ColorSwatch, IconButton } from '@shared/ui'
+import type { CanvasTool } from '@widgets/editorScene'
 
 import iconHand from '../../editorToolbar/assets/iconHand.svg'
 import iconMousePointer from '../../editorToolbar/assets/iconMousePointer.svg'
@@ -7,13 +8,17 @@ import iconRotateRight from '../../editorToolbar/assets/iconRotateRight.svg'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileCanvasControlsProps {
+  activeTool: CanvasTool
   fillColor: string | null
   onOpenColorPicker: () => void
+  onToolChange: (tool: CanvasTool) => void
 }
 
 export function MobileCanvasControls({
+  activeTool,
   fillColor,
   onOpenColorPicker,
+  onToolChange,
 }: MobileCanvasControlsProps) {
   return (
     <div className={styles.canvasControls}>
@@ -28,7 +33,10 @@ export function MobileCanvasControls({
           <img alt="" src={iconMousePointer} />
         </IconButton>
       )}
-      <IconButton>
+      <IconButton
+        className={activeTool === 'hand' ? styles.activeTool : undefined}
+        onClick={() => onToolChange(activeTool === 'hand' ? 'select' : 'hand')}
+      >
         <img alt="" src={iconHand} />
       </IconButton>
       <span />

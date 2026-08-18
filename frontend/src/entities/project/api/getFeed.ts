@@ -7,6 +7,8 @@ import {
 
 import type { FeedProject } from '../model/types'
 
+const feedPageSize = 40
+
 export type FeedScope = Exclude<
   NonNullable<GetFeedData['query']>['scope'],
   undefined
@@ -17,9 +19,12 @@ export interface FeedPage {
   nextCursor: string | null
 }
 
-export async function getFeed(scope: FeedScope): Promise<FeedPage> {
+export async function getFeed(
+  scope: FeedScope,
+  cursor?: string | null,
+): Promise<FeedPage> {
   const response = await api<unknown>('/feed', {
-    query: { limit: 20, scope },
+    query: { cursor, limit: feedPageSize, scope },
   })
   const feed = parseApiResponse(zGetFeedResponse, response, '/feed')
 

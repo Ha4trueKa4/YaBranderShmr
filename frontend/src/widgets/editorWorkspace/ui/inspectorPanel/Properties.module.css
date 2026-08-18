@@ -77,12 +77,19 @@
 }
 
 .scrubHandle {
+  align-items: center;
   cursor: ew-resize;
+  display: inline-flex;
+  line-height: 0;
   user-select: none;
 }
 
 .scrubHandleVertical {
   cursor: ns-resize;
+}
+
+.scrubIconVertical {
+  transform: rotate(90deg);
 }
 
 .scrubField :global(input[type="number"]) {

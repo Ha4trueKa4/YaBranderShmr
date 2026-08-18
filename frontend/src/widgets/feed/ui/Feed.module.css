@@ -60,6 +60,17 @@
   color: var(--color-text-muted);
 }
 
+.loadMore {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.loadMoreError {
+  margin: 0;
+  color: var(--color-error);
+}
+
 @media (width < 960px) {
   .toolbar {
     grid-template-columns: 1fr auto;

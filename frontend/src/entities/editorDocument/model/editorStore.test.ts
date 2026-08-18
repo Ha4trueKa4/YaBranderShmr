@@ -104,6 +104,35 @@ describe('EditorStore selection', () => {
     expect(group.children[0].isVisible).toBe(true)
   })
 
+  it('deletes the selected unlocked node and clears the selection', () => {
+    const store = new EditorStore(structuredClone(document), 'wheel')
+
+    expect(store.deleteSelectedNode()).toBe(true)
+    expect(store.selectedNode).toBeNull()
+
+    const group = store.document.layers[0]
+
+    if (group.type !== 'group') {
+      throw new Error('Expected the first layer to be a group')
+    }
+
+    expect(group.children).toEqual([])
+  })
+
+  it('does not delete a locked selected node', () => {
+    const store = new EditorStore(structuredClone(document), 'title')
+    const selectedNode = store.selectedNode
+
+    if (!selectedNode) {
+      throw new Error('Expected a selected node')
+    }
+
+    selectedNode.isLocked = true
+
+    expect(store.deleteSelectedNode()).toBe(false)
+    expect(store.selectedNode).toMatchObject({ id: 'title' })
+  })
+
   it('changes a shape fill color', () => {
     const store = new EditorStore(document)
 
@@ -137,6 +166,46 @@ describe('EditorStore selection', () => {
       opacity: 0.6,
       transform: { x: 12, y: -8 },
     })
+  })
+
+  it('moves the selected editable node by the given offset', () => {
+    const store = new EditorStore(structuredClone(document), 'wheel')
+
+    expect(store.moveSelectedNode(-1, 1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: -1, y: 1 },
+      type: 'shape',
+    })
+
+    store.setSelectedNode('taxi')
+
+    expect(store.moveSelectedNode(1, -1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: 1, y: -1 },
+      type: 'group',
+    })
+
+    store.setSelectedNode('title')
+
+    expect(store.moveSelectedNode(1, -1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({ x: 51, y: 19, type: 'text' })
+  })
+
+  it('does not move a missing or locked selection', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    expect(store.moveSelectedNode(1, 1)).toBe(false)
+
+    store.setSelectedNode('wheel')
+    const selectedNode = store.selectedNode
+
+    if (!selectedNode) {
+      throw new Error('Expected a selected node')
+    }
+
+    selectedNode.isLocked = true
+
+    expect(store.moveSelectedNode(1, 1)).toBe(false)
   })
 
   it('changes editable text properties', () => {

@@ -1,17 +1,15 @@
 import { IconButton } from '@shared/ui'
+import type { CanvasTool } from '@widgets/editorScene'
 import iconRotateLeft from '../assets/iconRotateLeft.svg'
 import iconRotateRight from '../assets/iconRotateRight.svg'
 import iconSearchMinus from '../assets/iconSearchMinus.svg'
 import iconSearchPlus from '../assets/iconSearchPlus.svg'
 import styles from '../EditorToolbar.module.css'
 
-export type CanvasTool = 'select' | 'pan'
-
 interface CanvasControlsProps {
   activeTool: CanvasTool
-  onPanTool: () => void
+  onToolChange: (tool: CanvasTool) => void
   onRedo: () => void
-  onSelectTool: () => void
   onUndo: () => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -19,9 +17,8 @@ interface CanvasControlsProps {
 
 export function CanvasControls({
   activeTool,
-  onPanTool,
+  onToolChange,
   onRedo,
-  onSelectTool,
   onUndo,
   onZoomIn,
   onZoomOut,
@@ -30,14 +27,14 @@ export function CanvasControls({
     <div className={styles.canvasControls}>
       <IconButton
         className={activeTool === 'select' ? styles.activeTool : undefined}
-        onClick={onSelectTool}
+        onClick={() => onToolChange('select')}
         size="sm"
       >
         <span className={`${styles.toolIcon} ${styles.selectTool}`} />
       </IconButton>
       <IconButton
-        className={activeTool === 'pan' ? styles.activeTool : undefined}
-        onClick={onPanTool}
+        className={activeTool === 'hand' ? styles.activeTool : undefined}
+        onClick={() => onToolChange('hand')}
         size="sm"
       >
         <span className={`${styles.toolIcon} ${styles.panTool}`} />

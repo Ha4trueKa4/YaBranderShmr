@@ -1,14 +1,18 @@
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileSelectionActionsProps {
+  canDeleteSelection: boolean
   fillColor: string | null
   hasSelection: boolean
+  onDeleteSelection: () => void
   onOpenColorPicker: () => void
 }
 
 export function MobileSelectionActions({
+  canDeleteSelection,
   fillColor,
   hasSelection,
+  onDeleteSelection,
   onOpenColorPicker,
 }: MobileSelectionActionsProps) {
   return (
@@ -29,7 +33,12 @@ export function MobileSelectionActions({
           <span />
           <button type="button">Stroke</button>
           <span />
-          <button className={styles.deleteAction} type="button">
+          <button
+            className={styles.deleteAction}
+            disabled={!canDeleteSelection}
+            onClick={onDeleteSelection}
+            type="button"
+          >
             Delete
           </button>
         </>
