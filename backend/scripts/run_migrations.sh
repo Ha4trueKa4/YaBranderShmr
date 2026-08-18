@@ -33,10 +33,11 @@ shopt -s nullglob
 for file in "$MIGRATIONS_DIR"/*.sql; do
   version="$(basename "$file")"
 
-  # :'version' + -v version=... — безопасная интерполяция значения через psql:
-  # имя файла экранируется как литерал, что исключает SQL-инъекцию.
+  # Значение $version подставляется напрямую из имени файла в каталоге миграций,
+  # то есть управляется репозиторием и безопасно для прямой интерполяции в SQL.
+  # (psql-переменные вида :'version' в командах -c не интерполируются.)
   applied="$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc \
-    "SELECT 1 FROM schema_migrations WHERE version = :'version'" -v version="$version")"
+    "SELECT 1 FROM schema_migrations WHERE version = '$version'")"
 
   if [[ "$applied" == "1" ]]; then
     echo "Skip: $version (already applied)"
@@ -47,7 +48,7 @@ for file in "$MIGRATIONS_DIR"/*.sql; do
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f "$file"
 
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 \
-    -c "INSERT INTO schema_migrations (version) VALUES (:'version')" -v version="$version"
+    -c "INSERT INTO schema_migrations (version) VALUES ('$version')"
 done
 
 # Применяем сид-данные, если указаны.
