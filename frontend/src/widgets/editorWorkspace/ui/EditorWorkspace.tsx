@@ -11,12 +11,12 @@ import {
 } from '@entities/project'
 import { useCreateProjectMutation } from '@features/projectCreate'
 import { getApiErrorMessage } from '@shared/api/api'
-import { useToast } from '@shared/ui'
+import { ConfirmUnsavedChangeModal, useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { EditorScene } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import styles from './EditorWorkspace.module.css'
 import { EditorDesktopLayout } from './editorDesktopLayout/EditorDesktopLayout'
 import { EditorMobileLayout } from './editorMobileLayout/EditorMobileLayout'
@@ -72,10 +72,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isCopyingProject, setIsCopyingProject] = useState(false)
+  const isLeavingAfterCopyRef = useRef(false)
   const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
     useUpdateProjectMetadataMutation()
   const { isPending: isCreatingProjectCopy, mutateAsync: createProject } =
     useCreateProjectMutation()
+  const hasUnsavedChanges =
+    serializeSvg(editorStore.document) !== savedProjectSvg
+  const shouldBlockNavigation = useCallback(
+    () => canEdit && hasUnsavedChanges && !isLeavingAfterCopyRef.current,
+    [canEdit, hasUnsavedChanges],
+  )
+  const navigationBlocker = useBlocker(shouldBlockNavigation)
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
@@ -149,6 +157,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         data: serializeSvg(editorStore.document),
         projectId: createdProject.id,
       })
+      isLeavingAfterCopyRef.current = true
       navigate(`/projects/${createdProject.id}`, { viewTransition: true })
       toast.info('Project copy created.')
     } catch (error) {
@@ -165,6 +174,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleSceneSelectNode(nodeId: string) {
     editorStore.setSelectedNode(nodeId)
+  }
+
+  function handleCancelExit() {
+    if (navigationBlocker.state === 'blocked') {
+      navigationBlocker.reset()
+    }
+  }
+
+  function handleConfirmExit() {
+    if (navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed()
+    }
   }
 
   const inspectorProps = {
@@ -251,6 +272,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           }
         />
       )}
+      <ConfirmUnsavedChangeModal
+        isOpen={navigationBlocker.state === 'blocked'}
+        onCancel={handleCancelExit}
+        onConfirm={handleConfirmExit}
+      />
     </section>
   )
 })
