@@ -8,6 +8,7 @@
 
 #include <userver/clients/http/component.hpp>
 #include <userver/components/component.hpp>
+#include <userver/crypto/base64.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -69,15 +70,23 @@ YandexOAuthHandler::YandexOAuthHandler(const userver::components::ComponentConfi
 }
 
 std::string YandexOAuthHandler::ExchangeCodeForToken(const std::string& code) const {
+    // client_id/client_secret едут в заголовке Authorization (HTTP Basic), а не в
+    // теле запроса — так они не попадают в логи прокси/gateway, которые часто
+    // пишут form-urlencoded тело POST-запросов в открытом виде, но обычно
+    // маскируют Authorization.
     const std::string body = "grant_type=authorization_code"
-                              "&code=" + UrlEncode(code) +
-                              "&client_id=" + UrlEncode(client_id_) +
-                              "&client_secret=" + UrlEncode(client_secret_);
+                              "&code=" + UrlEncode(code);
+
+    const std::string basic_auth = userver::crypto::base64::Base64Encode(
+        client_id_ + ":" + client_secret_);
 
     auto request = http_client_.CreateRequest();
     request.method(userver::clients::http::HttpMethod::kPost);
     request.url(std::string(kTokenUrl));
-    request.headers({{"Content-Type", "application/x-www-form-urlencoded"}});
+    request.headers({
+        {"Content-Type", "application/x-www-form-urlencoded"},
+        {"Authorization", "Basic " + basic_auth}
+    });
     request.data(body);
     request.timeout(10000);
 
