@@ -9,6 +9,7 @@ export async function getUserSubscriptions(
 ): Promise<GetUsersByIdSubscriptionsResponse> {
   const response = await api<unknown>(
     `/users/${encodeURIComponent(userId)}/subscriptions`,
+    { requiresAuth: true },
   )
 
   return parseApiResponse(

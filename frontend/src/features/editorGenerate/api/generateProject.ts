@@ -18,6 +18,7 @@ export async function generateProject(
     {
       body: validBody,
       method: 'POST',
+      requiresAuth: true,
     },
   )
 

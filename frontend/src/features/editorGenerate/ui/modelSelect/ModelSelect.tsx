@@ -41,11 +41,10 @@ export function ModelSelect({
 
   const selectedModel =
     options.find((model) => model.id === value) ?? options[0]
-  const isDisabled =
-    disabled || isLoading || (isError && onUnauthorizedSelect === undefined)
+  const isDisabled = disabled || isLoading
 
   function toggleMenu() {
-    if (isError) {
+    if (isError && onUnauthorizedSelect) {
       onUnauthorizedSelect?.()
 
       return

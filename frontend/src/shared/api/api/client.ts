@@ -5,11 +5,13 @@ export type QueryParams = Record<string, QueryValue>
 export interface ApiRequestOptions<Body = unknown>
   extends Omit<RequestInit, 'body'> {
   query?: QueryParams
+  requiresAuth?: boolean
   body?: Body | FormData
 }
 
 interface ApiClientOptions {
   getAccessToken?: () => string | null
+  onUnauthorized?: () => void
 }
 
 export class ApiError extends Error {
@@ -26,13 +28,19 @@ export class ApiError extends Error {
 
 export function createApiClient(
   baseUrl: string,
-  { getAccessToken }: ApiClientOptions = {},
+  { getAccessToken, onUnauthorized }: ApiClientOptions = {},
 ) {
   return async function apiRequest<Response, Body = unknown>(
     path: string,
     options: ApiRequestOptions<Body> = {},
   ): Promise<Response> {
-    const { query, body, headers: initialHeaders, ...requestOptions } = options
+    const {
+      query,
+      body,
+      headers: initialHeaders,
+      requiresAuth = false,
+      ...requestOptions
+    } = options
 
     const url = new URL(
       path.startsWith('http')
@@ -77,6 +85,10 @@ export function createApiClient(
     const responseData = await parseResponseData(response)
 
     if (!response.ok) {
+      if (response.status === 401 && requiresAuth && accessToken) {
+        onUnauthorized?.()
+      }
+
       throw new ApiError(response.status, responseData)
     }
 

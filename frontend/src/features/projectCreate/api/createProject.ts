@@ -15,6 +15,7 @@ export async function createProject(
   const response = await api<unknown, CreateProjectRequest>('/projects', {
     method: 'POST',
     body: validBody,
+    requiresAuth: true,
   })
 
   return parseApiResponse(zPostProjectsResponse, response, '/projects')
