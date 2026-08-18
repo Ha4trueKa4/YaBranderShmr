@@ -52,7 +52,7 @@ struct FormTextField: View {
             if let errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color(.error))
                     .accessibilityElement(children: .combine)
             }
         }

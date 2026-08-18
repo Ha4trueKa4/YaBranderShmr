@@ -1,14 +1,18 @@
 import SwiftUI
 import SVGView
 
+/// Превью проекта: чистое отображение состояний загрузки.
+/// Сеть и парсинг — в `SVGPreviewLoader`.
 struct FeedPreviewImage: View {
     let url: URL?
 
     private enum Content {
         case loading
-        case svg(SVGNode, aspectRatio: CGFloat)
+        case svg(SVGPreview)
         case failure
     }
+
+    private let loader = SVGPreviewLoader()
 
     @State private var content: Content = .loading
 
@@ -29,9 +33,9 @@ struct FeedPreviewImage: View {
         case .loading:
             ShimmerPlaceholder()
 
-        case .svg(let node, let aspectRatio):
-            SVGView(svg: node)
-                .aspectRatio(aspectRatio, contentMode: .fit)
+        case .svg(let preview):
+            SVGView(svg: preview.node)
+                .aspectRatio(preview.aspectRatio, contentMode: .fit)
 
         case .failure:
             failurePlaceholder
@@ -46,6 +50,7 @@ struct FeedPreviewImage: View {
     }
 
     private func load() async {
+        // Результат уже есть — ячейка просто вернулась на экран.
         guard case .loading = content else { return }
 
         guard let url else {
@@ -54,19 +59,7 @@ struct FeedPreviewImage: View {
         }
 
         do {
-            let request = URLRequest(
-                url: url,
-                cachePolicy: .returnCacheDataElseLoad,
-                timeoutInterval: 15
-            )
-            let (data, _) = try await URLSession.shared.data(for: request)
-
-            guard let node = SVGParser.parse(data: data) else {
-                show(.failure)
-                return
-            }
-
-            show(.svg(node, aspectRatio: Self.aspectRatio(of: node)))
+            show(.svg(try await loader.load(from: url)))
         } catch {
             guard !Task.isCancelled else { return }
             show(.failure)
@@ -77,15 +70,6 @@ struct FeedPreviewImage: View {
         withAnimation(.easeIn(duration: 0.2)) {
             content = newContent
         }
-    }
-
-    private static func aspectRatio(of node: SVGNode) -> CGFloat {
-        guard let viewport = node as? SVGViewport,
-              let viewBox = viewport.viewBox,
-              viewBox.width > 0, viewBox.height > 0
-        else { return 1 }
-
-        return viewBox.width / viewBox.height
     }
 }
 

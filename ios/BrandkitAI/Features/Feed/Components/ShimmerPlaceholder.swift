@@ -4,7 +4,7 @@ struct ShimmerPlaceholder: View {
     private static let period: TimeInterval = 1.4
 
     var body: some View {
-        Color(.secondarySystemBackground)
+        Color(.shimmerBase)
             .overlay {
                 GeometryReader { proxy in
                     TimelineView(.animation) { context in
@@ -14,7 +14,11 @@ struct ShimmerPlaceholder: View {
                         let travel = proxy.size.width + bandWidth
 
                         LinearGradient(
-                            colors: [.clear, .white.opacity(0.08), .clear],
+                            colors: [
+                                Color(.shimmerHighlight).opacity(0),
+                                Color(.shimmerHighlight),
+                                Color(.shimmerHighlight).opacity(0)
+                            ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

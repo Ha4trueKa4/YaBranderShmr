@@ -1,19 +1,23 @@
 import Foundation
 
+#if DEBUG
 /// Мок менеджера текущего пользователя для превью и тестов.
 @MainActor
 final class MockCurrentUserService: CurrentUserService {
-    var id: String?
+    var id: UUID?
     var name: String?
 
-    init(id: String? = "123e4567-e89b-12d3-a456-426614174000", name: String? = "Alex Morgan") {
+    init(
+        id: UUID? = UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000"),
+        name: String? = "Alex Morgan"
+    ) {
         self.id = id
         self.name = name
     }
 
     func restore() async {}
 
-    func save(id: String, name: String?) {
+    func save(id: UUID, name: String?) {
         self.id = id
         self.name = name
     }
@@ -23,3 +27,4 @@ final class MockCurrentUserService: CurrentUserService {
         name = nil
     }
 }
+#endif
