@@ -36,9 +36,12 @@ deploy:
     # ВАЖНО: SEED_FILE здесь НЕ передаётся — seed-данные (initial_data.sql)
     # начинаются с TRUNCATE и уничтожили бы реальные пользовательские данные.
     # Применяются только версионированные миграции из postgresql/migrations/db-1.
+    # set -e: любая упавшая команда миграции (не ноль) прерывает ssh-скрипт и,
+    # как следствие, весь деплой до запуска бэкенда.
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
-        docker rm -f ya-brander-migrate 2>/dev/null || true &&
+        set -e
+        docker rm -f ya-brander-migrate 2>/dev/null || true
         docker run --rm --name ya-brander-migrate --network ya-brander-net \
           -e PGHOST=service-postgres -e PGPORT=5432 \
           -e PGUSER=user -e PGPASSWORD=password -e PGDATABASE=ya_brander_db_1 \
@@ -46,22 +49,29 @@ deploy:
           -v ~/$REMOTE_APP_DIR/backend/postgresql:/postgresql:ro \
           -v ~/$REMOTE_APP_DIR/backend/scripts:/scripts:ro \
           postgres:18 bash /scripts/run_migrations.sh
+        echo 'main DB migrations ok'
       "
 
     # --- 4. Применение миграций к векторной БД (vector_db), если она существует ---
-    # Векторная БД может отсутствовать на сервере; если контейнера нет — пропускаем,
-    # чтобы не валить весь деплой.
+    # Если контейнера нет — пропускаем (это не ошибка). Если есть, но миграции
+    # упали — прерываем деплой явным exit 1 (внутри if с set -e статус тела
+    # не экранируется автоматически, поэтому проверяем вручную).
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
+        set -e
         if docker inspect service-vector-postgres >/dev/null 2>&1; then
-          docker rm -f ya-brander-migrate-vector 2>/dev/null || true &&
+          docker rm -f ya-brander-migrate-vector 2>/dev/null || true
           docker run --rm --name ya-brander-migrate-vector --network ya-brander-net \
             -e PGHOST=service-vector-postgres -e PGPORT=5432 \
             -e PGUSER=user -e PGPASSWORD=password -e PGDATABASE=vector_db \
             -e MIGRATIONS_DIR=/postgresql/migrations/vector-db \
             -v ~/$REMOTE_APP_DIR/backend/postgresql:/postgresql:ro \
             -v ~/$REMOTE_APP_DIR/backend/scripts:/scripts:ro \
-            postgres:18 bash /scripts/run_migrations.sh
+            postgres:18 bash /scripts/run_migrations.sh || {
+              echo 'vector DB migrations FAILED' >&2
+              exit 1
+            }
+          echo 'vector DB migrations ok'
         else
           echo 'service-vector-postgres not found, skipping vector migrations'
         fi

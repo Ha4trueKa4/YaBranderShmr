@@ -34,6 +34,7 @@ services:
       - ./postgresql:/postgresql:ro
       - ./scripts:/scripts:ro
     entrypoint: ["bash", "/scripts/run_migrations.sh"]
+    restart: "no"
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +74,7 @@ services:
       - ./postgresql:/postgresql:ro
       - ./scripts:/scripts:ro
     entrypoint: ["bash", "/scripts/run_migrations.sh"]
+    restart: "no"
     depends_on:
       vector-postgres:
         condition: service_healthy
