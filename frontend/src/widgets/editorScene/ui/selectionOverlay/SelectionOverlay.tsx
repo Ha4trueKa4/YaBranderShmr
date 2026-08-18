@@ -2,11 +2,11 @@ import type { EditorNode } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 import { useLayoutEffect, useState } from 'react'
 
+import { constrainSelectionBounds } from './model/constrainSelectionBounds'
 import {
   getSelectionBounds,
   type SelectionBounds,
 } from './model/getSelectionBounds'
-import { constrainSelectionBounds } from './model/constrainSelectionBounds'
 import styles from './SelectionOverlay.module.css'
 
 function hasSameBounds(
