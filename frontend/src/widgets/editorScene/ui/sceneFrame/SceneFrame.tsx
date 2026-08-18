@@ -244,6 +244,8 @@ export function SceneFrame({
         {!isReadOnly && (
           <>
             <SelectionOverlay
+              canvasHeight={document.height}
+              canvasWidth={document.width}
               getEditableElement={getEditableElement}
               selectedNode={selectedNode}
             />

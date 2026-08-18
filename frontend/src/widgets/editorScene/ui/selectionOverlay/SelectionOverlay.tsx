@@ -6,9 +6,8 @@ import {
   getSelectionBounds,
   type SelectionBounds,
 } from './model/getSelectionBounds'
+import { constrainSelectionBounds } from './model/constrainSelectionBounds'
 import styles from './SelectionOverlay.module.css'
-
-const selectionPadding = 4
 
 function hasSameBounds(
   firstBounds: SelectionBounds | null,
@@ -23,11 +22,15 @@ function hasSameBounds(
 }
 
 interface SelectionOverlayProps {
+  canvasHeight: number
+  canvasWidth: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   selectedNode: EditorNode | null
 }
 
 export const SelectionOverlay = observer(function SelectionOverlay({
+  canvasHeight,
+  canvasWidth,
   getEditableElement,
   selectedNode,
 }: SelectionOverlayProps) {
@@ -73,13 +76,19 @@ export const SelectionOverlay = observer(function SelectionOverlay({
     return null
   }
 
+  const constrainedBounds = constrainSelectionBounds(
+    bounds,
+    canvasWidth,
+    canvasHeight,
+  )
+
   return (
     <rect
       className={styles.overlay}
-      height={bounds.height + selectionPadding * 2}
-      width={bounds.width + selectionPadding * 2}
-      x={bounds.x - selectionPadding}
-      y={bounds.y - selectionPadding}
+      height={constrainedBounds.height}
+      width={constrainedBounds.width}
+      x={constrainedBounds.x}
+      y={constrainedBounds.y}
     />
   )
 })
