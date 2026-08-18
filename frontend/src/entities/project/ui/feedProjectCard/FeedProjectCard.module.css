@@ -9,6 +9,13 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition: box-shadow 160ms ease;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
 }
 
 .preview img {

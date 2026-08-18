@@ -57,6 +57,7 @@
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .generateIcon {

@@ -71,7 +71,7 @@ export function OwnProjectsSection({
   }
 
   return (
-    <section className={styles.projectsSection}>
+    <section className={styles.projectsSection} id="projects">
       <div className={styles.sectionHeader}>
         <div>
           <h2>All projects</h2>

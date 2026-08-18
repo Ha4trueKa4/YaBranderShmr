@@ -1,11 +1,14 @@
 import { getAvatarInitials } from '@shared/lib'
-import { Avatar } from '@shared/ui'
+import { Avatar, Button } from '@shared/ui'
 import type { ReactNode } from 'react'
 
 import styles from './ProfileHeader.module.css'
 
 export interface ProfileHeaderProps {
   actions?: ReactNode
+  onFollowersClick?: () => void
+  onFollowingClick?: () => void
+  onProjectsClick?: () => void
   profile: ProfileHeaderProfile
 }
 
@@ -17,7 +20,13 @@ export interface ProfileHeaderProfile {
   username: string
 }
 
-export function ProfileHeader({ actions, profile }: ProfileHeaderProps) {
+export function ProfileHeader({
+  actions,
+  onFollowersClick,
+  onFollowingClick,
+  onProjectsClick,
+  profile,
+}: ProfileHeaderProps) {
   return (
     <section className={styles.profile}>
       <div className={styles.cover} />
@@ -33,18 +42,30 @@ export function ProfileHeader({ actions, profile }: ProfileHeaderProps) {
         </div>
         <div className={styles.actions}>
           <dl className={styles.stats}>
-            <div>
-              <dt>{profile.projectsCount}</dt>
-              <dd>projects</dd>
-            </div>
-            <div>
-              <dt>{profile.followersCount}</dt>
-              <dd>followers</dd>
-            </div>
-            <div>
-              <dt>{profile.followingCount}</dt>
-              <dd>following</dd>
-            </div>
+            <Button
+              className={styles.statButton}
+              disabled={!onProjectsClick}
+              onClick={onProjectsClick}
+              variant={onFollowersClick ? 'ghost' : 'ghost'}
+            >
+              {profile.projectsCount} projects
+            </Button>
+            <Button
+              className={styles.statButton}
+              disabled={!onFollowersClick}
+              onClick={onFollowersClick}
+              variant={onFollowersClick ? 'ghost' : 'ghost'}
+            >
+              {profile.followersCount} followers
+            </Button>
+            <Button
+              className={styles.statButton}
+              disabled={!onFollowingClick}
+              onClick={onFollowingClick}
+              variant={onFollowersClick ? 'ghost' : 'ghost'}
+            >
+              {profile.followingCount} following
+            </Button>
           </dl>
           {actions && <div className={styles.profileActions}>{actions}</div>}
         </div>

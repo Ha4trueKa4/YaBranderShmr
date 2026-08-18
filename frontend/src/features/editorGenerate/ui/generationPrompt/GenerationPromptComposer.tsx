@@ -13,6 +13,7 @@ interface GenerationPromptComposerProps {
   onDescriptionChange: (description: string) => void
   onGenerate: () => void
   onModelChange: (model: string) => void
+  onUnauthorizedModelSelect?: () => void
 }
 
 export function GenerationPromptComposer({
@@ -23,6 +24,7 @@ export function GenerationPromptComposer({
   onDescriptionChange,
   onGenerate,
   onModelChange,
+  onUnauthorizedModelSelect,
 }: GenerationPromptComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -59,6 +61,7 @@ export function GenerationPromptComposer({
           <ModelSelect
             disabled={isGenerating}
             onChange={onModelChange}
+            onUnauthorizedSelect={onUnauthorizedModelSelect}
             value={model || DEFAULT_GENERATION_MODEL}
             variant="compact"
           />

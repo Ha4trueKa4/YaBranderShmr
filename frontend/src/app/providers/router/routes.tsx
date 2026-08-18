@@ -5,6 +5,8 @@ import { EditorProjectPage } from '@pages/editorProject'
 import { FeedPage } from '@pages/feed'
 import { ProfilePage } from '@pages/profile'
 import { PublicProfilePage } from '@pages/publicProfile'
+import { UserSubscribersPage } from '@pages/userSubscribers'
+import { UserSubscriptionsPage } from '@pages/userSubscriptions'
 import { observer } from 'mobx-react-lite'
 import {
   Navigate,
@@ -19,6 +21,8 @@ export const AppRoute = {
   Main: '/main',
   Profile: '/profile',
   PublicProfile: '/users/:userId',
+  UserSubscriptions: '/users/:userId/subscriptions',
+  UserSubscribers: '/users/:userId/subscribers',
   Auth: '/auth',
   Feed: '/feed',
 } as const
@@ -49,6 +53,11 @@ export const routes: RouteObject[] = [
     children: [
       { path: AppRoute.EditorProject, element: <EditorProjectPage /> },
       { path: AppRoute.Profile, element: <ProfilePage /> },
+      {
+        path: AppRoute.UserSubscriptions,
+        element: <UserSubscriptionsPage />,
+      },
+      { path: AppRoute.UserSubscribers, element: <UserSubscribersPage /> },
     ],
   },
   { path: '*', element: <Navigate to={AppRoute.EditorCreate} replace /> },

@@ -58,7 +58,6 @@ export function EditProfileModal({
               error={form.formState.errors.name?.message}
               htmlFor={nameInputId}
               label="Display name"
-              required
             >
               <Input
                 {...form.register('name')}
