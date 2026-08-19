@@ -137,6 +137,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
 
   const inspectorProps = {
+    definitions: editorStore.document.definitions,
+    onGradientStopColorChange: editorStore.setGradientStopColor,
     onShapeFillChange: editorStore.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.setShapeFillOpacity,
     onShapeOpacityChange: editorStore.setShapeOpacity,

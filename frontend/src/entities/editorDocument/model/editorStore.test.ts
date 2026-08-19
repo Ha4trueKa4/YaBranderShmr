@@ -4,6 +4,19 @@ import { EditorStore } from './editorStore'
 import type { EditorDocument } from './types'
 
 const document: EditorDocument = {
+  definitions: {
+    gradients: [
+      {
+        attributes: { x1: '0%', x2: '100%', y1: '0%', y2: '0%' },
+        id: 'wheel-gradient',
+        stops: [
+          { color: '#FF0000', offset: '0%' },
+          { color: '#0000FF', offset: '100%' },
+        ],
+        type: 'linearGradient',
+      },
+    ],
+  },
   height: 100,
   layers: [
     {
@@ -153,6 +166,18 @@ describe('EditorStore selection', () => {
     expect(store.selectedNode).toMatchObject({
       style: { fillOpacity: 0.4 },
     })
+  })
+
+  it('changes colors of a two-stop linear gradient', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setGradientStopColor('wheel-gradient', 0, '#FFD400')
+    store.setGradientStopColor('wheel-gradient', 1, '#6C3BFF')
+
+    expect(store.document.definitions?.gradients[0]?.stops).toEqual([
+      { color: '#FFD400', offset: '0%' },
+      { color: '#6C3BFF', offset: '100%' },
+    ])
   })
 
   it('changes a shape position through its transform and common opacity', () => {

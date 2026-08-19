@@ -119,6 +119,26 @@ export class EditorStore {
     node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
   }
 
+  setGradientStopColor(gradientId: string, stopIndex: number, color: string) {
+    const gradient = this.document.definitions?.gradients.find(
+      (item) => item.id === gradientId,
+    )
+
+    if (gradient?.type !== 'linearGradient') {
+      return
+    }
+
+    if (
+      gradient.stops.length !== 2 ||
+      stopIndex < 0 ||
+      stopIndex >= gradient.stops.length
+    ) {
+      return
+    }
+
+    gradient.stops[stopIndex].color = color
+  }
+
   setShapeOpacity(nodeId: string, opacity: number) {
     const node = this.getEditableShape(nodeId)
 
