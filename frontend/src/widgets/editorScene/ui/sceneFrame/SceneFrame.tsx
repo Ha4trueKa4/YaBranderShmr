@@ -43,6 +43,7 @@ export function SceneFrame({
 }: SceneFrameProps) {
   const editableElementsReference = useRef(new Map<string, SVGGElement>())
   const frameReference = useRef<HTMLDivElement>(null)
+  const isNativeGestureActiveReference = useRef(false)
   const viewportReference = useRef<HTMLDivElement>(null)
   const {
     onPointerMove,
@@ -101,6 +102,7 @@ export function SceneFrame({
   })
   useCanvasWheel({
     constrainOffset,
+    isNativeGestureActiveReference,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
     onZoomChange,
@@ -109,6 +111,7 @@ export function SceneFrame({
   })
   useCanvasGesture({
     constrainOffset,
+    isNativeGestureActiveReference,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
     onZoomChange,

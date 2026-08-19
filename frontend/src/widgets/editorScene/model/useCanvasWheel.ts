@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from 'react'
+import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
 import type { ViewportOffset } from './viewportOffset'
 
 interface UseCanvasWheelParams {
@@ -6,6 +6,7 @@ interface UseCanvasWheelParams {
   offset: ViewportOffset
   onOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
+  isNativeGestureActiveReference: MutableRefObject<boolean>
   viewportReference: RefObject<HTMLDivElement | null>
   zoom: number
 }
@@ -45,6 +46,7 @@ function isMouseWheelZoom(event: WheelEvent) {
 }
 
 export function useCanvasWheel({
+  isNativeGestureActiveReference,
   constrainOffset,
   offset,
   onOffsetChange,
@@ -113,6 +115,10 @@ export function useCanvasWheel({
     function handleWheel(event: WheelEvent) {
       event.preventDefault()
 
+      if (isNativeGestureActiveReference.current) {
+        return
+      }
+
       const { offset, onOffsetChange, onZoomChange, zoom } =
         latestStateReference.current
       const deltaY = getWheelDeltaY(event, viewportElement)
@@ -176,5 +182,5 @@ export function useCanvasWheel({
         clearTimeout(interactionTimeoutReference.current)
       }
     }
-  }, [viewportReference])
+  }, [isNativeGestureActiveReference, viewportReference])
 }
