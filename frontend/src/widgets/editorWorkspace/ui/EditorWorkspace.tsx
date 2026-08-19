@@ -28,6 +28,10 @@ interface EditorWorkspaceProps {
   projectName: string
 }
 
+const MAX_ZOOM = 2
+const MIN_ZOOM = 0.5
+const ZOOM_STEP = 0.25
+
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
@@ -40,6 +44,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [editorStore] = useState(() => new EditorStore(document))
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [zoom, setZoom] = useState(1)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const {
@@ -60,6 +65,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
+  }
+
+  function handleZoomIn() {
+    setZoom((currentZoom) => Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM))
+  }
+
+  function handleZoomOut() {
+    setZoom((currentZoom) => Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM))
   }
 
   function handleExport() {
@@ -134,6 +147,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onTextPositionChange={editorStore.setTextPosition}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
+      zoom={zoom}
     />
   )
 
@@ -155,8 +169,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onOpenProperties={() => setIsMobileInspectorOpen(true)}
           onSaveVersion={saveVersion}
           onToolChange={setActiveTool}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
+          zoom={zoom}
         />
       ) : (
         <EditorDesktopLayout
@@ -190,9 +208,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               onRedo={handleToolbarAction}
               onSaveVersion={saveVersion}
               onUndo={handleToolbarAction}
-              onZoomIn={handleToolbarAction}
-              onZoomOut={handleToolbarAction}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
               projectName={projectName}
+              zoom={zoom}
             />
           }
         />

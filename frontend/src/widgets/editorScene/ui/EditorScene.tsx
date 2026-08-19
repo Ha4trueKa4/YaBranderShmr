@@ -13,6 +13,7 @@ interface EditorSceneProps {
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   renderVersion: number
   selectedNode: EditorNode | null
+  zoom: number
 }
 
 export function EditorScene({
@@ -24,6 +25,7 @@ export function EditorScene({
   onTextPositionChange,
   renderVersion,
   selectedNode,
+  zoom,
 }: EditorSceneProps) {
   return (
     <section className={styles.scene}>
@@ -36,6 +38,7 @@ export function EditorScene({
         onTextPositionChange={onTextPositionChange}
         renderVersion={renderVersion}
         selectedNode={selectedNode}
+        zoom={zoom}
       />
     </section>
   )

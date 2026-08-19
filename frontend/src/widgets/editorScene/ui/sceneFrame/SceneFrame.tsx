@@ -16,6 +16,7 @@ interface SceneFrameProps {
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   renderVersion: number
   selectedNode: EditorNode | null
+  zoom: number
 }
 
 export function SceneFrame({
@@ -27,6 +28,7 @@ export function SceneFrame({
   onTextPositionChange,
   renderVersion,
   selectedNode,
+  zoom,
 }: SceneFrameProps) {
   const editableElementsReference = useRef(new Map<string, SVGGElement>())
   const {
@@ -67,6 +69,7 @@ export function SceneFrame({
       <svg
         className={styles.canvas}
         ref={svgReference}
+        style={{ transform: `scale(${zoom})` }}
         viewBox={`0 0 ${document.width} ${document.height}`}
         xmlns="http://www.w3.org/2000/svg"
       >

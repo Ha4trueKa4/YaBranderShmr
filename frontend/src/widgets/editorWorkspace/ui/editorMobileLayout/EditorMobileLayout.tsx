@@ -24,8 +24,12 @@ interface EditorMobileLayoutProps
   onOpenProperties: () => void
   onSaveVersion: () => void
   onToolChange: (tool: CanvasTool) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onZoomReset: () => void
   projectName: string
   scene: ReactNode
+  zoom: number
 }
 
 function getFillColor(
@@ -56,9 +60,13 @@ export function EditorMobileLayout({
   onOpenProperties,
   onSaveVersion,
   onToolChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   projectName,
   scene,
   selectedNode,
+  zoom,
   ...inspectorProps
 }: EditorMobileLayoutProps) {
   const hasSelection = Boolean(selectedNode)
@@ -107,6 +115,10 @@ export function EditorMobileLayout({
             fillColor={fillColor}
             onOpenColorPicker={() => setIsColorPickerOpen(true)}
             onToolChange={onToolChange}
+            onZoomIn={onZoomIn}
+            onZoomOut={onZoomOut}
+            onZoomReset={onZoomReset}
+            zoom={zoom}
           />
           <button
             className={styles.propertiesTrigger}

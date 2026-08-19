@@ -1,9 +1,8 @@
 import { ColorSwatch, IconButton } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
+import { ZoomIn, ZoomOut } from 'lucide-react'
 
 import iconMousePointer from '../../editorToolbar/assets/iconMousePointer.svg'
-import iconRotateLeft from '../../editorToolbar/assets/iconRotateLeft.svg'
-import iconRotateRight from '../../editorToolbar/assets/iconRotateRight.svg'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileCanvasControlsProps {
@@ -11,6 +10,10 @@ interface MobileCanvasControlsProps {
   fillColor: string | null
   onOpenColorPicker: () => void
   onToolChange: (tool: CanvasTool) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onZoomReset: () => void
+  zoom: number
 }
 
 export function MobileCanvasControls({
@@ -18,6 +21,10 @@ export function MobileCanvasControls({
   fillColor,
   onOpenColorPicker,
   onToolChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  zoom,
 }: MobileCanvasControlsProps) {
   return (
     <div className={styles.canvasControls}>
@@ -39,14 +46,14 @@ export function MobileCanvasControls({
         <span className={styles.handIcon} />
       </IconButton>
       <span />
-      <IconButton>
-        <img alt="" src={iconRotateLeft} />
+      <IconButton disabled={zoom >= 2} onClick={onZoomIn}>
+        <ZoomIn size={18} />
       </IconButton>
-      <IconButton>
-        <img alt="" src={iconRotateRight} />
+      <IconButton disabled={zoom <= 0.5} onClick={onZoomOut}>
+        <ZoomOut size={18} />
       </IconButton>
       <span />
-      <IconButton>
+      <IconButton onClick={onZoomReset}>
         <span className={styles.fitIcon}>⌗</span>
       </IconButton>
     </div>

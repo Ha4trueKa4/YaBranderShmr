@@ -1,9 +1,8 @@
 import { IconButton } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
+import { ZoomIn, ZoomOut } from 'lucide-react'
 import iconRotateLeft from '../assets/iconRotateLeft.svg'
 import iconRotateRight from '../assets/iconRotateRight.svg'
-import iconSearchMinus from '../assets/iconSearchMinus.svg'
-import iconSearchPlus from '../assets/iconSearchPlus.svg'
 import styles from '../EditorToolbar.module.css'
 
 interface CanvasControlsProps {
@@ -13,6 +12,7 @@ interface CanvasControlsProps {
   onUndo: () => void
   onZoomIn: () => void
   onZoomOut: () => void
+  zoom: number
 }
 
 export function CanvasControls({
@@ -22,6 +22,7 @@ export function CanvasControls({
   onUndo,
   onZoomIn,
   onZoomOut,
+  zoom,
 }: CanvasControlsProps) {
   return (
     <div className={styles.canvasControls}>
@@ -40,11 +41,11 @@ export function CanvasControls({
         <span className={`${styles.toolIcon} ${styles.panTool}`} />
       </IconButton>
       <span className={styles.divider} />
-      <IconButton onClick={onZoomIn} size="sm">
-        <img alt="" src={iconSearchPlus} />
+      <IconButton disabled={zoom >= 2} onClick={onZoomIn} size="sm">
+        <ZoomIn size={18} />
       </IconButton>
-      <IconButton onClick={onZoomOut} size="sm">
-        <img alt="" src={iconSearchMinus} />
+      <IconButton disabled={zoom <= 0.5} onClick={onZoomOut} size="sm">
+        <ZoomOut size={18} />
       </IconButton>
       <span className={styles.divider} />
       <IconButton onClick={onUndo} size="sm">
