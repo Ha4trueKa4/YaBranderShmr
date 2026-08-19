@@ -114,9 +114,13 @@ struct ChatView: View {
         } label: {
             Text(viewModel.privacy.shortTitle)
                 .font(.subheadline.weight(.semibold))
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-            .background(Color(.secondarySystemBackground), in: Capsule())
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(Color(.secondarySystemBackground), in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(Color(.border), lineWidth: 1)
+                }
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primary)
@@ -156,7 +160,7 @@ struct ChatView: View {
         .background(Color.background)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(.separator)
+                .fill(.border)
                 .frame(height: 1)
         }
     }

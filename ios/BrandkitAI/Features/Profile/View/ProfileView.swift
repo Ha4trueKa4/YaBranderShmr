@@ -189,7 +189,7 @@ struct ProfileView: View {
 
     private var separator: some View {
         Rectangle()
-            .fill(Color(.tabBarSeparator))
+            .fill(Color(.border))
             .frame(height: 1)
     }
 }
