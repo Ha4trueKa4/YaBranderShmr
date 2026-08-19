@@ -1,4 +1,4 @@
-import type { EditorShape, Paint } from '@entities/editorDocument'
+import type { EditorShape } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 
 import { FillProperty } from '../components/FillProperty'
@@ -12,18 +12,10 @@ interface ShapePropertiesProps {
   onFillOpacityChange: (opacity: number) => void
   onOpacityChange: (opacity: number) => void
   onPositionChange: (x: number, y: number) => void
-}
-
-function paintToLabel(paint: Paint) {
-  if (paint.type === 'color') {
-    return paint.value
-  }
-
-  if (paint.type === 'gradient') {
-    return `Gradient: ${paint.gradientId}`
-  }
-
-  return 'None'
+  onStrokeAdd: () => void
+  onStrokeColorChange: (color: string) => void
+  onStrokeRemove: () => void
+  onStrokeWidthChange: (strokeWidth: number) => void
 }
 
 export const ShapeProperties = observer(function ShapeProperties({
@@ -31,6 +23,10 @@ export const ShapeProperties = observer(function ShapeProperties({
   onFillChange,
   onFillOpacityChange,
   onPositionChange,
+  onStrokeAdd,
+  onStrokeColorChange,
+  onStrokeRemove,
+  onStrokeWidthChange,
 }: ShapePropertiesProps) {
   return (
     <div className={styles.properties}>
@@ -60,7 +56,14 @@ export const ShapeProperties = observer(function ShapeProperties({
         onOpacityChange={onFillOpacityChange}
         opacity={layer.style.fillOpacity}
       />
-      <StrokeProperty stroke={paintToLabel(layer.style.stroke)} />
+      <StrokeProperty
+        onAdd={onStrokeAdd}
+        onColorChange={onStrokeColorChange}
+        onRemove={onStrokeRemove}
+        onWidthChange={onStrokeWidthChange}
+        stroke={layer.style.stroke}
+        strokeWidth={layer.style.strokeWidth}
+      />
     </div>
   )
 })

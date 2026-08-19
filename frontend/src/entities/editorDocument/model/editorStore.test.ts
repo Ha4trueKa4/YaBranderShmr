@@ -208,6 +208,28 @@ describe('EditorStore selection', () => {
     expect(store.moveSelectedNode(1, 1)).toBe(false)
   })
 
+  it('adds, updates and removes a shape outline', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.addShapeStroke('wheel')
+    store.setShapeStrokeColor('wheel', '#6C3BFF')
+    store.setShapeStrokeWidth('wheel', 4)
+    store.setSelectedNode('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      style: {
+        stroke: { type: 'color', value: '#6C3BFF' },
+        strokeWidth: 4,
+      },
+    })
+
+    store.removeShapeStroke('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      style: { stroke: { type: 'none' }, strokeWidth: 0 },
+    })
+  })
+
   it('changes editable text properties', () => {
     const store = new EditorStore(document)
 

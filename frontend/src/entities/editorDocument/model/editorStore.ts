@@ -102,7 +102,6 @@ export class EditorStore {
 
   setShapeFillColor(nodeId: string, color: string) {
     const node = this.getEditableShape(nodeId)
-
     if (!node) {
       return
     }
@@ -139,6 +138,55 @@ export class EditorStore {
 
     node.transform.x = x
     node.transform.y = y
+  }
+
+  addShapeStroke(nodeId: string) {
+    const node = this.getEditableShape(nodeId)
+
+    if (!node) {
+      return
+    }
+
+    node.style.stroke = {
+      type: 'color',
+      value:
+        node.style.stroke.type === 'color'
+          ? node.style.stroke.value
+          : '#000000',
+    }
+    node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+  }
+
+  setShapeStrokeColor(nodeId: string, color: string) {
+    const node = this.getEditableShape(nodeId)
+
+    if (!node) {
+      return
+    }
+
+    node.style.stroke = { type: 'color', value: color }
+    node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+  }
+
+  setShapeStrokeWidth(nodeId: string, strokeWidth: number) {
+    const node = this.getEditableShape(nodeId)
+
+    if (!node || !Number.isFinite(strokeWidth)) {
+      return
+    }
+
+    node.style.strokeWidth = Math.max(strokeWidth, 0)
+  }
+
+  removeShapeStroke(nodeId: string) {
+    const node = this.getEditableShape(nodeId)
+
+    if (!node) {
+      return
+    }
+
+    node.style.stroke = { type: 'none' }
+    node.style.strokeWidth = 0
   }
 
   setTextContent(nodeId: string, text: string) {
