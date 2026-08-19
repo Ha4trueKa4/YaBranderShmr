@@ -6,7 +6,11 @@ import {
   ImageExportModal,
   useToast,
 } from '@shared/ui'
-import { type CanvasTool, EditorScene } from '@widgets/editorScene'
+import {
+  type CanvasTool,
+  EditorScene,
+  type ViewportOffset,
+} from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useState } from 'react'
 import { useBlocker, useNavigate } from 'react-router-dom'
@@ -28,6 +32,11 @@ interface EditorWorkspaceProps {
   projectName: string
 }
 
+const MAX_ZOOM = 2
+const MIN_ZOOM = 0.5
+const ZOOM_STEP = 0.25
+const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
+
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
@@ -40,6 +49,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [editorStore] = useState(() => new EditorStore(document))
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [zoom, setZoom] = useState(1)
+  const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const {
@@ -60,6 +71,22 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
+  }
+
+  function handleZoomIn() {
+    setZoom((currentZoom) => Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM))
+  }
+
+  function handleZoomOut() {
+    setZoom((currentZoom) => Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM))
+  }
+
+  function handleZoomChange(nextZoom: number) {
+    const constrainedZoom = Math.min(Math.max(nextZoom, MIN_ZOOM), MAX_ZOOM)
+
+    setZoom(constrainedZoom)
+
+    return constrainedZoom
   }
 
   function handleExport() {
@@ -132,8 +159,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.setShapePosition}
       onTextPositionChange={editorStore.setTextPosition}
+      onViewportOffsetChange={setViewportOffset}
+      onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
+      viewportOffset={viewportOffset}
+      zoom={zoom}
     />
   )
 
@@ -155,8 +186,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onOpenProperties={() => setIsMobileInspectorOpen(true)}
           onSaveVersion={saveVersion}
           onToolChange={setActiveTool}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
+          zoom={zoom}
         />
       ) : (
         <EditorDesktopLayout
@@ -190,9 +225,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               onRedo={handleToolbarAction}
               onSaveVersion={saveVersion}
               onUndo={handleToolbarAction}
-              onZoomIn={handleToolbarAction}
-              onZoomOut={handleToolbarAction}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
               projectName={projectName}
+              zoom={zoom}
             />
           }
         />

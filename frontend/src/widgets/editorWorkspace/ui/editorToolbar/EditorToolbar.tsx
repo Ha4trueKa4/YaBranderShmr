@@ -20,6 +20,7 @@ export interface EditorToolbarProps {
   onZoomIn: () => void
   onZoomOut: () => void
   projectName: string
+  zoom: number
 }
 
 export function EditorToolbar({
@@ -38,6 +39,7 @@ export function EditorToolbar({
   onZoomIn,
   onZoomOut,
   projectName,
+  zoom,
 }: EditorToolbarProps) {
   return (
     <header className={styles.toolbar}>
@@ -54,6 +56,7 @@ export function EditorToolbar({
           onUndo={onUndo}
           onZoomIn={onZoomIn}
           onZoomOut={onZoomOut}
+          zoom={zoom}
         />
       )}
       <ProjectActions

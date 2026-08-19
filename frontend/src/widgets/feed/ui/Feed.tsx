@@ -1,14 +1,17 @@
+import { authStore } from '@app/providers/auth'
 import { useFeedInfiniteQuery } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
 import { cn } from '@shared/lib'
 import { AsyncState, Button, Input } from '@shared/ui'
 import { Search, SlidersHorizontal } from 'lucide-react'
+import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 
 import styles from './Feed.module.css'
 import { type FeedFilters, FeedProjectGrid } from './FeedProjectGrid'
 
-export function Feed() {
+export const Feed = observer(function Feed() {
+  const isAuthorized = authStore.isAuthorized
   const [scope, setScope] = useState<FeedFilters['scope']>('discover')
   const [searchQuery, setSearchQuery] = useState('')
   const {
@@ -37,16 +40,18 @@ export function Feed() {
           >
             All
           </button>
-          <button
-            className={cn(
-              styles.scopeTab,
-              scope === 'following' && styles.active,
-            )}
-            onClick={() => setScope('following')}
-            type="button"
-          >
-            Following
-          </button>
+          {isAuthorized && (
+            <button
+              className={cn(
+                styles.scopeTab,
+                scope === 'following' && styles.active,
+              )}
+              onClick={() => setScope('following')}
+              type="button"
+            >
+              Following
+            </button>
+          )}
         </div>
 
         <Input
@@ -90,4 +95,4 @@ export function Feed() {
       </AsyncState>
     </section>
   )
-}
+})

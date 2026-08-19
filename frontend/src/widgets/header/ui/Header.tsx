@@ -3,6 +3,7 @@ import { AppRoute } from '@app/providers/router/routes'
 import brandMark from '@shared/assets/brandmark.svg'
 import { cn, getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
+import { LogIn } from 'lucide-react'
 import { observer } from 'mobx-react-lite'
 import { NavLink, useNavigate } from 'react-router-dom'
 
@@ -96,11 +97,9 @@ export const Header = observer(function Header({
           </button>
         ) : (
           <div className={styles.actions}>
-            <Button onClick={handleSignInClick} variant="ghost">
-              Sign in
-            </Button>
-            <Button onClick={() => navigate('/auth', { viewTransition: true })}>
-              Get started
+            <Button className={styles.signInButton} onClick={handleSignInClick}>
+              <LogIn size={18} />
+              <span>Sign in</span>
             </Button>
           </div>
         )}

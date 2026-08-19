@@ -67,12 +67,13 @@ export function useLayerDrag({
         return
       }
 
-      onSelectNode(node.id)
       const svg = svgReference.current
 
-      if (activeTool !== 'hand' || node.isLocked || !svg) {
+      if (activeTool !== 'select' || node.isLocked || !svg) {
         return
       }
+
+      onSelectNode(node.id)
 
       const pointerPosition = getSvgPointerPosition(
         svg,
