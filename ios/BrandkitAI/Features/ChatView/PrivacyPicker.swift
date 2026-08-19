@@ -3,6 +3,7 @@ import SwiftUI
 struct PrivacyPicker: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selection: ChatViewModel.ProjectPrivacy
+    var onSelect: (ChatViewModel.ProjectPrivacy) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -34,6 +35,7 @@ struct PrivacyPicker: View {
 
         return Button {
             selection = privacy
+            onSelect(privacy)
             dismiss()
         } label: {
             HStack(spacing: 16) {

@@ -112,6 +112,15 @@ struct ChatMessageView: View {
             Text(message.text)
                 .foregroundStyle(message.type == .user ? .white : .primary)
 
+            if message.isPending {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                    Text("Pending")
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(message.type == .user ? .white.opacity(0.8) : .secondary)
+            }
+
             if message.type == .assistant {
                 assistantContent
             }
