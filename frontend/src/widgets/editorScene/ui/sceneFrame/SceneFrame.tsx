@@ -1,6 +1,7 @@
 import type { EditorDocument, EditorNode } from '@entities/editorDocument'
 import { type RefCallback, useCallback, useRef } from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
+import { constrainViewportOffset } from '../../model/constrainViewportOffset'
 import { useCanvasGesture } from '../../model/useCanvasGesture'
 import { useCanvasPan } from '../../model/useCanvasPan'
 import { useCanvasWheel } from '../../model/useCanvasWheel'
@@ -41,6 +42,7 @@ export function SceneFrame({
   zoom,
 }: SceneFrameProps) {
   const editableElementsReference = useRef(new Map<string, SVGGElement>())
+  const frameReference = useRef<HTMLDivElement>(null)
   const viewportReference = useRef<HTMLDivElement>(null)
   const {
     onPointerMove,
@@ -73,12 +75,32 @@ export function SceneFrame({
       },
     [],
   )
+  const constrainOffset = useCallback(
+    (offset: ViewportOffset, nextZoom = zoom) => {
+      const frame = frameReference.current
+      const viewport = viewportReference.current
+
+      if (!frame || !viewport) {
+        return offset
+      }
+
+      return constrainViewportOffset(
+        offset,
+        { height: viewport.clientHeight, width: viewport.clientWidth },
+        { height: frame.clientHeight, width: frame.clientWidth },
+        nextZoom,
+      )
+    },
+    [zoom],
+  )
   const canvasPanHandlers = useCanvasPan({
     activeTool,
+    constrainOffset,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
   })
   useCanvasWheel({
+    constrainOffset,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
     onZoomChange,
@@ -86,6 +108,7 @@ export function SceneFrame({
     zoom,
   })
   useCanvasGesture({
+    constrainOffset,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
     onZoomChange,
@@ -109,7 +132,7 @@ export function SceneFrame({
           transform: `translate(${viewportOffset.x}px, ${viewportOffset.y}px) scale(${zoom})`,
         }}
       >
-        <div className={styles.frame}>
+        <div className={styles.frame} ref={frameReference}>
           {/* biome-ignore lint/a11y/noSvgWithoutTitle: The interactive editor canvas has no textual equivalent. */}
           <svg
             className={styles.canvas}

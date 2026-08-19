@@ -8,6 +8,7 @@ import type { ViewportOffset } from './viewportOffset'
 
 interface UseCanvasPanParams {
   activeTool: CanvasTool
+  constrainOffset: (offset: ViewportOffset) => ViewportOffset
   offset: ViewportOffset
   onOffsetChange: (offset: ViewportOffset) => void
 }
@@ -20,6 +21,7 @@ interface PanState {
 
 export function useCanvasPan({
   activeTool,
+  constrainOffset,
   offset,
   onOffsetChange,
 }: UseCanvasPanParams) {
@@ -54,12 +56,14 @@ export function useCanvasPan({
       }
 
       event.preventDefault()
-      onOffsetChange({
-        x: panState.startOffset.x + event.clientX - panState.startPosition.x,
-        y: panState.startOffset.y + event.clientY - panState.startPosition.y,
-      })
+      onOffsetChange(
+        constrainOffset({
+          x: panState.startOffset.x + event.clientX - panState.startPosition.x,
+          y: panState.startOffset.y + event.clientY - panState.startPosition.y,
+        }),
+      )
     },
-    [onOffsetChange],
+    [constrainOffset, onOffsetChange],
   )
 
   const stopPanning = useCallback(

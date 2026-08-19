@@ -2,6 +2,7 @@ import { type RefObject, useEffect, useRef } from 'react'
 import type { ViewportOffset } from './viewportOffset'
 
 interface UseCanvasWheelParams {
+  constrainOffset: (offset: ViewportOffset, zoom: number) => ViewportOffset
   offset: ViewportOffset
   onOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
@@ -11,7 +12,6 @@ interface UseCanvasWheelParams {
 
 const WHEEL_LINE_HEIGHT = 16
 const ZOOM_SENSITIVITY = 0.003
-const TRACKPAD_DELTA_THRESHOLD = 50
 
 function getWheelDeltaY(event: WheelEvent, viewport: HTMLDivElement) {
   if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
@@ -27,16 +27,22 @@ function getWheelDeltaY(event: WheelEvent, viewport: HTMLDivElement) {
   return event.deltaY
 }
 
-function isTrackpadScroll(event: WheelEvent) {
+function isMouseWheelZoom(event: WheelEvent) {
+  const absoluteDeltaY = Math.abs(event.deltaY)
+
   return (
-    !event.ctrlKey &&
-    !event.metaKey &&
-    event.deltaMode === WheelEvent.DOM_DELTA_PIXEL &&
-    (event.deltaX !== 0 || Math.abs(event.deltaY) < TRACKPAD_DELTA_THRESHOLD)
+    event.ctrlKey ||
+    event.metaKey ||
+    event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL ||
+    (event.deltaX === 0 &&
+      Number.isInteger(event.deltaY) &&
+      absoluteDeltaY >= 100 &&
+      (absoluteDeltaY % 100 === 0 || absoluteDeltaY % 120 === 0))
   )
 }
 
 export function useCanvasWheel({
+  constrainOffset,
   offset,
   onOffsetChange,
   onZoomChange,
@@ -44,6 +50,7 @@ export function useCanvasWheel({
   zoom,
 }: UseCanvasWheelParams) {
   const latestStateReference = useRef({
+    constrainOffset,
     offset,
     onOffsetChange,
     onZoomChange,
@@ -54,11 +61,12 @@ export function useCanvasWheel({
   useEffect(() => {
     latestStateReference.current = {
       offset,
+      constrainOffset,
       onOffsetChange,
       onZoomChange,
       zoom,
     }
-  }, [offset, onOffsetChange, onZoomChange, zoom])
+  }, [constrainOffset, offset, onOffsetChange, onZoomChange, zoom])
 
   useEffect(() => {
     const viewport = viewportReference.current
@@ -91,11 +99,16 @@ export function useCanvasWheel({
         latestStateReference.current
       const deltaY = getWheelDeltaY(event, viewportElement)
 
-      if (isTrackpadScroll(event)) {
-        scheduleOffsetChange({
-          x: offset.x - event.deltaX,
-          y: offset.y - deltaY,
-        })
+      if (!isMouseWheelZoom(event)) {
+        scheduleOffsetChange(
+          latestStateReference.current.constrainOffset(
+            {
+              x: offset.x - event.deltaX,
+              y: offset.y - deltaY,
+            },
+            zoom,
+          ),
+        )
 
         return
       }
@@ -111,10 +124,13 @@ export function useCanvasWheel({
       const cursorY = event.clientY - bounds.top - bounds.height / 2
       const zoomRatio = nextZoom / zoom
 
-      const nextOffset = {
-        x: cursorX - (cursorX - offset.x) * zoomRatio,
-        y: cursorY - (cursorY - offset.y) * zoomRatio,
-      }
+      const nextOffset = latestStateReference.current.constrainOffset(
+        {
+          x: cursorX - (cursorX - offset.x) * zoomRatio,
+          y: cursorY - (cursorY - offset.y) * zoomRatio,
+        },
+        nextZoom,
+      )
 
       latestStateReference.current = {
         ...latestStateReference.current,
