@@ -1,4 +1,9 @@
-import type { EditorShape, EditorText } from '@entities/editorDocument'
+import type {
+  EditorGroup,
+  EditorNode,
+  EditorShape,
+  EditorText,
+} from '@entities/editorDocument'
 import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
@@ -9,15 +14,17 @@ import type { CanvasTool } from './canvasTool'
 interface UseLayerDragParams {
   activeTool: CanvasTool
   isReadOnly: boolean
+  onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  selectedNode: EditorNode | null
 }
 
 type PointerPosition = { x: number; y: number }
 
 type DragState = {
-  elementType: 'shape' | 'text'
+  elementType: 'group' | 'shape' | 'text'
   nodeId: string
   pointerId: number
   startPointerPosition: PointerPosition
@@ -46,12 +53,22 @@ function getSvgPointerPosition(
   return { x: point.x, y: point.y }
 }
 
+function isGroupDescendant(group: EditorGroup, nodeId: string): boolean {
+  return group.children.some(
+    (child) =>
+      child.id === nodeId ||
+      (child.type === 'group' && isGroupDescendant(child, nodeId)),
+  )
+}
+
 export function useLayerDrag({
   activeTool,
   isReadOnly,
+  onGroupPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
+  selectedNode,
 }: UseLayerDragParams) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
@@ -69,11 +86,24 @@ export function useLayerDrag({
 
       const svg = svgReference.current
 
-      if (activeTool !== 'select' || node.isLocked || !svg) {
+      if (activeTool !== 'select' || !svg) {
         return
       }
 
-      onSelectNode(node.id)
+      const selectedGroup =
+        selectedNode?.type === 'group' &&
+        isGroupDescendant(selectedNode, node.id)
+          ? selectedNode
+          : null
+      const dragTarget = selectedGroup ?? node
+
+      if (dragTarget.isLocked) {
+        return
+      }
+
+      if (!selectedGroup) {
+        onSelectNode(node.id)
+      }
 
       const pointerPosition = getSvgPointerPosition(
         svg,
@@ -88,14 +118,16 @@ export function useLayerDrag({
       event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       dragStateReference.current = {
-        elementType,
-        nodeId: node.id,
+        elementType: selectedGroup ? 'group' : elementType,
+        nodeId: dragTarget.id,
         pointerId: event.pointerId,
         startPointerPosition: pointerPosition,
-        startTransformPosition,
+        startTransformPosition: selectedGroup
+          ? { x: selectedGroup.transform.x, y: selectedGroup.transform.y }
+          : startTransformPosition,
       }
     },
-    [activeTool, isReadOnly, onSelectNode],
+    [activeTool, isReadOnly, onSelectNode, selectedNode],
   )
 
   const onShapePointerDown = useCallback(
@@ -154,9 +186,15 @@ export function useLayerDrag({
         return
       }
 
+      if (dragState.elementType === 'group') {
+        onGroupPositionChange(dragState.nodeId, x, y)
+
+        return
+      }
+
       onTextPositionChange(dragState.nodeId, x, y)
     },
-    [onShapePositionChange, onTextPositionChange],
+    [onGroupPositionChange, onShapePositionChange, onTextPositionChange],
   )
 
   const onPointerUp = useCallback((event: ReactPointerEvent<SVGGElement>) => {

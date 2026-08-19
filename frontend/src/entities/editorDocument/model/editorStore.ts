@@ -160,6 +160,22 @@ export class EditorStore {
     node.transform.y = y
   }
 
+  setGroupPosition(nodeId: string, x: number, y: number) {
+    const node = findNode(this.document.layers, nodeId)
+
+    if (
+      node?.type !== 'group' ||
+      node.isLocked ||
+      !Number.isFinite(x) ||
+      !Number.isFinite(y)
+    ) {
+      return
+    }
+
+    node.transform.x = x
+    node.transform.y = y
+  }
+
   addShapeStroke(nodeId: string) {
     const node = this.getEditableShape(nodeId)
 

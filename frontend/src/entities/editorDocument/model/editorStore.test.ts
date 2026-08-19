@@ -193,6 +193,18 @@ describe('EditorStore selection', () => {
     })
   })
 
+  it('changes a group position through its transform', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setGroupPosition('taxi', 12, -8)
+    store.setSelectedNode('taxi')
+
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: 12, y: -8 },
+      type: 'group',
+    })
+  })
+
   it('moves the selected editable node by the given offset', () => {
     const store = new EditorStore(structuredClone(document), 'wheel')
 

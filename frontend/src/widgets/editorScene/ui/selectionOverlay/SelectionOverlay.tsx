@@ -1,4 +1,4 @@
-import type { EditorNode } from '@entities/editorDocument'
+import type { EditorElement, EditorNode } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 import { useLayoutEffect, useState } from 'react'
 
@@ -9,16 +9,67 @@ import {
 } from './model/getSelectionBounds'
 import styles from './SelectionOverlay.module.css'
 
+type SelectionBoundsByNode = {
+  bounds: SelectionBounds
+  nodeId: string
+}
+
 function hasSameBounds(
-  firstBounds: SelectionBounds | null,
-  secondBounds: SelectionBounds | null,
+  firstBounds: SelectionBounds,
+  secondBounds: SelectionBounds,
 ) {
   return (
-    firstBounds?.height === secondBounds?.height &&
-    firstBounds?.width === secondBounds?.width &&
-    firstBounds?.x === secondBounds?.x &&
-    firstBounds?.y === secondBounds?.y
+    firstBounds.height === secondBounds.height &&
+    firstBounds.width === secondBounds.width &&
+    firstBounds.x === secondBounds.x &&
+    firstBounds.y === secondBounds.y
   )
+}
+
+function hasSameSelection(
+  firstSelection: SelectionBoundsByNode[],
+  secondSelection: SelectionBoundsByNode[],
+) {
+  return (
+    firstSelection.length === secondSelection.length &&
+    firstSelection.every(
+      (item, index) =>
+        item.nodeId === secondSelection[index]?.nodeId &&
+        hasSameBounds(item.bounds, secondSelection[index].bounds),
+    )
+  )
+}
+
+function getSelectedElements(node: EditorNode | null): EditorElement[] {
+  if (!node || node.type === 'raw') {
+    return []
+  }
+
+  if (node.type === 'group') {
+    return node.children.flatMap(getSelectedElements)
+  }
+
+  return [node]
+}
+
+function getSelectionVersion(node: EditorNode | null): string {
+  if (!node) {
+    return ''
+  }
+
+  const transform = `${node.transform.x}:${node.transform.y}:${node.transform.rotation}:${node.transform.scaleX}:${node.transform.scaleY}`
+
+  if (node.type === 'group') {
+    return `${node.id}:${transform}:${node.children
+      .map(getSelectionVersion)
+      .join('|')}`
+  }
+
+  if (node.type === 'text') {
+    return `${node.id}:${transform}:${node.x}:${node.y}`
+  }
+
+  return `${node.id}:${transform}`
 }
 
 interface SelectionOverlayProps {
@@ -34,61 +85,46 @@ export const SelectionOverlay = observer(function SelectionOverlay({
   getEditableElement,
   selectedNode,
 }: SelectionOverlayProps) {
-  const [bounds, setBounds] = useState<SelectionBounds | null>(null)
-  const selectedElement =
-    selectedNode?.type === 'shape' || selectedNode?.type === 'text'
-      ? selectedNode
-      : null
-  const selectionTarget = selectedElement
-    ? {
-        element: getEditableElement(selectedElement.id),
-        position:
-          selectedElement.type === 'text'
-            ? { x: selectedElement.x, y: selectedElement.y }
-            : undefined,
-        transform: {
-          rotation: selectedElement.transform.rotation,
-          scaleX: selectedElement.transform.scaleX,
-          scaleY: selectedElement.transform.scaleY,
-          x: selectedElement.transform.x,
-          y: selectedElement.transform.y,
-        },
-      }
-    : null
+  const [selectionBounds, setSelectionBounds] = useState<
+    SelectionBoundsByNode[]
+  >([])
+  const selectedElements = getSelectedElements(selectedNode)
+  void getSelectionVersion(selectedNode)
 
   useLayoutEffect(() => {
-    if (!selectionTarget) {
-      setBounds((currentBounds) =>
-        hasSameBounds(currentBounds, null) ? currentBounds : null,
-      )
+    const nextSelection = selectedElements.flatMap((element) => {
+      const bounds = getSelectionBounds(getEditableElement(element.id))
 
-      return
-    }
+      return bounds ? [{ bounds, nodeId: element.id }] : []
+    })
 
-    const nextBounds = getSelectionBounds(selectionTarget.element)
-
-    setBounds((currentBounds) =>
-      hasSameBounds(currentBounds, nextBounds) ? currentBounds : nextBounds,
+    setSelectionBounds((currentSelection) =>
+      hasSameSelection(currentSelection, nextSelection)
+        ? currentSelection
+        : nextSelection,
     )
-  }, [selectionTarget])
+  }, [getEditableElement, selectedElements])
 
-  if (!bounds) {
+  if (selectionBounds.length === 0) {
     return null
   }
 
-  const constrainedBounds = constrainSelectionBounds(
-    bounds,
-    canvasWidth,
-    canvasHeight,
-  )
+  return selectionBounds.map(({ bounds, nodeId }) => {
+    const constrainedBounds = constrainSelectionBounds(
+      bounds,
+      canvasWidth,
+      canvasHeight,
+    )
 
-  return (
-    <rect
-      className={styles.overlay}
-      height={constrainedBounds.height}
-      width={constrainedBounds.width}
-      x={constrainedBounds.x}
-      y={constrainedBounds.y}
-    />
-  )
+    return (
+      <rect
+        className={styles.overlay}
+        height={constrainedBounds.height}
+        key={nodeId}
+        width={constrainedBounds.width}
+        x={constrainedBounds.x}
+        y={constrainedBounds.y}
+      />
+    )
+  })
 })

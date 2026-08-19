@@ -22,6 +22,7 @@ interface SceneFrameProps {
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
+  onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -38,6 +39,7 @@ export function SceneFrame({
   document,
   isReadOnly,
   onClearSelection,
+  onGroupPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -60,9 +62,11 @@ export function SceneFrame({
   } = useLayerDrag({
     activeTool,
     isReadOnly,
+    onGroupPositionChange,
     onSelectNode,
     onShapePositionChange,
     onTextPositionChange,
+    selectedNode,
   })
   const getEditableElement = useCallback(
     (nodeId: string) => editableElementsReference.current.get(nodeId),
