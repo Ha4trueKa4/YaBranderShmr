@@ -82,6 +82,12 @@ components_manager:
       task_processor: main-task-processor
       throttling_enabled: false
 
+    handler-test-polisher:
+      path: /test/polisher
+      method: POST
+      task_processor: main-task-processor
+      throttling_enabled: false
+    
     handler-test-vector-search:
       path: /test/vector-search
       method: GET
@@ -130,6 +136,8 @@ components_manager:
     # ==========================================
     project-manager: { }
     prompt-constructor: { }
+    prompt-polisher:
+      api-url: $yandex-gpt-url
     subscription-storage: { }
 
 
@@ -249,6 +257,7 @@ components_manager:
       auth:
         types:
           - jwt
+
     handler-users-get:
       path: /api/v1/users/{id}
       method: GET

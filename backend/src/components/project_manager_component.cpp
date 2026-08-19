@@ -34,7 +34,8 @@ ProjectManagerComponent::ProjectManagerComponent(
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()),
       version_storage_(context.FindComponent<VersionStorageComponent>()),
       llm_client_(context.FindComponent<LLMClientComponent>()),
-      prompt_constructor_(context.FindComponent<PromptConstructorComponent>()) {}
+      prompt_constructor_(context.FindComponent<PromptConstructorComponent>()),
+	  prompt_polisher_(context.FindComponent<PromptPolisherComponent>()) {}
 
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
@@ -168,19 +169,21 @@ userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std:
 }
 
 std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+    std::string current_state = version_storage_.GetLatestVersionData(project_id);
 
     std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
     for (auto& past_message : history) {
         past_message = EscapeXml(past_message);
     }
 
-    std::string safe_prompt = EscapeXml(prompt);
-
     LlmPrompt full_prompt;
     if (current_state.empty() || current_state == kDefaultSvg) {
+		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
+		std::string safe_prompt = EscapeXml(polisher_prompt_text);
         full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
     }else {
+		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
+		std::string safe_prompt = EscapeXml(polished_prompt_text);
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
     }
     auto new_data = llm_client_.SendPrompt(full_prompt, 10000, model, 0.1);
