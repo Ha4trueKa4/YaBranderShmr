@@ -1,8 +1,11 @@
 import type { EditorDocument, EditorNode } from '@entities/editorDocument'
 import { type RefCallback, useCallback, useRef } from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
+import { useCanvasGesture } from '../../model/useCanvasGesture'
+import { useCanvasPan } from '../../model/useCanvasPan'
+import { useCanvasWheel } from '../../model/useCanvasWheel'
 import { useLayerDrag } from '../../model/useLayerDrag'
-import { useScenePan } from '../../model/useScenePan'
+import type { ViewportOffset } from '../../model/viewportOffset'
 import { LayerRenderer } from '../layerRenderer/LayerRenderer'
 import { SelectionOverlay } from '../selectionOverlay/SelectionOverlay'
 import { TransformHandles } from '../transformHandles/TransformHandles'
@@ -15,10 +18,11 @@ interface SceneFrameProps {
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
-  onViewportOffsetChange: (offset: { x: number; y: number }) => void
+  onViewportOffsetChange: (offset: ViewportOffset) => void
+  onZoomChange: (zoom: number) => number
   renderVersion: number
   selectedNode: EditorNode | null
-  viewportOffset: { x: number; y: number }
+  viewportOffset: ViewportOffset
   zoom: number
 }
 
@@ -30,12 +34,14 @@ export function SceneFrame({
   onShapePositionChange,
   onTextPositionChange,
   onViewportOffsetChange,
+  onZoomChange,
   renderVersion,
   selectedNode,
   viewportOffset,
   zoom,
 }: SceneFrameProps) {
   const editableElementsReference = useRef(new Map<string, SVGGElement>())
+  const viewportReference = useRef<HTMLDivElement>(null)
   const {
     onPointerMove,
     onPointerUp,
@@ -49,16 +55,6 @@ export function SceneFrame({
     onShapePositionChange,
     onTextPositionChange,
   })
-  const {
-    onPointerDown: onScenePointerDown,
-    onPointerMove: onScenePointerMove,
-    onPointerUp: onScenePointerUp,
-  } = useScenePan({
-    activeTool,
-    onViewportOffsetChange,
-    viewportOffset,
-  })
-
   const getEditableElement = useCallback(
     (nodeId: string) => editableElementsReference.current.get(nodeId),
     [],
@@ -77,50 +73,75 @@ export function SceneFrame({
       },
     [],
   )
+  const canvasPanHandlers = useCanvasPan({
+    activeTool,
+    offset: viewportOffset,
+    onOffsetChange: onViewportOffsetChange,
+  })
+  useCanvasWheel({
+    offset: viewportOffset,
+    onOffsetChange: onViewportOffsetChange,
+    onZoomChange,
+    viewportReference,
+    zoom,
+  })
+  useCanvasGesture({
+    offset: viewportOffset,
+    onOffsetChange: onViewportOffsetChange,
+    onZoomChange,
+    viewportReference,
+    zoom,
+  })
 
   return (
-    <div className={styles.frame}>
-      <svg
-        className={
-          activeTool === 'hand'
-            ? `${styles.canvas} ${styles.handCanvas}`
-            : styles.canvas
-        }
-        ref={svgReference}
-        onPointerCancel={onScenePointerUp}
-        onPointerDown={onScenePointerDown}
-        onPointerMove={onScenePointerMove}
-        onPointerUp={onScenePointerUp}
+    <div
+      className={
+        activeTool === 'hand'
+          ? `${styles.viewport} ${styles.handTool}`
+          : styles.viewport
+      }
+      ref={viewportReference}
+      {...canvasPanHandlers}
+    >
+      <div
+        className={styles.world}
         style={{
           transform: `translate(${viewportOffset.x}px, ${viewportOffset.y}px) scale(${zoom})`,
         }}
-        viewBox={`0 0 ${document.width} ${document.height}`}
-        xmlns="http://www.w3.org/2000/svg"
       >
-        <title>Макет проекта</title>
-        <LayerRenderer
-          canMoveLayers={activeTool === 'select'}
-          document={document}
-          onSelectNode={onSelectNode}
-          onShapePointerDown={onShapePointerDown}
-          onShapePointerMove={onPointerMove}
-          onShapePointerUp={onPointerUp}
-          onTextPointerDown={onTextPointerDown}
-          renderVersion={renderVersion}
-          registerEditableElement={registerEditableElement}
-        />
-        {!isReadOnly && (
-          <>
-            <SelectionOverlay
-              canvasHeight={document.height}
-              canvasWidth={document.width}
-              getEditableElement={getEditableElement}
-              selectedNode={selectedNode}
+        <div className={styles.frame}>
+          {/* biome-ignore lint/a11y/noSvgWithoutTitle: The interactive editor canvas has no textual equivalent. */}
+          <svg
+            className={styles.canvas}
+            ref={svgReference}
+            viewBox={`0 0 ${document.width} ${document.height}`}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <LayerRenderer
+              canMoveLayers={activeTool === 'select'}
+              document={document}
+              onSelectNode={onSelectNode}
+              onShapePointerDown={onShapePointerDown}
+              onShapePointerMove={onPointerMove}
+              onShapePointerUp={onPointerUp}
+              onTextPointerDown={onTextPointerDown}
+              renderVersion={renderVersion}
+              registerEditableElement={registerEditableElement}
             />
-            <TransformHandles />
-          </>
-        )}
-      </svg>
+            {!isReadOnly && (
+              <>
+                <SelectionOverlay
+                  canvasHeight={document.height}
+                  canvasWidth={document.width}
+                  getEditableElement={getEditableElement}
+                  selectedNode={selectedNode}
+                />
+                <TransformHandles />
+              </>
+            )}
+          </svg>
+        </div>
+      </div>
     </div>
   )
 }

@@ -76,11 +76,11 @@ export const LayerNode = observer(function LayerNode({
         onPointerUp={onShapePointerUp}
         ref={registerEditableElement(node.id)}
         style={{
-          cursor: node.isLocked
-            ? 'not-allowed'
-            : canMoveLayers
-              ? 'grab'
-              : 'inherit',
+          cursor: canMoveLayers
+            ? node.isLocked
+              ? 'not-allowed'
+              : 'default'
+            : 'inherit',
         }}
       >
         <TextLayer node={node} />
@@ -97,11 +97,11 @@ export const LayerNode = observer(function LayerNode({
       onPointerUp={onShapePointerUp}
       ref={registerEditableElement(node.id)}
       style={{
-        cursor: node.isLocked
-          ? 'not-allowed'
-          : canMoveLayers
-            ? 'grab'
-            : 'inherit',
+        cursor: canMoveLayers
+          ? node.isLocked
+            ? 'not-allowed'
+            : 'default'
+          : 'inherit',
       }}
     >
       <ShapeLayer node={node} />

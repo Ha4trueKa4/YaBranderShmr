@@ -1,5 +1,6 @@
 import type { EditorDocument, EditorNode } from '@entities/editorDocument'
 import type { CanvasTool } from '../model/canvasTool'
+import type { ViewportOffset } from '../model/viewportOffset'
 
 import styles from './EditorScene.module.css'
 import { SceneFrame } from './sceneFrame/SceneFrame'
@@ -11,10 +12,11 @@ interface EditorSceneProps {
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
-  onViewportOffsetChange: (offset: { x: number; y: number }) => void
+  onViewportOffsetChange: (offset: ViewportOffset) => void
+  onZoomChange: (zoom: number) => number
   renderVersion: number
   selectedNode: EditorNode | null
-  viewportOffset: { x: number; y: number }
+  viewportOffset: ViewportOffset
   zoom: number
 }
 
@@ -26,6 +28,7 @@ export function EditorScene({
   onShapePositionChange,
   onTextPositionChange,
   onViewportOffsetChange,
+  onZoomChange,
   renderVersion,
   selectedNode,
   viewportOffset,
@@ -41,6 +44,7 @@ export function EditorScene({
         onShapePositionChange={onShapePositionChange}
         onTextPositionChange={onTextPositionChange}
         onViewportOffsetChange={onViewportOffsetChange}
+        onZoomChange={onZoomChange}
         renderVersion={renderVersion}
         selectedNode={selectedNode}
         viewportOffset={viewportOffset}

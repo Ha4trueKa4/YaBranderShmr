@@ -6,7 +6,11 @@ import {
   ImageExportModal,
   useToast,
 } from '@shared/ui'
-import { type CanvasTool, EditorScene } from '@widgets/editorScene'
+import {
+  type CanvasTool,
+  EditorScene,
+  type ViewportOffset,
+} from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useState } from 'react'
 import { useBlocker, useNavigate } from 'react-router-dom'
@@ -31,7 +35,7 @@ interface EditorWorkspaceProps {
 const MAX_ZOOM = 2
 const MIN_ZOOM = 0.5
 const ZOOM_STEP = 0.25
-const INITIAL_VIEWPORT_OFFSET = { x: 0, y: 0 }
+const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
 
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
@@ -75,6 +79,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleZoomOut() {
     setZoom((currentZoom) => Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM))
+  }
+
+  function handleZoomChange(nextZoom: number) {
+    const constrainedZoom = Math.min(Math.max(nextZoom, MIN_ZOOM), MAX_ZOOM)
+
+    setZoom(constrainedZoom)
+
+    return constrainedZoom
   }
 
   function handleExport() {
@@ -148,6 +160,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onShapePositionChange={editorStore.setShapePosition}
       onTextPositionChange={editorStore.setTextPosition}
       onViewportOffsetChange={setViewportOffset}
+      onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
       viewportOffset={viewportOffset}
@@ -175,10 +188,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onToolChange={setActiveTool}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
-          onZoomReset={() => {
-            setZoom(1)
-            setViewportOffset(INITIAL_VIEWPORT_OFFSET)
-          }}
+          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
           zoom={zoom}
