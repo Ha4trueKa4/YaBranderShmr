@@ -155,6 +155,21 @@ paths:
                   value:
                     code: "YANDEX_EMAIL_SCOPE_REQUIRED"
                     message: "Yandex ID app must request the login:email scope"
+        '409':
+          description: >
+            Email из профиля Yandex уже принадлежит существующему аккаунту без
+            привязанного provider (например, зарегистрированному по паролю).
+            Автоматическая привязка намеренно не выполняется — иначе аккаунт
+            можно угнать, заранее зарегистрировав чужой email своим паролем.
+            Пользователю нужно войти по паролю и привязать Yandex ID явно
+            (отдельный флоу, пока не реализован).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "EMAIL_EXISTS"
+                message: "This email is already registered with a password. Log in with your password and link Yandex ID from account settings."
         '502':
           description: Yandex OAuth API недоступен, code невалиден/просрочен, либо не удалось получить профиль
           content:
@@ -163,7 +178,7 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
               example:
                 code: "YANDEX_OAUTH_FAILED"
-                message: "Yandex token exchange failed: HTTP 400"
+                message: "Yandex authentication is temporarily unavailable. Please try again."
         '500':
           description: Внутренняя ошибка сервера
 
