@@ -12,6 +12,9 @@ interface UseCanvasWheelParams {
 
 const WHEEL_LINE_HEIGHT = 16
 const ZOOM_SENSITIVITY = 0.003
+const WHEEL_INTERACTION_TIMEOUT = 120
+
+type WheelInteractionMode = 'pan' | 'zoom'
 
 function getWheelDeltaY(event: WheelEvent, viewport: HTMLDivElement) {
   if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
@@ -57,6 +60,8 @@ export function useCanvasWheel({
     zoom,
   })
   const animationFrameReference = useRef<number | null>(null)
+  const interactionModeReference = useRef<WheelInteractionMode | null>(null)
+  const interactionTimeoutReference = useRef<number | null>(null)
 
   useEffect(() => {
     latestStateReference.current = {
@@ -76,6 +81,19 @@ export function useCanvasWheel({
     }
 
     const viewportElement = viewport
+
+    function setInteractionMode(mode: WheelInteractionMode) {
+      interactionModeReference.current = mode
+
+      if (interactionTimeoutReference.current !== null) {
+        clearTimeout(interactionTimeoutReference.current)
+      }
+
+      interactionTimeoutReference.current = window.setTimeout(() => {
+        interactionModeReference.current = null
+        interactionTimeoutReference.current = null
+      }, WHEEL_INTERACTION_TIMEOUT)
+    }
 
     function scheduleOffsetChange(offset: ViewportOffset) {
       latestStateReference.current.offset = offset
@@ -99,7 +117,12 @@ export function useCanvasWheel({
         latestStateReference.current
       const deltaY = getWheelDeltaY(event, viewportElement)
 
-      if (!isMouseWheelZoom(event)) {
+      const isZoomInteraction =
+        isMouseWheelZoom(event) || interactionModeReference.current === 'zoom'
+
+      setInteractionMode(isZoomInteraction ? 'zoom' : 'pan')
+
+      if (!isZoomInteraction) {
         scheduleOffsetChange(
           latestStateReference.current.constrainOffset(
             {
@@ -147,6 +170,10 @@ export function useCanvasWheel({
 
       if (animationFrameReference.current !== null) {
         cancelAnimationFrame(animationFrameReference.current)
+      }
+
+      if (interactionTimeoutReference.current !== null) {
+        clearTimeout(interactionTimeoutReference.current)
       }
     }
   }, [viewportReference])
