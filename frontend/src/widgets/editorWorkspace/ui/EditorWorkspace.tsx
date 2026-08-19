@@ -31,6 +31,7 @@ interface EditorWorkspaceProps {
 const MAX_ZOOM = 2
 const MIN_ZOOM = 0.5
 const ZOOM_STEP = 0.25
+const INITIAL_VIEWPORT_OFFSET = { x: 0, y: 0 }
 
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
@@ -45,6 +46,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
   const [zoom, setZoom] = useState(1)
+  const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const {
@@ -145,8 +147,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.setShapePosition}
       onTextPositionChange={editorStore.setTextPosition}
+      onViewportOffsetChange={setViewportOffset}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
+      viewportOffset={viewportOffset}
       zoom={zoom}
     />
   )
@@ -171,7 +175,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onToolChange={setActiveTool}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
-          onZoomReset={() => setZoom(1)}
+          onZoomReset={() => {
+            setZoom(1)
+            setViewportOffset(INITIAL_VIEWPORT_OFFSET)
+          }}
           projectName={projectName}
           scene={scene}
           zoom={zoom}

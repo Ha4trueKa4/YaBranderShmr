@@ -80,7 +80,7 @@ export const LayerNode = observer(function LayerNode({
             ? 'not-allowed'
             : canMoveLayers
               ? 'grab'
-              : 'pointer',
+              : 'inherit',
         }}
       >
         <TextLayer node={node} />
@@ -101,7 +101,7 @@ export const LayerNode = observer(function LayerNode({
           ? 'not-allowed'
           : canMoveLayers
             ? 'grab'
-            : 'pointer',
+            : 'inherit',
       }}
     >
       <ShapeLayer node={node} />

@@ -2,6 +2,7 @@ import type { EditorDocument, EditorNode } from '@entities/editorDocument'
 import { type RefCallback, useCallback, useRef } from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
 import { useLayerDrag } from '../../model/useLayerDrag'
+import { useScenePan } from '../../model/useScenePan'
 import { LayerRenderer } from '../layerRenderer/LayerRenderer'
 import { SelectionOverlay } from '../selectionOverlay/SelectionOverlay'
 import { TransformHandles } from '../transformHandles/TransformHandles'
@@ -14,8 +15,10 @@ interface SceneFrameProps {
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  onViewportOffsetChange: (offset: { x: number; y: number }) => void
   renderVersion: number
   selectedNode: EditorNode | null
+  viewportOffset: { x: number; y: number }
   zoom: number
 }
 
@@ -26,8 +29,10 @@ export function SceneFrame({
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
+  onViewportOffsetChange,
   renderVersion,
   selectedNode,
+  viewportOffset,
   zoom,
 }: SceneFrameProps) {
   const editableElementsReference = useRef(new Map<string, SVGGElement>())
@@ -43,6 +48,15 @@ export function SceneFrame({
     onSelectNode,
     onShapePositionChange,
     onTextPositionChange,
+  })
+  const {
+    onPointerDown: onScenePointerDown,
+    onPointerMove: onScenePointerMove,
+    onPointerUp: onScenePointerUp,
+  } = useScenePan({
+    activeTool,
+    onViewportOffsetChange,
+    viewportOffset,
   })
 
   const getEditableElement = useCallback(
@@ -67,15 +81,25 @@ export function SceneFrame({
   return (
     <div className={styles.frame}>
       <svg
-        className={styles.canvas}
+        className={
+          activeTool === 'hand'
+            ? `${styles.canvas} ${styles.handCanvas}`
+            : styles.canvas
+        }
         ref={svgReference}
-        style={{ transform: `scale(${zoom})` }}
+        onPointerCancel={onScenePointerUp}
+        onPointerDown={onScenePointerDown}
+        onPointerMove={onScenePointerMove}
+        onPointerUp={onScenePointerUp}
+        style={{
+          transform: `translate(${viewportOffset.x}px, ${viewportOffset.y}px) scale(${zoom})`,
+        }}
         viewBox={`0 0 ${document.width} ${document.height}`}
         xmlns="http://www.w3.org/2000/svg"
       >
         <title>Макет проекта</title>
         <LayerRenderer
-          canMoveLayers={activeTool === 'hand'}
+          canMoveLayers={activeTool === 'select'}
           document={document}
           onSelectNode={onSelectNode}
           onShapePointerDown={onShapePointerDown}
