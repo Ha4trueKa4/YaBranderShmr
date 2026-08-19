@@ -137,6 +137,15 @@
     height: 1.125rem;
   }
 
+  .handIcon {
+    width: 1.125rem;
+    height: 1.125rem;
+    background: currentcolor;
+    color: #71717a;
+    mask:
+      url("../editorToolbar/assets/iconHand.svg") center / contain no-repeat;
+  }
+
   .fillSwatch {
     width: 3.25rem;
     height: 3.25rem;
@@ -147,6 +156,10 @@
   .canvasControls .activeTool,
   .canvasControls .activeTool:hover {
     background: var(--color-accent-primary);
+    color: var(--color-text-inverse);
+  }
+
+  .canvasControls .activeTool .handIcon {
     color: var(--color-text-inverse);
   }
 
