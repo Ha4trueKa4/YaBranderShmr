@@ -31,6 +31,21 @@ export function useCanvasGesture({
   zoom,
 }: UseCanvasGestureParams) {
   const gestureStateReference = useRef<GestureState | null>(null)
+  const latestStateReference = useRef({
+    offset,
+    onOffsetChange,
+    onZoomChange,
+    zoom,
+  })
+
+  useEffect(() => {
+    latestStateReference.current = {
+      offset,
+      onOffsetChange,
+      onZoomChange,
+      zoom,
+    }
+  }, [offset, onOffsetChange, onZoomChange, zoom])
 
   useEffect(() => {
     const viewport = viewportReference.current
@@ -44,6 +59,7 @@ export function useCanvasGesture({
     function handleGestureStart(event: Event) {
       const gestureEvent = event as GestureEvent
       const bounds = viewportElement.getBoundingClientRect()
+      const { offset, zoom } = latestStateReference.current
 
       event.preventDefault()
       gestureStateReference.current = {
@@ -64,20 +80,28 @@ export function useCanvasGesture({
       }
 
       event.preventDefault()
+      const { onOffsetChange, onZoomChange } = latestStateReference.current
       const gestureScale = (event as GestureEvent).scale
       const nextZoom = onZoomChange(
         gestureState.zoom * gestureScale ** GESTURE_ZOOM_SENSITIVITY,
       )
       const zoomRatio = nextZoom / gestureState.zoom
 
-      onOffsetChange({
+      const nextOffset = {
         x:
           gestureState.cursor.x -
           (gestureState.cursor.x - gestureState.offset.x) * zoomRatio,
         y:
           gestureState.cursor.y -
           (gestureState.cursor.y - gestureState.offset.y) * zoomRatio,
-      })
+      }
+
+      latestStateReference.current = {
+        ...latestStateReference.current,
+        offset: nextOffset,
+        zoom: nextZoom,
+      }
+      onOffsetChange(nextOffset)
     }
 
     function handleGestureEnd() {
@@ -97,5 +121,5 @@ export function useCanvasGesture({
       viewportElement.removeEventListener('gesturechange', handleGestureChange)
       viewportElement.removeEventListener('gestureend', handleGestureEnd)
     }
-  }, [offset, onOffsetChange, onZoomChange, viewportReference, zoom])
+  }, [viewportReference])
 }

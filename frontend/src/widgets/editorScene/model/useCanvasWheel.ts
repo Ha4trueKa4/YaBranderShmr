@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from 'react'
+import { type RefObject, useEffect, useRef } from 'react'
 import type { ViewportOffset } from './viewportOffset'
 
 interface UseCanvasWheelParams {
@@ -43,6 +43,23 @@ export function useCanvasWheel({
   viewportReference,
   zoom,
 }: UseCanvasWheelParams) {
+  const latestStateReference = useRef({
+    offset,
+    onOffsetChange,
+    onZoomChange,
+    zoom,
+  })
+  const animationFrameReference = useRef<number | null>(null)
+
+  useEffect(() => {
+    latestStateReference.current = {
+      offset,
+      onOffsetChange,
+      onZoomChange,
+      zoom,
+    }
+  }, [offset, onOffsetChange, onZoomChange, zoom])
+
   useEffect(() => {
     const viewport = viewportReference.current
 
@@ -52,13 +69,30 @@ export function useCanvasWheel({
 
     const viewportElement = viewport
 
+    function scheduleOffsetChange(offset: ViewportOffset) {
+      latestStateReference.current.offset = offset
+
+      if (animationFrameReference.current !== null) {
+        return
+      }
+
+      animationFrameReference.current = requestAnimationFrame(() => {
+        animationFrameReference.current = null
+        latestStateReference.current.onOffsetChange(
+          latestStateReference.current.offset,
+        )
+      })
+    }
+
     function handleWheel(event: WheelEvent) {
       event.preventDefault()
 
+      const { offset, onOffsetChange, onZoomChange, zoom } =
+        latestStateReference.current
       const deltaY = getWheelDeltaY(event, viewportElement)
 
       if (isTrackpadScroll(event)) {
-        onOffsetChange({
+        scheduleOffsetChange({
           x: offset.x - event.deltaX,
           y: offset.y - deltaY,
         })
@@ -77,14 +111,27 @@ export function useCanvasWheel({
       const cursorY = event.clientY - bounds.top - bounds.height / 2
       const zoomRatio = nextZoom / zoom
 
-      onOffsetChange({
+      const nextOffset = {
         x: cursorX - (cursorX - offset.x) * zoomRatio,
         y: cursorY - (cursorY - offset.y) * zoomRatio,
-      })
+      }
+
+      latestStateReference.current = {
+        ...latestStateReference.current,
+        offset: nextOffset,
+        zoom: nextZoom,
+      }
+      onOffsetChange(nextOffset)
     }
 
     viewportElement.addEventListener('wheel', handleWheel, { passive: false })
 
-    return () => viewportElement.removeEventListener('wheel', handleWheel)
-  }, [offset, onOffsetChange, onZoomChange, viewportReference, zoom])
+    return () => {
+      viewportElement.removeEventListener('wheel', handleWheel)
+
+      if (animationFrameReference.current !== null) {
+        cancelAnimationFrame(animationFrameReference.current)
+      }
+    }
+  }, [viewportReference])
 }
