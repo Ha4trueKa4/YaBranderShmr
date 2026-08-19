@@ -9,6 +9,7 @@ interface EditorSceneProps {
   activeTool: CanvasTool
   document: EditorDocument
   isReadOnly: boolean
+  onClearSelection: () => void
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -24,6 +25,7 @@ export function EditorScene({
   activeTool,
   document,
   isReadOnly,
+  onClearSelection,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -40,6 +42,7 @@ export function EditorScene({
         activeTool={activeTool}
         document={document}
         isReadOnly={isReadOnly}
+        onClearSelection={onClearSelection}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
         onTextPositionChange={onTextPositionChange}

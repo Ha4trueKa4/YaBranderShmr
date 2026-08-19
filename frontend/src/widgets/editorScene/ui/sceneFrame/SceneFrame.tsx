@@ -1,5 +1,10 @@
 import type { EditorDocument, EditorNode } from '@entities/editorDocument'
-import { type RefCallback, useCallback, useRef } from 'react'
+import {
+  type PointerEvent as ReactPointerEvent,
+  type RefCallback,
+  useCallback,
+  useRef,
+} from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
 import { constrainViewportOffset } from '../../model/constrainViewportOffset'
 import { useCanvasGesture } from '../../model/useCanvasGesture'
@@ -16,6 +21,7 @@ interface SceneFrameProps {
   activeTool: CanvasTool
   document: EditorDocument
   isReadOnly: boolean
+  onClearSelection: () => void
   onSelectNode: (nodeId: string) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -31,6 +37,7 @@ export function SceneFrame({
   activeTool,
   document,
   isReadOnly,
+  onClearSelection,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -116,6 +123,22 @@ export function SceneFrame({
     zoom,
   })
 
+  function handleViewportPointerDownCapture(
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (event.button !== 0) {
+      return
+    }
+
+    const target = event.target
+
+    if (target instanceof Element && target.closest('[data-editor-node-id]')) {
+      return
+    }
+
+    onClearSelection()
+  }
+
   return (
     <div
       className={
@@ -123,6 +146,7 @@ export function SceneFrame({
           ? `${styles.viewport} ${styles.handTool}`
           : styles.viewport
       }
+      onPointerDownCapture={handleViewportPointerDownCapture}
       ref={viewportReference}
       {...canvasPanHandlers}
     >

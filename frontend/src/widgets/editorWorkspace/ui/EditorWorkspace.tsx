@@ -160,6 +160,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       activeTool={activeTool}
       document={editorStore.document}
       isReadOnly={!canEdit}
+      onClearSelection={() => editorStore.setSelectedNode(null)}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.setShapePosition}
       onTextPositionChange={editorStore.setTextPosition}
