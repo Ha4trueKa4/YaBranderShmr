@@ -8,10 +8,10 @@ import { LayerTreeItem } from './LayerTreeItem'
 interface LayersPanelProps {
   expandedGroupIds: ReadonlySet<string>
   nodes: EditorNode[]
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onToggleGroup: (groupId: string) => void
   onToggleVisibility: (nodeId: string) => void
-  selectedNodeId: string | null
+  selectedNodeIds: ReadonlySet<string>
 }
 
 export const LayersPanel = observer(function LayersPanel({
@@ -20,7 +20,7 @@ export const LayersPanel = observer(function LayersPanel({
   onSelectNode,
   onToggleGroup,
   onToggleVisibility,
-  selectedNodeId,
+  selectedNodeIds,
 }: LayersPanelProps) {
   return (
     <section className={styles.panel}>
@@ -41,7 +41,7 @@ export const LayersPanel = observer(function LayersPanel({
             onSelectNode={onSelectNode}
             onToggleGroup={onToggleGroup}
             onToggleVisibility={onToggleVisibility}
-            selectedNodeId={selectedNodeId}
+            selectedNodeIds={selectedNodeIds}
           />
         ))}
       </div>

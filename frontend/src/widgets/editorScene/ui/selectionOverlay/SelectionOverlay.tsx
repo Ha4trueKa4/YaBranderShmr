@@ -40,8 +40,8 @@ function hasSameSelection(
   )
 }
 
-function getSelectedElements(node: EditorNode | null): EditorElement[] {
-  if (!node || node.type === 'raw') {
+function getSelectedElements(node: EditorNode): EditorElement[] {
+  if (node.type === 'raw') {
     return []
   }
 
@@ -52,11 +52,13 @@ function getSelectedElements(node: EditorNode | null): EditorElement[] {
   return [node]
 }
 
-function getSelectionVersion(node: EditorNode | null): string {
-  if (!node) {
-    return ''
-  }
+function getUniqueElements(nodes: EditorNode[]): EditorElement[] {
+  const elements = nodes.flatMap(getSelectedElements)
 
+  return [...new Map(elements.map((element) => [element.id, element])).values()]
+}
+
+function getSelectionVersion(node: EditorNode): string {
   const transform = `${node.transform.x}:${node.transform.y}:${node.transform.rotation}:${node.transform.scaleX}:${node.transform.scaleY}`
 
   if (node.type === 'group') {
@@ -76,20 +78,20 @@ interface SelectionOverlayProps {
   canvasHeight: number
   canvasWidth: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
-  selectedNode: EditorNode | null
+  selectedNodes: EditorNode[]
 }
 
 export const SelectionOverlay = observer(function SelectionOverlay({
   canvasHeight,
   canvasWidth,
   getEditableElement,
-  selectedNode,
+  selectedNodes,
 }: SelectionOverlayProps) {
   const [selectionBounds, setSelectionBounds] = useState<
     SelectionBoundsByNode[]
   >([])
-  const selectedElements = getSelectedElements(selectedNode)
-  void getSelectionVersion(selectedNode)
+  const selectedElements = getUniqueElements(selectedNodes)
+  void selectedNodes.map(getSelectionVersion).join('|')
 
   useLayoutEffect(() => {
     const nextSelection = selectedElements.flatMap((element) => {

@@ -12,7 +12,7 @@ import { SvgDefinitions } from './SvgDefinitions'
 interface LayerRendererProps {
   canMoveLayers: boolean
   document: EditorDocument
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePointerDown: (
     node: EditorShape,
     event: ReactPointerEvent<SVGGElement>,

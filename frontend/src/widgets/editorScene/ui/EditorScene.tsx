@@ -10,7 +10,7 @@ interface EditorSceneProps {
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -18,6 +18,7 @@ interface EditorSceneProps {
   onZoomChange: (zoom: number) => number
   renderVersion: number
   selectedNode: EditorNode | null
+  selectedNodes: EditorNode[]
   viewportOffset: ViewportOffset
   zoom: number
 }
@@ -35,6 +36,7 @@ export function EditorScene({
   onZoomChange,
   renderVersion,
   selectedNode,
+  selectedNodes,
   viewportOffset,
   zoom,
 }: EditorSceneProps) {
@@ -53,6 +55,7 @@ export function EditorScene({
         onZoomChange={onZoomChange}
         renderVersion={renderVersion}
         selectedNode={selectedNode}
+        selectedNodes={selectedNodes}
         viewportOffset={viewportOffset}
         zoom={zoom}
       />

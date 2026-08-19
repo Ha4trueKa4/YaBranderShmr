@@ -23,13 +23,14 @@ interface SceneFrameProps {
   isReadOnly: boolean
   onClearSelection: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
   renderVersion: number
   selectedNode: EditorNode | null
+  selectedNodes: EditorNode[]
   viewportOffset: ViewportOffset
   zoom: number
 }
@@ -47,6 +48,7 @@ export function SceneFrame({
   onZoomChange,
   renderVersion,
   selectedNode,
+  selectedNodes,
   viewportOffset,
   zoom,
 }: SceneFrameProps) {
@@ -67,6 +69,7 @@ export function SceneFrame({
     onShapePositionChange,
     onTextPositionChange,
     selectedNode,
+    selectedNodes,
   })
   const getEditableElement = useCallback(
     (nodeId: string) => editableElementsReference.current.get(nodeId),
@@ -185,7 +188,7 @@ export function SceneFrame({
                   canvasHeight={document.height}
                   canvasWidth={document.width}
                   getEditableElement={getEditableElement}
-                  selectedNode={selectedNode}
+                  selectedNodes={selectedNodes}
                 />
                 <TransformHandles />
               </>

@@ -9,26 +9,30 @@ import {
   useCallback,
   useRef,
 } from 'react'
+
 import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
   isReadOnly: boolean
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   selectedNode: EditorNode | null
+  selectedNodes: EditorNode[]
 }
 
 type PointerPosition = { x: number; y: number }
-
-type DragState = {
+type DragTarget = {
   elementType: 'group' | 'shape' | 'text'
   nodeId: string
+  startPosition: PointerPosition
+}
+type DragState = {
   pointerId: number
   startPointerPosition: PointerPosition
-  startTransformPosition: PointerPosition
+  targets: DragTarget[]
 }
 
 function roundCoordinate(value: number) {
@@ -61,6 +65,24 @@ function isGroupDescendant(group: EditorGroup, nodeId: string): boolean {
   )
 }
 
+function toDragTarget(
+  node: EditorShape | EditorText | EditorGroup,
+): DragTarget {
+  if (node.type === 'text') {
+    return {
+      elementType: 'text',
+      nodeId: node.id,
+      startPosition: { x: node.x, y: node.y },
+    }
+  }
+
+  return {
+    elementType: node.type,
+    nodeId: node.id,
+    startPosition: { x: node.transform.x, y: node.transform.y },
+  }
+}
+
 export function useLayerDrag({
   activeTool,
   isReadOnly,
@@ -69,24 +91,26 @@ export function useLayerDrag({
   onShapePositionChange,
   onTextPositionChange,
   selectedNode,
+  selectedNodes,
 }: UseLayerDragParams) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
 
   const startDrag = useCallback(
-    (
-      node: EditorShape | EditorText,
-      elementType: DragState['elementType'],
-      startTransformPosition: PointerPosition,
-      event: ReactPointerEvent<SVGGElement>,
-    ) => {
-      if (isReadOnly || event.button !== 0) {
+    (node: EditorShape | EditorText, event: ReactPointerEvent<SVGGElement>) => {
+      if (isReadOnly || event.button !== 0 || activeTool !== 'select') {
+        return
+      }
+
+      if (event.shiftKey) {
+        onSelectNode(node.id, true)
+
         return
       }
 
       const svg = svgReference.current
 
-      if (activeTool !== 'select' || !svg) {
+      if (!svg) {
         return
       }
 
@@ -95,14 +119,27 @@ export function useLayerDrag({
         isGroupDescendant(selectedNode, node.id)
           ? selectedNode
           : null
-      const dragTarget = selectedGroup ?? node
+      const dragTargets = selectedGroup
+        ? [selectedGroup]
+        : selectedNodes.some((selected) => selected.id === node.id)
+          ? selectedNodes.filter(
+              (selected): selected is EditorShape | EditorText =>
+                selected.type === 'shape' || selected.type === 'text',
+            )
+          : [node]
 
-      if (dragTarget.isLocked) {
+      if (
+        dragTargets.length === 0 ||
+        dragTargets.some((target) => target.isLocked)
+      ) {
         return
       }
 
-      if (!selectedGroup) {
-        onSelectNode(node.id)
+      if (
+        !selectedGroup &&
+        !selectedNodes.some((selected) => selected.id === node.id)
+      ) {
+        onSelectNode(node.id, false)
       }
 
       const pointerPosition = getSvgPointerPosition(
@@ -118,33 +155,24 @@ export function useLayerDrag({
       event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       dragStateReference.current = {
-        elementType: selectedGroup ? 'group' : elementType,
-        nodeId: dragTarget.id,
         pointerId: event.pointerId,
         startPointerPosition: pointerPosition,
-        startTransformPosition: selectedGroup
-          ? { x: selectedGroup.transform.x, y: selectedGroup.transform.y }
-          : startTransformPosition,
+        targets: dragTargets.map(toDragTarget),
       }
     },
-    [activeTool, isReadOnly, onSelectNode, selectedNode],
+    [activeTool, isReadOnly, onSelectNode, selectedNode, selectedNodes],
   )
 
   const onShapePointerDown = useCallback(
     (node: EditorShape, event: ReactPointerEvent<SVGGElement>) => {
-      startDrag(
-        node,
-        'shape',
-        { x: node.transform.x, y: node.transform.y },
-        event,
-      )
+      startDrag(node, event)
     },
     [startDrag],
   )
 
   const onTextPointerDown = useCallback(
     (node: EditorText, event: ReactPointerEvent<SVGGElement>) => {
-      startDrag(node, 'text', { x: node.x, y: node.y }, event)
+      startDrag(node, event)
     },
     [startDrag],
   )
@@ -169,30 +197,21 @@ export function useLayerDrag({
       }
 
       event.preventDefault()
-      const x = roundCoordinate(
-        dragState.startTransformPosition.x +
-          pointerPosition.x -
-          dragState.startPointerPosition.x,
-      )
-      const y = roundCoordinate(
-        dragState.startTransformPosition.y +
-          pointerPosition.y -
-          dragState.startPointerPosition.y,
-      )
+      const offsetX = pointerPosition.x - dragState.startPointerPosition.x
+      const offsetY = pointerPosition.y - dragState.startPointerPosition.y
 
-      if (dragState.elementType === 'shape') {
-        onShapePositionChange(dragState.nodeId, x, y)
+      for (const target of dragState.targets) {
+        const x = roundCoordinate(target.startPosition.x + offsetX)
+        const y = roundCoordinate(target.startPosition.y + offsetY)
 
-        return
+        if (target.elementType === 'shape') {
+          onShapePositionChange(target.nodeId, x, y)
+        } else if (target.elementType === 'text') {
+          onTextPositionChange(target.nodeId, x, y)
+        } else {
+          onGroupPositionChange(target.nodeId, x, y)
+        }
       }
-
-      if (dragState.elementType === 'group') {
-        onGroupPositionChange(dragState.nodeId, x, y)
-
-        return
-      }
-
-      onTextPositionChange(dragState.nodeId, x, y)
     },
     [onGroupPositionChange, onShapePositionChange, onTextPositionChange],
   )

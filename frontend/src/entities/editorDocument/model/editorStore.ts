@@ -16,6 +16,7 @@ export class EditorStore {
   document: EditorDocument
   expandedGroupIds: Set<string>
   selectedNodeId: string | null
+  selectedNodeIds: Set<string>
   zoom = 1
 
   constructor(
@@ -26,6 +27,7 @@ export class EditorStore {
     this.document = document
     this.expandedGroupIds = new Set(expandedGroupIds)
     this.selectedNodeId = selectedNodeId
+    this.selectedNodeIds = new Set(selectedNodeId ? [selectedNodeId] : [])
 
     makeAutoObservable(this, {}, { autoBind: true })
   }
@@ -34,8 +36,19 @@ export class EditorStore {
     return findNode(this.document.layers, this.selectedNodeId)
   }
 
+  get selectedNodes(): EditorNode[] {
+    return [...this.selectedNodeIds]
+      .map((nodeId) => findNode(this.document.layers, nodeId))
+      .filter((node): node is EditorNode => node !== null)
+  }
+
   setSelectedNode(nodeId: string | null) {
     this.selectedNodeId = nodeId
+    this.selectedNodeIds.clear()
+
+    if (nodeId) {
+      this.selectedNodeIds.add(nodeId)
+    }
 
     if (!nodeId) {
       return
@@ -45,6 +58,34 @@ export class EditorStore {
       []) {
       this.expandedGroupIds.add(groupId)
     }
+  }
+
+  selectNode(nodeId: string, isMultiSelect = false) {
+    const node = findNode(this.document.layers, nodeId)
+
+    if (!isMultiSelect || node?.type === 'group' || node?.type === 'raw') {
+      this.setSelectedNode(nodeId)
+
+      return
+    }
+
+    if (
+      this.selectedNodes.some((selectedNode) => selectedNode.type === 'group')
+    ) {
+      this.setSelectedNode(nodeId)
+
+      return
+    }
+
+    if (this.selectedNodeIds.has(nodeId)) {
+      this.selectedNodeIds.delete(nodeId)
+      this.selectedNodeId = [...this.selectedNodeIds].at(-1) ?? null
+
+      return
+    }
+
+    this.selectedNodeIds.add(nodeId)
+    this.selectedNodeId = nodeId
   }
 
   setNodeVisibility(nodeId: string, isVisible: boolean) {
@@ -65,39 +106,39 @@ export class EditorStore {
     const wasDeleted = removeNode(this.document.layers, selectedNode.id)
 
     if (wasDeleted) {
-      this.selectedNodeId = null
+      this.setSelectedNode(null)
     }
 
     return wasDeleted
   }
 
   moveSelectedNode(offsetX: number, offsetY: number): boolean {
-    const selectedNode = this.selectedNode
+    const selectedNodes = this.selectedNodes
 
     if (
-      !selectedNode ||
-      selectedNode.isLocked ||
+      selectedNodes.length === 0 ||
+      selectedNodes.some((node) => node.isLocked) ||
       !Number.isFinite(offsetX) ||
       !Number.isFinite(offsetY)
     ) {
       return false
     }
 
-    if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
-      selectedNode.transform.x += offsetX
-      selectedNode.transform.y += offsetY
+    for (const selectedNode of selectedNodes) {
+      if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
+        selectedNode.transform.x += offsetX
+        selectedNode.transform.y += offsetY
 
-      return true
+        continue
+      }
+
+      if (selectedNode.type === 'text') {
+        selectedNode.x += offsetX
+        selectedNode.y += offsetY
+      }
     }
 
-    if (selectedNode.type === 'text') {
-      selectedNode.x += offsetX
-      selectedNode.y += offsetY
-
-      return true
-    }
-
-    return false
+    return true
   }
 
   setShapeFillColor(nodeId: string, color: string) {

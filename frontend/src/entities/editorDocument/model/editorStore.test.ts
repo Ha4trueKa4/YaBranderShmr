@@ -100,6 +100,20 @@ describe('EditorStore selection', () => {
     expect(store.isGroupExpanded('taxi')).toBe(false)
   })
 
+  it('adds and removes editable nodes from the selection', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.selectNode('wheel')
+    store.selectNode('title', true)
+
+    expect([...store.selectedNodeIds]).toEqual(['wheel', 'title'])
+    expect(store.selectedNode).toMatchObject({ id: 'title' })
+
+    store.selectNode('wheel', true)
+
+    expect([...store.selectedNodeIds]).toEqual(['title'])
+  })
+
   it('toggles visibility without changing a child node state', () => {
     const store = new EditorStore(document)
 
@@ -226,6 +240,19 @@ describe('EditorStore selection', () => {
 
     expect(store.moveSelectedNode(1, -1)).toBe(true)
     expect(store.selectedNode).toMatchObject({ x: 51, y: 19, type: 'text' })
+  })
+
+  it('moves all selected editable nodes by the given offset', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.selectNode('wheel')
+    store.selectNode('title', true)
+
+    expect(store.moveSelectedNode(4, -2)).toBe(true)
+    expect(store.selectedNodes).toMatchObject([
+      { id: 'wheel', transform: { x: 4, y: -2 } },
+      { id: 'title', x: 54, y: 18 },
+    ])
   })
 
   it('does not move a missing or locked selection', () => {

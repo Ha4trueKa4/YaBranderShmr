@@ -13,7 +13,7 @@ import { TextLayer } from './TextLayer'
 interface LayerNodeProps {
   canMoveLayers: boolean
   node: EditorNode
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePointerDown: (
     node: EditorShape,
     event: ReactPointerEvent<SVGGElement>,

@@ -103,8 +103,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setSceneRenderVersion((version) => version + 1)
   }
 
-  function handleSceneSelectNode(nodeId: string) {
-    editorStore.setSelectedNode(nodeId)
+  function handleSceneSelectNode(nodeId: string, isMultiSelect: boolean) {
+    editorStore.selectNode(nodeId, isMultiSelect)
   }
 
   const handleDeleteSelection = useCallback(() => {
@@ -171,6 +171,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
+      selectedNodes={editorStore.selectedNodes}
       viewportOffset={viewportOffset}
       zoom={zoom}
     />
@@ -209,10 +210,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             <LayersPanel
               expandedGroupIds={editorStore.expandedGroupIds}
               nodes={editorStore.document.layers}
-              onSelectNode={editorStore.setSelectedNode}
+              onSelectNode={editorStore.selectNode}
               onToggleGroup={editorStore.toggleGroup}
               onToggleVisibility={handleToggleVisibility}
-              selectedNodeId={editorStore.selectedNodeId}
+              selectedNodeIds={editorStore.selectedNodeIds}
             />
           }
           scene={scene}
