@@ -6,7 +6,8 @@
   .layout {
     display: grid;
     grid-template-rows: calc(4.5rem + env(safe-area-inset-top)) minmax(0, 1fr) auto auto;
-    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
     background: var(--color-surface);
   }
 
