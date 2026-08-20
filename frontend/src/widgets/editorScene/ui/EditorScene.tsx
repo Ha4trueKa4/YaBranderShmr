@@ -7,6 +7,7 @@ import { SceneFrame } from './sceneFrame/SceneFrame'
 
 interface EditorSceneProps {
   activeTool: CanvasTool
+  constrainZoom: (zoom: number) => number
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
@@ -25,6 +26,7 @@ interface EditorSceneProps {
 
 export function EditorScene({
   activeTool,
+  constrainZoom,
   document,
   isReadOnly,
   onClearSelection,
@@ -44,6 +46,7 @@ export function EditorScene({
     <section className={styles.scene}>
       <SceneFrame
         activeTool={activeTool}
+        constrainZoom={constrainZoom}
         document={document}
         isReadOnly={isReadOnly}
         onClearSelection={onClearSelection}

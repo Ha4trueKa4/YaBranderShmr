@@ -1,8 +1,15 @@
-import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
+import {
+  type MutableRefObject,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from 'react'
 import type { ViewportOffset } from './viewportOffset'
 
 interface UseCanvasWheelParams {
   constrainOffset: (offset: ViewportOffset, zoom: number) => ViewportOffset
+  constrainZoom: (zoom: number) => number
   offset: ViewportOffset
   onOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
@@ -48,6 +55,7 @@ function isMouseWheelZoom(event: WheelEvent) {
 export function useCanvasWheel({
   isNativeGestureActiveReference,
   constrainOffset,
+  constrainZoom,
   offset,
   onOffsetChange,
   onZoomChange,
@@ -56,6 +64,7 @@ export function useCanvasWheel({
 }: UseCanvasWheelParams) {
   const latestStateReference = useRef({
     constrainOffset,
+    constrainZoom,
     offset,
     onOffsetChange,
     onZoomChange,
@@ -64,16 +73,25 @@ export function useCanvasWheel({
   const animationFrameReference = useRef<number | null>(null)
   const interactionModeReference = useRef<WheelInteractionMode | null>(null)
   const interactionTimeoutReference = useRef<number | null>(null)
+  const pendingZoomReference = useRef<number | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     latestStateReference.current = {
       offset,
       constrainOffset,
+      constrainZoom,
       onOffsetChange,
       onZoomChange,
       zoom,
     }
-  }, [constrainOffset, offset, onOffsetChange, onZoomChange, zoom])
+  }, [
+    constrainOffset,
+    constrainZoom,
+    offset,
+    onOffsetChange,
+    onZoomChange,
+    zoom,
+  ])
 
   useEffect(() => {
     const viewport = viewportReference.current
@@ -97,8 +115,13 @@ export function useCanvasWheel({
       }, WHEEL_INTERACTION_TIMEOUT)
     }
 
-    function scheduleOffsetChange(offset: ViewportOffset) {
+    function scheduleViewportChange(offset: ViewportOffset, nextZoom?: number) {
       latestStateReference.current.offset = offset
+
+      if (nextZoom !== undefined) {
+        latestStateReference.current.zoom = nextZoom
+        pendingZoomReference.current = nextZoom
+      }
 
       if (animationFrameReference.current !== null) {
         return
@@ -106,6 +129,14 @@ export function useCanvasWheel({
 
       animationFrameReference.current = requestAnimationFrame(() => {
         animationFrameReference.current = null
+        const pendingZoom = pendingZoomReference.current
+
+        pendingZoomReference.current = null
+
+        if (pendingZoom !== null) {
+          latestStateReference.current.onZoomChange(pendingZoom)
+        }
+
         latestStateReference.current.onOffsetChange(
           latestStateReference.current.offset,
         )
@@ -119,8 +150,7 @@ export function useCanvasWheel({
         return
       }
 
-      const { offset, onOffsetChange, onZoomChange, zoom } =
-        latestStateReference.current
+      const { constrainZoom, offset, zoom } = latestStateReference.current
       const deltaY = getWheelDeltaY(event, viewportElement)
 
       const isZoomInteraction =
@@ -129,7 +159,7 @@ export function useCanvasWheel({
       setInteractionMode(isZoomInteraction ? 'zoom' : 'pan')
 
       if (!isZoomInteraction) {
-        scheduleOffsetChange(
+        scheduleViewportChange(
           latestStateReference.current.constrainOffset(
             {
               x: offset.x - event.deltaX,
@@ -142,7 +172,9 @@ export function useCanvasWheel({
         return
       }
 
-      const nextZoom = onZoomChange(zoom * Math.exp(-deltaY * ZOOM_SENSITIVITY))
+      const nextZoom = constrainZoom(
+        zoom * Math.exp(-deltaY * ZOOM_SENSITIVITY),
+      )
 
       if (nextZoom === zoom) {
         return
@@ -161,12 +193,7 @@ export function useCanvasWheel({
         nextZoom,
       )
 
-      latestStateReference.current = {
-        ...latestStateReference.current,
-        offset: nextOffset,
-        zoom: nextZoom,
-      }
-      onOffsetChange(nextOffset)
+      scheduleViewportChange(nextOffset, nextZoom)
     }
 
     viewportElement.addEventListener('wheel', handleWheel, { passive: false })
@@ -177,6 +204,8 @@ export function useCanvasWheel({
       if (animationFrameReference.current !== null) {
         cancelAnimationFrame(animationFrameReference.current)
       }
+
+      pendingZoomReference.current = null
 
       if (interactionTimeoutReference.current !== null) {
         clearTimeout(interactionTimeoutReference.current)

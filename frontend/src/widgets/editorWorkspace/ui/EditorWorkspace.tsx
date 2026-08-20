@@ -85,8 +85,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setZoom((currentZoom) => Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM))
   }
 
+  function constrainZoom(nextZoom: number) {
+    return Math.min(Math.max(nextZoom, MIN_ZOOM), MAX_ZOOM)
+  }
+
   function handleZoomChange(nextZoom: number) {
-    const constrainedZoom = Math.min(Math.max(nextZoom, MIN_ZOOM), MAX_ZOOM)
+    const constrainedZoom = constrainZoom(nextZoom)
 
     setZoom(constrainedZoom)
 
@@ -177,6 +181,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const scene = (
     <EditorScene
       activeTool={activeTool}
+      constrainZoom={constrainZoom}
       document={editorStore.document}
       isReadOnly={!canEdit}
       onClearSelection={() => editorStore.setSelectedNode(null)}

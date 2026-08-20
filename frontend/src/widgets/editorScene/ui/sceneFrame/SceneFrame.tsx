@@ -19,6 +19,7 @@ import styles from './SceneFrame.module.css'
 
 interface SceneFrameProps {
   activeTool: CanvasTool
+  constrainZoom: (zoom: number) => number
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
@@ -37,6 +38,7 @@ interface SceneFrameProps {
 
 export function SceneFrame({
   activeTool,
+  constrainZoom,
   document,
   isReadOnly,
   onClearSelection,
@@ -116,6 +118,7 @@ export function SceneFrame({
   })
   useCanvasWheel({
     constrainOffset,
+    constrainZoom,
     isNativeGestureActiveReference,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
