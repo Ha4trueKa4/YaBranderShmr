@@ -4,8 +4,22 @@ actor ChatCache {
     static let shared = ChatCache()
 
     struct PendingMessage: Codable, Equatable {
+        let id: UUID
         let text: String
         let createdAt: Date
+
+        init(id: UUID, text: String, createdAt: Date) {
+            self.id = id
+            self.text = text
+            self.createdAt = createdAt
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+            text = try container.decode(String.self, forKey: .text)
+            createdAt = try container.decode(Date.self, forKey: .createdAt)
+        }
     }
 
     struct CachedChat: Codable {

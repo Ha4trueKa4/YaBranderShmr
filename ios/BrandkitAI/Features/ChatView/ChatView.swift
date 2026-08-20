@@ -307,6 +307,9 @@ struct ChatView: View {
             }
         }
         .background(Color.background)
+        .onChange(of: messageText) {
+            viewModel.clearSendError()
+        }
     }
 
     private var canSendMessage: Bool {

@@ -140,7 +140,11 @@ final class ChatViewModel {
             isGenerating = false
             if shouldKeepPending(after: error) {
                 markMessagePending(id: chatMessage.id)
-                await queuePendingMessage(text, createdAt: chatMessage.date)
+                await queuePendingMessage(
+                    id: chatMessage.id,
+                    text: text,
+                    createdAt: chatMessage.date
+                )
                 sendErrorMessage = "Message is pending and will be sent when the connection recovers."
             } else {
                 markMessageFailed(id: chatMessage.id)
@@ -158,6 +162,7 @@ final class ChatViewModel {
             let prompt = pendingMessages[0]
             guard prompt.text.utf8.count <= Self.maxPromptUTF8Length else {
                 pendingMessages.removeFirst()
+                pendingCount = pendingMessages.count
                 markPendingMessageFailed(prompt)
                 continue
             }
@@ -170,18 +175,24 @@ final class ChatViewModel {
                     break
                 }
                 pendingMessages.removeFirst()
+                pendingCount = pendingMessages.count
                 markPendingMessageFailed(prompt)
                 sendErrorMessage = failureMessage(for: error)
                 continue
             }
 
             pendingMessages.removeFirst()
-            markPendingMessageSent(prompt)
+            pendingCount = pendingMessages.count
             sendErrorMessage = nil
-            try? await refreshChatAfterGenerate(generatedURL: generatedURL)
+            do {
+                try await refreshChatAfterGenerate(generatedURL: generatedURL)
+            } catch {
+                // Generation succeeded, so the item must not return to the queue.
+                // Keep the local bubble as sent when refreshing remote history fails.
+                markPendingMessageSent(prompt)
+            }
         }
 
-        pendingCount = pendingMessages.count
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
     }
 
@@ -198,6 +209,10 @@ final class ChatViewModel {
         } catch {
             privacy = previousPrivacy
         }
+    }
+
+    func clearSendError() {
+        sendErrorMessage = nil
     }
 
     func dateTitle(for date: Date) -> String {
@@ -249,6 +264,7 @@ final class ChatViewModel {
         pendingCount = messages.count
         for pending in messages {
             appendMessage(ChatMessage(
+                id: pending.id,
                 type: .user,
                 text: pending.text,
                 date: pending.createdAt,
@@ -272,17 +288,11 @@ final class ChatViewModel {
     }
 
     private func markPendingMessageFailed(_ pending: ChatCache.PendingMessage) {
-        guard let message = messages.first(where: {
-            $0.type == .user && $0.isPending && $0.text == pending.text
-        }) else { return }
-        markMessageFailed(id: message.id)
+        markMessageFailed(id: pending.id)
     }
 
     private func markPendingMessageSent(_ pending: ChatCache.PendingMessage) {
-        guard let message = messages.first(where: {
-            $0.type == .user && $0.isPending && $0.text == pending.text
-        }) else { return }
-        updateMessage(id: message.id) { message in
+        updateMessage(id: pending.id) { message in
             message.isPending = false
             message.isFailed = false
         }
@@ -297,8 +307,8 @@ final class ChatViewModel {
         sections = makeSections(from: messages)
     }
 
-    private func queuePendingMessage(_ text: String, createdAt: Date) async {
-        pendingMessages.append(ChatCache.PendingMessage(text: text, createdAt: createdAt))
+    private func queuePendingMessage(id: ChatMessage.ID, text: String, createdAt: Date) async {
+        pendingMessages.append(ChatCache.PendingMessage(id: id, text: text, createdAt: createdAt))
         pendingCount = pendingMessages.count
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
     }
@@ -370,11 +380,10 @@ final class ChatViewModel {
 
     private func mergePendingMessages() {
         for pending in pendingMessages {
-            let alreadyPresent = messages.contains { message in
-                message.type == .user && message.text == pending.text
-            }
+            let alreadyPresent = messages.contains { $0.id == pending.id }
             if !alreadyPresent {
                 appendMessage(ChatMessage(
+                    id: pending.id,
                     type: .user,
                     text: pending.text,
                     date: pending.createdAt,
