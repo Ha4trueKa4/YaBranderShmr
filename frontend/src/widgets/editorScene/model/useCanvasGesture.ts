@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from 'react'
+import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
 import type { ViewportOffset } from './viewportOffset'
 
 interface GestureEvent extends Event {
@@ -12,6 +12,7 @@ interface UseCanvasGestureParams {
   offset: ViewportOffset
   onOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
+  isNativeGestureActiveReference: MutableRefObject<boolean>
   viewportReference: RefObject<HTMLDivElement | null>
   zoom: number
 }
@@ -26,7 +27,15 @@ interface GestureState {
 const GESTURE_ZOOM_SENSITIVITY = 1.5
 const PINCH_SCALE_THRESHOLD = 0.05
 
+function isSafariBrowser() {
+  return (
+    /Safari/.test(navigator.userAgent) &&
+    !/Chrome|Chromium|CriOS|Edg|OPR|YaBrowser/.test(navigator.userAgent)
+  )
+}
+
 export function useCanvasGesture({
+  isNativeGestureActiveReference,
   constrainOffset,
   offset,
   onOffsetChange,
@@ -54,6 +63,10 @@ export function useCanvasGesture({
   }, [constrainOffset, offset, onOffsetChange, onZoomChange, zoom])
 
   useEffect(() => {
+    if (!isSafariBrowser()) {
+      return
+    }
+
     const viewport = viewportReference.current
 
     if (!viewport) {
@@ -96,6 +109,7 @@ export function useCanvasGesture({
       }
 
       gestureState.isZooming = true
+      isNativeGestureActiveReference.current = true
       event.preventDefault()
       const nextZoom = onZoomChange(
         gestureState.zoom * gestureScale ** GESTURE_ZOOM_SENSITIVITY,
@@ -124,6 +138,7 @@ export function useCanvasGesture({
 
     function handleGestureEnd() {
       gestureStateReference.current = null
+      isNativeGestureActiveReference.current = false
     }
 
     viewportElement.addEventListener('gesturestart', handleGestureStart, {
@@ -139,5 +154,5 @@ export function useCanvasGesture({
       viewportElement.removeEventListener('gesturechange', handleGestureChange)
       viewportElement.removeEventListener('gestureend', handleGestureEnd)
     }
-  }, [viewportReference])
+  }, [isNativeGestureActiveReference, viewportReference])
 }
