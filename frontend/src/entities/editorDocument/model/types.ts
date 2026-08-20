@@ -158,5 +158,7 @@ export interface EditorDocument {
   definitions?: EditorDefinitions
   width: number
   height: number
+  viewBoxX?: number
+  viewBoxY?: number
   layers: EditorNode[]
 }

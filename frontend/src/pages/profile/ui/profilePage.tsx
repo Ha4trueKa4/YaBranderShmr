@@ -4,6 +4,7 @@ import {
   useDeleteProjectMutation,
   userProfileQueryKey,
   useUpdateProjectMetadataMutation,
+  useUpdateUserProfileMutation,
   useUserProfileQuery,
 } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
@@ -45,11 +46,16 @@ export function ProfilePage() {
     useDeleteProjectMutation()
   const { mutateAsync: updateProjectMetadata } =
     useUpdateProjectMetadataMutation()
+  const {
+    isPending: isUpdatingProfilePending,
+    mutateAsync: updateUserProfile,
+  } = useUpdateUserProfileMutation()
 
   if (!session) {
     return <ProfileUnavailable />
   }
 
+  const currentSession = session
   const projects = userProfile?.projects ?? []
 
   const profile: ProfileHeaderProfile = {
@@ -87,9 +93,28 @@ export function ProfilePage() {
     document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  function handleEditProfile(name: string) {
-    setProfileName(name)
-    setEditProfileModalOpen(false)
+  async function handleEditProfile(name: string) {
+    try {
+      const updatedProfile = await updateUserProfile({
+        nickname: name,
+        userId,
+      })
+      const nickname = updatedProfile.nickname
+
+      setProfileName(nickname)
+      authStore.signIn({
+        ...currentSession,
+        user: { ...currentSession.user, nickname },
+      })
+      setEditProfileModalOpen(false)
+      await queryClient.invalidateQueries({
+        queryKey: userProfileQueryKey(userId),
+      })
+      toast.info(t('Profile updated.'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+      throw error
+    }
   }
 
   async function handleDeleteProject(projectId: string) {
@@ -164,6 +189,7 @@ export function ProfilePage() {
         </AsyncState>
       </main>
       <EditProfileModal
+        isSubmitting={isUpdatingProfilePending}
         isOpen={isEditProfileModalOpen}
         name={profileName}
         onClose={() => setEditProfileModalOpen(false)}

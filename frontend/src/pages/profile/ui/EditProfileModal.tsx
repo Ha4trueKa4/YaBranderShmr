@@ -10,13 +10,15 @@ import styles from './EditProfileModal.module.css'
 type EditProfileFormValues = { name: string }
 
 interface EditProfileModalProps {
+  isSubmitting: boolean
   isOpen: boolean
   name: string
   onClose: () => void
-  onSubmit: (name: string) => void
+  onSubmit: (name: string) => Promise<void>
 }
 
 export function EditProfileModal({
+  isSubmitting,
   isOpen,
   name,
   onClose,
@@ -25,7 +27,11 @@ export function EditProfileModal({
   const { t } = useTranslation()
   const nameInputId = useId()
   const editProfileFormSchema = z.object({
-    name: z.string().trim().nonempty(t('Enter a display name.')),
+    name: z
+      .string()
+      .trim()
+      .min(3, t('Display name must be 3-64 characters.'))
+      .max(64, t('Display name must be 3-64 characters.')),
   })
   const form = useForm<EditProfileFormValues>({
     defaultValues: { name },
@@ -51,8 +57,8 @@ export function EditProfileModal({
           <h2 className={styles.title}>{t('Edit profile')}</h2>
           <form
             className={styles.form}
-            onSubmit={form.handleSubmit(({ name: nextName }) => {
-              onSubmit(nextName)
+            onSubmit={form.handleSubmit(async ({ name: nextName }) => {
+              await onSubmit(nextName)
             })}
           >
             <FormField
@@ -68,10 +74,16 @@ export function EditProfileModal({
               />
             </FormField>
             <div className={styles.actions}>
-              <Button onClick={onClose} variant="secondary">
+              <Button
+                disabled={isSubmitting}
+                onClick={onClose}
+                variant="secondary"
+              >
                 {t('Cancel')}
               </Button>
-              <Button type="submit">{t('Save changes')}</Button>
+              <Button disabled={isSubmitting} type="submit">
+                {t('Save changes')}
+              </Button>
             </div>
           </form>
         </section>

@@ -47,7 +47,7 @@ export function StrokeProperty({
     return (
       <div className={styles.field}>
         <span>{t('Stroke')}</span>
-        <Button onClick={onAdd} variant="secondary">
+        <Button onClick={onAdd} size="sm" variant="secondary">
           {t('Add outline')}
         </Button>
       </div>
@@ -73,7 +73,7 @@ export function StrokeProperty({
         </div>
         <div className={styles.field}>
           <span>{t('Outline')}</span>
-          <Button onClick={onRemove} variant="secondary">
+          <Button onClick={onRemove} size="sm" variant="secondary">
             {t('Remove')}
           </Button>
         </div>

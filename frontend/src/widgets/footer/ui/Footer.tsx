@@ -17,7 +17,7 @@ export function Footer() {
   return (
     <footer className={styles.footer}>
       <div className={styles.content}>
-        <span className={styles.copyright}>© 2026 Brandkit AI</span>
+        <span className={styles.copyright}>© 2026 Ya Brander Y&&Y</span>
         <div className={styles.languageControl}>
           <Globe2 size={16} />
           <span>{t('Language')}</span>

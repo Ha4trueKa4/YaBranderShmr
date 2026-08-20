@@ -58,6 +58,10 @@ export function SceneFrame({
   const frameReference = useRef<HTMLDivElement>(null)
   const isNativeGestureActiveReference = useRef(false)
   const viewportReference = useRef<HTMLDivElement>(null)
+  const getEditableElement = useCallback(
+    (nodeId: string) => editableElementsReference.current.get(nodeId),
+    [],
+  )
   const {
     onPointerMove,
     onPointerUp,
@@ -66,6 +70,7 @@ export function SceneFrame({
     svgReference,
   } = useLayerDrag({
     activeTool,
+    getEditableElement,
     isReadOnly,
     onGroupPositionChange,
     onSelectNode,
@@ -74,10 +79,6 @@ export function SceneFrame({
     selectedNode,
     selectedNodes,
   })
-  const getEditableElement = useCallback(
-    (nodeId: string) => editableElementsReference.current.get(nodeId),
-    [],
-  )
 
   const registerEditableElement = useCallback(
     (nodeId: string): RefCallback<SVGGElement> =>
@@ -178,7 +179,7 @@ export function SceneFrame({
           <svg
             className={styles.canvas}
             ref={svgReference}
-            viewBox={`0 0 ${document.width} ${document.height}`}
+            viewBox={`${document.viewBoxX ?? 0} ${document.viewBoxY ?? 0} ${document.width} ${document.height}`}
             xmlns="http://www.w3.org/2000/svg"
           >
             <LayerRenderer
@@ -197,6 +198,8 @@ export function SceneFrame({
                 <SelectionOverlay
                   canvasHeight={document.height}
                   canvasWidth={document.width}
+                  canvasX={document.viewBoxX ?? 0}
+                  canvasY={document.viewBoxY ?? 0}
                   getEditableElement={getEditableElement}
                   selectedNodes={selectedNodes}
                 />

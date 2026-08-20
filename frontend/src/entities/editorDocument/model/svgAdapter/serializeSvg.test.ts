@@ -58,4 +58,14 @@ describe('serializeSvg', () => {
     expect(serialized).toContain('<tspan dy="26" x="50">Second line</tspan>')
     expect(parseSvg(serialized)).toEqual(document)
   })
+
+  it('preserves the viewBox origin when serializing', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">
+        <text id="title" x="0" y="200">A</text>
+      </svg>
+    `)
+
+    expect(serializeSvg(document)).toContain('viewBox="-250 100 500 300"')
+  })
 })

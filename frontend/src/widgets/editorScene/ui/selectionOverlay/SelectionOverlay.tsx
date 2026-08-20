@@ -53,14 +53,46 @@ function getSelectedElements(node: EditorNode): EditorElement[] {
 }
 
 function getUniqueElements(nodes: EditorNode[]): EditorElement[] {
+  for (const node of nodes) {
+    getNodeRenderSignature(node)
+  }
+
   const elements = nodes.flatMap(getSelectedElements)
 
   return [...new Map(elements.map((element) => [element.id, element])).values()]
 }
 
+function getNodeRenderSignature(node: EditorNode): string {
+  const transform = [
+    node.transform.x,
+    node.transform.y,
+    node.transform.rotation,
+    node.transform.scaleX,
+    node.transform.scaleY,
+    node.transform.rotationCenter?.x ?? '',
+    node.transform.rotationCenter?.y ?? '',
+  ].join(',')
+
+  if (node.type === 'group') {
+    return `${node.id}:${transform}[${node.children.map(getNodeRenderSignature).join('|')}]`
+  }
+
+  if (node.type === 'text') {
+    return `${node.id}:${transform}:${node.x},${node.y}:${node.text}:${node.style.fontFamily},${node.style.fontSize},${node.style.fontStyle ?? ''},${node.style.fontWeight ?? ''},${node.style.letterSpacing ?? ''}`
+  }
+
+  if (node.type === 'shape') {
+    return `${node.id}:${transform}:${JSON.stringify(node.geometry)}:${node.style.strokeWidth}`
+  }
+
+  return node.id
+}
+
 interface SelectionOverlayProps {
   canvasHeight: number
   canvasWidth: number
+  canvasX: number
+  canvasY: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   selectedNodes: EditorNode[]
 }
@@ -68,6 +100,8 @@ interface SelectionOverlayProps {
 export const SelectionOverlay = observer(function SelectionOverlay({
   canvasHeight,
   canvasWidth,
+  canvasX,
+  canvasY,
   getEditableElement,
   selectedNodes,
 }: SelectionOverlayProps) {
@@ -99,6 +133,8 @@ export const SelectionOverlay = observer(function SelectionOverlay({
       bounds,
       canvasWidth,
       canvasHeight,
+      canvasX,
+      canvasY,
     )
 
     return (

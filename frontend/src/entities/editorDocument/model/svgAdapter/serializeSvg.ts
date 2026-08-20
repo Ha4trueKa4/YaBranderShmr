@@ -213,7 +213,7 @@ function serializeDefinitions(
 export function serializeSvg(document: EditorDocument): string {
   const rootAttributes = serializeAttributes({
     height: document.height,
-    viewBox: `0 0 ${document.width} ${document.height}`,
+    viewBox: `${document.viewBoxX ?? 0} ${document.viewBoxY ?? 0} ${document.width} ${document.height}`,
     width: document.width,
     xmlns: 'http://www.w3.org/2000/svg',
   })

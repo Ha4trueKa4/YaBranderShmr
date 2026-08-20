@@ -2,6 +2,8 @@ import { SvgParseError } from './errors'
 
 export type SvgCanvas = {
   height: number
+  viewBoxX?: number
+  viewBoxY?: number
   width: number
 }
 
@@ -34,5 +36,10 @@ export function parseRoot(root: Element): SvgCanvas {
     throw new SvgParseError('SVG viewBox must contain four finite numbers')
   }
 
-  return { height: values[3], width: values[2] }
+  return {
+    height: values[3],
+    ...(values[0] === 0 ? {} : { viewBoxX: values[0] }),
+    ...(values[1] === 0 ? {} : { viewBoxY: values[1] }),
+    width: values[2],
+  }
 }
