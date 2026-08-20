@@ -162,15 +162,6 @@
   .navigation {
     gap: var(--space-3);
   }
-
-  .projectsLabel {
-    font-size: 0;
-  }
-
-  .projectsLabel::after {
-    content: "Projects";
-    font-size: var(--font-size-body);
-  }
 }
 
 @media (width < 360px) {
