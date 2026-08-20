@@ -14,6 +14,7 @@ import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
+  getEditableElement: (nodeId: string) => SVGGElement | undefined
   isReadOnly: boolean
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
@@ -72,6 +73,39 @@ function hasLockedDescendant(node: EditorGroup): boolean {
   )
 }
 
+function getEditableDescendants(
+  node: EditorNode,
+): (EditorShape | EditorText)[] {
+  if (node.type === 'shape' || node.type === 'text') {
+    return [node]
+  }
+
+  if (node.type === 'group') {
+    return node.children.flatMap(getEditableDescendants)
+  }
+
+  return []
+}
+
+function isPointerWithinElement(
+  element: SVGGElement | undefined,
+  clientX: number,
+  clientY: number,
+) {
+  if (!element) {
+    return false
+  }
+
+  const bounds = element.getBoundingClientRect()
+
+  return (
+    clientX >= bounds.left &&
+    clientX <= bounds.right &&
+    clientY >= bounds.top &&
+    clientY <= bounds.bottom
+  )
+}
+
 function toDragTarget(
   node: EditorShape | EditorText | EditorGroup,
 ): DragTarget {
@@ -92,6 +126,7 @@ function toDragTarget(
 
 export function useLayerDrag({
   activeTool,
+  getEditableElement,
   isReadOnly,
   onGroupPositionChange,
   onSelectNode,
@@ -127,17 +162,35 @@ export function useLayerDrag({
           ? selectedNode
           : null
 
+      const isPointerWithinSelection = selectedNodes
+        .flatMap(getEditableDescendants)
+        .some((selected) =>
+          isPointerWithinElement(
+            getEditableElement(selected.id),
+            event.clientX,
+            event.clientY,
+          ),
+        )
+      const selectedGroupToDrag =
+        selectedGroup ??
+        (isPointerWithinSelection && selectedNode?.type === 'group'
+          ? selectedNode
+          : null)
+      const isSelectedNode = selectedNodes.some(
+        (selected) => selected.id === node.id,
+      )
+
       if (
-        node.isLocked ||
-        selectedGroup?.isLocked ||
-        (selectedGroup && hasLockedDescendant(selectedGroup))
+        (node.isLocked && (isSelectedNode || !isPointerWithinSelection)) ||
+        selectedGroupToDrag?.isLocked ||
+        (selectedGroupToDrag && hasLockedDescendant(selectedGroupToDrag))
       ) {
         return
       }
 
-      const dragTargets = selectedGroup
-        ? [selectedGroup]
-        : selectedNodes.some((selected) => selected.id === node.id)
+      const dragTargets = selectedGroupToDrag
+        ? [selectedGroupToDrag]
+        : isPointerWithinSelection || isSelectedNode
           ? selectedNodes.filter(
               (selected): selected is EditorShape | EditorText =>
                 (selected.type === 'shape' || selected.type === 'text') &&
@@ -150,8 +203,9 @@ export function useLayerDrag({
       }
 
       if (
-        !selectedGroup &&
-        !selectedNodes.some((selected) => selected.id === node.id)
+        !selectedGroupToDrag &&
+        !isPointerWithinSelection &&
+        !isSelectedNode
       ) {
         onSelectNode(node.id, false)
       }
@@ -174,7 +228,14 @@ export function useLayerDrag({
         targets: dragTargets.map(toDragTarget),
       }
     },
-    [activeTool, isReadOnly, onSelectNode, selectedNode, selectedNodes],
+    [
+      activeTool,
+      getEditableElement,
+      isReadOnly,
+      onSelectNode,
+      selectedNode,
+      selectedNodes,
+    ],
   )
 
   const onShapePointerDown = useCallback(
