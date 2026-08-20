@@ -12,6 +12,7 @@ export {
   useSubscribeToUserMutation,
   useUnsubscribeFromUserMutation,
   useUpdateProjectMetadataMutation,
+  useUpdateUserProfileMutation,
   useUserProfileQuery,
   useUserSubscribersQuery,
   useUserSubscriptionsQuery,

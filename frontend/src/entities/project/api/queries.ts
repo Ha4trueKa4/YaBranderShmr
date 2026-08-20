@@ -10,6 +10,10 @@ import { getUserSubscriptions } from './getUserSubscriptions'
 import { subscribeToUser } from './subscribeToUser'
 import { unsubscribeFromUser } from './unsubscribeFromUser'
 import { type UpdateProjectMetadataInput, updateProject } from './updateProject'
+import {
+  type UpdateUserProfileInput,
+  updateUserProfile,
+} from './updateUserProfile'
 
 const projectQueryStaleTime = 60_000
 
@@ -60,6 +64,13 @@ export function useUpdateProjectMetadataMutation() {
   return useMutation({
     mutationKey: ['project', 'update-metadata'],
     mutationFn: (input: UpdateProjectMetadataInput) => updateProject(input),
+  })
+}
+
+export function useUpdateUserProfileMutation() {
+  return useMutation({
+    mutationKey: ['user', 'update-profile'],
+    mutationFn: (input: UpdateUserProfileInput) => updateUserProfile(input),
   })
 }
 
