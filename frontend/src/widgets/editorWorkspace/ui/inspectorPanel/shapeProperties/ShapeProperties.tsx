@@ -44,8 +44,7 @@ export const ShapeProperties = observer(function ShapeProperties({
     fill.type === 'gradient'
       ? definitions?.gradients.find((item) => item.id === fill.gradientId)
       : undefined
-  const isEditableGradient =
-    gradient?.type === 'linearGradient' && gradient.stops.length === 2
+  const isEditableGradient = Boolean(gradient && gradient.stops.length > 0)
   const { t } = useTranslation()
   return (
     <div className={styles.properties}>
@@ -78,7 +77,7 @@ export const ShapeProperties = observer(function ShapeProperties({
         <PropertyField
           label={t('Fill')}
           labelClassName={styles.sectionTitle}
-          value={t('Gradient editing supports two-stop linear gradients')}
+          value={t('Gradient has no editable color stops')}
         />
       ) : (
         <FillProperty
