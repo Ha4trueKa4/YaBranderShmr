@@ -1,6 +1,6 @@
 import type { Paint } from '@entities/editorDocument'
 import { Button, Input } from '@shared/ui'
-
+import { useTranslation } from 'react-i18next'
 import styles from '../Properties.module.css'
 import { FillProperty } from './FillProperty'
 
@@ -27,6 +27,7 @@ export function StrokeProperty({
   stroke,
   strokeWidth,
 }: StrokePropertyProps) {
+  const { t } = useTranslation()
   const color = stroke.type === 'color' ? stroke.value : '#000000'
   const hasStroke = stroke.type !== 'none' && strokeWidth > 0
 
@@ -45,9 +46,9 @@ export function StrokeProperty({
   if (!hasStroke) {
     return (
       <div className={styles.field}>
-        <span>Stroke</span>
+        <span>{t('Stroke')}</span>
         <Button onClick={onAdd} variant="secondary">
-          Add outline
+          {t('Add outline')}
         </Button>
       </div>
     )
@@ -55,10 +56,14 @@ export function StrokeProperty({
 
   return (
     <>
-      <FillProperty fill={color} onFillChange={onColorChange} title="Stroke" />
+      <FillProperty
+        fill={color}
+        onFillChange={onColorChange}
+        title={t('Stroke')}
+      />
       <div className={styles.fieldGrid}>
         <div className={styles.field}>
-          <span>Width</span>
+          <span>{t('Width')}</span>
           <Input
             min="0"
             onChange={(event) => handleWidthChange(event.target.value)}
@@ -67,9 +72,9 @@ export function StrokeProperty({
           />
         </div>
         <div className={styles.field}>
-          <span>Outline</span>
+          <span>{t('Outline')}</span>
           <Button onClick={onRemove} variant="secondary">
-            Remove
+            {t('Remove')}
           </Button>
         </div>
       </div>

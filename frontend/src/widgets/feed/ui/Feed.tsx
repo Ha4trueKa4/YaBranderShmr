@@ -6,11 +6,13 @@ import { AsyncState, Button, Input } from '@shared/ui'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from './Feed.module.css'
 import { type FeedFilters, FeedProjectGrid } from './FeedProjectGrid'
 
 export const Feed = observer(function Feed() {
+  const { t } = useTranslation()
   const isAuthorized = authStore.isAuthorized
   const [scope, setScope] = useState<FeedFilters['scope']>('discover')
   const [searchQuery, setSearchQuery] = useState('')
@@ -38,7 +40,7 @@ export const Feed = observer(function Feed() {
             onClick={() => setScope('discover')}
             type="button"
           >
-            All
+            {t('All')}
           </button>
           {isAuthorized && (
             <button
@@ -49,7 +51,7 @@ export const Feed = observer(function Feed() {
               onClick={() => setScope('following')}
               type="button"
             >
-              Following
+              {t('Following')}
             </button>
           )}
         </div>
@@ -58,14 +60,14 @@ export const Feed = observer(function Feed() {
           className={styles.search}
           leadingContent={<Search size={16} />}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search projects"
+          placeholder={t('Search projects')}
           type="search"
           value={searchQuery}
         />
 
         <Button className={styles.filtersButton} variant="ghost">
           <SlidersHorizontal size={16} />
-          Filters
+          {t('Filters')}
         </Button>
       </div>
 
@@ -88,7 +90,7 @@ export const Feed = observer(function Feed() {
               onClick={() => fetchNextPage()}
               variant="secondary"
             >
-              {isFetchNextPageError ? 'Retry loading' : 'Load more'}
+              {isFetchNextPageError ? t('Retry loading') : t('Load more')}
             </Button>
           </div>
         )}

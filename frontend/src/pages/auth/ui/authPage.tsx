@@ -12,6 +12,7 @@ import type {
 import { useToast } from '@shared/ui'
 import { LoginForm, RegisterForm } from '@widgets'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import heroCanvas from '../assets/heroCanvas.svg'
 import heroLogoShape from '../assets/heroLogoShape.svg'
@@ -33,6 +34,7 @@ export function AuthPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const toast = useToast()
+  const { t } = useTranslation()
   const [activeForm, setActiveForm] = useState<AuthForm>('login')
   const { isPending: isLoggingInPending, mutateAsync: login } =
     useLoginMutation()
@@ -57,7 +59,7 @@ export function AuthPage() {
   async function handleLogin(values: LoginRequest) {
     try {
       const response = await login(values)
-      toast.info('You are signed in.')
+      toast.info(t('You are signed in.'))
       signIn(response)
     } catch (error) {
       handleAuthError(error)
@@ -67,7 +69,7 @@ export function AuthPage() {
   async function handleRegister(values: RegisterRequest) {
     try {
       const response = await register(values)
-      toast.info('Your account has been created.')
+      toast.info(t('Your account has been created.'))
       signIn(response)
     } catch (error) {
       handleAuthError(error)
@@ -77,16 +79,17 @@ export function AuthPage() {
   return (
     <main className={styles.page}>
       <aside className={styles.promoPanel}>
-        <p className={styles.brandName}>Brandkit AI</p>
+        <p className={styles.brandName}>{t('Brandkit AI')}</p>
         <div className={styles.promoContent}>
           <h1 className={styles.promoTitle}>
-            Your next brand
+            {t('Your next brand')}
             <br />
-            starts here.
+            {t('starts here.')}
           </h1>
           <p className={styles.promoDescription}>
-            Turn a prompt into a complete visual identity, then refine it in the
-            editor.
+            {t(
+              'Turn a prompt into a complete visual identity, then refine it in the editor.',
+            )}
           </p>
         </div>
         <div className={styles.brandPreview}>

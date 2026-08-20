@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '../Button'
 import { Portal } from '../Portal'
@@ -35,6 +36,7 @@ export function ImageExportModal({
   onClose,
   onExport,
 }: ImageExportModalProps) {
+  const { t } = useTranslation()
   const [fileType, setFileType] = useState<ImageExportFileType>('png')
   const titleId = useId()
 
@@ -46,7 +48,7 @@ export function ImageExportModal({
     <Portal>
       <div className={styles.overlay}>
         <button
-          aria-label="Close export dialog"
+          aria-label={t('Close export dialog')}
           className={styles.backdrop}
           onClick={onClose}
           type="button"
@@ -57,8 +59,10 @@ export function ImageExportModal({
           className={styles.modal}
           role="dialog"
         >
-          <h2 id={titleId}>Export image</h2>
-          <p className={styles.description}>Choose a file type for export.</p>
+          <h2 id={titleId}>{t('Export image')}</h2>
+          <p className={styles.description}>
+            {t('Choose a file type for export.')}
+          </p>
           <div className={styles.fileTypes}>
             {exportFileTypes.map((type) => (
               <label className={styles.fileType} key={type.extension}>
@@ -71,16 +75,16 @@ export function ImageExportModal({
                 />
                 <span className={styles.fileTypeContent}>
                   <strong>{type.label}</strong>
-                  <p className={styles.text}>{type.description}</p>
+                  <p className={styles.text}>{t(type.description)}</p>
                 </span>
               </label>
             ))}
           </div>
           <div className={styles.actions}>
             <Button onClick={onClose} variant="secondary">
-              Cancel
+              {t('Cancel')}
             </Button>
-            <Button onClick={() => onExport(fileType)}>Export</Button>
+            <Button onClick={() => onExport(fileType)}>{t('Export')}</Button>
           </div>
         </section>
       </div>

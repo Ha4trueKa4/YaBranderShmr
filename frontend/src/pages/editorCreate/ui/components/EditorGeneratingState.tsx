@@ -1,4 +1,5 @@
 import { GenerationPromptComposer } from '@features/editorGenerate'
+import { useTranslation } from 'react-i18next'
 
 import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 
@@ -11,6 +12,7 @@ export function EditorGeneratingState({
   description,
   model,
 }: EditorGeneratingStateProps) {
+  const { t } = useTranslation()
   return (
     <EditorCreateStateLayout
       composer={
@@ -23,8 +25,8 @@ export function EditorGeneratingState({
           onModelChange={() => undefined}
         />
       }
-      description="This usually takes a few seconds."
-      title="Creating your identity…"
+      description={t('This usually takes a few seconds.')}
+      title={t('Creating your identity…')}
     />
   )
 }

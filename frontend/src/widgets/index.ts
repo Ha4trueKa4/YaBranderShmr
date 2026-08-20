@@ -1,4 +1,5 @@
 export * from './auth'
+export { Footer } from './footer'
 export { Feed } from './feed'
 export { OwnProjectsSection } from './ownProjectsSection'
 export type { ProfileHeaderProfile, ProfileHeaderProps } from './profileHeader'

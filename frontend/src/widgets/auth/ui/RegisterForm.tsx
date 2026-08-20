@@ -2,6 +2,7 @@ import { Button, FormField, IconButton, Input } from '@shared'
 import { Eye, EyeOff } from 'lucide-react'
 import { useId } from 'react'
 import { Controller } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { type RegisterSubmitHandler, useRegisterForm } from '../model'
 import styles from './AuthForms.module.css'
 
@@ -16,6 +17,7 @@ export function RegisterForm({
   onSubmit,
   onSwitchToLogin,
 }: RegisterFormProps) {
+  const { t } = useTranslation()
   const nicknameInputId = useId()
   const emailInputId = useId()
   const passwordInputId = useId()
@@ -25,9 +27,9 @@ export function RegisterForm({
   return (
     <section className={styles.formSection}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Create account</h1>
+        <h1 className={styles.title}>{t('Create account')}</h1>
         <p className={styles.subtitle}>
-          Create your workspace in less than a minute.
+          {t('Create your workspace in less than a minute.')}
         </p>
       </header>
       <form className={styles.form} onSubmit={submit}>
@@ -39,7 +41,7 @@ export function RegisterForm({
               <FormField
                 error={fieldState.error?.message}
                 htmlFor={nicknameInputId}
-                label="Nickname"
+                label={t('Nickname')}
                 reserveErrorSpace
               >
                 <Input
@@ -61,7 +63,7 @@ export function RegisterForm({
               <FormField
                 error={fieldState.error?.message}
                 htmlFor={emailInputId}
-                label="Email"
+                label={t('Email')}
                 reserveErrorSpace
               >
                 <Input
@@ -84,7 +86,7 @@ export function RegisterForm({
               <FormField
                 error={fieldState.error?.message}
                 htmlFor={passwordInputId}
-                label="Password"
+                label={t('Password')}
                 reserveErrorSpace
               >
                 <Input
@@ -93,7 +95,7 @@ export function RegisterForm({
                   className={styles.inputControl}
                   invalid={Boolean(fieldState.error)}
                   id={passwordInputId}
-                  placeholder="Enter your password"
+                  placeholder={t('Enter your password')}
                   ref={field.ref}
                   trailingContent={
                     <IconButton onClick={togglePasswordVisibility} size="sm">
@@ -111,17 +113,17 @@ export function RegisterForm({
           />
         </div>
         <Button fullWidth loading={isPending} size="lg" type="submit">
-          Create account
+          {t('Create account')}
         </Button>
       </form>
       <p className={styles.footer}>
-        Already have an account?{' '}
+        {t('Already have an account?')}{' '}
         <button className={styles.link} onClick={onSwitchToLogin} type="button">
-          Sign in
+          {t('Sign in')}
         </button>
       </p>
       <p className={styles.legalNotice}>
-        By continuing, you agree to the Terms and Privacy Policy.
+        {t('By continuing, you agree to the Terms and Privacy Policy.')}
       </p>
     </section>
   )

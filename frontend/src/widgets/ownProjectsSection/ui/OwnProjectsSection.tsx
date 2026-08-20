@@ -2,6 +2,7 @@ import { OwnProjectCard } from '@entities/project'
 import type { Project } from '@shared/api/types'
 import { ConfirmationModal } from '@shared/ui'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from './OwnProjectsSection.module.css'
 import { ProjectManagementModal } from './ProjectManagementModal'
@@ -24,6 +25,7 @@ export function OwnProjectsSection({
   onUpdateProjectMetadata,
   projects,
 }: OwnProjectsSectionProps) {
+  const { t } = useTranslation()
   const [managedProjects, setManagedProjects] = useState(projects)
   const [editedProjectId, setEditedProjectId] = useState<string | null>(null)
   const [deletedProjectId, setDeletedProjectId] = useState<string | null>(null)
@@ -74,10 +76,12 @@ export function OwnProjectsSection({
     <section className={styles.projectsSection} id="projects">
       <div className={styles.sectionHeader}>
         <div>
-          <h2>All projects</h2>
-          <p>Manage visibility and versions</p>
+          <h2>{t('All projects')}</h2>
+          <p>{t('Manage visibility and versions')}</p>
         </div>
-        <span>{managedProjects.length} projects</span>
+        <span>
+          {t('{{count}} projects', { count: managedProjects.length })}
+        </span>
       </div>
       <div className={styles.projectsGrid}>
         {managedProjects.map((project) => (
@@ -120,13 +124,18 @@ export function OwnProjectsSection({
         />
       )}
       <ConfirmationModal
-        confirmLabel="Delete project"
-        description={`Delete “${deletedProject?.name ?? 'Untitled project'}”? This action cannot be undone.`}
+        confirmLabel={t('Delete project')}
+        description={t(
+          'Delete “{{projectName}}”? This action cannot be undone.',
+          {
+            projectName: deletedProject?.name ?? t('Untitled project'),
+          },
+        )}
         isConfirming={isDeletingProjectPending}
         isOpen={Boolean(deletedProject)}
         onCancel={() => setDeletedProjectId(null)}
         onConfirm={handleDeleteProject}
-        title="Delete project?"
+        title={t('Delete project?')}
       />
     </section>
   )

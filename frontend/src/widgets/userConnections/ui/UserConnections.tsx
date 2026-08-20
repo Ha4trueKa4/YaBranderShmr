@@ -1,6 +1,7 @@
 import { getApiErrorMessage } from '@shared/api/api'
 import { getAvatarInitials } from '@shared/lib'
 import { AsyncState, Avatar } from '@shared/ui'
+import { Footer } from '@widgets/footer'
 import { Header } from '@widgets/header'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
@@ -80,6 +81,7 @@ export function UserConnections({
           )}
         </AsyncState>
       </main>
+      <Footer />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Button, IconButton, PopupMenu } from '@shared/ui'
 import { MoreHorizontal } from 'lucide-react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { ProjectPreview } from '../projectPreview'
 import styles from './OwnProjectCard.module.css'
@@ -20,11 +21,12 @@ export function OwnProjectCard({
   onOpenClick,
   project,
 }: OwnProjectCardProps) {
+  const { i18n, t } = useTranslation()
   const [isMenuOpen, setMenuOpen] = useState(false)
   const isPrivate = !project.is_public
-  const title = project.name ?? 'Untitled project'
-  const updatedAt = getProjectStatus(project)
-  const visibility = isPrivate ? 'Private' : 'Public'
+  const title = project.name ?? t('Untitled project')
+  const updatedAt = getProjectStatus(project, i18n.language, t)
+  const visibility = isPrivate ? t('Private') : t('Public')
 
   function handleMenuClick(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
@@ -59,15 +61,18 @@ export function OwnProjectCard({
             onClick={handleMenuClick}
             onPointerDown={(event) => event.stopPropagation()}
             size="sm"
-            title="Project actions"
+            title={t('Project actions')}
           >
             <MoreHorizontal size={20} />
           </IconButton>
           {isMenuOpen && (
             <PopupMenu
               items={[
-                { label: 'Edit project', onClick: () => onEditClick?.() },
-                { label: 'Delete project', onClick: () => onDeleteClick?.() },
+                { label: t('Edit project'), onClick: () => onEditClick?.() },
+                {
+                  label: t('Delete project'),
+                  onClick: () => onDeleteClick?.(),
+                },
               ]}
               onClose={() => setMenuOpen(false)}
             />
@@ -80,23 +85,27 @@ export function OwnProjectCard({
           size="sm"
           variant="secondary"
         >
-          Open project
+          {t('Open project')}
         </Button>
       </div>
     </article>
   )
 }
 
-function getProjectStatus(project: Project) {
+function getProjectStatus(
+  project: Project,
+  language: string,
+  t: (key: string) => string,
+) {
   if (!project.is_public) {
-    return 'Draft'
+    return t('Draft')
   }
 
   if (!project.created_at) {
-    return 'Published'
+    return t('Published')
   }
 
-  return `Published ${new Intl.DateTimeFormat('en', {
+  return `${t('Published')} ${new Intl.DateTimeFormat(language, {
     day: 'numeric',
     month: 'short',
   }).format(new Date(project.created_at))}`

@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 interface UseEditorProjectActionsParams {
@@ -27,6 +28,7 @@ export function useEditorProjectActions({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t } = useTranslation()
   const [projectName, setProjectName] = useState(initialProjectName)
   const [savedProjectSvg, setSavedProjectSvg] = useState(() =>
     serializeSvg(document),
@@ -64,21 +66,21 @@ export function useEditorProjectActions({
           queryClient.invalidateQueries({ queryKey: ['user-profile'] }),
           queryClient.invalidateQueries({ queryKey: ['feed'] }),
         ])
-        toast.info('Project name updated.')
+        toast.info(t('Project name updated.'))
       } catch (error) {
         toast.error(getApiErrorMessage(error))
 
         throw error
       }
     },
-    [projectId, projectName, queryClient, saveProjectVersion, toast],
+    [projectId, projectName, queryClient, saveProjectVersion, t, toast],
   )
 
   const saveVersion = useCallback(async () => {
     const projectSvg = serializeSvg(document)
 
     if (projectSvg === savedProjectSvg) {
-      toast.error('There are no changes to save.')
+      toast.error(t('There are no changes to save.'))
 
       return
     }
@@ -92,7 +94,7 @@ export function useEditorProjectActions({
           queryKey: projectSvgQueryKey(projectId),
         }),
       ])
-      toast.info('Project version saved.')
+      toast.info(t('Project version saved.'))
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     }
@@ -102,6 +104,7 @@ export function useEditorProjectActions({
     queryClient,
     saveProjectVersion,
     savedProjectSvg,
+    t,
     toast,
   ])
 
@@ -121,7 +124,7 @@ export function useEditorProjectActions({
       })
       isLeavingAfterCopyReference.current = true
       navigate(`/projects/${createdProject.id}`, { viewTransition: true })
-      toast.info('Project copy created.')
+      toast.info(t('Project copy created.'))
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     } finally {
@@ -133,6 +136,7 @@ export function useEditorProjectActions({
     navigate,
     projectName,
     saveProjectVersion,
+    t,
     toast,
   ])
 

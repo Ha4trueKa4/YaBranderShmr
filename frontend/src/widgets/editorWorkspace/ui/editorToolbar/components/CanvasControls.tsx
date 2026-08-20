@@ -1,6 +1,7 @@
 import { IconButton, Tooltip } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
 import { ZoomIn, ZoomOut } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import iconRotateLeft from '../assets/iconRotateLeft.svg'
 import iconRotateRight from '../assets/iconRotateRight.svg'
 import styles from '../EditorToolbar.module.css'
@@ -24,6 +25,7 @@ export function CanvasControls({
   onZoomOut,
   zoom,
 }: CanvasControlsProps) {
+  const { t } = useTranslation()
   const zoomPercent = Math.round(zoom * 100)
 
   return (
@@ -32,7 +34,7 @@ export function CanvasControls({
         className={activeTool === 'select' ? styles.activeTool : undefined}
         onClick={() => onToolChange('select')}
         size="sm"
-        title="Select tool"
+        title={t('Select tool')}
       >
         <span className={`${styles.toolIcon} ${styles.selectTool}`} />
       </IconButton>
@@ -40,36 +42,36 @@ export function CanvasControls({
         className={activeTool === 'hand' ? styles.activeTool : undefined}
         onClick={() => onToolChange('hand')}
         size="sm"
-        title="Pan canvas"
+        title={t('Pan canvas')}
       >
         <span className={`${styles.toolIcon} ${styles.panTool}`} />
       </IconButton>
       <span className={styles.divider} />
-      <Tooltip content={`Увеличить масштаб (${zoomPercent}%)`}>
+      <Tooltip content={t('Zoom in ({{percent}}%)', { percent: zoomPercent })}>
         <IconButton
           disabled={zoom >= 2}
           onClick={onZoomIn}
           size="sm"
-          title="Zoom in"
+          title={t('Zoom in')}
         >
           <ZoomIn color="#71717A" size={18} strokeWidth={2.5} />
         </IconButton>
       </Tooltip>
-      <Tooltip content={`Уменьшить масштаб (${zoomPercent}%)`}>
+      <Tooltip content={t('Zoom out ({{percent}}%)', { percent: zoomPercent })}>
         <IconButton
           disabled={zoom <= 0.5}
           onClick={onZoomOut}
           size="sm"
-          title="Zoom out"
+          title={t('Zoom out')}
         >
           <ZoomOut color="#71717A" size={18} strokeWidth={2.5} />
         </IconButton>
       </Tooltip>
       <span className={styles.divider} />
-      <IconButton onClick={onUndo} size="sm" title="Undo">
+      <IconButton onClick={onUndo} size="sm" title={t('Undo')}>
         <img alt="" src={iconRotateLeft} />
       </IconButton>
-      <IconButton onClick={onRedo} size="sm" title="Redo">
+      <IconButton onClick={onRedo} size="sm" title={t('Redo')}>
         <img alt="" src={iconRotateRight} />
       </IconButton>
     </div>

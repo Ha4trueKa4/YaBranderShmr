@@ -1,6 +1,7 @@
 import { ColorSwatch, IconButton, Tooltip } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
 import { ZoomIn, ZoomOut } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import iconMousePointer from '../../editorToolbar/assets/iconMousePointer.svg'
 import styles from '../EditorMobileLayout.module.css'
@@ -26,6 +27,7 @@ export function MobileCanvasControls({
   onZoomReset,
   zoom,
 }: MobileCanvasControlsProps) {
+  const { t } = useTranslation()
   const zoomPercent = Math.round(zoom * 100)
 
   return (
@@ -37,30 +39,38 @@ export function MobileCanvasControls({
           onClick={onOpenColorPicker}
         />
       ) : (
-        <IconButton className={styles.activeTool} title="Select tool">
+        <IconButton className={styles.activeTool} title={t('Select tool')}>
           <img alt="" src={iconMousePointer} />
         </IconButton>
       )}
       <IconButton
         className={activeTool === 'hand' ? styles.activeTool : undefined}
         onClick={() => onToolChange(activeTool === 'hand' ? 'select' : 'hand')}
-        title="Pan canvas"
+        title={t('Pan canvas')}
       >
         <span className={styles.handIcon} />
       </IconButton>
       <span />
-      <Tooltip content={`Увеличить масштаб (${zoomPercent}%)`}>
-        <IconButton disabled={zoom >= 2} onClick={onZoomIn} title="Zoom in">
+      <Tooltip content={t('Zoom in ({{percent}}%)', { percent: zoomPercent })}>
+        <IconButton
+          disabled={zoom >= 2}
+          onClick={onZoomIn}
+          title={t('Zoom in')}
+        >
           <ZoomIn color="#71717A" size={18} strokeWidth={2.5} />
         </IconButton>
       </Tooltip>
-      <Tooltip content={`Уменьшить масштаб (${zoomPercent}%)`}>
-        <IconButton disabled={zoom <= 0.5} onClick={onZoomOut} title="Zoom out">
+      <Tooltip content={t('Zoom out ({{percent}}%)', { percent: zoomPercent })}>
+        <IconButton
+          disabled={zoom <= 0.5}
+          onClick={onZoomOut}
+          title={t('Zoom out')}
+        >
           <ZoomOut color="#71717A" size={18} strokeWidth={2.5} />
         </IconButton>
       </Tooltip>
       <span />
-      <IconButton onClick={onZoomReset} title="Fit canvas">
+      <IconButton onClick={onZoomReset} title={t('Fit canvas')}>
         <span className={styles.fitIcon}>⌗</span>
       </IconButton>
     </div>

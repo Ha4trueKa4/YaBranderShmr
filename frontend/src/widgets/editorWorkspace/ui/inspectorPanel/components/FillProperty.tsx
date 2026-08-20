@@ -1,5 +1,6 @@
 import { ColorPicker, ColorSwatch, Range } from '@shared/ui'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from './FillProperty.module.css'
 
@@ -18,6 +19,7 @@ export function FillProperty({
   opacity = 1,
   title = 'Fill',
 }: FillPropertyProps) {
+  const { t } = useTranslation()
   const [draftFill, setDraftFill] = useState(fill)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const colorControlRef = useRef<HTMLDivElement>(null)
@@ -82,13 +84,13 @@ export function FillProperty({
         </div>
         <div>
           <p className={styles.hex}>{draftFill.toUpperCase()}</p>
-          <p className={styles.colorName}>Violet Primary</p>
+          <p className={styles.colorName}>{t('Violet Primary')}</p>
         </div>
       </div>
       {onOpacityChange && (
         <>
           <div className={styles.opacityHeader}>
-            <span>Opacity</span>
+            <span>{t('Opacity')}</span>
             <strong>{opacityPercent}%</strong>
           </div>
           <Range
