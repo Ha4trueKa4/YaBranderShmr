@@ -16,6 +16,8 @@ public:
 
   std::string PolishGenerate(const std::string& raw_prompt) const;
 
+  std::string PolishEdit(const std::string& raw_prompt) const;
+
   static userver::yaml_config::Schema GetStaticConfigSchema();
 
 private:

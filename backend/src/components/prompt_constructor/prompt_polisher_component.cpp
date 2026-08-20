@@ -15,34 +15,30 @@
 namespace ya_brander::components {
 
 namespace {
-constexpr std::string_view kPolisherGenerateInstructions =
-  "Ты — опытный арт-директор и prompt-инженер векторной графики. Твоя задача — преобразовать короткий или неточный запрос пользователя в детальное, структурированное техническое задание (ТЗ) для другой ИИ-модели, которая будет писать чистый SVG-код."
-  "Твои задачи при обработке запроса:"
-  "1. Раскрыть визуальный стиль: Если пользователь не указал стиль, подбери подходящий для SVG (например: Flat design, Material, Line art, Corporate minimalism, Geometric). Исключи растровые понятия (фотореализм, сложное освещение, размытие)."
-  "2. Задать цветовую палитру: Опиши 3-4 гармоничных цвета (можно с HEX-кодами), подходящих к тематике."
-  "3. Описать композицию по слоям: Разбей идею на логические группы, чтобы помочь SVG-генератору. Явно выдели:"
-  "   - Фон (background)"
-  "   - Основной объект (illustration / logo-mark)"
-  "   - Текст (если запрашивается)"
-  "   - Декор (дополнительные элементы)"
-  "4. Векторная специфика: Формулируй ТЗ в терминах простых геометрических примитивов, четких контуров (stroke), сплошных заливок (fill) и базовых градиентов."
-  "ПРАВИЛА ОТВЕТА:"
-  "- НИКОГДА не генерируй SVG-код самостоятельно. Твой ответ — это только текст ТЗ."
-  "- Выведи ТОЛЬКО улучшенный промпт. Никаких приветствий, вступлений («Вот ваш промпт») или заключений."
-  "- Пиши четко, емко и директивно, используя списки."
-  "Формат вывода:"
-  "[Краткое описание концепции]"
-  "Стиль: [Название стиля, настроение]"
-  "Цвета: [Описания цветов]"
-  "Структура:"
-  "- Фон: [Описание]"
-  "- Главный объект: [Детальное описание геометрии]"
-  "- Декор/Текст: [Описание]";
+constexpr std::string_view kPolisherGenerateInstructions = R"PROMPT(
+Ты — строгий текстовый редактор. Твоя единственная задача — очистить запрос пользователя от словесного мусора и сформулировать его как четкую команду для ИИ-художника.
 
+ЖЕСТКИЕ ОГРАНИЧЕНИЯ (ЧИТАТЬ ВНИМАТЕЛЬНО):
+1. НИКАКОЙ ОТСЕБЯТИНЫ: СТРОГО ЗАПРЕЩЕНО добавлять детали, которых не было в запросе (не придумывай цвета, палитры, стили дизайна, фоны, композицию или новые объекты).
+2. ТОЛЬКО СУТЬ: Сохрани только оригинальную идею пользователя. Если он просит просто «логотип кофейни» — так и передай, не додумывай, как она должна выглядеть.
+3. ОЧИСТКА: Убери слова-паразиты, опечатки, сленг, приветствия и воду. Сделай текст грамотным, понятным и прямым.
 
-constexpr std::string_view kPolisherEditInstructions =
+ФОРМАТ ОТВЕТА:
+1-2 коротких предложения. Начинай с глагола («Нарисуй...», «Создай...», «Сгенерируй...»). Верни ТОЛЬКО очищенный текст промпта, без приветствий и пояснений.
+)PROMPT";
 
-}
+constexpr std::string_view kPolisherEditInstructions = R"PROMPT(
+Ты — строгий текстовый редактор. Твоя единственная задача — очистить запрос пользователя на изменение картинки от словесного мусора и сформулировать его как четкую команду для ИИ-редактора.
+
+ЖЕСТКИЕ ОГРАНИЧЕНИЯ (ЧИТАТЬ ВНИМАТЕЛЬНО):
+1. НИКАКОЙ ОТСЕБЯТИНЫ: СТРОГО ЗАПРЕЩЕНО добавлять детали, стили, цвета или элементы, которых не было в запросе пользователя.
+2. ТОЛЬКО СУТЬ ПРАВКИ: Сохрани только то, что пользователь просит изменить, добавить или удалить. Не додумывай за него, как именно это должно выглядеть.
+3. ОЧИСТКА: Убери слова-паразиты, опечатки, сленг, эмоции и воду. Сделай текст грамотным, понятным и прямым.
+4. НИКАКОГО КОДА: Не диктуй ИИ-редактору, как именно менять SVG-код. Не упоминай координаты, теги или названия слоев, если пользователь сам их не назвал.
+
+ФОРМАТ ОТВЕТА:
+1-2 коротких предложения. Начинай с глагола («Измени...», «Увеличь...», «Перекрась...», «Удали...»). Верни ТОЛЬКО очищенный текст правки, без приветствий и пояснений.
+)PROMPT";
 
 PromptPolisherComponent::PromptPolisherComponent(
     const userver::components::ComponentConfig& config,
@@ -60,8 +56,8 @@ PromptPolisherComponent::PromptPolisherComponent(
 
 std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_prompt) const {
     userver::formats::json::ValueBuilder request_body;
-    request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/yandexgpt-lite/latest";
-    request_body["temperature"] = 0.3;
+    request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/aliceai-llm/latest";
+    request_body["temperature"] = 0.5;
     request_body["max_output_tokens"] = 1000;
     request_body["instructions"] = kPolisherGenerateInstructions;
     request_body["input"] = fmt::format("Исходный запрос: {}", raw_prompt);
@@ -87,7 +83,6 @@ std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_promp
 
         auto response_json = nlohmann::json::parse(response->body());
 
-        // Извлекаем обычный текст без парсинга SVG
         for (const auto& output_item : response_json["output"]) {
             if (output_item.contains("content") && output_item["content"].is_array() && !output_item["content"].empty()) {
                 for (const auto& content_item : output_item["content"]) {
@@ -108,8 +103,8 @@ std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_promp
 
 std::string PromptPolisherComponent::PolishEdit(const std::string& raw_prompt) const {
     userver::formats::json::ValueBuilder request_body;
-    request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/yandexgpt-lite/latest";
-    request_body["temperature"] = 0.3;
+    request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/aliceai-llm/latest";
+    request_body["temperature"] = 0.1;
     request_body["max_output_tokens"] = 1000;
     request_body["instructions"] = kPolisherEditInstructions;
     request_body["input"] = fmt::format("Исходный запрос: {}", raw_prompt);
@@ -135,7 +130,6 @@ std::string PromptPolisherComponent::PolishEdit(const std::string& raw_prompt) c
 
         auto response_json = nlohmann::json::parse(response->body());
 
-        // Извлекаем обычный текст без парсинга SVG
         for (const auto& output_item : response_json["output"]) {
             if (output_item.contains("content") && output_item["content"].is_array() && !output_item["content"].empty()) {
                 for (const auto& content_item : output_item["content"]) {

@@ -179,7 +179,7 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
     LlmPrompt full_prompt;
     if (current_state.empty() || current_state == kDefaultSvg) {
 		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
-		std::string safe_prompt = EscapeXml(polisher_prompt_text);
+		std::string safe_prompt = EscapeXml(polished_prompt_text);
         full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
     }else {
 		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
