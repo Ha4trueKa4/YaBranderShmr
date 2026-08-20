@@ -2,10 +2,19 @@ import SwiftUI
 
 struct ProjectCreateView: View {
     var onBack: (() -> Void)?
-    /// Отдаёт введённое имя проекта — оно становится заголовком чата.
-    var onGenerate: (String) -> Void = { _ in }
+    var onGenerate: (Project) -> Void = { _ in }
 
-    @State private var viewModel = ProjectCreateViewModel()
+    @State private var viewModel: ProjectCreateViewModel
+
+    init(
+        onBack: (() -> Void)? = nil,
+        onGenerate: @escaping (Project) -> Void = { _ in },
+        service: any ProjectServiceProtocol = ProjectService()
+    ) {
+        self.onBack = onBack
+        self.onGenerate = onGenerate
+        _viewModel = State(initialValue: ProjectCreateViewModel(service: service))
+    }
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -27,13 +36,23 @@ struct ProjectCreateView: View {
 
                 FormHint(text: viewModel.hint)
 
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
                 PrimaryButton(
-                    title: "Generate Brandkit",
-                    isEnabled: viewModel.canSubmit,
+                    title: viewModel.isLoading ? "Creating..." : "Generate Brandkit",
+                    isEnabled: viewModel.canSubmit && !viewModel.isLoading,
                     fill: AnyShapeStyle(.brand)
                 ) {
-                    guard viewModel.canSubmit else { return }
-                    onGenerate(viewModel.name)
+                    Task {
+                        if let project = await viewModel.submit() {
+                            onGenerate(project)
+                        }
+                    }
                 }
                 .padding(.top, 8)
             }

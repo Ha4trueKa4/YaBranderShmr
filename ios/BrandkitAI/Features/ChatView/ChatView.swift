@@ -8,22 +8,53 @@
 import SwiftUI
 
 struct ChatView: View {
+    let projectID: UUID
     let title: String
     var onBack: () -> Void = {}
-    var onOpenImage: () -> Void = {}
+    var onOpenImage: (UUID) -> Void = { _ in }
 
-    @State private var viewModel = ChatViewModel()
+    @State private var viewModel: ChatViewModel
     @State private var messageText = ""
     @State private var didFinishInitialLoad = false
     @State private var isPrivacyPickerPresented = false
+    @State private var selectedPrivacy = ChatViewModel.ProjectPrivacy.privateProject
     @FocusState private var isInputFocused: Bool
+
+    init(
+        projectID: UUID = UUID(),
+        title: String,
+        onBack: @escaping () -> Void = {},
+        onOpenImage: @escaping (UUID) -> Void = { _ in },
+        service: any ProjectServiceProtocol = ProjectService(),
+        viewModel: ChatViewModel? = nil
+    ) {
+        let resolvedViewModel = viewModel ?? ChatViewModel(projectID: projectID, service: service)
+        self.projectID = resolvedViewModel.projectID
+        self.title = title
+        self.onBack = onBack
+        self.onOpenImage = onOpenImage
+        _viewModel = State(initialValue: resolvedViewModel)
+    }
 
     private let bottomAnchor = "chat-bottom"
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
+            Group {
+                if viewModel.loadFailed && viewModel.messages.isEmpty {
+                    loadFailedState
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 20) {
+                            if viewModel.isLoading && viewModel.messages.isEmpty {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                            }
+
+                            if viewModel.isOffline {
+                                offlinePill
+                            }
+
                     ForEach(viewModel.sections) { section in
                         VStack(alignment: .leading, spacing: 12) {
                             Text(viewModel.dateTitle(for: section.date))
@@ -37,12 +68,26 @@ struct ChatView: View {
                                     timeTitle: viewModel.timeTitle(for: message.date)
                                 ) {
                                     switch message.attachment {
-                                    case .mockImage:
-                                        Button(action: onOpenImage) {
-                                            ChatImageMockView()
+                                    case .version(let versionID, let url):
+                                        GeometryReader { _ in
+                                            SVGDocumentView(
+                                                source: .url(
+                                                    url,
+                                                    cacheKey: SVGCache.versionKey(projectID: projectID, versionID: versionID),
+                                                    isPrivate: true
+                                                ),
+                                                refreshURL: {
+                                                    try await viewModel.versionURL(for: versionID)
+                                                },
+                                                onTap: {
+                                                    onOpenImage(versionID)
+                                                }
+                                            )
                                         }
-                                        .buttonStyle(.plain)
-                                        .accessibilityHint("Opens the generated image")
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .frame(maxWidth: .infinity)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .contentShape(RoundedRectangle(cornerRadius: 10))
                                     case .none:
                                         EmptyView()
                                     }
@@ -51,17 +96,44 @@ struct ChatView: View {
                         }
                     }
 
+                    if viewModel.isGenerating {
+                        HStack {
+                            HStack(spacing: 10) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Generating…")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(14)
+                            .frame(maxWidth: 270, alignment: .leading)
+                            .background(
+                                Color(.secondarySystemBackground),
+                                in: UnevenRoundedRectangle(
+                                    topLeadingRadius: 16,
+                                    bottomLeadingRadius: 4,
+                                    bottomTrailingRadius: 16,
+                                    topTrailingRadius: 16
+                                )
+                            )
+
+                            Spacer(minLength: 40)
+                        }
+                    }
+
                     Color.clear
                         .frame(height: 1)
                         .id(bottomAnchor)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .defaultScrollAnchor(.bottom)
+                }
             }
-            .scrollDismissesKeyboard(.interactively)
-            .defaultScrollAnchor(.bottom)
             .task {
-                viewModel.load()
+                await viewModel.load()
                 await Task.yield()
                 scrollToBottom(using: proxy, animated: false)
                 didFinishInitialLoad = true
@@ -74,8 +146,18 @@ struct ChatView: View {
                     scrollToBottom(using: proxy, animated: true)
                 }
             }
+            .onChange(of: viewModel.isGenerating) { _, isGenerating in
+                guard didFinishInitialLoad, isGenerating else { return }
+
+                Task { @MainActor in
+                    await Task.yield()
+                    scrollToBottom(using: proxy, animated: true)
+                }
+            }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                inputBar(using: proxy)
+                if !(viewModel.loadFailed && viewModel.messages.isEmpty) {
+                    inputBar(using: proxy)
+                }
             }
         }
             .customNavigationBar(title: title, onBack: onBack)
@@ -89,8 +171,9 @@ struct ChatView: View {
                     .background(Color.background)
             }
             .sheet(isPresented: $isPrivacyPickerPresented) {
-                @Bindable var viewModel = viewModel
-                PrivacyPicker(selection: $viewModel.privacy)
+                PrivacyPicker(selection: $selectedPrivacy) { newPrivacy in
+                    Task { await viewModel.updatePrivacy(newPrivacy) }
+                }
             }
     }
 
@@ -110,6 +193,7 @@ struct ChatView: View {
 
     private var privacyButton: some View {
         Button {
+            selectedPrivacy = viewModel.privacy
             isPrivacyPickerPresented = true
         } label: {
             Text(viewModel.privacy.shortTitle)
@@ -128,52 +212,129 @@ struct ChatView: View {
         .accessibilityHint("Opens project visibility settings")
     }
 
-    private func inputBar(using proxy: ScrollViewProxy) -> some View {
-        HStack(spacing: 12) {
-            TextField("Ask brand assistant...", text: $messageText, axis: .vertical)
-                .font(.subheadline)
-                .lineLimit(1...4)
-                .focused($isInputFocused)
-                .submitLabel(.send)
-                .onSubmit {
-                    sendMessage()
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+    private var offlinePill: some View {
+        Button {
+            Task { await viewModel.retry() }
+        } label: {
+            Label("Offline — showing saved messages", systemImage: "wifi.slash")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground), in: Capsule())
-
-            Button {
-                sendMessage()
-            } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color(.onAccent))
-                    .frame(width: 40, height: 40)
-                    .background(.tint, in: Circle())
-            }
-            .opacity(canSendMessage ? 1 : 0.5)
-            .disabled(!canSendMessage)
-            .accessibilityLabel("Send message")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityHint("Tap to retry")
+    }
+
+    private var loadFailedState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Text("Unable to load the chat")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Button("Retry") {
+                Task { await viewModel.retry() }
+            }
+            .buttonStyle(.bordered)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
+
+    private func inputBar(using proxy: ScrollViewProxy) -> some View {
+        VStack(spacing: 8) {
+            if let inputErrorMessage {
+                Label(inputErrorMessage, systemImage: "exclamationmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+            }
+
+            if viewModel.pendingCount > 0 {
+                Label(
+                    viewModel.pendingCount == 1
+                        ? "1 message pending — will send when the network is back."
+                        : "\(viewModel.pendingCount) messages pending — will send when the network is back.",
+                    systemImage: "clock.arrow.circlepath"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+            }
+
+            HStack(spacing: 12) {
+                TextField("Ask brand assistant...", text: $messageText, axis: .vertical)
+                    .font(.subheadline)
+                    .lineLimit(1...4)
+                    .focused($isInputFocused)
+                    .submitLabel(.send)
+                    .onSubmit {
+                        sendMessage()
+                    }
+                    .disabled(viewModel.isGenerating)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.secondarySystemBackground), in: Capsule())
+
+                Button {
+                    sendMessage()
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color(.onAccent))
+                        .frame(width: 40, height: 40)
+                        .background(.tint, in: Circle())
+                }
+                .opacity(canSendMessage ? 1 : 0.5)
+                .disabled(!canSendMessage)
+                .accessibilityLabel("Send message")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.background)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(.border)
+                    .frame(height: 1)
+            }
+        }
         .background(Color.background)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(.border)
-                .frame(height: 1)
+        .onChange(of: messageText) {
+            viewModel.clearSendError()
         }
     }
 
     private var canSendMessage: Bool {
-        !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !viewModel.isGenerating
+            && !text.isEmpty
+            && text.utf8.count <= ChatViewModel.maxPromptUTF8Length
+    }
+
+    private var inputErrorMessage: String? {
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.utf8.count > ChatViewModel.maxPromptUTF8Length {
+            return "Message is too long (maximum 1500 bytes)."
+        }
+        return viewModel.sendErrorMessage
     }
 
     private func sendMessage() {
         guard canSendMessage else { return }
 
-        viewModel.sendMessage(messageText)
+        let text = messageText
         messageText = ""
+        Task {
+            await viewModel.sendMessage(text)
+        }
     }
 
     private func scrollToBottom(using proxy: ScrollViewProxy, animated: Bool) {
@@ -192,9 +353,11 @@ struct ChatView: View {
     NavigationStack {
         VStack {}
         .navigationDestination(isPresented: .constant(true)) {
-            ChatView(title: "Test chat")
-                .background(Color.background)
-                .preferredColorScheme(.dark)
+            ChatView(
+                title: "Test chat",
+                viewModel: ChatViewModel.makePreview()
+            )
+            .background(Color.background)
         }
     }
 }
