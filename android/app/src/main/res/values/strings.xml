@@ -5,9 +5,9 @@
     <string name="brand_version_restore">Restore</string>
 
     <!-- Вкладки нижней навигации -->
-    <string name="nav_feed">Лента</string>
-    <string name="nav_create">Создать</string>
-    <string name="nav_profile">Профиль</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_create">Create</string>
+    <string name="nav_profile">Profile</string>
 
     <!-- Вход и регистрация -->
     <string name="auth_sign_in">Sign in</string>
@@ -65,7 +65,7 @@
     <!-- Лента -->
     <string name="feed_brand_name">Brandkit</string>
     <string name="feed_brand_name_accent">AI</string>
-    <string name="feed_search_description">Поиск</string>
+    <string name="feed_search_description">Search</string>
 
     <string name="feed_tab_all">All</string>
     <string name="feed_tab_subscriptions">Subscriptions</string>
