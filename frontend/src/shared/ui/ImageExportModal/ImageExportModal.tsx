@@ -26,12 +26,14 @@ const exportFileTypes = [
 export type ImageExportFileType = (typeof exportFileTypes)[number]['extension']
 
 export interface ImageExportModalProps {
+  isExporting?: boolean
   isOpen: boolean
   onClose: () => void
-  onExport: (fileType: ImageExportFileType) => void
+  onExport: (fileType: ImageExportFileType) => void | Promise<void>
 }
 
 export function ImageExportModal({
+  isExporting = false,
   isOpen,
   onClose,
   onExport,
@@ -50,6 +52,7 @@ export function ImageExportModal({
         <button
           aria-label={t('Close export dialog')}
           className={styles.backdrop}
+          disabled={isExporting}
           onClick={onClose}
           type="button"
         />
@@ -68,6 +71,7 @@ export function ImageExportModal({
               <label className={styles.fileType} key={type.extension}>
                 <input
                   checked={fileType === type.extension}
+                  disabled={isExporting}
                   name="image-export-file-type"
                   onChange={() => setFileType(type.extension)}
                   type="radio"
@@ -81,10 +85,16 @@ export function ImageExportModal({
             ))}
           </div>
           <div className={styles.actions}>
-            <Button onClick={onClose} variant="secondary">
+            <Button
+              disabled={isExporting}
+              onClick={onClose}
+              variant="secondary"
+            >
               {t('Cancel')}
             </Button>
-            <Button onClick={() => onExport(fileType)}>{t('Export')}</Button>
+            <Button loading={isExporting} onClick={() => onExport(fileType)}>
+              {isExporting ? t('Exporting…') : t('Export')}
+            </Button>
           </div>
         </section>
       </div>
