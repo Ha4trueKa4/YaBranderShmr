@@ -47,7 +47,11 @@ std::string GetModels::HandleRequestThrow(
 
   // Создаем билдер для нового ответа
   userver::formats::json::ValueBuilder response_builder;
-  response_builder["object"] = json_body["object"]; // сохраняем корневой "object": "list"
+  if (json_body.HasMember("object")) {
+    response_builder["object"] = json_body["object"];
+  } else {
+    response_builder["object"] = "list";
+  }
 
   // Список разрешенных моделей
   const std::vector<std::string_view> allowed_models = {
@@ -62,6 +66,10 @@ std::string GetModels::HandleRequestThrow(
   // Итерируемся по моделям и фильтруем
   if (json_body.HasMember("data") && json_body["data"].IsArray()) {
     for (const auto& item : json_body["data"]) {
+
+      if (!item.HasMember("id") || !item["id"].IsString()) {
+        continue;
+      }
       std::string id = item["id"].As<std::string>();
 
       bool keep = false;
