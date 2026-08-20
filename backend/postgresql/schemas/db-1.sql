@@ -6,9 +6,13 @@ CREATE TABLE users
     id            UUID PRIMARY KEY         DEFAULT uuid_generate_v4(),
     login         VARCHAR(64) UNIQUE  NOT NULL,
     email         VARCHAR(128) UNIQUE NOT NULL,
-    password_hash VARCHAR(255)        NOT NULL,
+    password_hash VARCHAR(255),
+    provider      VARCHAR(32),
+    provider_id   VARCHAR(255),
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX idx_users_provider_identity ON users (provider, provider_id) WHERE provider_id IS NOT NULL;
 
 CREATE TABLE projects
 (
