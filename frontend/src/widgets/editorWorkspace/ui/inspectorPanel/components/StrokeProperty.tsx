@@ -31,6 +31,10 @@ export function StrokeProperty({
   const hasStroke = stroke.type !== 'none' && strokeWidth > 0
 
   function handleWidthChange(value: string) {
+    if (value.trim() === '') {
+      return
+    }
+
     const width = getFiniteNumber(value)
 
     if (width !== null) {

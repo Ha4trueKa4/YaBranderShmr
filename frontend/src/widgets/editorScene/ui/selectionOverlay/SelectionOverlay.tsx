@@ -58,22 +58,6 @@ function getUniqueElements(nodes: EditorNode[]): EditorElement[] {
   return [...new Map(elements.map((element) => [element.id, element])).values()]
 }
 
-function getSelectionVersion(node: EditorNode): string {
-  const transform = `${node.transform.x}:${node.transform.y}:${node.transform.rotation}:${node.transform.scaleX}:${node.transform.scaleY}`
-
-  if (node.type === 'group') {
-    return `${node.id}:${transform}:${node.children
-      .map(getSelectionVersion)
-      .join('|')}`
-  }
-
-  if (node.type === 'text') {
-    return `${node.id}:${transform}:${node.x}:${node.y}`
-  }
-
-  return `${node.id}:${transform}`
-}
-
 interface SelectionOverlayProps {
   canvasHeight: number
   canvasWidth: number
@@ -91,7 +75,6 @@ export const SelectionOverlay = observer(function SelectionOverlay({
     SelectionBoundsByNode[]
   >([])
   const selectedElements = getUniqueElements(selectedNodes)
-  void selectedNodes.map(getSelectionVersion).join('|')
 
   useLayoutEffect(() => {
     const nextSelection = selectedElements.flatMap((element) => {

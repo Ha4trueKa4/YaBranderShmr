@@ -7,6 +7,11 @@ import { findAncestorGroupIds, findNode } from './tree/findNode'
 import type { EditorDocument, EditorNode, TextStyle } from './types'
 
 const maximumTextLength = 1_000
+const hexColorPattern = /^#(?:[\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/
+
+function isValidHexColor(color: string) {
+  return hexColorPattern.test(color)
+}
 
 /**
  * Состояние взаимодействия с редактором.
@@ -64,6 +69,8 @@ export class EditorStore {
     const node = findNode(this.document.layers, nodeId)
 
     if (!isMultiSelect || node?.type === 'group' || node?.type === 'raw') {
+      // A group owns its children in the selection, so it replaces any
+      // existing multi-selection rather than being added to it.
       this.setSelectedNode(nodeId)
 
       return
@@ -118,6 +125,12 @@ export class EditorStore {
     if (
       selectedNodes.length === 0 ||
       selectedNodes.some((node) => node.isLocked) ||
+      selectedNodes.some(
+        (node) =>
+          node.type !== 'shape' &&
+          node.type !== 'group' &&
+          node.type !== 'text',
+      ) ||
       !Number.isFinite(offsetX) ||
       !Number.isFinite(offsetY)
     ) {
@@ -135,7 +148,11 @@ export class EditorStore {
       if (selectedNode.type === 'text') {
         selectedNode.x += offsetX
         selectedNode.y += offsetY
+
+        continue
       }
+
+      return false
     }
 
     return true
@@ -171,8 +188,10 @@ export class EditorStore {
 
     if (
       gradient.stops.length !== 2 ||
+      !Number.isInteger(stopIndex) ||
       stopIndex < 0 ||
-      stopIndex >= gradient.stops.length
+      stopIndex >= gradient.stops.length ||
+      !isValidHexColor(color)
     ) {
       return
     }
@@ -224,12 +243,21 @@ export class EditorStore {
       return
     }
 
+    const currentStrokeColor =
+      node.style.stroke.type === 'color' ? node.style.stroke.value : null
+    const currentStrokeWidth = node.style.strokeWidth
+
+    if (
+      (currentStrokeColor !== null && !isValidHexColor(currentStrokeColor)) ||
+      !Number.isFinite(currentStrokeWidth) ||
+      currentStrokeWidth < 0
+    ) {
+      return
+    }
+
     node.style.stroke = {
       type: 'color',
-      value:
-        node.style.stroke.type === 'color'
-          ? node.style.stroke.value
-          : '#000000',
+      value: currentStrokeColor ?? '#000000',
     }
     node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
   }
@@ -237,7 +265,7 @@ export class EditorStore {
   setShapeStrokeColor(nodeId: string, color: string) {
     const node = this.getEditableShape(nodeId)
 
-    if (!node) {
+    if (!node || !isValidHexColor(color)) {
       return
     }
 
@@ -248,11 +276,11 @@ export class EditorStore {
   setShapeStrokeWidth(nodeId: string, strokeWidth: number) {
     const node = this.getEditableShape(nodeId)
 
-    if (!node || !Number.isFinite(strokeWidth)) {
+    if (!node || !Number.isFinite(strokeWidth) || strokeWidth < 0) {
       return
     }
 
-    node.style.strokeWidth = Math.max(strokeWidth, 0)
+    node.style.strokeWidth = strokeWidth
   }
 
   removeShapeStroke(nodeId: string) {

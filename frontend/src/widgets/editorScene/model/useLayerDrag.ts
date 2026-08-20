@@ -65,6 +65,13 @@ function isGroupDescendant(group: EditorGroup, nodeId: string): boolean {
   )
 }
 
+function hasLockedDescendant(node: EditorGroup): boolean {
+  return node.children.some(
+    (child) =>
+      child.isLocked || (child.type === 'group' && hasLockedDescendant(child)),
+  )
+}
+
 function toDragTarget(
   node: EditorShape | EditorText | EditorGroup,
 ): DragTarget {
@@ -119,19 +126,26 @@ export function useLayerDrag({
         isGroupDescendant(selectedNode, node.id)
           ? selectedNode
           : null
+
+      if (
+        node.isLocked ||
+        selectedGroup?.isLocked ||
+        (selectedGroup && hasLockedDescendant(selectedGroup))
+      ) {
+        return
+      }
+
       const dragTargets = selectedGroup
         ? [selectedGroup]
         : selectedNodes.some((selected) => selected.id === node.id)
           ? selectedNodes.filter(
               (selected): selected is EditorShape | EditorText =>
-                selected.type === 'shape' || selected.type === 'text',
+                (selected.type === 'shape' || selected.type === 'text') &&
+                !selected.isLocked,
             )
           : [node]
 
-      if (
-        dragTargets.length === 0 ||
-        dragTargets.some((target) => target.isLocked)
-      ) {
+      if (dragTargets.length === 0) {
         return
       }
 

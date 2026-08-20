@@ -114,6 +114,17 @@ describe('EditorStore selection', () => {
     expect([...store.selectedNodeIds]).toEqual(['title'])
   })
 
+  it('replaces a multi-selection when a group is selected', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.selectNode('wheel')
+    store.selectNode('title', true)
+    store.selectNode('taxi', true)
+
+    expect([...store.selectedNodeIds]).toEqual(['taxi'])
+    expect(store.selectedNode).toMatchObject({ id: 'taxi', type: 'group' })
+  })
+
   it('toggles visibility without changing a child node state', () => {
     const store = new EditorStore(document)
 
@@ -272,6 +283,23 @@ describe('EditorStore selection', () => {
     expect(store.moveSelectedNode(1, 1)).toBe(false)
   })
 
+  it('does not report a move for a selected raw node', () => {
+    const documentWithRawNode = structuredClone(document)
+    documentWithRawNode.layers.push({
+      id: 'unsupported',
+      isLocked: false,
+      isVisible: true,
+      name: 'Unsupported',
+      opacity: 1,
+      rawSvg: '<foreignObject />',
+      transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 },
+      type: 'raw',
+    })
+    const store = new EditorStore(documentWithRawNode, 'unsupported')
+
+    expect(store.moveSelectedNode(1, 1)).toBe(false)
+  })
+
   it('adds, updates and removes a shape outline', () => {
     const store = new EditorStore(structuredClone(document))
 
@@ -291,6 +319,22 @@ describe('EditorStore selection', () => {
 
     expect(store.selectedNode).toMatchObject({
       style: { stroke: { type: 'none' }, strokeWidth: 0 },
+    })
+  })
+
+  it('does not apply invalid gradient or stroke values', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setGradientStopColor('wheel-gradient', 0, '')
+    store.setGradientStopColor('wheel-gradient', 0, '#invalid')
+    store.setShapeStrokeColor('wheel', '')
+    store.setShapeStrokeWidth('wheel', -1)
+
+    expect(store.document.definitions?.gradients[0]?.stops[0]?.color).toBe(
+      '#FF0000',
+    )
+    expect(store.document.layers[0]).toMatchObject({
+      children: [{ style: { stroke: { type: 'none' }, strokeWidth: 0 } }],
     })
   })
 
