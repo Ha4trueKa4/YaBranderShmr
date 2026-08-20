@@ -12,25 +12,20 @@ export function GradientProperty({
   gradient,
   onStopColorChange,
 }: GradientPropertyProps) {
-  const [startStop, endStop] = gradient.stops
-
-  if (!startStop || !endStop) {
-    return null
-  }
+  const title =
+    gradient.type === 'linearGradient' ? 'Linear gradient' : 'Radial gradient'
 
   return (
     <>
-      <p className={styles.sectionTitle}>Linear gradient</p>
-      <FillProperty
-        fill={startStop.color}
-        onFillChange={(color) => onStopColorChange(0, color)}
-        title="Start color"
-      />
-      <FillProperty
-        fill={endStop.color}
-        onFillChange={(color) => onStopColorChange(1, color)}
-        title="End color"
-      />
+      <p className={styles.sectionTitle}>{title}</p>
+      {gradient.stops.map((stop, index) => (
+        <FillProperty
+          fill={stop.color}
+          key={stop.offset}
+          onFillChange={(color) => onStopColorChange(index, color)}
+          title={`Color ${index + 1} · ${stop.offset}`}
+        />
+      ))}
     </>
   )
 }

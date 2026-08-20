@@ -15,6 +15,16 @@ const document: EditorDocument = {
         ],
         type: 'linearGradient',
       },
+      {
+        attributes: { cx: '50%', cy: '50%', r: '50%' },
+        id: 'shadow-gradient',
+        stops: [
+          { color: '#FFFFFF', offset: '0%' },
+          { color: '#808080', offset: '50%' },
+          { color: '#000000', offset: '100%' },
+        ],
+        type: 'radialGradient',
+      },
     ],
   },
   height: 100,
@@ -193,16 +203,21 @@ describe('EditorStore selection', () => {
     })
   })
 
-  it('changes colors of a two-stop linear gradient', () => {
+  it('changes colors of every stop in linear and radial gradients', () => {
     const store = new EditorStore(structuredClone(document))
 
     store.setGradientStopColor('wheel-gradient', 0, '#FFD400')
     store.setGradientStopColor('wheel-gradient', 1, '#6C3BFF')
+    store.setGradientStopColor('shadow-gradient', 1, '#FF00FF')
 
     expect(store.document.definitions?.gradients[0]?.stops).toEqual([
       { color: '#FFD400', offset: '0%' },
       { color: '#6C3BFF', offset: '100%' },
     ])
+    expect(store.document.definitions?.gradients[1]?.stops[1]).toEqual({
+      color: '#FF00FF',
+      offset: '50%',
+    })
   })
 
   it('changes a shape position through its transform and common opacity', () => {

@@ -182,12 +182,11 @@ export class EditorStore {
       (item) => item.id === gradientId,
     )
 
-    if (gradient?.type !== 'linearGradient') {
+    if (!gradient) {
       return
     }
 
     if (
-      gradient.stops.length !== 2 ||
       !Number.isInteger(stopIndex) ||
       stopIndex < 0 ||
       stopIndex >= gradient.stops.length ||

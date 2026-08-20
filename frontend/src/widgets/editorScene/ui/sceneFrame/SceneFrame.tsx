@@ -146,11 +146,7 @@ export function SceneFrame({
 
     const target = event.target
 
-    if (
-      !(target instanceof Element) ||
-      !target.closest('svg') ||
-      target.closest('[data-editor-node-id]')
-    ) {
+    if (target instanceof Element && target.closest('[data-editor-node-id]')) {
       return
     }
 
