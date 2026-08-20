@@ -4,6 +4,29 @@ import { EditorStore } from './editorStore'
 import type { EditorDocument } from './types'
 
 const document: EditorDocument = {
+  definitions: {
+    gradients: [
+      {
+        attributes: { x1: '0%', x2: '100%', y1: '0%', y2: '0%' },
+        id: 'wheel-gradient',
+        stops: [
+          { color: '#FF0000', offset: '0%' },
+          { color: '#0000FF', offset: '100%' },
+        ],
+        type: 'linearGradient',
+      },
+      {
+        attributes: { cx: '50%', cy: '50%', r: '50%' },
+        id: 'shadow-gradient',
+        stops: [
+          { color: '#FFFFFF', offset: '0%' },
+          { color: '#808080', offset: '50%' },
+          { color: '#000000', offset: '100%' },
+        ],
+        type: 'radialGradient',
+      },
+    ],
+  },
   height: 100,
   layers: [
     {
@@ -87,6 +110,31 @@ describe('EditorStore selection', () => {
     expect(store.isGroupExpanded('taxi')).toBe(false)
   })
 
+  it('adds and removes editable nodes from the selection', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.selectNode('wheel')
+    store.selectNode('title', true)
+
+    expect([...store.selectedNodeIds]).toEqual(['wheel', 'title'])
+    expect(store.selectedNode).toMatchObject({ id: 'title' })
+
+    store.selectNode('wheel', true)
+
+    expect([...store.selectedNodeIds]).toEqual(['title'])
+  })
+
+  it('replaces a multi-selection when a group is selected', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.selectNode('wheel')
+    store.selectNode('title', true)
+    store.selectNode('taxi', true)
+
+    expect([...store.selectedNodeIds]).toEqual(['taxi'])
+    expect(store.selectedNode).toMatchObject({ id: 'taxi', type: 'group' })
+  })
+
   it('toggles visibility without changing a child node state', () => {
     const store = new EditorStore(document)
 
@@ -155,6 +203,23 @@ describe('EditorStore selection', () => {
     })
   })
 
+  it('changes colors of every stop in linear and radial gradients', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setGradientStopColor('wheel-gradient', 0, '#FFD400')
+    store.setGradientStopColor('wheel-gradient', 1, '#6C3BFF')
+    store.setGradientStopColor('shadow-gradient', 1, '#FF00FF')
+
+    expect(store.document.definitions?.gradients[0]?.stops).toEqual([
+      { color: '#FFD400', offset: '0%' },
+      { color: '#6C3BFF', offset: '100%' },
+    ])
+    expect(store.document.definitions?.gradients[1]?.stops[1]).toEqual({
+      color: '#FF00FF',
+      offset: '50%',
+    })
+  })
+
   it('changes a shape position through its transform and common opacity', () => {
     const store = new EditorStore(document)
 
@@ -165,6 +230,18 @@ describe('EditorStore selection', () => {
     expect(store.selectedNode).toMatchObject({
       opacity: 0.6,
       transform: { x: 12, y: -8 },
+    })
+  })
+
+  it('changes a group position through its transform', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setGroupPosition('taxi', 12, -8)
+    store.setSelectedNode('taxi')
+
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: 12, y: -8 },
+      type: 'group',
     })
   })
 
@@ -191,6 +268,19 @@ describe('EditorStore selection', () => {
     expect(store.selectedNode).toMatchObject({ x: 51, y: 19, type: 'text' })
   })
 
+  it('moves all selected editable nodes by the given offset', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.selectNode('wheel')
+    store.selectNode('title', true)
+
+    expect(store.moveSelectedNode(4, -2)).toBe(true)
+    expect(store.selectedNodes).toMatchObject([
+      { id: 'wheel', transform: { x: 4, y: -2 } },
+      { id: 'title', x: 54, y: 18 },
+    ])
+  })
+
   it('does not move a missing or locked selection', () => {
     const store = new EditorStore(structuredClone(document))
 
@@ -206,6 +296,61 @@ describe('EditorStore selection', () => {
     selectedNode.isLocked = true
 
     expect(store.moveSelectedNode(1, 1)).toBe(false)
+  })
+
+  it('does not report a move for a selected raw node', () => {
+    const documentWithRawNode = structuredClone(document)
+    documentWithRawNode.layers.push({
+      id: 'unsupported',
+      isLocked: false,
+      isVisible: true,
+      name: 'Unsupported',
+      opacity: 1,
+      rawSvg: '<foreignObject />',
+      transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 },
+      type: 'raw',
+    })
+    const store = new EditorStore(documentWithRawNode, 'unsupported')
+
+    expect(store.moveSelectedNode(1, 1)).toBe(false)
+  })
+
+  it('adds, updates and removes a shape outline', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.addShapeStroke('wheel')
+    store.setShapeStrokeColor('wheel', '#6C3BFF')
+    store.setShapeStrokeWidth('wheel', 4)
+    store.setSelectedNode('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      style: {
+        stroke: { type: 'color', value: '#6C3BFF' },
+        strokeWidth: 4,
+      },
+    })
+
+    store.removeShapeStroke('wheel')
+
+    expect(store.selectedNode).toMatchObject({
+      style: { stroke: { type: 'none' }, strokeWidth: 0 },
+    })
+  })
+
+  it('does not apply invalid gradient or stroke values', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setGradientStopColor('wheel-gradient', 0, '')
+    store.setGradientStopColor('wheel-gradient', 0, '#invalid')
+    store.setShapeStrokeColor('wheel', '')
+    store.setShapeStrokeWidth('wheel', -1)
+
+    expect(store.document.definitions?.gradients[0]?.stops[0]?.color).toBe(
+      '#FF0000',
+    )
+    expect(store.document.layers[0]).toMatchObject({
+      children: [{ style: { stroke: { type: 'none' }, strokeWidth: 0 } }],
+    })
   })
 
   it('changes editable text properties', () => {

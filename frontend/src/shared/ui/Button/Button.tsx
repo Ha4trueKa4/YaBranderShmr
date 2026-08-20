@@ -33,6 +33,7 @@ export function Button({
         styles[variant],
         styles[size],
         fullWidth && styles.fullWidth,
+        loading && styles.loading,
         className,
       ]
         .filter(Boolean)
@@ -41,7 +42,16 @@ export function Button({
       style={{ ...style, minWidth }}
       type={type}
     >
-      {loading ? <Spinner size="sm" /> : children}
+      {loading ? (
+        <>
+          <span className={styles.loadingLabel}>{children}</span>
+          <span className={styles.loadingSpinner}>
+            <Spinner size="sm" />
+          </span>
+        </>
+      ) : (
+        children
+      )}
     </button>
   )
 }

@@ -65,6 +65,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/login_handler.cpp
         src/handlers/auth/password_hasher.hpp
         src/handlers/auth/password_hasher.cpp
+        src/handlers/auth/yandex_oauth_handler.hpp
+        src/handlers/auth/yandex_oauth_handler.cpp
         src/components/auth_checker.hpp
         src/components/auth_checker.cpp
         src/components/project_manager_component.cpp

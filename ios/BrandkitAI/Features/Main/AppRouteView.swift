@@ -17,21 +17,33 @@ struct AppRouteView: View {
         case .projectCreate:
             ProjectCreateView(
                 onBack: { router.pop() },
-                onGenerate: { name in
-                    router.push(.chat(projectID: UUID(), title: name))
+                onGenerate: { project in
+                    router.popToRoot(.create)
+                    router.push(.chat(projectID: project.id, title: project.name), in: .create)
                 }
             )
 
         case .chat(let projectID, let title):
             ChatView(
+                projectID: projectID,
                 title: title,
                 onBack: { router.pop() },
-                onOpenImage: { router.push(.chatImage(projectID: projectID, title: title)) }
+                onOpenImage: { versionID in
+                    router.push(.chatImage(
+                        projectID: projectID,
+                        title: title,
+                        versionID: versionID
+                    ))
+                }
             )
 
-        case .chatImage(let projectID, let title):
+        case .chatImage(let projectID, let title, let versionID):
             ChatImagePreviewView(
-                viewModel: ChatImagePreviewViewModel(projectID: projectID, title: title),
+                viewModel: ChatImagePreviewViewModel(
+                    projectID: projectID,
+                    title: title,
+                    versionID: versionID
+                ),
                 onBack: { router.pop() }
             )
 

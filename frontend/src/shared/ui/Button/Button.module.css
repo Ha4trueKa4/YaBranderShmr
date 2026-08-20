@@ -40,6 +40,18 @@
 .fullWidth {
   width: 100%;
 }
+.loading {
+  position: relative;
+}
+.loadingLabel {
+  visibility: hidden;
+}
+.loadingSpinner {
+  display: grid;
+  inset: 0;
+  place-items: center;
+  position: absolute;
+}
 .primary {
   background: var(--color-accent-primary);
   color: var(--color-text-inverse);

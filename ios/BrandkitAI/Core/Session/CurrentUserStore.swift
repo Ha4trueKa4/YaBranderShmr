@@ -33,20 +33,21 @@ final class CurrentUserStore: CurrentUserService {
     }
 
     func restore() async {
-        if let id {
-            if name == nil {
-                await refreshName(for: id)
-            }
-            return
-        }
-
         guard let token = tokenStore.accessToken,
-              let userID = JWTDecoder.userID(from: token) else {
+              let tokenUserID = JWTDecoder.userID(from: token) else {
+            id = nil
+            name = nil
             return
         }
 
-        id = userID
-        await refreshName(for: userID)
+        if id != tokenUserID {
+            id = tokenUserID
+            name = nil
+        }
+
+        if name == nil {
+            await refreshName(for: tokenUserID)
+        }
     }
 
     func save(id: UUID, name: String?) {

@@ -1,5 +1,6 @@
 import { GenerationPromptComposer } from '@features/editorGenerate'
 import { Controller } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 import { useGenerationForm } from '../../model/useGenerationForm'
 import { EditorCreateStateLayout } from './EditorCreateStateLayout'
@@ -18,9 +19,10 @@ export function EditorEmptyState({
   onGenerate,
   onUnauthorizedModelSelect,
 }: EditorEmptyStateProps) {
+  const { t } = useTranslation()
   const { form, submit } = useGenerationForm({
     onSubmit: ({ description, model }) =>
-      onGenerate({ description, model, name: 'Untitled project' }),
+      onGenerate({ description, model, name: t('Untitled project') }),
   })
 
   return (
@@ -50,10 +52,12 @@ export function EditorEmptyState({
           />
         </form>
       }
-      description="Create customized vectors, logos, and high-fidelity marks instantly."
+      description={t(
+        'Create customized vectors, logos, and high-fidelity marks instantly.',
+      )}
       isCopyWidthLimited
       isPreviewCompact
-      title="Paste your description and generate"
+      title={t('Paste your description and generate')}
     />
   )
 }
