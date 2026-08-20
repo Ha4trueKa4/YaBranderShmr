@@ -1,37 +1,51 @@
-import type { EditorShape, Paint } from '@entities/editorDocument'
+import type { EditorDefinitions, EditorShape } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 
 import { FillProperty } from '../components/FillProperty'
+import { GradientProperty } from '../components/GradientProperty'
+import { PropertyField } from '../components/PropertyField'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
 import { StrokeProperty } from '../components/StrokeProperty'
 import styles from '../Properties.module.css'
 
 interface ShapePropertiesProps {
+  definitions?: EditorDefinitions
   layer: EditorShape
   onFillChange: (color: string) => void
   onFillOpacityChange: (opacity: number) => void
+  onGradientStopColorChange: (
+    gradientId: string,
+    stopIndex: number,
+    color: string,
+  ) => void
   onOpacityChange: (opacity: number) => void
   onPositionChange: (x: number, y: number) => void
-}
-
-function paintToLabel(paint: Paint) {
-  if (paint.type === 'color') {
-    return paint.value
-  }
-
-  if (paint.type === 'gradient') {
-    return `Gradient: ${paint.gradientId}`
-  }
-
-  return 'None'
+  onStrokeAdd: () => void
+  onStrokeColorChange: (color: string) => void
+  onStrokeRemove: () => void
+  onStrokeWidthChange: (strokeWidth: number) => void
 }
 
 export const ShapeProperties = observer(function ShapeProperties({
+  definitions,
   layer,
   onFillChange,
   onFillOpacityChange,
+  onGradientStopColorChange,
   onPositionChange,
+  onStrokeAdd,
+  onStrokeColorChange,
+  onStrokeRemove,
+  onStrokeWidthChange,
 }: ShapePropertiesProps) {
+  const fill = layer.style.fill
+  const gradient =
+    fill.type === 'gradient'
+      ? definitions?.gradients.find((item) => item.id === fill.gradientId)
+      : undefined
+  const isEditableGradient =
+    gradient?.type === 'linearGradient' && gradient.stops.length === 2
+
   return (
     <div className={styles.properties}>
       <p className={styles.sectionTitle}>Shape</p>
@@ -52,15 +66,35 @@ export const ShapeProperties = observer(function ShapeProperties({
           />
         </div>
       </div>
-      <FillProperty
-        fill={
-          layer.style.fill.type === 'color' ? layer.style.fill.value : '#000000'
-        }
-        onFillChange={onFillChange}
-        onOpacityChange={onFillOpacityChange}
-        opacity={layer.style.fillOpacity}
+      {isEditableGradient && gradient ? (
+        <GradientProperty
+          gradient={gradient}
+          onStopColorChange={(stopIndex, color) =>
+            onGradientStopColorChange(gradient.id, stopIndex, color)
+          }
+        />
+      ) : fill.type === 'gradient' ? (
+        <PropertyField
+          label="Fill"
+          labelClassName={styles.sectionTitle}
+          value="Gradient editing supports two-stop linear gradients"
+        />
+      ) : (
+        <FillProperty
+          fill={fill.type === 'color' ? fill.value : '#000000'}
+          onFillChange={onFillChange}
+          onOpacityChange={onFillOpacityChange}
+          opacity={layer.style.fillOpacity}
+        />
+      )}
+      <StrokeProperty
+        onAdd={onStrokeAdd}
+        onColorChange={onStrokeColorChange}
+        onRemove={onStrokeRemove}
+        onWidthChange={onStrokeWidthChange}
+        stroke={layer.style.stroke}
+        strokeWidth={layer.style.strokeWidth}
       />
-      <StrokeProperty stroke={paintToLabel(layer.style.stroke)} />
     </div>
   )
 })

@@ -1,5 +1,10 @@
 import type { EditorDocument, EditorNode } from '@entities/editorDocument'
-import { type RefCallback, useCallback, useRef } from 'react'
+import {
+  type PointerEvent as ReactPointerEvent,
+  type RefCallback,
+  useCallback,
+  useRef,
+} from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
 import { constrainViewportOffset } from '../../model/constrainViewportOffset'
 import { useCanvasGesture } from '../../model/useCanvasGesture'
@@ -16,13 +21,16 @@ interface SceneFrameProps {
   activeTool: CanvasTool
   document: EditorDocument
   isReadOnly: boolean
-  onSelectNode: (nodeId: string) => void
+  onClearSelection: () => void
+  onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
   renderVersion: number
   selectedNode: EditorNode | null
+  selectedNodes: EditorNode[]
   viewportOffset: ViewportOffset
   zoom: number
 }
@@ -31,6 +39,8 @@ export function SceneFrame({
   activeTool,
   document,
   isReadOnly,
+  onClearSelection,
+  onGroupPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -38,6 +48,7 @@ export function SceneFrame({
   onZoomChange,
   renderVersion,
   selectedNode,
+  selectedNodes,
   viewportOffset,
   zoom,
 }: SceneFrameProps) {
@@ -53,9 +64,12 @@ export function SceneFrame({
   } = useLayerDrag({
     activeTool,
     isReadOnly,
+    onGroupPositionChange,
     onSelectNode,
     onShapePositionChange,
     onTextPositionChange,
+    selectedNode,
+    selectedNodes,
   })
   const getEditableElement = useCallback(
     (nodeId: string) => editableElementsReference.current.get(nodeId),
@@ -116,6 +130,26 @@ export function SceneFrame({
     zoom,
   })
 
+  function handleViewportPointerDownCapture(
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (event.button !== 0) {
+      return
+    }
+
+    const target = event.target
+
+    if (
+      !(target instanceof Element) ||
+      !target.closest('svg') ||
+      target.closest('[data-editor-node-id]')
+    ) {
+      return
+    }
+
+    onClearSelection()
+  }
+
   return (
     <div
       className={
@@ -123,6 +157,7 @@ export function SceneFrame({
           ? `${styles.viewport} ${styles.handTool}`
           : styles.viewport
       }
+      onPointerDownCapture={handleViewportPointerDownCapture}
       ref={viewportReference}
       {...canvasPanHandlers}
     >
@@ -157,7 +192,7 @@ export function SceneFrame({
                   canvasHeight={document.height}
                   canvasWidth={document.width}
                   getEditableElement={getEditableElement}
-                  selectedNode={selectedNode}
+                  selectedNodes={selectedNodes}
                 />
                 <TransformHandles />
               </>

@@ -9,10 +9,10 @@ interface LayerTreeItemProps {
   depth: number
   expandedGroupIds: ReadonlySet<string>
   node: EditorNode
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onToggleGroup: (groupId: string) => void
   onToggleVisibility: (nodeId: string) => void
-  selectedNodeId: string | null
+  selectedNodeIds: ReadonlySet<string>
 }
 
 export const LayerTreeItem = observer(function LayerTreeItem({
@@ -22,12 +22,12 @@ export const LayerTreeItem = observer(function LayerTreeItem({
   onSelectNode,
   onToggleGroup,
   onToggleVisibility,
-  selectedNodeId,
+  selectedNodeIds,
 }: LayerTreeItemProps) {
   const isGroup = node.type === 'group'
   const hasChildren = isGroup && node.children.length > 0
   const isExpanded = isGroup && expandedGroupIds.has(node.id)
-  const isSelected = node.id === selectedNodeId
+  const isSelected = selectedNodeIds.has(node.id)
   const presentation = getLayerPresentation(node)
   const LayerIcon = presentation.icon
   const VisibilityIcon = node.isVisible ? Eye : EyeOff
@@ -46,7 +46,7 @@ export const LayerTreeItem = observer(function LayerTreeItem({
         <button
           aria-label={`Select layer ${node.name}`}
           className={styles.selectRowButton}
-          onClick={() => onSelectNode(node.id)}
+          onClick={(event) => onSelectNode(node.id, event.shiftKey)}
           type="button"
         />
         {isGroup ? (
@@ -91,7 +91,7 @@ export const LayerTreeItem = observer(function LayerTreeItem({
               onSelectNode={onSelectNode}
               onToggleGroup={onToggleGroup}
               onToggleVisibility={onToggleVisibility}
-              selectedNodeId={selectedNodeId}
+              selectedNodeIds={selectedNodeIds}
             />
           ))}
         </div>
