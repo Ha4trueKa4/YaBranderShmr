@@ -1,5 +1,5 @@
 import type { EditorDefinitions, EditorNode } from '@entities/editorDocument'
-
+import { useTranslation } from 'react-i18next'
 import { getLayerPresentation } from '../layerPresentation'
 import { GroupProperties } from './groupProperties/GroupProperties'
 import styles from './InspectorPanel.module.css'
@@ -46,13 +46,14 @@ function InspectorHeader({
   label?: string
   showHeader: boolean
 }) {
+  const { t } = useTranslation()
   if (!showHeader) {
     return null
   }
 
   return (
     <div className={styles.header}>
-      <h2>Inspector</h2>
+      <h2>{t('Inspector')}</h2>
       {label && <span className={styles.typeLabel}>{label}</span>}
     </div>
   )
@@ -80,12 +81,13 @@ export function InspectorPanel({
   selectedNode,
   showHeader = true,
 }: InspectorPanelProps) {
+  const { t } = useTranslation()
   if (!selectedNode) {
     return (
       <section className={styles.panel}>
         <InspectorHeader showHeader={showHeader} />
         <div className={styles.content}>
-          <p>Select a layer to edit its properties.</p>
+          <p>{t('Select a layer to edit its properties.')}</p>
         </div>
       </section>
     )
@@ -95,7 +97,7 @@ export function InspectorPanel({
     return (
       <section className={styles.panel}>
         <InspectorHeader
-          label={getLayerPresentation(selectedNode).label}
+          label={t(getLayerPresentation(selectedNode).label)}
           showHeader={showHeader}
         />
         <div className={styles.content}>
@@ -109,12 +111,14 @@ export function InspectorPanel({
     return (
       <section className={styles.panel}>
         <InspectorHeader
-          label={getLayerPresentation(selectedNode).label}
+          label={t(getLayerPresentation(selectedNode).label)}
           showHeader={showHeader}
         />
         <div className={styles.content}>
           <p>
-            This SVG layer is locked because its features are not editable yet.
+            {t(
+              'This SVG layer is locked because its features are not editable yet.',
+            )}
           </p>
         </div>
       </section>
@@ -125,7 +129,7 @@ export function InspectorPanel({
     return (
       <section className={styles.panel}>
         <InspectorHeader
-          label={getLayerPresentation(selectedNode).label}
+          label={t(getLayerPresentation(selectedNode).label)}
           showHeader={showHeader}
         />
         <div className={styles.content}>
@@ -162,7 +166,7 @@ export function InspectorPanel({
   return (
     <section className={styles.panel}>
       <InspectorHeader
-        label={getLayerPresentation(selectedNode).label}
+        label={t(getLayerPresentation(selectedNode).label)}
         showHeader={showHeader}
       />
       <div className={styles.content}>

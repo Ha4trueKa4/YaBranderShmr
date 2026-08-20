@@ -3,15 +3,12 @@ import type { Project } from '@shared/api/types'
 import { Button, FormField, Input, Portal } from '@shared/ui'
 import { useEffect, useId, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 
 import styles from './ProjectManagementModal.module.css'
 
-const projectNameFormSchema = z.object({
-  name: z.string().trim().nonempty('Enter a project name.'),
-})
-
-type ProjectNameFormValues = z.infer<typeof projectNameFormSchema>
+type ProjectNameFormValues = { name: string }
 
 interface ProjectManagementModalProps {
   onClose: () => void
@@ -24,8 +21,12 @@ export function ProjectManagementModal({
   onSubmit,
   project,
 }: ProjectManagementModalProps) {
+  const { t } = useTranslation()
   const nameInputId = useId()
   const [isPublic, setIsPublic] = useState(project.is_public ?? false)
+  const projectNameFormSchema = z.object({
+    name: z.string().trim().nonempty(t('Enter a project name.')),
+  })
   const form = useForm<ProjectNameFormValues>({
     defaultValues: { name: project.name ?? '' },
     mode: 'onSubmit',
@@ -42,7 +43,7 @@ export function ProjectManagementModal({
       <div className={styles.overlay}>
         <button className={styles.backdrop} onClick={onClose} type="button" />
         <section className={styles.modal}>
-          <h2 className={styles.title}>Manage project</h2>
+          <h2 className={styles.title}>{t('Manage project')}</h2>
           <form
             className={styles.form}
             onSubmit={form.handleSubmit(async ({ name }) => {
@@ -52,7 +53,7 @@ export function ProjectManagementModal({
             <FormField
               error={form.formState.errors.name?.message}
               htmlFor={nameInputId}
-              label="Project name"
+              label={t('Project name')}
             >
               <Input
                 {...form.register('name')}
@@ -62,7 +63,7 @@ export function ProjectManagementModal({
               />
             </FormField>
             <div className={styles.visibility}>
-              <span>Visibility</span>
+              <span>{t('Visibility')}</span>
               <div className={styles.visibilityOptions}>
                 <Button
                   className={
@@ -73,7 +74,7 @@ export function ProjectManagementModal({
                   type="button"
                   variant="secondary"
                 >
-                  Public
+                  {t('Public')}
                 </Button>
                 <Button
                   className={
@@ -84,16 +85,16 @@ export function ProjectManagementModal({
                   type="button"
                   variant="secondary"
                 >
-                  Private
+                  {t('Private')}
                 </Button>
               </div>
             </div>
             <div className={styles.actions}>
               <Button onClick={onClose} variant="secondary">
-                Cancel
+                {t('Cancel')}
               </Button>
               <Button loading={form.formState.isSubmitting} type="submit">
-                Save
+                {t('Save')}
               </Button>
             </div>
           </form>

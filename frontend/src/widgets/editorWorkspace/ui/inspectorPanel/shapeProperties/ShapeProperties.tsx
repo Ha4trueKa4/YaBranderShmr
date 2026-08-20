@@ -1,5 +1,6 @@
 import type { EditorDefinitions, EditorShape } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
 import { GradientProperty } from '../components/GradientProperty'
@@ -45,20 +46,20 @@ export const ShapeProperties = observer(function ShapeProperties({
       : undefined
   const isEditableGradient =
     gradient?.type === 'linearGradient' && gradient.stops.length === 2
-
+  const { t } = useTranslation()
   return (
     <div className={styles.properties}>
-      <p className={styles.sectionTitle}>Shape</p>
+      <p className={styles.sectionTitle}>{t('Shape')}</p>
       <div className={styles.fieldGrid}>
         <div className={styles.field}>
-          <span>X</span>
+          <span>{t('X')}</span>
           <ScrubbableNumberInput
             onValueChange={(x) => onPositionChange(x, layer.transform.y)}
             value={layer.transform.x}
           />
         </div>
         <div className={styles.field}>
-          <span>Y</span>
+          <span>{t('Y')}</span>
           <ScrubbableNumberInput
             axis="vertical"
             onValueChange={(y) => onPositionChange(layer.transform.x, y)}
@@ -75,9 +76,9 @@ export const ShapeProperties = observer(function ShapeProperties({
         />
       ) : fill.type === 'gradient' ? (
         <PropertyField
-          label="Fill"
+          label={t('Fill')}
           labelClassName={styles.sectionTitle}
-          value="Gradient editing supports two-stop linear gradients"
+          value={t('Gradient editing supports two-stop linear gradients')}
         />
       ) : (
         <FillProperty

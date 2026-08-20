@@ -1,5 +1,6 @@
 import { CircleAlert, Info, X } from 'lucide-react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import styles from './Toast.module.css'
 import type { Toast } from './toast.types'
 
@@ -11,6 +12,7 @@ type ToastItemProps = {
 }
 
 export function ToastItem({ onDismiss, toast }: ToastItemProps) {
+  const { t } = useTranslation()
   useEffect(() => {
     const timeoutId = window.setTimeout(
       () => onDismiss(toast.id),
@@ -29,7 +31,7 @@ export function ToastItem({ onDismiss, toast }: ToastItemProps) {
       <button
         className={styles.dismissButton}
         onClick={() => onDismiss(toast.id)}
-        title="Закрыть уведомление"
+        title={t('Close notification')}
         type="button"
       >
         <X size={18} />

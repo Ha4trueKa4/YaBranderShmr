@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
+import { useTranslation } from 'react-i18next'
 
 import { Input } from '../Input'
 
@@ -18,6 +19,7 @@ export function ColorPicker({
   onChange,
   onChangeEnd,
 }: ColorPickerProps) {
+  const { t } = useTranslation()
   const [hexColor, setHexColor] = useState(color)
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function ColorPicker({
         onChangeEnd={onChangeEnd}
       />
       <div className={styles.hexField}>
-        <span>HEX</span>
+        <span>{t('HEX')}</span>
         <Input
           autoComplete="off"
           invalid={hexColor.length > 0 && !HEX_COLOR_PATTERN.test(hexColor)}

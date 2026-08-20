@@ -2,15 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, FormField, Input, Portal } from '@shared/ui'
 import { useEffect, useId } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 
 import styles from './EditProfileModal.module.css'
 
-const editProfileFormSchema = z.object({
-  name: z.string().trim().nonempty('Enter a display name.'),
-})
-
-type EditProfileFormValues = z.infer<typeof editProfileFormSchema>
+type EditProfileFormValues = { name: string }
 
 interface EditProfileModalProps {
   isOpen: boolean
@@ -25,7 +22,11 @@ export function EditProfileModal({
   onClose,
   onSubmit,
 }: EditProfileModalProps) {
+  const { t } = useTranslation()
   const nameInputId = useId()
+  const editProfileFormSchema = z.object({
+    name: z.string().trim().nonempty(t('Enter a display name.')),
+  })
   const form = useForm<EditProfileFormValues>({
     defaultValues: { name },
     mode: 'onSubmit',
@@ -47,7 +48,7 @@ export function EditProfileModal({
       <div className={styles.overlay}>
         <button className={styles.backdrop} onClick={onClose} type="button" />
         <section className={styles.modal}>
-          <h2 className={styles.title}>Edit profile</h2>
+          <h2 className={styles.title}>{t('Edit profile')}</h2>
           <form
             className={styles.form}
             onSubmit={form.handleSubmit(({ name: nextName }) => {
@@ -57,7 +58,7 @@ export function EditProfileModal({
             <FormField
               error={form.formState.errors.name?.message}
               htmlFor={nameInputId}
-              label="Display name"
+              label={t('Display name')}
             >
               <Input
                 {...form.register('name')}
@@ -68,9 +69,9 @@ export function EditProfileModal({
             </FormField>
             <div className={styles.actions}>
               <Button onClick={onClose} variant="secondary">
-                Cancel
+                {t('Cancel')}
               </Button>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit">{t('Save changes')}</Button>
             </div>
           </form>
         </section>

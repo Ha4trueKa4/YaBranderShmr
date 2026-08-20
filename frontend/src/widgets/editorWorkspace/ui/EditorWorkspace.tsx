@@ -1,5 +1,6 @@
 import { AppRoute } from '@app/providers/router/routes'
 import { type EditorDocument, EditorStore } from '@entities/editorDocument'
+import { exportEditorDocument } from '@features/editorExport'
 import {
   ConfirmUnsavedChangeModal,
   type ImageExportFileType,
@@ -13,6 +14,7 @@ import {
 } from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { useEditorKeyboardShortcuts } from '../model/useEditorKeyboardShortcuts'
 import { useEditorProjectActions } from '../model/useEditorProjectActions'
@@ -46,6 +48,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const isMobileLayout = useIsMobileLayout()
   const navigate = useNavigate()
   const toast = useToast()
+  const { t } = useTranslation()
   const [editorStore] = useState(() => new EditorStore(document))
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
@@ -53,6 +56,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
+  const [isImageExporting, setIsImageExporting] = useState(false)
   const {
     createCopy,
     isCreatingCopy,
@@ -93,9 +97,22 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsImageExportModalOpen(true)
   }
 
-  function handleImageExport(fileType: ImageExportFileType) {
-    setIsImageExportModalOpen(false)
-    toast.info(`${fileType.toUpperCase()} export is not available yet.`)
+  async function handleImageExport(fileType: ImageExportFileType) {
+    setIsImageExporting(true)
+
+    try {
+      await exportEditorDocument({
+        document: editorStore.document,
+        fileName: projectName,
+        format: fileType,
+      })
+      setIsImageExportModalOpen(false)
+      toast.info(t('Image exported.'))
+    } catch {
+      toast.error(t('Unable to export image. Please try again.'))
+    } finally {
+      setIsImageExporting(false)
+    }
   }
 
   function handleToggleVisibility(nodeId: string) {
@@ -248,6 +265,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         onConfirm={handleConfirmExit}
       />
       <ImageExportModal
+        isExporting={isImageExporting}
         isOpen={isImageExportModalOpen}
         onClose={() => setIsImageExportModalOpen(false)}
         onExport={handleImageExport}

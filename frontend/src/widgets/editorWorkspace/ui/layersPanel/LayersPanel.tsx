@@ -1,5 +1,6 @@
 import type { EditorNode } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import plus from './assets/plus.svg'
 import styles from './LayersPanel.module.css'
@@ -22,10 +23,11 @@ export const LayersPanel = observer(function LayersPanel({
   onToggleVisibility,
   selectedNodeIds,
 }: LayersPanelProps) {
+  const { t } = useTranslation()
   return (
     <section className={styles.panel}>
       <div className={styles.header}>
-        <h2>Layers</h2>
+        <h2>{t('Layers')}</h2>
         {/* TODO: открыть feature добавления нового слоя. */}
         <button className={styles.addButton} type="button">
           <img alt="" src={plus} />

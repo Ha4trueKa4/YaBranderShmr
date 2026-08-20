@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '@shared/api/api'
 import { AsyncState, Button, ErrorState, useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  Footer,
   OwnProjectsSection,
   ProfileHeader,
   type ProfileHeaderProfile,
@@ -17,6 +18,7 @@ import {
 import { Header } from '@widgets/header'
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { generatePath, useNavigate } from 'react-router-dom'
 
 import { EditProfileModal } from './EditProfileModal'
@@ -26,6 +28,7 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t } = useTranslation()
   const session = authStore.getSession
   const [isEditProfileModalOpen, setEditProfileModalOpen] = useState(false)
   const [profileName, setProfileName] = useState(
@@ -95,7 +98,7 @@ export function ProfilePage() {
       await queryClient.invalidateQueries({
         queryKey: userProfileQueryKey(userId),
       })
-      toast.info('Project deleted.')
+      toast.info(t('Project deleted.'))
     } catch (error) {
       toast.error(getApiErrorMessage(error))
       throw error
@@ -115,7 +118,7 @@ export function ProfilePage() {
       await queryClient.invalidateQueries({
         queryKey: userProfileQueryKey(userId),
       })
-      toast.info('Project updated.')
+      toast.info(t('Project updated.'))
     } catch (error) {
       toast.error(getApiErrorMessage(error))
       throw error
@@ -130,14 +133,14 @@ export function ProfilePage() {
           actions={
             <>
               <Button onClick={handleLogout} variant="ghost">
-                Log out
+                {t('Log out')}
               </Button>
               <Button
                 onClick={() => setEditProfileModalOpen(true)}
                 variant="outline"
               >
                 <Pencil aria-hidden size={16} />
-                Edit profile
+                {t('Edit profile')}
               </Button>
             </>
           }
@@ -166,17 +169,25 @@ export function ProfilePage() {
         onClose={() => setEditProfileModalOpen(false)}
         onSubmit={handleEditProfile}
       />
+      <Footer />
     </div>
   )
 }
 
 function ProfileUnavailable() {
+  const { t } = useTranslation()
+
   return (
     <div className={styles.page}>
       <Header />
       <main className={styles.content}>
-        <ErrorState message="Unable to load the profile. Please sign in and try again." />
+        <ErrorState
+          message={t(
+            'Unable to load the profile. Please sign in and try again.',
+          )}
+        />
       </main>
+      <Footer />
     </div>
   )
 }

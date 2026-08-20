@@ -1,6 +1,7 @@
 import type { EditorNode } from '@entities/editorDocument'
 import { ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import { getLayerPresentation } from '../layerPresentation'
 import styles from './LayersPanel.module.css'
@@ -24,6 +25,7 @@ export const LayerTreeItem = observer(function LayerTreeItem({
   onToggleVisibility,
   selectedNodeIds,
 }: LayerTreeItemProps) {
+  const { t } = useTranslation()
   const isGroup = node.type === 'group'
   const hasChildren = isGroup && node.children.length > 0
   const isExpanded = isGroup && expandedGroupIds.has(node.id)
@@ -44,7 +46,7 @@ export const LayerTreeItem = observer(function LayerTreeItem({
         }}
       >
         <button
-          aria-label={`Select layer ${node.name}`}
+          aria-label={t('Select layer {{layerName}}', { layerName: node.name })}
           className={styles.selectRowButton}
           onClick={(event) => onSelectNode(node.id, event.shiftKey)}
           type="button"
