@@ -110,8 +110,7 @@ std::string YandexOAuthHandler::ExchangeCodeForToken(const std::string& code) co
     auto response = request.perform();
     if (response->status_code() != 200) {
         throw std::runtime_error("Yandex token exchange failed: HTTP " +
-                                  std::to_string(response->status_code()) +
-                                  ", body: " + response->body());
+                                  std::to_string(response->status_code()));
     }
 
     auto json = userver::formats::json::FromString(response->body());
