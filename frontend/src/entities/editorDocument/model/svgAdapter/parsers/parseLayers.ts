@@ -282,6 +282,10 @@ function getUnsupportedReason(element: Element): string | null {
     return 'Text with unsupported nested SVG elements is not editable'
   }
 
+  if (element.localName === 'text' && !hasLosslessTspanPositions(element)) {
+    return 'Text with individually positioned lines is not editable'
+  }
+
   const supportedAttributes =
     attributeNamesByElement[
       element.localName as keyof typeof attributeNamesByElement
@@ -323,6 +327,37 @@ function hasSupportedTextContent(element: Element): boolean {
         child.nodeType !== Node.TEXT_NODE || !child.textContent?.trim(),
     )
   )
+}
+
+function hasLosslessTspanPositions(element: Element): boolean {
+  if (element.localName !== 'text' || element.children.length === 0) {
+    return true
+  }
+
+  const textX = parseNumberAttribute(element, 'x', 0)
+  const tspans = Array.from(element.children)
+  let lineHeight: number | null = null
+
+  return tspans.every((tspan, index) => {
+    const x = tspan.getAttribute('x')
+    const dy = tspan.getAttribute('dy')
+
+    if (x === null || Number(x) !== textX) {
+      return false
+    }
+
+    if (index === 0) {
+      return dy === null || Number(dy) === 0
+    }
+
+    if (dy === null || !Number.isFinite(Number(dy)) || Number(dy) <= 0) {
+      return false
+    }
+
+    lineHeight ??= Number(dy)
+
+    return Number(dy) === lineHeight
+  })
 }
 
 function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {

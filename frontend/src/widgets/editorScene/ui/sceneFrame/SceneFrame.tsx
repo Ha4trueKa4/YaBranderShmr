@@ -178,7 +178,7 @@ export function SceneFrame({
           <svg
             className={styles.canvas}
             ref={svgReference}
-            viewBox={`0 0 ${document.width} ${document.height}`}
+            viewBox={`${document.viewBoxX ?? 0} ${document.viewBoxY ?? 0} ${document.width} ${document.height}`}
             xmlns="http://www.w3.org/2000/svg"
           >
             <LayerRenderer
@@ -197,6 +197,8 @@ export function SceneFrame({
                 <SelectionOverlay
                   canvasHeight={document.height}
                   canvasWidth={document.width}
+                  canvasX={document.viewBoxX ?? 0}
+                  canvasY={document.viewBoxY ?? 0}
                   getEditableElement={getEditableElement}
                   selectedNodes={selectedNodes}
                 />

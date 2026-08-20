@@ -32,4 +32,21 @@ describe('constrainSelectionBounds', () => {
       y: 196,
     })
   })
+
+  it('uses the viewBox origin as the canvas boundary', () => {
+    expect(
+      constrainSelectionBounds(
+        { height: 300, width: 500, x: -250, y: 100 },
+        500,
+        300,
+        -250,
+        100,
+      ),
+    ).toEqual({
+      height: 297,
+      width: 497,
+      x: -248.5,
+      y: 101.5,
+    })
+  })
 })

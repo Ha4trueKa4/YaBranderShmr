@@ -61,6 +61,8 @@ function getUniqueElements(nodes: EditorNode[]): EditorElement[] {
 interface SelectionOverlayProps {
   canvasHeight: number
   canvasWidth: number
+  canvasX: number
+  canvasY: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   selectedNodes: EditorNode[]
 }
@@ -68,6 +70,8 @@ interface SelectionOverlayProps {
 export const SelectionOverlay = observer(function SelectionOverlay({
   canvasHeight,
   canvasWidth,
+  canvasX,
+  canvasY,
   getEditableElement,
   selectedNodes,
 }: SelectionOverlayProps) {
@@ -99,6 +103,8 @@ export const SelectionOverlay = observer(function SelectionOverlay({
       bounds,
       canvasWidth,
       canvasHeight,
+      canvasX,
+      canvasY,
     )
 
     return (
