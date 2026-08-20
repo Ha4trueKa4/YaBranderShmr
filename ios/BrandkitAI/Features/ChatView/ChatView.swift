@@ -249,6 +249,14 @@ struct ChatView: View {
 
     private func inputBar(using proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 8) {
+            if let inputErrorMessage {
+                Label(inputErrorMessage, systemImage: "exclamationmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+            }
+
             if viewModel.pendingCount > 0 {
                 Label(
                     viewModel.pendingCount == 1
@@ -302,8 +310,18 @@ struct ChatView: View {
     }
 
     private var canSendMessage: Bool {
-        !viewModel.isGenerating
-            && !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !viewModel.isGenerating
+            && !text.isEmpty
+            && text.utf8.count <= ChatViewModel.maxPromptUTF8Length
+    }
+
+    private var inputErrorMessage: String? {
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.utf8.count > ChatViewModel.maxPromptUTF8Length {
+            return "Message is too long (maximum 1500 bytes)."
+        }
+        return viewModel.sendErrorMessage
     }
 
     private func sendMessage() {

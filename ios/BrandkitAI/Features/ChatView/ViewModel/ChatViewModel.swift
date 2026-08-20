@@ -11,6 +11,8 @@ private nonisolated final class ChatObserverHolder: @unchecked Sendable {
 @MainActor
 @Observable
 final class ChatViewModel {
+    static let maxPromptUTF8Length = 1_500
+
     enum ProjectPrivacy: String, CaseIterable, Identifiable {
         case privateProject
         case publicShowcase
@@ -67,6 +69,7 @@ final class ChatViewModel {
     private(set) var isOffline = false
     private(set) var loadFailed = false
     private(set) var pendingCount = 0
+    private(set) var sendErrorMessage: String?
     var privacy = ProjectPrivacy.privateProject
 
     private let service: any ProjectServiceProtocol
@@ -118,8 +121,14 @@ final class ChatViewModel {
     func sendMessage(_ text: String) async {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isGenerating else { return }
+        guard text.utf8.count <= Self.maxPromptUTF8Length else {
+            sendErrorMessage = "Message is too long (maximum 1500 bytes)."
+            return
+        }
 
-        appendMessage(ChatMessage(type: .user, text: text, date: Date()))
+        sendErrorMessage = nil
+        let chatMessage = ChatMessage(type: .user, text: text, date: Date())
+        appendMessage(chatMessage)
         isGenerating = true
 
         do {
@@ -129,9 +138,14 @@ final class ChatViewModel {
             await flushPendingMessages()
         } catch {
             isGenerating = false
-            markLastMessagePending()
-            await queuePendingMessage(text)
-            await flushPendingMessages()
+            if shouldKeepPending(after: error) {
+                markMessagePending(id: chatMessage.id)
+                await queuePendingMessage(text, createdAt: chatMessage.date)
+                sendErrorMessage = "Message is pending and will be sent when the connection recovers."
+            } else {
+                markMessageFailed(id: chatMessage.id)
+                sendErrorMessage = failureMessage(for: error)
+            }
         }
     }
 
@@ -142,13 +156,29 @@ final class ChatViewModel {
 
         while !pendingMessages.isEmpty {
             let prompt = pendingMessages[0]
-            do {
-                let generatedURL = try await service.generate(projectID: projectID, prompt: prompt.text)
+            guard prompt.text.utf8.count <= Self.maxPromptUTF8Length else {
                 pendingMessages.removeFirst()
-                try await refreshChatAfterGenerate(generatedURL: generatedURL)
-            } catch {
-                break
+                markPendingMessageFailed(prompt)
+                continue
             }
+
+            let generatedURL: URL?
+            do {
+                generatedURL = try await service.generate(projectID: projectID, prompt: prompt.text)
+            } catch {
+                if shouldKeepPending(after: error) {
+                    break
+                }
+                pendingMessages.removeFirst()
+                markPendingMessageFailed(prompt)
+                sendErrorMessage = failureMessage(for: error)
+                continue
+            }
+
+            pendingMessages.removeFirst()
+            markPendingMessageSent(prompt)
+            sendErrorMessage = nil
+            try? await refreshChatAfterGenerate(generatedURL: generatedURL)
         }
 
         pendingCount = pendingMessages.count
@@ -227,16 +257,79 @@ final class ChatViewModel {
         }
     }
 
-    private func markLastMessagePending() {
-        guard let lastID = lastMessageID,
-              let index = messages.firstIndex(where: { $0.id == lastID }) else { return }
-        messages[index].isPending = true
+    private func markMessagePending(id: ChatMessage.ID) {
+        updateMessage(id: id) { message in
+            message.isPending = true
+            message.isFailed = false
+        }
     }
 
-    private func queuePendingMessage(_ text: String) async {
-        pendingMessages.append(ChatCache.PendingMessage(text: text, createdAt: Date()))
+    private func markMessageFailed(id: ChatMessage.ID) {
+        updateMessage(id: id) { message in
+            message.isPending = false
+            message.isFailed = true
+        }
+    }
+
+    private func markPendingMessageFailed(_ pending: ChatCache.PendingMessage) {
+        guard let message = messages.first(where: {
+            $0.type == .user && $0.isPending && $0.text == pending.text
+        }) else { return }
+        markMessageFailed(id: message.id)
+    }
+
+    private func markPendingMessageSent(_ pending: ChatCache.PendingMessage) {
+        guard let message = messages.first(where: {
+            $0.type == .user && $0.isPending && $0.text == pending.text
+        }) else { return }
+        updateMessage(id: message.id) { message in
+            message.isPending = false
+            message.isFailed = false
+        }
+    }
+
+    private func updateMessage(
+        id: ChatMessage.ID,
+        update: (inout ChatMessage) -> Void
+    ) {
+        guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+        update(&messages[index])
+        sections = makeSections(from: messages)
+    }
+
+    private func queuePendingMessage(_ text: String, createdAt: Date) async {
+        pendingMessages.append(ChatCache.PendingMessage(text: text, createdAt: createdAt))
         pendingCount = pendingMessages.count
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+    }
+
+    private func shouldKeepPending(after error: Error) -> Bool {
+        if case NetworkError.httpError(let statusCode) = error {
+            return [408, 429, 500, 502, 503, 504].contains(statusCode)
+        }
+
+        guard let urlError = error as? URLError else { return false }
+        return [
+            .notConnectedToInternet,
+            .cannotFindHost,
+            .cannotConnectToHost,
+            .dnsLookupFailed,
+            .dataNotAllowed
+        ].contains(urlError.code)
+    }
+
+    private func failureMessage(for error: Error) -> String {
+        if case NetworkError.httpError(let statusCode) = error {
+            return "Unable to send message (server error \(statusCode))."
+        }
+        if case NetworkError.serverValidation = error {
+            return "The server rejected this message."
+        }
+        if let urlError = error as? URLError,
+           [.timedOut, .networkConnectionLost].contains(urlError.code) {
+            return "The result is uncertain. Refresh the chat before sending again."
+        }
+        return "Unable to send message."
     }
 
     private func reload() async {

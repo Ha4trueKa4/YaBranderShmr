@@ -119,6 +119,13 @@ struct ChatMessageView: View {
                 }
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(message.type == .user ? .white.opacity(0.8) : .secondary)
+            } else if message.isFailed {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle")
+                    Text("Not sent")
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(message.type == .user ? .white.opacity(0.8) : .red)
             }
 
             if message.type == .assistant {

@@ -7,6 +7,7 @@ struct ChatMessage: Identifiable {
     let date: Date
     let attachment: ChatMessageAttachment
     var isPending: Bool
+    var isFailed: Bool
 
     init(
         id: UUID = UUID(),
@@ -14,7 +15,8 @@ struct ChatMessage: Identifiable {
         text: String,
         date: Date,
         attachment: ChatMessageAttachment = .none,
-        isPending: Bool = false
+        isPending: Bool = false,
+        isFailed: Bool = false
     ) {
         self.id = id
         self.type = type
@@ -22,5 +24,6 @@ struct ChatMessage: Identifiable {
         self.date = date
         self.attachment = attachment
         self.isPending = isPending
+        self.isFailed = isFailed
     }
 }
