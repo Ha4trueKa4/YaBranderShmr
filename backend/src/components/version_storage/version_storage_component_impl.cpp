@@ -193,4 +193,59 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
       }
     }
 
+    std::size_t VersionStorageComponentImpl::CollectGarbage(
+    std::chrono::seconds grace, double max_orphan_ratio) {
+
+    const auto objects = storage_.ListKeys("projects/");
+    if (objects.empty()) return 0;
+
+    std::unordered_set<std::string> referenced;
+    {
+    const auto res = pg_cluster_->Execute(
+        pg::ClusterHostType::kMaster,
+        "SELECT s3_file_key AS k FROM project_versions WHERE s3_file_key IS NOT NULL "
+        "UNION "
+        "SELECT last_version_key AS k FROM projects WHERE last_version_key IS NOT NULL");
+    referenced.reserve(res.Size());
+    for (const auto& row : res) referenced.insert(row["k"].As<std::string>());
+    }
+
+    if (referenced.empty()) {
+        LOG_ERROR() << "CollectGarbage ABORTED: reference set is empty but bucket has "
+                    << objects.size()
+                    << " objects. Likely wrong DB/bucket pairing (different "
+                       "environments). Deleting nothing.";
+        return 0;
+    }
+
+    const auto cutoff = std::chrono::system_clock::now() - grace;
+    std::vector<std::string> orphans;
+    for (const auto& obj : objects) {
+        if (referenced.count(obj.key) == 0 && obj.last_modified < cutoff) {
+            orphans.push_back(obj.key);
+        }
+    }
+    if (orphans.empty()) return 0;
+
+    const double ratio =
+      static_cast<double>(orphans.size()) / static_cast<double>(objects.size());
+    if (ratio > max_orphan_ratio) {
+    LOG_ERROR() << "CollectGarbage ABORTED: " << orphans.size() << " of "
+                << objects.size() << " objects ("
+                << static_cast<int>(ratio * 100)
+                << "%) look like orphans, over the "
+                << static_cast<int>(max_orphan_ratio * 100)
+                << "% safety threshold. Refusing to delete — likely misconfiguration.";
+    return 0;
+    }
+
+    try {
+        storage_.DeleteMany(orphans);
+    } catch (const std::exception& e) {
+            LOG_ERROR() << "CollectGarbage: delete failed, will retry next run: " << e.what();
+        }
+        LOG_INFO() << "CollectGarbage: reclaimed " << orphans.size() << " orphan objects";
+
+        return orphans.size();
+    }
 }  // namespace ya_brander::components

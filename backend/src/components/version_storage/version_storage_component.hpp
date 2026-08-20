@@ -136,6 +136,19 @@ class VersionStorageComponent : public userver::components::LoggableComponentBas
     ///          не фатальны и не бросаются наружу, их подберёт фоновый orphan-GC
     ///          когда будет готов.
     virtual void DeleteAllVersions(const std::string& project_id) = 0;
+
+    /// @brief Сверяет объекты бакета с БД и удаляет "сирот" (best-effort).
+    /// @details Источник истины это БД. Объект живой, если его ключ есть среди
+    ///          project_versions.s3_file_key или projects.last_version_key. Под
+    ///          префиксом всё, чего в БД нет И что старше grace, удаляется.
+    ///          ЗАЩИТА: если ссылок в БД нет вовсе, либо доля "сирот" превышает
+    ///          max_orphan_ratio — проход прерывается и НИЧЕГО не удаляется
+    ///          (почти наверняка перепутаны окружения: чужая БД к этому бакету).
+    /// @param grace Минимальный возраст объекта, чтобы считать его мусором.
+    /// @param max_orphan_ratio Порог доли "сирот" (0..1); выше — abort.
+    /// @return Сколько объектов удалено за проход (0 при abort).
+    virtual std::size_t CollectGarbage(std::chrono::seconds grace,
+                                       double max_orphan_ratio) = 0;
 };
 
 }  // namespace ya_brander::components

@@ -107,6 +107,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/get_user_profile.cpp
         src/handlers/users/patch_user_profile.cpp
         src/handlers/users/user_subscriptions_handlers.cpp
+        src/components/garbage_collector/garbage_collector_component.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

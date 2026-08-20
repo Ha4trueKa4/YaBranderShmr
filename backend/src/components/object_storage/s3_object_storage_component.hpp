@@ -30,6 +30,8 @@ class S3ObjectStorageComponent final : public ObjectStorageComponent {
   void SetAcl(const std::string& key, bool make_public) override;
   void Delete(const std::string& key) override;
   void DeleteMany(const std::vector<std::string>& keys) override;
+  std::vector<ObjectKey> ListKeys(const std::string& prefix) override;
+
 
   static userver::yaml_config::Schema GetStaticConfigSchema();
 

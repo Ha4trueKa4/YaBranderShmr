@@ -24,6 +24,38 @@ std::string GetScheme(std::string_view endpoint) {
   return "https://"; // По умолчанию для продакшена
 }
 
+// Extracts the text between <tag> and </tag> starting at/after `from`.
+// Returns the value and advances `from` past the closing tag; empty if not found.
+std::string ExtractTag(std::string_view xml, std::string_view tag, size_t& from) {
+    const std::string open = "<" + std::string{tag} + ">";
+    const std::string close = "</" + std::string{tag} + ">";
+    const auto open_pos = xml.find(open, from);
+
+
+    if (open_pos == std::string_view::npos) return {};
+
+    const auto val_start = open_pos + open.size();
+    const auto close_pos = xml.find(close, val_start);
+
+    if (close_pos == std::string_view::npos) return {};
+
+    from = close_pos + close.size();
+    return std::string{xml.substr(val_start, close_pos - val_start)};
+}
+
+// Parses an ISO-8601 UTC timestamp like "2026-08-15T00:01:55.000Z" to a time_point.
+std::chrono::system_clock::time_point ParseS3Time(const std::string& iso) {
+  std::tm tm{};
+  // Ignore fractional seconds / 'Z'; strptime reads up to seconds.
+  if (::strptime(iso.c_str(), "%Y-%m-%dT%H:%M:%S", &tm) == nullptr) {
+    return std::chrono::system_clock::time_point::min();  // unparseable -> treat as very old
+  }
+
+  const std::time_t t = ::timegm(&tm);  // interpret tm as UTC
+
+  return std::chrono::system_clock::from_time_t(t);
+}
+
 namespace hash = userver::crypto::hash;
 
 constexpr std::string_view kAlgorithm = "AWS4-HMAC-SHA256";
@@ -329,5 +361,80 @@ properties:
         defaultDescription: '900'
 )");
 }
+
+    std::vector<ObjectKey> S3ObjectStorageComponent::ListKeys(
+    const std::string& prefix) {
+  std::vector<ObjectKey> out;
+  std::string continuation_token;
+
+  do {
+
+    std::map<std::string, std::string> params;
+    params["list-type"] = "2";
+    params["prefix"] = prefix;
+    if (!continuation_token.empty()) {
+      params["continuation-token"] = continuation_token;
+    }
+
+    std::string canonical_query;
+    for (const auto& [k, v] : params) {
+      if (!canonical_query.empty()) canonical_query += '&';
+      canonical_query += UriEncode(k, true) + '=' + UriEncode(v, true);
+    }
+
+    const std::string canonical_uri = "/" + bucket_ + "/";
+    auto headers = SignRequest("GET", canonical_uri, canonical_query,
+                               kEmptyPayloadSha256, {});
+
+    std::string host = GetScheme(endpoint_) + endpoint_;
+    if (!host.empty() && host.back() == '/')
+    {
+        host.pop_back();
+    }
+
+    const std::string url = host + canonical_uri + "?" + canonical_query;
+
+    auto response = http_client_.CreateRequest()
+                        .get(url)
+                        .headers(std::move(headers))
+                        .timeout(std::chrono::seconds{30})
+                        .perform();
+
+    const int code = StatusOf(response);
+    if (code != 200) {
+      LOG_ERROR() << "S3 ListKeys failed prefix=" << prefix << " status=" << code
+                  << " body=" << response->body_view();
+      throw std::runtime_error("object storage ListKeys failed, status=" +
+                               std::to_string(code));
+    }
+
+    const std::string body = response->body();
+
+    size_t pos = 0;
+    while (true) {
+      const auto contents_open = body.find("<Contents>", pos);
+      if (contents_open == std::string::npos) break;
+      size_t inner = contents_open;
+      const auto key = ExtractTag(body, "Key", inner);
+      const auto last_modified = ExtractTag(body, "LastModified", inner);
+      if (!key.empty()) {
+        out.push_back(ObjectKey{key, ParseS3Time(last_modified)});
+      }
+      pos = inner;
+    }
+
+    size_t p = 0;
+    const auto truncated = ExtractTag(body, "IsTruncated", p);
+    if (truncated == "true") {
+      size_t t = 0;
+      continuation_token = ExtractTag(body, "NextContinuationToken", t);
+    } else {
+      continuation_token.clear();
+    }
+  } while (!continuation_token.empty());
+
+  return out;
+}
+
 
 }  // namespace ya_brander::components

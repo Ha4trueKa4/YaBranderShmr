@@ -24,6 +24,7 @@
 #include "handlers/feed/get_feed.h"
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "handlers/test_vector_search/test_vector_search_handler.hpp"
+#include "components/garbage_collector/garbage_collector_component.hpp"
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
@@ -47,7 +48,8 @@ int main(int argc, char* argv[]) {
             // Регистрация модулей когда будут готовы
             .Append<ya_brander::components::S3ObjectStorageComponent>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-			.Append<ya_brander::components::SubscriptionStorageComponent>();
+			.Append<ya_brander::components::SubscriptionStorageComponent>()
+            .Append<ya_brander::components::GarbageCollectorComponent>();
 
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);
