@@ -1,7 +1,7 @@
 import { type EditorDocument, serializeSvg } from '@entities/editorDocument'
 import {
   projectQueryKey,
-  projectSvgQueryKey,
+  projectSvgQueryPrefix,
   useUpdateProjectMetadataMutation,
 } from '@entities/project'
 import { useCreateProjectMutation } from '@features/projectCreate'
@@ -91,7 +91,7 @@ export function useEditorProjectActions({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
         queryClient.invalidateQueries({
-          queryKey: projectSvgQueryKey(projectId),
+          queryKey: projectSvgQueryPrefix(projectId),
         }),
       ])
       toast.info(t('Project version saved.'))

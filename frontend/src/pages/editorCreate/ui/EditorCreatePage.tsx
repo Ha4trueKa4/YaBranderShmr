@@ -82,7 +82,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           url: generatedProjectUrl,
         })
         await queryClient.fetchQuery({
-          queryKey: projectSvgQueryKey(project.id),
+          queryKey: projectSvgQueryKey(project.id, generatedProjectUrl),
           queryFn: () => getProjectSvg(generatedProjectUrl),
         })
         pendingGenerationStore.take()
