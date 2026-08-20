@@ -42,13 +42,6 @@ class LoginGenerationExhaustedError final : public std::runtime_error {
       : std::runtime_error("failed to generate a unique login after multiple attempts") {}
 };
 
-userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message) {
-    userver::formats::json::ValueBuilder builder;
-    builder["code"] = std::string(code);
-    builder["message"] = std::string(message);
-    return builder.ExtractValue();
-}
-
 std::string UrlEncode(const std::string& value) {
     static const char* kHex = "0123456789ABCDEF";
     std::string result;
@@ -219,24 +212,24 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
 
         if (profile.email.empty()) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-            return MakeErrorJson("YANDEX_EMAIL_SCOPE_REQUIRED",
+            return MakeError("YANDEX_EMAIL_SCOPE_REQUIRED",
                                   "Yandex ID app must request the login:email scope");
         }
 
         user = FindOrCreateUser(profile);
     } catch (const EmailOwnedByAnotherAccountError&) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
-        return MakeErrorJson("EMAIL_EXISTS",
+        return MakeError("EMAIL_EXISTS",
                               "This email is already registered with a password. "
                               "Log in with your password and link Yandex ID from account settings.");
     } catch (const LoginGenerationExhaustedError& ex) {
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
-        return MakeErrorJson("INTERNAL_ERROR", "Something went wrong on our side. Please try again.");
+        return MakeError("INTERNAL_ERROR", "Something went wrong on our side. Please try again.");
     } catch (const std::exception& ex) {
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadGateway);
-        return MakeErrorJson("YANDEX_OAUTH_FAILED",
+        return MakeError("YANDEX_OAUTH_FAILED",
                               "Yandex authentication is temporarily unavailable. Please try again.");
     }
 
