@@ -1,13 +1,33 @@
+import { authStore } from '@app/providers/auth'
+import { queryClient } from '@app/providers/query'
+import { setUnauthorizedHandler } from '@shared/api/api'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { getAuthorizedRoutes, getUnauthorizedRoutes } from './routes'
+import { routes } from './routes'
 
-type AppRouterProps = {
-  isAuthorized?: boolean
-}
+export const router = createBrowserRouter(routes)
 
-export function AppRouter({ isAuthorized = false }: AppRouterProps) {
-  const routes = isAuthorized ? getAuthorizedRoutes() : getUnauthorizedRoutes()
-  // Если будут какие-то роли потом, то тут можно передавать роль
+let isHandlingUnauthorized = false
 
-  return <RouterProvider router={createBrowserRouter(routes)} />
+setUnauthorizedHandler(() => {
+  if (isHandlingUnauthorized) {
+    return
+  }
+
+  isHandlingUnauthorized = true
+  const { hash, pathname, search } = router.state.location
+
+  authStore.signOut()
+  queryClient.clear()
+  void router
+    .navigate('/auth', {
+      replace: true,
+      state: { from: `${pathname}${search}${hash}` },
+    })
+    .finally(() => {
+      isHandlingUnauthorized = false
+    })
+})
+
+export function AppRouter() {
+  return <RouterProvider router={router} />
 }

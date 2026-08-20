@@ -1,5 +1,4 @@
-import sparkles from '@shared/assets/sparkles.svg'
-import { Button, Input } from '@shared/ui'
+import { GenerationPromptComposer } from '@features/editorGenerate'
 import { Controller } from 'react-hook-form'
 
 import { useGenerationForm } from '../../model/useGenerationForm'
@@ -7,13 +6,21 @@ import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 import styles from './EditorEmptyState.module.css'
 
 interface EditorEmptyStateProps {
-  onGenerate: (draft: { description: string; name: string }) => void
+  onGenerate: (draft: {
+    description: string
+    model: string
+    name: string
+  }) => void
+  onUnauthorizedModelSelect?: () => void
 }
 
-export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
+export function EditorEmptyState({
+  onGenerate,
+  onUnauthorizedModelSelect,
+}: EditorEmptyStateProps) {
   const { form, submit } = useGenerationForm({
-    onSubmit: ({ description }) =>
-      onGenerate({ description, name: 'Untitled project' }),
+    onSubmit: ({ description, model }) =>
+      onGenerate({ description, model, name: 'Untitled project' }),
   })
 
   return (
@@ -24,31 +31,28 @@ export function EditorEmptyState({ onGenerate }: EditorEmptyStateProps) {
             control={form.control}
             name="description"
             render={({ field, fieldState }) => (
-              <div className={styles.descriptionField}>
-                <div className={styles.inputRow}>
-                  <Input
-                    {...field}
-                    autoFocus
-                    className={styles.input}
-                    invalid={Boolean(fieldState.error)}
-                    leadingContent={<img alt="" src={sparkles} />}
-                    placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
-                    ref={field.ref}
+              <Controller
+                control={form.control}
+                name="model"
+                render={({ field: modelField }) => (
+                  <GenerationPromptComposer
+                    description={field.value}
+                    error={fieldState.error?.message}
+                    model={modelField.value}
+                    onDescriptionChange={field.onChange}
+                    onGenerate={submit}
+                    onModelChange={modelField.onChange}
+                    onUnauthorizedModelSelect={onUnauthorizedModelSelect}
                   />
-                  <Button className={styles.generateButton} type="submit">
-                    Generate
-                  </Button>
-                </div>
-                {fieldState.error && (
-                  <p className={styles.error}>{fieldState.error.message}</p>
                 )}
-              </div>
+              />
             )}
           />
         </form>
       }
       description="Create customized vectors, logos, and high-fidelity marks instantly."
       isCopyWidthLimited
+      isPreviewCompact
       title="Paste your description and generate"
     />
   )

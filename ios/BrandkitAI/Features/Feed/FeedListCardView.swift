@@ -90,43 +90,6 @@ struct FeedListCardView: View {
     }
 }
 
-struct FeedListCardSkeleton: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            ShimmerPlaceholder()
-                .aspectRatio(1, contentMode: .fit)
-
-            VStack(alignment: .leading, spacing: 8) {
-                textLine(width: 96, font: FeedListCardView.titleFont)
-
-                HStack(spacing: 8) {
-                    ShimmerPlaceholder()
-                        .frame(width: 24, height: 24)
-                        .clipShape(Circle())
-
-                    textLine(width: 64, font: FeedListCardView.authorFont)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-        }
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .accessibilityHidden(true)
-    }
-
-    private func textLine(width: CGFloat, font: Font) -> some View {
-        Text(verbatim: "•")
-            .font(font)
-            .hidden()
-            .frame(width: width, alignment: .leading)
-            .overlay {
-                ShimmerPlaceholder()
-                    .clipShape(Capsule())
-            }
-    }
-}
-
 #Preview {
     HStack(alignment: .top, spacing: 12) {
         FeedListCardView(

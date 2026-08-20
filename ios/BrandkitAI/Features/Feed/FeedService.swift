@@ -1,9 +1,5 @@
 import Foundation
 
-nonisolated protocol FeedServiceProtocol: Sendable {
-    func fetchPage(scope: FeedScope, cursor: String?, limit: Int) async throws -> FeedPage
-}
-
 /// Загрузка ленты: `GET /feed` с курсорной пагинацией.
 ///
 /// Авторизация опциональная: `discover` доступен и без токена,

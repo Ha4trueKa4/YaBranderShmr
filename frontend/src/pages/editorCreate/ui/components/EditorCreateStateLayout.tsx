@@ -7,6 +7,7 @@ interface EditorCreateStateLayoutProps {
   composer: ReactNode
   description: string
   isCopyWidthLimited?: boolean
+  isPreviewCompact?: boolean
   title: string
 }
 
@@ -14,11 +15,16 @@ export function EditorCreateStateLayout({
   composer,
   description,
   isCopyWidthLimited = false,
+  isPreviewCompact = false,
   title,
 }: EditorCreateStateLayoutProps) {
   return (
     <section className={styles.state}>
-      <div className={styles.preview}>
+      <div
+        className={[styles.preview, isPreviewCompact && styles.previewCompact]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <div
           className={isCopyWidthLimited ? styles.copyWidthLimited : styles.copy}
         >

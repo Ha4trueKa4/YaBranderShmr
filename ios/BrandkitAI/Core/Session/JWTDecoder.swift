@@ -7,8 +7,9 @@ import Foundation
 /// токена. Подпись здесь не проверяется — сам токен всё равно валидирует бэкенд
 /// на каждом запросе.
 nonisolated enum JWTDecoder {
-    static func userID(from token: String) -> String? {
-        payload(from: token)?["user_id"] as? String
+    static func userID(from token: String) -> UUID? {
+        (payload(from: token)?["user_id"] as? String)
+            .flatMap(UUID.init(uuidString:))
     }
 
     static func expirationDate(from token: String) -> Date? {

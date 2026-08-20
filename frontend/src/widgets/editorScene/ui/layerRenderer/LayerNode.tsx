@@ -11,6 +11,7 @@ import { ShapeLayer } from './ShapeLayer'
 import { TextLayer } from './TextLayer'
 
 interface LayerNodeProps {
+  canMoveLayers: boolean
   node: EditorNode
   onSelectNode: (nodeId: string) => void
   onShapePointerDown: (
@@ -27,6 +28,7 @@ interface LayerNodeProps {
 }
 
 export const LayerNode = observer(function LayerNode({
+  canMoveLayers,
   node,
   onSelectNode,
   onShapePointerDown,
@@ -45,6 +47,7 @@ export const LayerNode = observer(function LayerNode({
         {node.children.map((child) => (
           <LayerNode
             key={child.id}
+            canMoveLayers={canMoveLayers}
             node={child}
             onSelectNode={onSelectNode}
             onShapePointerDown={onShapePointerDown}
@@ -72,7 +75,13 @@ export const LayerNode = observer(function LayerNode({
         onPointerMove={onShapePointerMove}
         onPointerUp={onShapePointerUp}
         ref={registerEditableElement(node.id)}
-        style={{ cursor: node.isLocked ? 'not-allowed' : 'grab' }}
+        style={{
+          cursor: canMoveLayers
+            ? node.isLocked
+              ? 'not-allowed'
+              : 'default'
+            : 'inherit',
+        }}
       >
         <TextLayer node={node} />
       </g>
@@ -87,7 +96,13 @@ export const LayerNode = observer(function LayerNode({
       onPointerMove={onShapePointerMove}
       onPointerUp={onShapePointerUp}
       ref={registerEditableElement(node.id)}
-      style={{ cursor: node.isLocked ? 'not-allowed' : 'grab' }}
+      style={{
+        cursor: canMoveLayers
+          ? node.isLocked
+            ? 'not-allowed'
+            : 'default'
+          : 'inherit',
+      }}
     >
       <ShapeLayer node={node} />
     </g>

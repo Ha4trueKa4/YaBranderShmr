@@ -1,4 +1,5 @@
 import { BottomSheet, ColorPicker } from '@shared/ui'
+import type { CanvasTool } from '@widgets/editorScene'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
 
@@ -10,6 +11,7 @@ import styles from './EditorMobileLayout.module.css'
 
 interface EditorMobileLayoutProps
   extends ComponentProps<typeof InspectorPanel> {
+  activeTool: CanvasTool
   canEdit: boolean
   isCreatingProjectCopy: boolean
   isSavingVersion: boolean
@@ -17,11 +19,17 @@ interface EditorMobileLayoutProps
   onBack: () => void
   onCloseProperties: () => void
   onCreateCopy: () => void
+  onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
   onSaveVersion: () => void
+  onToolChange: (tool: CanvasTool) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onZoomReset: () => void
   projectName: string
   scene: ReactNode
+  zoom: number
 }
 
 function getFillColor(
@@ -39,6 +47,7 @@ function getFillColor(
 }
 
 export function EditorMobileLayout({
+  activeTool,
   canEdit,
   isCreatingProjectCopy,
   isSavingVersion,
@@ -46,15 +55,22 @@ export function EditorMobileLayout({
   onBack,
   onCloseProperties,
   onCreateCopy,
+  onDeleteSelection,
   onExport,
   onOpenProperties,
   onSaveVersion,
+  onToolChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   projectName,
   scene,
   selectedNode,
+  zoom,
   ...inspectorProps
 }: EditorMobileLayoutProps) {
   const hasSelection = Boolean(selectedNode)
+  const canDeleteSelection = Boolean(selectedNode && !selectedNode.isLocked)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const fillColor = getFillColor(selectedNode)
 
@@ -85,16 +101,24 @@ export function EditorMobileLayout({
       <div className={styles.scene}>{scene}</div>
       {canEdit && (
         <MobileSelectionActions
+          canDeleteSelection={canDeleteSelection}
           fillColor={fillColor}
           hasSelection={hasSelection}
+          onDeleteSelection={onDeleteSelection}
           onOpenColorPicker={() => setIsColorPickerOpen(true)}
         />
       )}
       {canEdit && (
         <>
           <MobileCanvasControls
+            activeTool={activeTool}
             fillColor={fillColor}
             onOpenColorPicker={() => setIsColorPickerOpen(true)}
+            onToolChange={onToolChange}
+            onZoomIn={onZoomIn}
+            onZoomOut={onZoomOut}
+            onZoomReset={onZoomReset}
+            zoom={zoom}
           />
           <button
             className={styles.propertiesTrigger}

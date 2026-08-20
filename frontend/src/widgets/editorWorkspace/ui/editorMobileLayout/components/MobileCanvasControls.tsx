@@ -1,20 +1,33 @@
-import { ColorSwatch, IconButton } from '@shared/ui'
+import { ColorSwatch, IconButton, Tooltip } from '@shared/ui'
+import type { CanvasTool } from '@widgets/editorScene'
+import { ZoomIn, ZoomOut } from 'lucide-react'
 
-import iconHand from '../../editorToolbar/assets/iconHand.svg'
 import iconMousePointer from '../../editorToolbar/assets/iconMousePointer.svg'
-import iconRotateLeft from '../../editorToolbar/assets/iconRotateLeft.svg'
-import iconRotateRight from '../../editorToolbar/assets/iconRotateRight.svg'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileCanvasControlsProps {
+  activeTool: CanvasTool
   fillColor: string | null
   onOpenColorPicker: () => void
+  onToolChange: (tool: CanvasTool) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onZoomReset: () => void
+  zoom: number
 }
 
 export function MobileCanvasControls({
+  activeTool,
   fillColor,
   onOpenColorPicker,
+  onToolChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  zoom,
 }: MobileCanvasControlsProps) {
+  const zoomPercent = Math.round(zoom * 100)
+
   return (
     <div className={styles.canvasControls}>
       {fillColor ? (
@@ -24,22 +37,30 @@ export function MobileCanvasControls({
           onClick={onOpenColorPicker}
         />
       ) : (
-        <IconButton className={styles.activeTool}>
+        <IconButton className={styles.activeTool} title="Select tool">
           <img alt="" src={iconMousePointer} />
         </IconButton>
       )}
-      <IconButton>
-        <img alt="" src={iconHand} />
+      <IconButton
+        className={activeTool === 'hand' ? styles.activeTool : undefined}
+        onClick={() => onToolChange(activeTool === 'hand' ? 'select' : 'hand')}
+        title="Pan canvas"
+      >
+        <span className={styles.handIcon} />
       </IconButton>
       <span />
-      <IconButton>
-        <img alt="" src={iconRotateLeft} />
-      </IconButton>
-      <IconButton>
-        <img alt="" src={iconRotateRight} />
-      </IconButton>
+      <Tooltip content={`Увеличить масштаб (${zoomPercent}%)`}>
+        <IconButton disabled={zoom >= 2} onClick={onZoomIn} title="Zoom in">
+          <ZoomIn color="#71717A" size={18} strokeWidth={2.5} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content={`Уменьшить масштаб (${zoomPercent}%)`}>
+        <IconButton disabled={zoom <= 0.5} onClick={onZoomOut} title="Zoom out">
+          <ZoomOut color="#71717A" size={18} strokeWidth={2.5} />
+        </IconButton>
+      </Tooltip>
       <span />
-      <IconButton>
+      <IconButton onClick={onZoomReset} title="Fit canvas">
         <span className={styles.fitIcon}>⌗</span>
       </IconButton>
     </div>

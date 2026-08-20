@@ -4,7 +4,10 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   display: grid;
+  max-height: 20rem;
+  max-width: min(24rem, calc(100vw - var(--space-6)));
   min-width: 10rem;
+  overflow-y: auto;
   padding: var(--space-1);
   position: absolute;
   right: 0;
@@ -26,6 +29,10 @@
 
 .item:hover {
   background: var(--color-surface-elevated);
+}
+
+.selected {
+  background: var(--color-accent-subtle);
 }
 
 .item:focus-visible {

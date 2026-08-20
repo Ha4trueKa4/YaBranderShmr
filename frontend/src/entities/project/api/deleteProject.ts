@@ -9,7 +9,7 @@ export async function deleteProject(
 ): Promise<DeleteProjectsByIdResponse> {
   const response = await api<unknown>(
     `/projects/${encodeURIComponent(projectId)}`,
-    { method: 'DELETE' },
+    { method: 'DELETE', requiresAuth: true },
   )
 
   return parseApiResponse(

@@ -15,6 +15,7 @@ import {
   type ProfileHeaderProfile,
 } from '@widgets'
 import { Header } from '@widgets/header'
+import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { generatePath, useNavigate } from 'react-router-dom'
 
@@ -67,6 +68,22 @@ export function ProfilePage() {
     })
   }
 
+  function handleOpenFollowing() {
+    navigate(generatePath(AppRoute.UserSubscriptions, { userId }), {
+      viewTransition: true,
+    })
+  }
+
+  function handleOpenFollowers() {
+    navigate(generatePath(AppRoute.UserSubscribers, { userId }), {
+      viewTransition: true,
+    })
+  }
+
+  function handleOpenProjects() {
+    document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   function handleEditProfile(name: string) {
     setProfileName(name)
     setEditProfileModalOpen(false)
@@ -117,13 +134,17 @@ export function ProfilePage() {
               </Button>
               <Button
                 onClick={() => setEditProfileModalOpen(true)}
-                variant="secondary"
+                variant="outline"
               >
+                <Pencil aria-hidden size={16} />
                 Edit profile
               </Button>
             </>
           }
           profile={profile}
+          onFollowersClick={handleOpenFollowers}
+          onFollowingClick={handleOpenFollowing}
+          onProjectsClick={handleOpenProjects}
         />
         <AsyncState
           errorMessage={getApiErrorMessage(userProfileError)}

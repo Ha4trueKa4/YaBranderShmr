@@ -4,13 +4,16 @@ import {
   projectQueryKey,
   projectSvgQueryKey,
 } from '@entities/project'
-import { useGenerateProjectMutation } from '@features/editorGenerate'
+import {
+  DEFAULT_GENERATION_MODEL,
+  useGenerateProjectMutation,
+} from '@features/editorGenerate'
 import {
   type ProjectDraft,
   pendingGenerationStore,
   useCreateProjectMutation,
 } from '@features/projectCreate'
-import { getApiErrorMessage } from '@shared/api/api'
+import { ApiError, getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { Header } from '@widgets/header'
@@ -28,6 +31,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const toast = useToast()
   const isAuthorized = authStore.isAuthorized
   const [description, setDescription] = useState('')
+  const [model, setModel] = useState(DEFAULT_GENERATION_MODEL)
   const [isGenerationInProgress, setGenerationInProgress] = useState(false)
   const { isPending: isCreatingProjectPending, mutateAsync: createProject } =
     useCreateProjectMutation()
@@ -44,7 +48,9 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const startGeneration = useCallback(
     async (draft: ProjectDraft) => {
       setDescription(draft.description)
+      setModel(draft.model)
       setGenerationInProgress(true)
+      pendingGenerationStore.save(draft)
 
       try {
         const project = await createProject(draft)
@@ -55,6 +61,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         }
 
         const generatedProject = await generateProject({
+          model: draft.model,
           projectId: project.id,
           prompt: draft.description,
         })
@@ -73,8 +80,13 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           queryKey: projectSvgQueryKey(project.id),
           queryFn: () => getProjectSvg(generatedProjectUrl),
         })
+        pendingGenerationStore.take()
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) {
+          pendingGenerationStore.take()
+        }
+
         toast.error(getApiErrorMessage(error))
       } finally {
         setGenerationInProgress(false)
@@ -94,6 +106,12 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     void startGeneration(draft)
   }
 
+  function handleUnauthorizedModelSelect() {
+    if (!isAuthorized) {
+      navigate('/auth', { viewTransition: true })
+    }
+  }
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthorized is updated by MobX observer.
   useEffect(() => {
     if (!isAuthorized) {
@@ -111,9 +129,14 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     <main className={styles.page}>
       <Header />
       {isGenerationPending ? (
-        <EditorGeneratingState description={description} />
+        <EditorGeneratingState description={description} model={model} />
       ) : (
-        <EditorEmptyState onGenerate={handleGenerate} />
+        <EditorEmptyState
+          onGenerate={handleGenerate}
+          onUnauthorizedModelSelect={
+            isAuthorized ? undefined : handleUnauthorizedModelSelect
+          }
+        />
       )}
     </main>
   )

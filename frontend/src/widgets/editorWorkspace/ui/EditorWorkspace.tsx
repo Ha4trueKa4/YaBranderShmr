@@ -1,22 +1,22 @@
 import { AppRoute } from '@app/providers/router/routes'
+import { type EditorDocument, EditorStore } from '@entities/editorDocument'
 import {
-  type EditorDocument,
-  EditorStore,
-  serializeSvg,
-} from '@entities/editorDocument'
+  ConfirmUnsavedChangeModal,
+  type ImageExportFileType,
+  ImageExportModal,
+  useToast,
+} from '@shared/ui'
 import {
-  projectQueryKey,
-  projectSvgQueryKey,
-  useUpdateProjectMetadataMutation,
-} from '@entities/project'
-import { useCreateProjectMutation } from '@features/projectCreate'
-import { getApiErrorMessage } from '@shared/api/api'
-import { useToast } from '@shared/ui'
-import { useQueryClient } from '@tanstack/react-query'
-import { EditorScene } from '@widgets/editorScene'
+  type CanvasTool,
+  EditorScene,
+  type ViewportOffset,
+} from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useState } from 'react'
+import { useBlocker, useNavigate } from 'react-router-dom'
+import { useEditorKeyboardShortcuts } from '../model/useEditorKeyboardShortcuts'
+import { useEditorProjectActions } from '../model/useEditorProjectActions'
+import { useIsMobileLayout } from '../model/useIsMobileLayout'
 import styles from './EditorWorkspace.module.css'
 import { EditorDesktopLayout } from './editorDesktopLayout/EditorDesktopLayout'
 import { EditorMobileLayout } from './editorMobileLayout/EditorMobileLayout'
@@ -32,27 +32,10 @@ interface EditorWorkspaceProps {
   projectName: string
 }
 
-const mobileLayoutMediaQuery = '(width < 640px)'
-
-function useIsMobileLayout() {
-  const [isMobileLayout, setIsMobileLayout] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia(mobileLayoutMediaQuery).matches,
-  )
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(mobileLayoutMediaQuery)
-    const handleChange = () => setIsMobileLayout(mediaQuery.matches)
-
-    handleChange()
-    mediaQuery.addEventListener('change', handleChange)
-
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
-
-  return isMobileLayout
-}
+const MAX_ZOOM = 2
+const MIN_ZOOM = 0.5
+const ZOOM_STEP = 0.25
+const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
 
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
@@ -62,100 +45,57 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 }: EditorWorkspaceProps) {
   const isMobileLayout = useIsMobileLayout()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const toast = useToast()
-  const [projectName, setProjectName] = useState(initialProjectName)
   const [editorStore] = useState(() => new EditorStore(document))
-  const [savedProjectSvg, setSavedProjectSvg] = useState(() =>
-    serializeSvg(document),
-  )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
+  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [zoom, setZoom] = useState(1)
+  const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
-  const [isCopyingProject, setIsCopyingProject] = useState(false)
-  const { isPending: isSavingProjectVersion, mutateAsync: saveProjectVersion } =
-    useUpdateProjectMetadataMutation()
-  const { isPending: isCreatingProjectCopy, mutateAsync: createProject } =
-    useCreateProjectMutation()
+  const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
+  const {
+    createCopy,
+    isCreatingCopy,
+    isSavingVersion,
+    projectName,
+    renameProject,
+    saveVersion,
+    shouldBlockNavigation,
+  } = useEditorProjectActions({
+    canEdit,
+    document: editorStore.document,
+    initialProjectName,
+    projectId,
+  })
+  const navigationBlocker = useBlocker(shouldBlockNavigation)
 
   function handleToolbarAction() {
     // TODO: подключить действия после реализации editorStore.
   }
 
-  async function handleProjectNameSubmit(nextProjectName: string) {
-    if (nextProjectName === projectName) {
-      return
-    }
-
-    try {
-      const updatedProject = await saveProjectVersion({
-        name: nextProjectName,
-        projectId,
-      })
-
-      setProjectName(updatedProject.name ?? nextProjectName)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
-        queryClient.invalidateQueries({ queryKey: ['user-profile'] }),
-        queryClient.invalidateQueries({ queryKey: ['feed'] }),
-      ])
-      toast.info('Project name updated.')
-    } catch (error) {
-      toast.error(getApiErrorMessage(error))
-
-      throw error
-    }
+  function handleZoomIn() {
+    setZoom((currentZoom) => Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM))
   }
 
-  async function handleSaveVersion() {
-    const projectSvg = serializeSvg(editorStore.document)
-
-    if (projectSvg === savedProjectSvg) {
-      toast.error('There are no changes to save.')
-
-      return
-    }
-
-    try {
-      await saveProjectVersion({
-        data: projectSvg,
-        projectId,
-      })
-      setSavedProjectSvg(projectSvg)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
-        queryClient.invalidateQueries({
-          queryKey: projectSvgQueryKey(projectId),
-        }),
-      ])
-      toast.info('Project version saved.')
-    } catch (error) {
-      toast.error(getApiErrorMessage(error))
-    }
+  function handleZoomOut() {
+    setZoom((currentZoom) => Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM))
   }
 
-  async function handleCreateCopy() {
-    setIsCopyingProject(true)
+  function handleZoomChange(nextZoom: number) {
+    const constrainedZoom = Math.min(Math.max(nextZoom, MIN_ZOOM), MAX_ZOOM)
 
-    try {
-      const createdProject = await createProject({
-        name: projectName,
-      })
+    setZoom(constrainedZoom)
 
-      if (!createdProject.id) {
-        throw new TypeError('Created project ID is missing')
-      }
+    return constrainedZoom
+  }
 
-      await saveProjectVersion({
-        data: serializeSvg(editorStore.document),
-        projectId: createdProject.id,
-      })
-      navigate(`/projects/${createdProject.id}`, { viewTransition: true })
-      toast.info('Project copy created.')
-    } catch (error) {
-      toast.error(getApiErrorMessage(error))
-    } finally {
-      setIsCopyingProject(false)
-    }
+  function handleExport() {
+    setIsImageExportModalOpen(true)
+  }
+
+  function handleImageExport(fileType: ImageExportFileType) {
+    setIsImageExportModalOpen(false)
+    toast.info(`${fileType.toUpperCase()} export is not available yet.`)
   }
 
   function handleToggleVisibility(nodeId: string) {
@@ -165,6 +105,35 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleSceneSelectNode(nodeId: string) {
     editorStore.setSelectedNode(nodeId)
+  }
+
+  const handleDeleteSelection = useCallback(() => {
+    if (!editorStore.deleteSelectedNode()) {
+      return false
+    }
+
+    setIsMobileInspectorOpen(false)
+    setSceneRenderVersion((version) => version + 1)
+
+    return true
+  }, [editorStore])
+
+  useEditorKeyboardShortcuts({
+    canEdit,
+    onDeleteSelectedNode: handleDeleteSelection,
+    onMoveSelectedNode: editorStore.moveSelectedNode,
+  })
+
+  function handleCancelExit() {
+    if (navigationBlocker.state === 'blocked') {
+      navigationBlocker.reset()
+    }
+  }
+
+  function handleConfirmExit() {
+    if (navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed()
+    }
   }
 
   const inspectorProps = {
@@ -184,13 +153,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
   const scene = (
     <EditorScene
+      activeTool={activeTool}
       document={editorStore.document}
       isReadOnly={!canEdit}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.setShapePosition}
       onTextPositionChange={editorStore.setTextPosition}
+      onViewportOffsetChange={setViewportOffset}
+      onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
+      viewportOffset={viewportOffset}
+      zoom={zoom}
     />
   )
 
@@ -199,18 +173,25 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       {isMobileLayout ? (
         <EditorMobileLayout
           {...inspectorProps}
+          activeTool={activeTool}
           canEdit={canEdit}
-          isCreatingProjectCopy={isCopyingProject || isCreatingProjectCopy}
-          isSavingVersion={isSavingProjectVersion}
+          isCreatingProjectCopy={isCreatingCopy}
+          isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
           onCloseProperties={() => setIsMobileInspectorOpen(false)}
-          onCreateCopy={handleCreateCopy}
-          onExport={handleToolbarAction}
+          onCreateCopy={createCopy}
+          onDeleteSelection={handleDeleteSelection}
+          onExport={handleExport}
           onOpenProperties={() => setIsMobileInspectorOpen(true)}
-          onSaveVersion={handleSaveVersion}
+          onSaveVersion={saveVersion}
+          onToolChange={setActiveTool}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
+          zoom={zoom}
         />
       ) : (
         <EditorDesktopLayout
@@ -230,27 +211,38 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           status={<EditorStatusBar />}
           toolbar={
             <EditorToolbar
+              activeTool={activeTool}
               canEdit={canEdit}
-              isCreatingProjectCopy={isCopyingProject || isCreatingProjectCopy}
-              isSavingVersion={isSavingProjectVersion}
-              onCreateCopy={handleCreateCopy}
-              onEditProjectName={handleProjectNameSubmit}
-              onExport={handleToolbarAction}
+              isCreatingProjectCopy={isCreatingCopy}
+              isSavingVersion={isSavingVersion}
+              onCreateCopy={createCopy}
+              onEditProjectName={renameProject}
+              onExport={handleExport}
               onOpenProfile={() =>
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
-              onPanTool={handleToolbarAction}
+              onToolChange={setActiveTool}
               onRedo={handleToolbarAction}
-              onSaveVersion={handleSaveVersion}
-              onSelectTool={handleToolbarAction}
+              onSaveVersion={saveVersion}
               onUndo={handleToolbarAction}
-              onZoomIn={handleToolbarAction}
-              onZoomOut={handleToolbarAction}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
               projectName={projectName}
+              zoom={zoom}
             />
           }
         />
       )}
+      <ConfirmUnsavedChangeModal
+        isOpen={navigationBlocker.state === 'blocked'}
+        onCancel={handleCancelExit}
+        onConfirm={handleConfirmExit}
+      />
+      <ImageExportModal
+        isOpen={isImageExportModalOpen}
+        onClose={() => setIsImageExportModalOpen(false)}
+        onExport={handleImageExport}
+      />
     </section>
   )
 })

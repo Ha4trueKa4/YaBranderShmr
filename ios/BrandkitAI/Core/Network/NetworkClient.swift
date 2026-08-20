@@ -81,6 +81,20 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         )
     }
 
+    // MARK: - Кодеки
+
+    private static let jsonDecoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return decoder
+    }()
+
+    private static let jsonEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        return encoder
+    }()
+
     // MARK: - Private
 
     private func decode<Response: Decodable & Sendable>(
@@ -88,7 +102,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         from data: Data
     ) throws -> Response {
         do {
-            return try JSONDecoder().decode(type, from: data)
+            return try Self.jsonDecoder.decode(type, from: data)
         } catch {
             throw NetworkError.decodingError
         }
@@ -97,7 +111,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     private func encode(_ body: (some Encodable & Sendable)?) throws -> Data? {
         guard let body else { return nil }
         do {
-            return try JSONEncoder().encode(body)
+            return try Self.jsonEncoder.encode(body)
         } catch {
             throw NetworkError.encodingError
         }
@@ -166,7 +180,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            let serverError = try? JSONDecoder().decode(ServerErrorResponse.self, from: data)
+            let serverError = try? Self.jsonDecoder.decode(ServerErrorResponse.self, from: data)
             if serverError?.code != nil || serverError?.field != nil {
                 throw NetworkError.serverValidation(
                     statusCode: httpResponse.statusCode,
@@ -217,37 +231,6 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
             }
         }
     }
-}
-
-// MARK: - Auth DTOs
-
-nonisolated struct LoginRequest: Encodable, Sendable {
-    let email: String
-    let password: String
-}
-
-nonisolated struct RegisterRequest: Encodable, Sendable {
-    let email: String
-    let password: String
-    let nickname: String
-}
-
-nonisolated struct AuthResponse: Decodable, Sendable {
-    let accessToken: String
-    let tokenType: String
-    let user: AuthUser
-
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case tokenType = "token_type"
-        case user
-    }
-}
-
-nonisolated struct AuthUser: Decodable, Sendable {
-    let id: String
-    let email: String
-    let nickname: String
 }
 
 nonisolated private struct ServerErrorResponse: Decodable, Sendable {

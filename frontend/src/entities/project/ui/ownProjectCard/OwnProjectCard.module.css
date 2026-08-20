@@ -5,6 +5,13 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition: box-shadow 160ms ease;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
 }
 
 .previewWrap {
@@ -54,11 +61,13 @@
 
 .titleRow h3 {
   display: -webkit-box;
+  min-height: 2.4em;
   min-width: 0;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   font-size: var(--font-size-h3);
+  line-height: 1.2;
 }
 
 .content p {

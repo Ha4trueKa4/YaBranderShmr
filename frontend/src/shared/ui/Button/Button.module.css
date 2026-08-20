@@ -63,6 +63,15 @@
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
 }
+.outline {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+.outline:hover:not(:disabled) {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
 .danger {
   background: var(--color-surface);
   border-color: var(--color-error);

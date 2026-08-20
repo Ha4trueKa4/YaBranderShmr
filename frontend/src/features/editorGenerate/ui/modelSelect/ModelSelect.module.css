@@ -1,0 +1,83 @@
+.root {
+  flex: 0 0 15rem;
+  position: relative;
+  width: 15rem;
+}
+
+.trigger {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-weight: var(--font-weight-regular);
+  gap: var(--space-1);
+  height: 2.25rem;
+  justify-content: space-between;
+  outline: 0;
+  max-width: 100%;
+  padding: 0 var(--space-3) 0 var(--space-3);
+  width: auto;
+}
+
+.trigger:hover:not(:disabled) {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.trigger:focus-visible {
+  border-color: transparent;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 20%, transparent);
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.chevron {
+  flex: 0 0 auto;
+}
+
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.default .trigger {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  padding: 0 var(--space-3);
+  width: 100%;
+}
+
+.compact {
+  flex-basis: auto;
+  max-width: 24rem;
+  width: fit-content;
+}
+
+@media (width < 720px) {
+  .root {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .compact {
+    flex: 1 1 auto;
+    max-width: none;
+    min-width: 0;
+    width: auto;
+  }
+
+  .compact .trigger {
+    min-width: 0;
+    width: 100%;
+  }
+}

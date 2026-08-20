@@ -4,7 +4,7 @@ import SwiftUI
 @Observable
 final class ProfileViewModel {
     struct Project: Identifiable {
-        let id: String
+        let id: UUID
         let title: String
         let colors: [Color]
         let coverHeight: CGFloat
@@ -20,25 +20,17 @@ final class ProfileViewModel {
 
     private let currentUserService: any CurrentUserService
     private let userProfileService: any UserProfileService
-    private let userID: String?
+    private let userID: UUID?
 
     init(
         currentUserService: any CurrentUserService,
         userProfileService: any UserProfileService,
-        userID: String? = nil
+        userID: UUID? = nil
     ) {
         self.currentUserService = currentUserService
         self.userProfileService = userProfileService
         self.userID = userID
         self.name = (userID == nil) ? (currentUserService.name ?? "") : ""
-    }
-
-    var leftProjects: [Project] {
-        projects.enumerated().compactMap { $0.offset.isMultiple(of: 2) ? $0.element : nil }
-    }
-
-    var rightProjects: [Project] {
-        projects.enumerated().compactMap { $0.offset.isMultiple(of: 2) ? nil : $0.element }
     }
 
     var initials: String {

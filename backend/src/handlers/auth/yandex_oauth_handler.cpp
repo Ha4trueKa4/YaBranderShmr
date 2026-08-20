@@ -10,6 +10,7 @@
 #include <userver/components/component.hpp>
 #include <userver/crypto/base64.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/logging/log.hpp>
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -24,6 +25,29 @@ namespace {
 
 constexpr std::string_view kTokenUrl = "https://oauth.yandex.ru/token";
 constexpr std::string_view kProfileUrl = "https://login.yandex.ru/info?format=json";
+
+constexpr std::string_view kLoginUniqueConstraint = "users_login_key";
+constexpr std::string_view kEmailUniqueConstraint = "users_email_key";
+constexpr std::string_view kProviderIdentityIndex = "idx_users_provider_identity";
+
+class EmailOwnedByAnotherAccountError final : public std::runtime_error {
+ public:
+  EmailOwnedByAnotherAccountError()
+      : std::runtime_error("email is already registered via another sign-in method") {}
+};
+
+class LoginGenerationExhaustedError final : public std::runtime_error {
+ public:
+  LoginGenerationExhaustedError()
+      : std::runtime_error("failed to generate a unique login after multiple attempts") {}
+};
+
+userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message) {
+    userver::formats::json::ValueBuilder builder;
+    builder["code"] = std::string(code);
+    builder["message"] = std::string(message);
+    return builder.ExtractValue();
+}
 
 std::string UrlEncode(const std::string& value) {
     static const char* kHex = "0123456789ABCDEF";
@@ -67,10 +91,6 @@ YandexOAuthHandler::YandexOAuthHandler(const userver::components::ComponentConfi
 }
 
 std::string YandexOAuthHandler::ExchangeCodeForToken(const std::string& code) const {
-    // client_id/client_secret едут в заголовке Authorization (HTTP Basic), а не в
-    // теле запроса — так они не попадают в логи прокси/gateway, которые часто
-    // пишут form-urlencoded тело POST-запросов в открытом виде, но обычно
-    // маскируют Authorization.
     const std::string body = "grant_type=authorization_code"
                               "&code=" + UrlEncode(code);
 
@@ -133,17 +153,16 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
         }
     }
 
-    // 2. Есть аккаунт с таким email, зарегистрированный по паролю — привязываем Yandex ID к нему.
+    // 2. Есть аккаунт с таким email, зарегистрированный другим способом — не
+    //    привязываем Yandex ID автоматически (см. EmailOwnedByAnotherAccountError),
+    //    отдаём наверх ошибку, чтобы пользователь подтвердил привязку явно.
     {
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE users SET provider = 'yandex', provider_id = $1 "
-            "WHERE email = $2 AND provider_id IS NULL "
-            "RETURNING id::text, login, email",
-            profile.provider_id, profile.email);
+            "SELECT 1 FROM users WHERE email = $1 AND provider_id IS NULL",
+            profile.email);
         if (result.Size() > 0) {
-            const auto row = result.Front();
-            return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
+            throw EmailOwnedByAnotherAccountError{};
         }
     }
 
@@ -162,12 +181,11 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
             return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
         } catch (const userver::storages::postgres::UniqueViolation& ex) {
             const auto constraint = ex.GetConstraint();
-            if (constraint.find("login") != std::string::npos) {
+            if (constraint == kLoginUniqueConstraint) {
                 login += "_" + GenerateLoginSuffix();
                 continue;
             }
-            if (constraint.find("provider") != std::string::npos) {
-                // Параллельный запрос успел создать/привязать аккаунт первым.
+            if (constraint == kProviderIdentityIndex) {
                 auto result = pg_cluster_->Execute(
                     userver::storages::postgres::ClusterHostType::kMaster,
                     "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
@@ -175,10 +193,13 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
                 const auto row = result.Front();
                 return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
             }
+            if (constraint == kEmailUniqueConstraint) {
+                throw EmailOwnedByAnotherAccountError{};
+            }
             throw;
         }
     }
-    throw std::runtime_error("Failed to create user: login collisions exhausted");
+    throw LoginGenerationExhaustedError{};
 }
 
 userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
@@ -192,22 +213,34 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
         return MakeError("INVALID_CODE", "Authorization code is required");
     }
 
-    YandexProfile profile;
+    UserRecord user;
     try {
         const auto access_token = ExchangeCodeForToken(code);
-        profile = FetchProfile(access_token);
+        const auto profile = FetchProfile(access_token);
+
+        if (profile.email.empty()) {
+            request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+            return MakeErrorJson("YANDEX_EMAIL_SCOPE_REQUIRED",
+                                  "Yandex ID app must request the login:email scope");
+        }
+
+        user = FindOrCreateUser(profile);
+    } catch (const EmailOwnedByAnotherAccountError&) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
+        return MakeErrorJson("EMAIL_EXISTS",
+                              "This email is already registered with a password. "
+                              "Log in with your password and link Yandex ID from account settings.");
+    } catch (const LoginGenerationExhaustedError& ex) {
+        LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
+        request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
+        return MakeErrorJson("INTERNAL_ERROR", "Something went wrong on our side. Please try again.");
     } catch (const std::exception& ex) {
+        LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadGateway);
-        return MakeError("YANDEX_OAUTH_FAILED", ex.what());
+        return MakeErrorJson("YANDEX_OAUTH_FAILED",
+                              "Yandex authentication is temporarily unavailable. Please try again.");
     }
 
-    if (profile.email.empty()) {
-        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeError("YANDEX_EMAIL_SCOPE_REQUIRED",
-                              "Yandex ID app must request the login:email scope");
-    }
-
-    const auto user = FindOrCreateUser(profile);
     const auto token = jwt_service_.IssueToken(user.id);
 
     userver::formats::json::ValueBuilder response;

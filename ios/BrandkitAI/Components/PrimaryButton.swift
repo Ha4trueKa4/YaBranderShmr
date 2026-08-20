@@ -22,13 +22,13 @@ struct PrimaryButton: View {
             HStack(spacing: 10) {
                 if isLoading {
                     ProgressView()
-                        .tint(.white)
+                        .tint(Color(.onAccent))
                 }
 
                 Text(isLoading ? "Please wait..." : title)
                     .font(.headline)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color(.onAccent))
             .frame(maxWidth: .infinity)
             .frame(height: 52)
         }
@@ -52,28 +52,11 @@ private struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-struct LinkButton: View {
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.tint)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 #Preview {
-    VStack(spacing: 16) {
-        PrimaryButton(title: "Sign in") {}
-        LinkButton(title: "Forgot password?") {}
-    }
-    .padding(24)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color(.systemBackground))
-    .tint(Color.accentColor)
-    .preferredColorScheme(.dark)
+    PrimaryButton(title: "Sign in") {}
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
+        .tint(Color.accentColor)
+        .preferredColorScheme(.dark)
 }

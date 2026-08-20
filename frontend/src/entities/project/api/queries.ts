@@ -1,10 +1,14 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
 
 import { deleteProject } from './deleteProject'
 import { type FeedScope, getFeed } from './getFeed'
 import { getProject } from './getProject'
 import { getProjectSvg } from './getProjectSvg'
 import { getUserProfile } from './getProjects'
+import { getUserSubscribers } from './getUserSubscribers'
+import { getUserSubscriptions } from './getUserSubscriptions'
+import { subscribeToUser } from './subscribeToUser'
+import { unsubscribeFromUser } from './unsubscribeFromUser'
 import { type UpdateProjectMetadataInput, updateProject } from './updateProject'
 
 const projectQueryStaleTime = 60_000
@@ -14,6 +18,10 @@ export const projectQueryKey = (id: string) => ['project', id] as const
 export const projectSvgQueryKey = (id: string) => ['project-svg', id] as const
 export const userProfileQueryKey = (userId: string | undefined) =>
   ['user-profile', userId] as const
+export const userSubscribersQueryKey = (userId: string | undefined) =>
+  ['user-subscribers', userId] as const
+export const userSubscriptionsQueryKey = (userId: string | undefined) =>
+  ['user-subscriptions', userId] as const
 
 export function useProjectQuery(id: string) {
   return useQuery({
@@ -64,10 +72,44 @@ export function useUserProfileQuery(userId: string) {
   })
 }
 
-export function useFeedQuery(scope: FeedScope) {
+export function useUserSubscribersQuery(userId: string) {
   return useQuery({
+    queryKey: userSubscribersQueryKey(userId),
+    queryFn: () => getUserSubscribers(userId),
+    enabled: Boolean(userId),
+    retry: false,
+  })
+}
+
+export function useUserSubscriptionsQuery(userId: string) {
+  return useQuery({
+    queryKey: userSubscriptionsQueryKey(userId),
+    queryFn: () => getUserSubscriptions(userId),
+    enabled: Boolean(userId),
+    retry: false,
+  })
+}
+
+export function useSubscribeToUserMutation() {
+  return useMutation({
+    mutationKey: ['user', 'subscribe'],
+    mutationFn: (userId: string) => subscribeToUser(userId),
+  })
+}
+
+export function useUnsubscribeFromUserMutation() {
+  return useMutation({
+    mutationKey: ['user', 'unsubscribe'],
+    mutationFn: (userId: string) => unsubscribeFromUser(userId),
+  })
+}
+
+export function useFeedInfiniteQuery(scope: FeedScope) {
+  return useInfiniteQuery({
     queryKey: feedQueryKey(scope),
-    queryFn: () => getFeed(scope),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => getFeed(scope, pageParam),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     retry: false,
   })
 }

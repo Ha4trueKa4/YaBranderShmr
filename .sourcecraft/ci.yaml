@@ -5,8 +5,8 @@
 #   VITE_API_URL_DEV         — public HTTPS API URL, including /api/v1
 #   VITE_HEALTH_URL_DEV      — public HTTPS health-check URL
 #
-# CI/CD-сборка Android запускается только для pull request в ветку main
-# и только если в изменениях затрагивались файлы Android-проекта (директория android/**).
+# Проверки frontend, backend и Android запускаются только для pull request в main
+# и только если затронуты файлы соответствующего проекта.
 
 on:
   pull_request:
@@ -18,6 +18,10 @@ on:
       filter:
         target_branches: ["main"]
         paths: ["backend/**"]
+    - workflows: check-frontend
+      filter:
+        target_branches: ["main"]
+        paths: ["frontend/**"]
 
   push:
     - workflows: [deploy-frontend-dev]
@@ -30,6 +34,22 @@ on:
         paths: ["backend/**"]
 
 workflows:
+  # Полная проверка frontend на этапе pull request без деплоя.
+  check-frontend:
+    tasks:
+      - name: check-test-and-build
+        cubes:
+          - name: install-check-test-and-build
+            image: docker.io/library/node:22-bookworm
+            script:
+              - cd frontend
+              - corepack enable
+              - corepack prepare pnpm@11.16.0 --activate
+              - pnpm install --frozen-lockfile
+              - pnpm check
+              - pnpm test
+              - pnpm build
+
   # Проверка компиляции backend на этапе pull request:
   # только docker build (без публикации образа и без затирания тега latest).
   build-backend-check:

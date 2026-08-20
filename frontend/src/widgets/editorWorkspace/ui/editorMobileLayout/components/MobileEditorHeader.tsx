@@ -33,7 +33,6 @@ export function MobileEditorHeader({
         <ArrowLeft className={styles.backIcon} />
       </IconButton>
       <div className={styles.title}>
-        <span>Brandkit webview</span>
         <strong>{projectName}</strong>
       </div>
       <div

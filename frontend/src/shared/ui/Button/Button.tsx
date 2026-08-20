@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
 
 import { Spinner } from '@/shared'
 import styles from './Button.module.css'
@@ -7,8 +7,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
   fullWidth?: boolean
   loading?: boolean
+  minWidth?: CSSProperties['minWidth']
   size?: 'sm' | 'md' | 'lg'
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger'
 }
 
 export function Button({
@@ -17,7 +18,9 @@ export function Button({
   disabled,
   fullWidth = false,
   loading = false,
+  minWidth,
   size = 'md',
+  style,
   type = 'button',
   variant = 'primary',
   ...props
@@ -35,6 +38,7 @@ export function Button({
         .filter(Boolean)
         .join(' ')}
       disabled={disabled || loading}
+      style={{ ...style, minWidth }}
       type={type}
     >
       {loading ? <Spinner size="sm" /> : children}
