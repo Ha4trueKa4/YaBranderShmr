@@ -20,6 +20,8 @@ export {
   zPostAuthLoginResponse,
   zPostAuthRegisterBody,
   zPostAuthRegisterResponse,
+  zPostAuthYandexBody,
+  zPostAuthYandexResponse,
   zPostProjectsBody,
   zPostProjectsByIdGenerateBody,
   zPostProjectsByIdGeneratePath,
@@ -30,4 +32,5 @@ export {
   zRegisterRequest,
   zUserProfile,
   zValidationError,
+  zYandexAuthRequest,
 } from './generated/zod.gen'

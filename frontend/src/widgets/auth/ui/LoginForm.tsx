@@ -4,16 +4,19 @@ import { useId } from 'react'
 import { Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { type LoginSubmitHandler, useLoginForm } from '../model'
+import yandexIcon from './assets/yandexIcon.svg'
 import styles from './AuthForms.module.css'
 
 interface LoginFormProps {
   isPending?: boolean
+  onYandexSignIn?: () => void
   onSubmit?: LoginSubmitHandler
   onSwitchToRegister?: () => void
 }
 
 export function LoginForm({
   isPending = false,
+  onYandexSignIn,
   onSubmit,
   onSwitchToRegister,
 }: LoginFormProps) {
@@ -91,6 +94,18 @@ export function LoginForm({
           {t('Sign in')}
         </Button>
       </form>
+      {onYandexSignIn && (
+        <Button
+          className={styles.yandexButton}
+          fullWidth
+          onClick={onYandexSignIn}
+          size="lg"
+          variant="outline"
+        >
+          <img alt="" className={styles.yandexIcon} src={yandexIcon} />
+          {t('Continue with Yandex ID')}
+        </Button>
+      )}
       <p className={styles.footer}>
         {t('New to Brandkit AI?')}{' '}
         <button

@@ -1,5 +1,5 @@
 import { authStore } from '@app/providers/auth'
-import { AuthPage } from '@pages/auth'
+import { AuthPage, YandexOAuthCallbackPage } from '@pages/auth'
 import { EditorCreatePage } from '@pages/editorCreate'
 import { EditorProjectPage } from '@pages/editorProject'
 import { FeedPage } from '@pages/feed'
@@ -24,6 +24,7 @@ export const AppRoute = {
   UserSubscriptions: '/users/:userId/subscriptions',
   UserSubscribers: '/users/:userId/subscribers',
   Auth: '/auth',
+  YandexOAuthCallback: '/auth/yandex/callback',
   Feed: '/feed',
 } as const
 
@@ -48,6 +49,7 @@ const RequireAuth = observer(function RequireAuth() {
 export const routes: RouteObject[] = [
   ...publicRoutes,
   { path: AppRoute.Auth, element: <AuthPage /> },
+  { path: AppRoute.YandexOAuthCallback, element: <YandexOAuthCallbackPage /> },
   {
     element: <RequireAuth />,
     children: [

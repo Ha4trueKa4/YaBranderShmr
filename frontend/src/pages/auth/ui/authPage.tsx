@@ -1,6 +1,7 @@
 import { authStore } from '@app/providers/auth'
 import {
   getAuthErrorMessage,
+  startYandexOAuth,
   useLoginMutation,
   useRegisterMutation,
 } from '@features/auth'
@@ -56,6 +57,12 @@ export function AuthPage() {
     toast.error(getAuthErrorMessage(authError))
   }
 
+  function handleYandexSignIn() {
+    if (!startYandexOAuth(returnPath)) {
+      toast.error(t('Yandex ID sign-in is not configured.'))
+    }
+  }
+
   async function handleLogin(values: LoginRequest) {
     try {
       const response = await login(values)
@@ -104,6 +111,7 @@ export function AuthPage() {
               isPending={isLoggingInPending}
               onSubmit={handleLogin}
               onSwitchToRegister={() => setActiveForm('register')}
+              onYandexSignIn={handleYandexSignIn}
             />
           ) : (
             <RegisterForm

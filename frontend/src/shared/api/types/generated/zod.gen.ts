@@ -13,6 +13,10 @@ export const zLoginRequest = z.object({
   password: z.string(),
 })
 
+export const zYandexAuthRequest = z.object({
+  code: z.string(),
+})
+
 export const zAuthResponse = z.object({
   access_token: z.string(),
   token_type: z.string(),
@@ -132,6 +136,13 @@ export const zPostAuthLoginBody = zLoginRequest
  * Успешный вход
  */
 export const zPostAuthLoginResponse = zAuthResponse
+
+export const zPostAuthYandexBody = zYandexAuthRequest
+
+/**
+ * Успешный вход (существующий или только что привязанный аккаунт)
+ */
+export const zPostAuthYandexResponse = zAuthResponse
 
 export const zGetUsersByIdPath = z.object({
   id: z.string(),
