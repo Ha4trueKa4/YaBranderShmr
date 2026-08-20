@@ -16,7 +16,7 @@
 .content {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(19rem, 24rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
   gap: var(--space-6);
   padding: var(--space-3) var(--space-8) var(--space-6) 11.5rem;
 }
@@ -63,6 +63,7 @@
   display: grid;
   gap: var(--space-8);
   align-content: start;
+  min-width: 0;
 }
 
 .stats {
@@ -102,6 +103,7 @@
 
 .profileActions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: end;
   gap: var(--space-2);
 }

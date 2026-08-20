@@ -112,7 +112,12 @@ export function ModelSelect({
         <span className={styles.value}>
           {selectedModel.owner} — {selectedModel.id}
         </span>
-        <ChevronDown className={styles.chevron} size={16} />
+        <ChevronDown
+          className={[styles.chevron, isOpen && styles.chevronOpen]
+            .filter(Boolean)
+            .join(' ')}
+          size={16}
+        />
       </button>
       {isOpen && (
         <Portal>
