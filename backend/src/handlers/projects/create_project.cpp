@@ -10,11 +10,7 @@ userver::formats::json::Value CreateProjectHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value& body,
     userver::server::request::RequestContext& context) const {
-  std::string* user_id = context.GetDataOptional<std::string>("user_id");
-  if (!user_id) {
-    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-    return {};
-  }
+  const auto& user_id = context.GetData<std::string>("user_id");
 
   std::string name = body["name"].As<std::string>("");
   std::string desc = body["description"].As<std::string>("");
@@ -26,7 +22,7 @@ userver::formats::json::Value CreateProjectHandler::HandleRequestJsonThrow(
     return err.ExtractValue();
   }
 
-  auto project = project_manager_.CreateProject(*user_id, name, desc);
+  auto project = project_manager_.CreateProject(user_id, name, desc);
 
   userver::formats::json::ValueBuilder res;
   res["id"] = project.id;

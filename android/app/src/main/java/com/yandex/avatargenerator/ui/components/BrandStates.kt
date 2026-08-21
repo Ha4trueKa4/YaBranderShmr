@@ -1,8 +1,6 @@
 package com.yandex.avatargenerator.ui.components
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -96,8 +94,7 @@ private fun StateIcon(@DrawableRes iconRes: Int, modifier: Modifier = Modifier) 
     Box(
         modifier = modifier
             .size(IconCircleSize)
-            .background(AppColors.Surface, CircleShape)
-            .border(1.dp, AppColors.Border, CircleShape),
+            .brandSurface(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(

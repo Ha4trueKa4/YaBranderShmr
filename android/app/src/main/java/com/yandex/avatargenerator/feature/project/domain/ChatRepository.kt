@@ -4,16 +4,27 @@ import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 
 /**
- * Источник диалога с ИИ по проекту. Интерфейс живёт в `domain/`, реализации —
- * в `data/` (пока только [com.yandex.avatargenerator.feature.project.data.MockChatRepository]);
- * при готовности бэкенда добавится сетевая реализация без изменения UI.
+ * Источник диалога с ИИ по проекту. Интерфейс живёт в `domain/`, боевая
+ * реализация — [com.yandex.avatargenerator.feature.project.data.ChatRepositoryImpl];
+ * [com.yandex.avatargenerator.feature.project.data.MockChatRepository] остаётся
+ * только для `@Preview`.
  *
  * Методы возвращают [Result] и не бросают исключений (кроме отмены корутины):
  * разбор успеха/ошибки — на стороне ViewModel.
  */
 interface ChatRepository {
 
-    /** @return диалог проекта; у нового проекта [ProjectChat.messages] пустой. */
+    /**
+     * Загружает проект вместе с историей диалога (`GET /projects/{id}/chat`).
+     *
+     * История приватна: у не-автора сервер отдаёт 403 даже на публичный проект.
+     * Это не ошибка экрана — лента в таком случае приходит пустой, а сам проект
+     * открывается на чтение.
+     *
+     * @return диалог проекта; у нового проекта [ProjectChat.messages] содержит
+     *  только системную пилюлю «проект создан». `Result.failure` — если не
+     *  удалось загрузить сам проект: без него нет даже заголовка.
+     */
     suspend fun getChat(projectId: String): Result<ProjectChat>
 
     /**

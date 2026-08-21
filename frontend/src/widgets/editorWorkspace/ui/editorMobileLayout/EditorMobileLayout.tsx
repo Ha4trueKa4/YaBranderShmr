@@ -23,6 +23,7 @@ interface EditorMobileLayoutProps
   onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
+  onOpenVersionHistory: () => void
   onSaveVersion: () => void
   onToolChange: (tool: CanvasTool) => void
   onZoomIn: () => void
@@ -59,6 +60,7 @@ export function EditorMobileLayout({
   onDeleteSelection,
   onExport,
   onOpenProperties,
+  onOpenVersionHistory,
   onSaveVersion,
   onToolChange,
   onZoomIn,
@@ -97,6 +99,7 @@ export function EditorMobileLayout({
         onBack={onBack}
         onCreateCopy={onCreateCopy}
         onExport={onExport}
+        onOpenVersionHistory={onOpenVersionHistory}
         onSaveVersion={onSaveVersion}
         projectName={projectName}
       />

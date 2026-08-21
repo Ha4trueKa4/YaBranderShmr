@@ -12,10 +12,15 @@ import java.time.format.FormatStyle
  * локаль устройства, поэтому свой шаблон вида `HH:mm` здесь не нужен.
  *
  * Живёт в `ui/`, а не в `domain/`: зона и локаль — свойства окружения, а не данных.
+ *
+ * @param instant время сообщения; `null` (бэкенд не прислал `created_at` или
+ *  прислал в неизвестном формате) даёт `null` — пузырь рисуется без подписи.
  */
 @Composable
-internal fun rememberMessageTimeLabel(instant: Instant): String = remember(instant) {
-    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
+internal fun rememberMessageTimeLabel(instant: Instant?): String? = remember(instant) {
+    instant?.let {
+        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+            .withZone(ZoneId.systemDefault())
+            .format(it)
+    }
 }

@@ -11,6 +11,8 @@ interface EditorSceneProps {
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
+  onDocumentChangeEnd: () => void
+  onDocumentChangeStart: () => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
@@ -30,6 +32,8 @@ export function EditorScene({
   document,
   isReadOnly,
   onClearSelection,
+  onDocumentChangeEnd,
+  onDocumentChangeStart,
   onSelectNode,
   onGroupPositionChange,
   onShapePositionChange,
@@ -50,6 +54,8 @@ export function EditorScene({
         document={document}
         isReadOnly={isReadOnly}
         onClearSelection={onClearSelection}
+        onDocumentChangeEnd={onDocumentChangeEnd}
+        onDocumentChangeStart={onDocumentChangeStart}
         onGroupPositionChange={onGroupPositionChange}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}

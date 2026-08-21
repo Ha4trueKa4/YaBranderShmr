@@ -10,6 +10,7 @@ import type {
 import { SvgParseError } from '../errors'
 import type { SvgImportWarning } from '../types'
 import { parseNumberAttribute } from './parseNumber'
+import { parsePaint } from './parsePaint'
 import { parseShapeStyle, parseTextStyle } from './parseStyle'
 import { parseTransform } from './parseTransform'
 
@@ -23,6 +24,7 @@ const commonAttributeNames = new Set([
   'id',
   'opacity',
   'transform',
+  'xmlns',
 ])
 
 const attributeNamesByElement = {
@@ -33,6 +35,7 @@ const attributeNamesByElement = {
     'fill-opacity',
     'r',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -46,16 +49,18 @@ const attributeNamesByElement = {
     'rx',
     'ry',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
     'stroke-width',
   ]),
-  g: new Set<string>(),
+  g: new Set(['fill']),
   line: new Set([
     'fill',
     'fill-opacity',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -70,6 +75,7 @@ const attributeNamesByElement = {
     'fill',
     'fill-opacity',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -82,6 +88,7 @@ const attributeNamesByElement = {
     'rx',
     'ry',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -214,6 +221,14 @@ function parseShape(element: Element): EditorShape {
     default:
       throw new SvgParseError(`Unsupported SVG element: ${element.localName}`)
   }
+}
+
+function parseGroupFill(element: Element): Pick<EditorGroup, 'fill'> {
+  const fill = element.getAttribute('fill')
+
+  return fill === null
+    ? {}
+    : { fill: parsePaint(fill, { type: 'color', value: '#000000' }) }
 }
 
 function parseText(element: Element): EditorText {
@@ -371,6 +386,7 @@ function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
     if (element.localName === 'g') {
       const group: EditorGroup = {
         ...parseBase(element),
+        ...parseGroupFill(element),
         children: Array.from(element.children).map((child) =>
           parseNode(child, warnings),
         ),

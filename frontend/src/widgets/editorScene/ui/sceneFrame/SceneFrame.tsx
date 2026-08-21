@@ -23,6 +23,8 @@ interface SceneFrameProps {
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
+  onDocumentChangeEnd: () => void
+  onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
@@ -42,6 +44,8 @@ export function SceneFrame({
   document,
   isReadOnly,
   onClearSelection,
+  onDocumentChangeEnd,
+  onDocumentChangeStart,
   onGroupPositionChange,
   onSelectNode,
   onShapePositionChange,
@@ -72,6 +76,8 @@ export function SceneFrame({
     activeTool,
     getEditableElement,
     isReadOnly,
+    onDocumentChangeEnd,
+    onDocumentChangeStart,
     onGroupPositionChange,
     onSelectNode,
     onShapePositionChange,
