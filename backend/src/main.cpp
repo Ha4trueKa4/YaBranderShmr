@@ -28,6 +28,7 @@
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
+    userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactoryRequired>();
     auto component_list =
         userver::components::MinimalServerComponentList()
             .Append<userver::server::handlers::Ping>()
