@@ -36,7 +36,6 @@ struct ProfileView: View {
                 .customNavigationBar(title: "Profile", onBack: onBack)
         } else {
             profileContent
-                .ignoresSafeArea(edges: .top)
         }
     }
 
@@ -44,6 +43,7 @@ struct ProfileView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 profileHeader
+                
                 projectsSection
             }
         }
@@ -100,7 +100,7 @@ struct ProfileView: View {
     }
 
     private var cover: some View {
-        let baseHeight = CGFloat(132)
+        let baseHeight = CGFloat(100)
         
         return GeometryReader { proxy in
             LinearGradient(
@@ -108,6 +108,13 @@ struct ProfileView: View {
                 startPoint: .leading,
                 endPoint: .trailing
             )
+            .mask {
+                LinearGradient(
+                    colors: [Color(.black).opacity(max(0.025, 1 - proxy.frame(in: .scrollView).origin.y * 0.005)), Color(.black)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
             .frame(height: baseHeight + max(0, proxy.frame(in: .global).origin.y))
             .accessibilityHidden(true)
             .overlay(alignment: .trailing) {
