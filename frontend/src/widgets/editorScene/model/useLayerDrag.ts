@@ -14,6 +14,7 @@ import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
+  getEditableElement: (nodeId: string) => SVGGElement | undefined
   isReadOnly: boolean
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
@@ -92,8 +93,47 @@ function toDragTarget(
   }
 }
 
+function isPointerWithinElement(
+  element: SVGGElement | undefined,
+  clientX: number,
+  clientY: number,
+) {
+  if (!element) {
+    return false
+  }
+
+  const bounds = element.getBoundingClientRect()
+
+  return (
+    clientX >= bounds.left &&
+    clientX <= bounds.right &&
+    clientY >= bounds.top &&
+    clientY <= bounds.bottom
+  )
+}
+
+function isPointerWithinNode(
+  node: EditorNode,
+  getEditableElement: (nodeId: string) => SVGGElement | undefined,
+  clientX: number,
+  clientY: number,
+): boolean {
+  if (node.type === 'raw') {
+    return false
+  }
+
+  if (node.type === 'group') {
+    return node.children.some((child) =>
+      isPointerWithinNode(child, getEditableElement, clientX, clientY),
+    )
+  }
+
+  return isPointerWithinElement(getEditableElement(node.id), clientX, clientY)
+}
+
 export function useLayerDrag({
   activeTool,
+  getEditableElement,
   isReadOnly,
   onDocumentChangeEnd,
   onDocumentChangeStart,
@@ -125,15 +165,32 @@ export function useLayerDrag({
         return
       }
 
+      const preferredNode =
+        (selectedNode?.type === 'shape' || selectedNode?.type === 'text') &&
+        isPointerWithinNode(
+          selectedNode,
+          getEditableElement,
+          event.clientX,
+          event.clientY,
+        )
+          ? selectedNode
+          : node
+
       const selectedGroup =
         selectedNode?.type === 'group' &&
-        isGroupDescendant(selectedNode, node.id)
+        (isGroupDescendant(selectedNode, preferredNode.id) ||
+          isPointerWithinNode(
+            selectedNode,
+            getEditableElement,
+            event.clientX,
+            event.clientY,
+          ))
           ? selectedNode
           : null
 
       const selectedGroupToDrag = selectedGroup
       const isSelectedNode = selectedNodes.some(
-        (selected) => selected.id === node.id,
+        (selected) => selected.id === preferredNode.id,
       )
 
       if (
@@ -152,14 +209,14 @@ export function useLayerDrag({
                 (selected.type === 'shape' || selected.type === 'text') &&
                 !selected.isLocked,
             )
-          : [node]
+          : [preferredNode]
 
       if (dragTargets.length === 0) {
         return
       }
 
       if (!selectedGroupToDrag && !isSelectedNode) {
-        onSelectNode(node.id, false)
+        onSelectNode(preferredNode.id, false)
       }
 
       const pointerPosition = getSvgPointerPosition(
@@ -183,6 +240,7 @@ export function useLayerDrag({
     },
     [
       activeTool,
+      getEditableElement,
       isReadOnly,
       onDocumentChangeStart,
       onSelectNode,
