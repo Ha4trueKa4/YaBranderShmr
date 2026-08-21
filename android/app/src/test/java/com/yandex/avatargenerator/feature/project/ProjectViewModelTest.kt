@@ -24,6 +24,7 @@ internal class ProjectViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var chatRepository: FakeChatRepository
+    private lateinit var versionsRepository: FakeVersionsRepository
 
     private val messages = listOf<ChatMessage>(
         ChatMessage.System.ProjectCreated(id = "system-created"),
@@ -47,6 +48,25 @@ internal class ProjectViewModelTest {
             sentAt = Instant.parse("2026-08-12T11:32:20Z"),
         ),
     )
+    /**
+     * Лента с двумя ответами ИИ: сервер прикладывает ссылку только к последней
+     * версии, у прошлой её нет — именно её и должен догрузить экран.
+     */
+    private val twoAnswers = listOf<ChatMessage>(
+        ChatMessage.System.ProjectCreated(id = "system-created"),
+        ChatMessage.Incoming(
+            id = "chat-1-assistant",
+            versionId = "v-1",
+            sentAt = Instant.parse("2026-08-12T11:30:00Z"),
+        ),
+        ChatMessage.Incoming(
+            id = "chat-3-assistant",
+            versionId = "v-2",
+            sentAt = Instant.parse("2026-08-12T11:32:00Z"),
+            previewUrl = LATEST_URL,
+        ),
+    )
+
     private val chat = ProjectChat(
         id = PROJECT_ID,
         title = "Orion Brand AI",
@@ -58,6 +78,7 @@ internal class ProjectViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         chatRepository = FakeChatRepository()
+        versionsRepository = FakeVersionsRepository()
     }
 
     @After
@@ -65,7 +86,7 @@ internal class ProjectViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ProjectViewModel(chatRepository, PROJECT_ID)
+    private fun viewModel() = ProjectViewModel(chatRepository, versionsRepository, PROJECT_ID)
 
     @Test
     fun `starts in loading state`() {
@@ -371,10 +392,70 @@ internal class ProjectViewModelTest {
         assertEquals(false, content.isSending)
     }
 
+    @Test
+    fun `превью прошлых версий догружаются, а не только последней`() = runTest(dispatcher) {
+        // Сервер отдаёт ссылку лишь к последней версии — остальные пузыри без
+        // догрузки остались бы без картинки.
+        chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
+        versionsRepository.urls["v-1"] = OLD_URL
+        val viewModel = viewModel()
+
+        advanceUntilIdle()
+
+        val previews = contentOf(viewModel).messages
+            .filterIsInstance<ChatMessage.Incoming>()
+            .associate { it.versionId to it.previewUrl }
+        assertEquals(mapOf("v-1" to OLD_URL, "v-2" to LATEST_URL), previews)
+        // За готовой ссылкой последней версии второй раз не ходим.
+        assertEquals(listOf("v-1"), versionsRepository.requestedVersionIds)
+    }
+
+    @Test
+    fun `упавшая догрузка превью не ломает ленту`() = runTest(dispatcher) {
+        // Ссылки для v-1 у репозитория нет — пузырь останется без картинки, но
+        // экран должен жить дальше.
+        chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
+        val viewModel = viewModel()
+
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals(twoAnswers.size, content.messages.size)
+        assertEquals(
+            null,
+            content.messages.filterIsInstance<ChatMessage.Incoming>()
+                .first { it.versionId == "v-1" }
+                .previewUrl,
+        )
+    }
+
+    @Test
+    fun `перечитывание ленты не теряет уже загруженные превью`() = runTest(dispatcher) {
+        // После генерации сервер снова отдаёт ссылку только к последней версии.
+        // Без кэша прошлые пузыри мигали бы пустотой на каждом обновлении.
+        chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
+        versionsRepository.urls["v-1"] = OLD_URL
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val old = contentOf(viewModel).messages
+            .filterIsInstance<ChatMessage.Incoming>()
+            .first { it.versionId == "v-1" }
+        assertEquals(OLD_URL, old.previewUrl)
+        // Повторного запроса за той же ссылкой не было — взяли из кэша.
+        assertEquals(listOf("v-1"), versionsRepository.requestedVersionIds)
+    }
+
     private fun contentOf(viewModel: ProjectViewModel): ProjectUiState.Content =
         viewModel.uiState.value as ProjectUiState.Content
 
     private companion object {
         const val PROJECT_ID = "project-1"
+        const val LATEST_URL = "https://s3.example/v2.svg"
+        const val OLD_URL = "https://s3.example/v1.svg"
     }
 }

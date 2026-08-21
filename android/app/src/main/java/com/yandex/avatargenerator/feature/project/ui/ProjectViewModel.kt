@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.core.network.ApiConfig
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
+import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,14 +25,30 @@ import java.util.UUID
  * Название и видимость проекта приходят в том же ответе репозитория — своего
  * запроса за проектом ViewModel не делает: репозиторий всё равно ходит за ним,
  * чтобы взять ссылку на последнюю версию, и второй такой же запрос был бы лишним.
+ *
+ * Превью прошлых версий догружаются отдельно через [VersionsRepository]: история
+ * чата отдаёт только `version_id`, а ссылка на картинку у каждой версии своя и
+ * запрашивается по одной (`GET /projects/{id}/versions/{versionId}`).
  */
 internal class ProjectViewModel(
     private val chatRepository: ChatRepository,
+    private val versionsRepository: VersionsRepository,
     private val projectId: String,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProjectUiState>(ProjectUiState.Loading)
     val uiState: StateFlow<ProjectUiState> = _uiState.asStateFlow()
+
+    /**
+     * Уже известные ссылки на превью, versionId → url. Переживают перечитывание
+     * ленты: сервер отдаёт ссылку только для последней версии, и без кэша все
+     * остальные пузыри теряли бы картинку на каждом обновлении.
+     *
+     * Presigned-ссылка живёт час — этого хватает на сеанс работы с экраном.
+     */
+    private val previewUrls = mutableMapOf<String, String>()
+
+    private var previewJob: Job? = null
 
     init {
         load()
@@ -159,13 +177,80 @@ internal class ProjectViewModel(
 
     /** Серверная лента заменяет локальную целиком — оптимистичное сообщение уходит с ней. */
     private fun applyChat(chat: ProjectChat) {
+        rememberPreviews(chat.messages)
         _uiState.updateContent { content ->
             content.copy(
                 title = chat.title,
                 isPublic = chat.isPublic,
-                messages = chat.messages,
+                messages = chat.messages.withKnownPreviews(),
                 isSending = false,
             )
+        }
+        loadMissingPreviews()
+    }
+
+    /**
+     * Догружает превью версий, которых нет в [previewUrls].
+     *
+     * История чата отдаёт только `version_id`, а ссылку на картинку сервер
+     * прикладывает лишь к последней версии — у остальных пузырей она пустая, и
+     * без этой догрузки в ленте была бы видна одна последняя картинка.
+     *
+     * Грузим фоном и параллельно, дорисовывая каждый пузырь по мере ответа:
+     * лента открывается сразу, а не ждёт все запросы. Ошибку версии глотаем —
+     * пузырь просто останется без картинки, рушить из-за этого экран незачем.
+     */
+    private fun loadMissingPreviews() {
+        val content = _uiState.value as? ProjectUiState.Content ?: return
+        val missing = content.messages
+            .filterIsInstance<ChatMessage.Incoming>()
+            .filter { it.previewUrl == null }
+            .map { it.versionId }
+            .distinct()
+        if (missing.isEmpty()) return
+
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch {
+            missing.forEach { versionId ->
+                launch {
+                    versionsRepository.getVersionUrl(projectId, versionId)
+                        .onSuccess { url -> applyPreview(versionId, url) }
+                }
+            }
+        }
+    }
+
+    /** Дорисовывает пришедшую ссылку всем пузырям этой версии. */
+    private fun applyPreview(versionId: String, url: String) {
+        previewUrls[versionId] = url
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.map { message ->
+                    if (message is ChatMessage.Incoming &&
+                        message.versionId == versionId &&
+                        message.previewUrl == null
+                    ) {
+                        message.copy(previewUrl = url)
+                    } else {
+                        message
+                    }
+                },
+            )
+        }
+    }
+
+    /** Ссылку последней версии сервер присылает сам — кладём её в кэш как свою. */
+    private fun rememberPreviews(messages: List<ChatMessage>) {
+        messages.filterIsInstance<ChatMessage.Incoming>().forEach { message ->
+            message.previewUrl?.let { previewUrls[message.versionId] = it }
+        }
+    }
+
+    private fun List<ChatMessage>.withKnownPreviews(): List<ChatMessage> = map { message ->
+        if (message is ChatMessage.Incoming && message.previewUrl == null) {
+            previewUrls[message.versionId]?.let { message.copy(previewUrl = it) } ?: message
+        } else {
+            message
         }
     }
 
@@ -179,14 +264,16 @@ internal class ProjectViewModel(
         viewModelScope.launch {
             _uiState.value = chatRepository.getChat(projectId).fold(
                 onSuccess = { chat ->
+                    rememberPreviews(chat.messages)
                     ProjectUiState.Content(
                         title = chat.title,
                         isPublic = chat.isPublic,
-                        messages = chat.messages,
+                        messages = chat.messages.withKnownPreviews(),
                     )
                 },
                 onFailure = { ProjectUiState.Error },
             )
+            loadMissingPreviews()
         }
     }
 }

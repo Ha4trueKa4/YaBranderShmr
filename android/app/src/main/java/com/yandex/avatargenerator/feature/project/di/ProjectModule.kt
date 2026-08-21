@@ -24,6 +24,6 @@ val projectModule = module {
     single<ProjectRepository> { ProjectRepositoryImpl(client = get()) }
     single<PublicProjectRepository> { NetworkPublicProjectRepository(get()) }
     single<VersionsRepository> { VersionsRepositoryImpl(client = get()) }
-    viewModel { (projectId: String) -> ProjectViewModel(get(), projectId) }
+    viewModel { (projectId: String) -> ProjectViewModel(get(), get(), projectId) }
     viewModel { (projectId: String) -> PublicProjectViewModel(get(), get(), projectId) }
 }

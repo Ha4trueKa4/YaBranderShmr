@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -47,6 +49,9 @@ private const val MaxImageHeightFraction = 0.5f
  *
  * @param timeLabel готовая подпись времени («11:32»), рисуется справа внизу;
  *  `null` — времени нет (например, у системных подсказок).
+ * @param imageCacheKey стабильный ключ кэша картинки. Нужен, когда [imageUrl] —
+ *  presigned-ссылка: она новая при каждом запросе, и по самому URL Coil грузил
+ *  бы одну и ту же картинку заново на каждом обновлении ленты.
  */
 @Composable
 fun BrandChatBubble(
@@ -54,6 +59,7 @@ fun BrandChatBubble(
     isOutgoing: Boolean,
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
+    imageCacheKey: String? = null,
     timeLabel: String? = null
 ) {
     val shape: Shape = RoundedCornerShape(
@@ -81,7 +87,11 @@ fun BrandChatBubble(
             }.coerceAtLeast(MinImageHeight)
             Spacer(modifier = Modifier.height(AppSpacing.s))
             AsyncImage(
-                model = imageUrl,
+                model = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .memoryCacheKey(imageCacheKey)
+                    .diskCacheKey(imageCacheKey)
+                    .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier

@@ -76,6 +76,7 @@ internal fun ChatTimeline(
                         text = stringResource(R.string.project_assistant_message),
                         isOutgoing = false,
                         imageUrl = message.previewUrl,
+                        imageCacheKey = message.versionId,
                         timeLabel = rememberMessageTimeLabel(message.sentAt),
                     )
                 }
