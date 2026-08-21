@@ -110,12 +110,12 @@ struct ProfileView: View {
             )
             .mask {
                 LinearGradient(
-                    colors: [Color(.black).opacity(max(0.025, 1 - proxy.frame(in: .scrollView).origin.y * 0.005)), Color(.black)],
+                    colors: [Color(.black).opacity(viewModel.isLoading ? 0 : max(0, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             }
-            .frame(height: baseHeight + max(0, proxy.frame(in: .global).origin.y))
+            .frame(height: baseHeight + max(0, onBack == nil ? proxy.frame(in: .global).origin.y : proxy.frame(in: .scrollView).origin.y))
             .accessibilityHidden(true)
             .overlay(alignment: .trailing) {
                 if isCurrentUser {
@@ -124,7 +124,7 @@ struct ProfileView: View {
                         .padding(.trailing, 12)
                 }
             }
-            .offset(y: -max(0, proxy.frame(in: .global).origin.y))
+            .offset(y: -max(0, onBack == nil ? proxy.frame(in: .global).origin.y : proxy.frame(in: .scrollView).origin.y))
         }
         .frame(minHeight: baseHeight)
     }
