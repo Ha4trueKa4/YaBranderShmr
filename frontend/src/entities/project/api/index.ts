@@ -8,6 +8,7 @@ export {
   feedQueryKey,
   projectQueryKey,
   projectSvgQueryKey,
+  projectSvgQueryPrefix,
   useDeleteProjectMutation,
   useFeedInfiniteQuery,
   useProjectQuery,

@@ -1,7 +1,7 @@
 import { type EditorDocument, serializeSvg } from '@entities/editorDocument'
 import {
   projectQueryKey,
-  projectSvgQueryKey,
+  projectSvgQueryPrefix,
   useUpdateProjectMetadataMutation,
 } from '@entities/project'
 import { useCreateProjectMutation } from '@features/projectCreate'
@@ -45,6 +45,10 @@ export function useEditorProjectActions({
     () => canEdit && hasUnsavedChanges && !isLeavingAfterCopyReference.current,
     [canEdit, hasUnsavedChanges],
   )
+
+  const markDocumentAsSaved = useCallback((nextDocument: EditorDocument) => {
+    setSavedProjectSvg(serializeSvg(nextDocument))
+  }, [])
 
   const renameProject = useCallback(
     async (nextProjectName: string) => {
@@ -91,7 +95,7 @@ export function useEditorProjectActions({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: projectQueryKey(projectId) }),
         queryClient.invalidateQueries({
-          queryKey: projectSvgQueryKey(projectId),
+          queryKey: projectSvgQueryPrefix(projectId),
         }),
       ])
       toast.info(t('Project version saved.'))
@@ -144,6 +148,8 @@ export function useEditorProjectActions({
     createCopy,
     isCreatingCopy: isCopyingProject || isCreatingProjectCopy,
     isSavingVersion,
+    hasUnsavedChanges,
+    markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,

@@ -69,7 +69,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     color-scheme: light;
     --color-bg: #f9fafb;
     --color-surface: #ffffff;
@@ -93,6 +93,31 @@
     --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
     --shadow-card-hover: 0 4px 12px rgb(24 24 27 / 14%);
   }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f9fafb;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f4f4f5;
+  --color-accent-secondary: #0891b2;
+  --color-accent-subtle: #f5f3ff;
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+  --color-text-inverse: #fff;
+  --color-success: #16a34a;
+  --color-error: #dc2626;
+  --color-border: #e4e4e7;
+  --color-focus: #7c3aed;
+  --color-auth-panel: #f9fafb;
+  --color-auth-field: #f4f4f5;
+  --color-auth-text: #18181b;
+  --color-auth-muted: #71717a;
+  --shadow-sm: 0 1px 2px rgb(24 24 27 / 8%);
+  --shadow-md: 0 8px 24px rgb(24 24 27 / 12%);
+  --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
+  --shadow-card-hover: 0 4px 12px rgb(24 24 27 / 14%);
 }
 
 * {

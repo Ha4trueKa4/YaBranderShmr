@@ -1,7 +1,7 @@
 import { authStore } from '@app/providers/auth'
 import { getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
-import chevronDown from '../assets/chevronDown.svg'
+import { Download, History, Save } from 'lucide-react'
 import styles from '../EditorToolbar.module.css'
 
 interface ProjectActionsProps {
@@ -11,6 +11,7 @@ interface ProjectActionsProps {
   onCreateCopy: () => void
   onExport: () => void
   onOpenProfile: () => void
+  onOpenVersionHistory: () => void
   onSaveVersion: () => void
 }
 
@@ -21,6 +22,7 @@ export function ProjectActions({
   onCreateCopy,
   onExport,
   onOpenProfile,
+  onOpenVersionHistory,
   onSaveVersion,
 }: ProjectActionsProps) {
   const session = authStore.getSession
@@ -28,14 +30,21 @@ export function ProjectActions({
   return (
     <div className={styles.projectActions}>
       {canEdit ? (
-        <Button
-          className={styles.saveVersion}
-          loading={isSavingVersion}
-          onClick={onSaveVersion}
-          variant="secondary"
-        >
-          Save version
-        </Button>
+        <>
+          <Button
+            className={styles.saveVersion}
+            loading={isSavingVersion}
+            onClick={onSaveVersion}
+            variant="secondary"
+          >
+            <Save className={styles.actionIcon} />
+            Save version
+          </Button>
+          <Button onClick={onOpenVersionHistory} variant="secondary">
+            <History className={styles.actionIcon} />
+            Version history
+          </Button>
+        </>
       ) : (
         <Button
           className={styles.saveVersion}
@@ -47,8 +56,8 @@ export function ProjectActions({
         </Button>
       )}
       <Button onClick={onExport}>
+        <Download className={styles.actionIcon} />
         Export
-        <img alt="" src={chevronDown} />
       </Button>
       {session && (
         <button className={styles.avatar} onClick={onOpenProfile} type="button">

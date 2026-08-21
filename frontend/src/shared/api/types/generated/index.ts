@@ -72,6 +72,11 @@ export type {
   PostAuthRegisterErrors,
   PostAuthRegisterResponse,
   PostAuthRegisterResponses,
+  PostAuthYandexData,
+  PostAuthYandexError,
+  PostAuthYandexErrors,
+  PostAuthYandexResponse,
+  PostAuthYandexResponses,
   PostProjectsByIdGenerateData,
   PostProjectsByIdGenerateError,
   PostProjectsByIdGenerateErrors,
@@ -99,4 +104,5 @@ export type {
   ValidationError,
   VersionInfo,
   VersionUrl,
+  YandexAuthRequest,
 } from './types.gen'
