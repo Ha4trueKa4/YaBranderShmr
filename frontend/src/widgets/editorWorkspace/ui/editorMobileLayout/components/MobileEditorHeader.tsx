@@ -1,6 +1,7 @@
 import { IconButton, PopupMenu } from '@shared/ui'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from '../EditorMobileLayout.module.css'
 
@@ -28,6 +29,7 @@ export function MobileEditorHeader({
   projectName,
 }: MobileEditorHeaderProps) {
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false)
+  const { t } = useTranslation()
 
   return (
     <header className={styles.header}>
@@ -54,11 +56,11 @@ export function MobileEditorHeader({
               ...(canEdit
                 ? [
                     {
-                      label: isSavingVersion ? 'Saving…' : 'Save',
+                      label: isSavingVersion ? t('Saving…') : t('Save'),
                       onClick: onSaveVersion,
                     },
                     {
-                      label: 'Version history',
+                      label: t('History'),
                       onClick: onOpenVersionHistory,
                     },
                   ]
