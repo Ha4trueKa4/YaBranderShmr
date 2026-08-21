@@ -84,7 +84,7 @@ describe('EditorStore selection', () => {
   it('undoes and redoes a document change', () => {
     const store = new EditorStore(structuredClone(document))
 
-    store.setShapeFillColor('wheel', '#FF0000')
+    store.svgNodeEditing.setShapeFillColor('wheel', '#FF0000')
 
     expect(store.canUndo).toBe(true)
     expect(store.undo()).toBe(true)
@@ -104,8 +104,8 @@ describe('EditorStore selection', () => {
     const store = new EditorStore(structuredClone(document))
 
     store.beginHistoryTransaction()
-    store.setShapePosition('wheel', 10, 10)
-    store.setShapePosition('wheel', 20, 20)
+    store.svgNodeEditing.setShapePosition('wheel', 10, 10)
+    store.svgNodeEditing.setShapePosition('wheel', 20, 20)
 
     expect(store.commitHistoryTransaction()).toBe(true)
     expect(store.undo()).toBe(true)
@@ -172,7 +172,7 @@ describe('EditorStore selection', () => {
   it('toggles visibility without changing a child node state', () => {
     const store = new EditorStore(document)
 
-    store.toggleNodeVisibility('taxi')
+    store.svgNodeEditing.toggleNodeVisibility('taxi')
 
     expect(store.selectedNode).toBeNull()
     expect(store.document.layers[0].isVisible).toBe(false)
@@ -218,7 +218,7 @@ describe('EditorStore selection', () => {
   it('changes a shape fill color', () => {
     const store = new EditorStore(document)
 
-    store.setShapeFillColor('wheel', '#FF0000')
+    store.svgNodeEditing.setShapeFillColor('wheel', '#FF0000')
     store.setSelectedNode('wheel')
 
     expect(store.selectedNode).toMatchObject({
@@ -229,7 +229,7 @@ describe('EditorStore selection', () => {
   it('changes a shape fill opacity', () => {
     const store = new EditorStore(document)
 
-    store.setShapeFillOpacity('wheel', 0.4)
+    store.svgNodeEditing.setShapeFillOpacity('wheel', 0.4)
     store.setSelectedNode('wheel')
 
     expect(store.selectedNode).toMatchObject({
@@ -240,9 +240,9 @@ describe('EditorStore selection', () => {
   it('changes colors of every stop in linear and radial gradients', () => {
     const store = new EditorStore(structuredClone(document))
 
-    store.setGradientStopColor('wheel-gradient', 0, '#FFD400')
-    store.setGradientStopColor('wheel-gradient', 1, '#6C3BFF')
-    store.setGradientStopColor('shadow-gradient', 1, '#FF00FF')
+    store.svgNodeEditing.setGradientStopColor('wheel-gradient', 0, '#FFD400')
+    store.svgNodeEditing.setGradientStopColor('wheel-gradient', 1, '#6C3BFF')
+    store.svgNodeEditing.setGradientStopColor('shadow-gradient', 1, '#FF00FF')
 
     expect(store.document.definitions?.gradients[0]?.stops).toEqual([
       { color: '#FFD400', offset: '0%' },
@@ -257,8 +257,8 @@ describe('EditorStore selection', () => {
   it('changes a shape position through its transform and common opacity', () => {
     const store = new EditorStore(document)
 
-    store.setShapePosition('wheel', 12, -8)
-    store.setShapeOpacity('wheel', 0.6)
+    store.svgNodeEditing.setShapePosition('wheel', 12, -8)
+    store.svgNodeEditing.setShapeOpacity('wheel', 0.6)
     store.setSelectedNode('wheel')
 
     expect(store.selectedNode).toMatchObject({
@@ -270,7 +270,7 @@ describe('EditorStore selection', () => {
   it('changes a group position through its transform', () => {
     const store = new EditorStore(structuredClone(document))
 
-    store.setGroupPosition('taxi', 12, -8)
+    store.svgNodeEditing.setGroupPosition('taxi', 12, -8)
     store.setSelectedNode('taxi')
 
     expect(store.selectedNode).toMatchObject({
@@ -352,9 +352,9 @@ describe('EditorStore selection', () => {
   it('adds, updates and removes a shape outline', () => {
     const store = new EditorStore(structuredClone(document))
 
-    store.addShapeStroke('wheel')
-    store.setShapeStrokeColor('wheel', '#6C3BFF')
-    store.setShapeStrokeWidth('wheel', 4)
+    store.svgNodeEditing.addShapeStroke('wheel')
+    store.svgNodeEditing.setShapeStrokeColor('wheel', '#6C3BFF')
+    store.svgNodeEditing.setShapeStrokeWidth('wheel', 4)
     store.setSelectedNode('wheel')
 
     expect(store.selectedNode).toMatchObject({
@@ -364,7 +364,7 @@ describe('EditorStore selection', () => {
       },
     })
 
-    store.removeShapeStroke('wheel')
+    store.svgNodeEditing.removeShapeStroke('wheel')
 
     expect(store.selectedNode).toMatchObject({
       style: { stroke: { type: 'none' }, strokeWidth: 0 },
@@ -374,10 +374,10 @@ describe('EditorStore selection', () => {
   it('does not apply invalid gradient or stroke values', () => {
     const store = new EditorStore(structuredClone(document))
 
-    store.setGradientStopColor('wheel-gradient', 0, '')
-    store.setGradientStopColor('wheel-gradient', 0, '#invalid')
-    store.setShapeStrokeColor('wheel', '')
-    store.setShapeStrokeWidth('wheel', -1)
+    store.svgNodeEditing.setGradientStopColor('wheel-gradient', 0, '')
+    store.svgNodeEditing.setGradientStopColor('wheel-gradient', 0, '#invalid')
+    store.svgNodeEditing.setShapeStrokeColor('wheel', '')
+    store.svgNodeEditing.setShapeStrokeWidth('wheel', -1)
 
     expect(store.document.definitions?.gradients[0]?.stops[0]?.color).toBe(
       '#FF0000',
@@ -390,14 +390,14 @@ describe('EditorStore selection', () => {
   it('changes editable text properties', () => {
     const store = new EditorStore(document)
 
-    store.setTextContent('title', 'Updated title')
-    store.setTextFillColor('title', '#6C3BFF')
-    store.setTextFontFamily('title', 'Roboto')
-    store.setTextFontSize('title', 36)
-    store.setTextFontStyle('title', 'italic')
-    store.setTextFontWeight('title', 700)
-    store.setTextAnchor('title', 'start')
-    store.setTextPosition('title', 30, 40)
+    store.svgNodeEditing.setTextContent('title', 'Updated title')
+    store.svgNodeEditing.setTextFillColor('title', '#6C3BFF')
+    store.svgNodeEditing.setTextFontFamily('title', 'Roboto')
+    store.svgNodeEditing.setTextFontSize('title', 36)
+    store.svgNodeEditing.setTextFontStyle('title', 'italic')
+    store.svgNodeEditing.setTextFontWeight('title', 700)
+    store.svgNodeEditing.setTextAnchor('title', 'start')
+    store.svgNodeEditing.setTextPosition('title', 30, 40)
     store.setSelectedNode('title')
 
     expect(store.selectedNode).toMatchObject({

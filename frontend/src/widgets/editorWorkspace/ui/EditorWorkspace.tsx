@@ -149,7 +149,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
 
   function handleToggleVisibility(nodeId: string) {
-    editorStore.toggleNodeVisibility(nodeId)
+    editorStore.svgNodeEditing.toggleNodeVisibility(nodeId)
     setSceneRenderVersion((version) => version + 1)
   }
 
@@ -190,23 +190,23 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   const inspectorProps = {
     definitions: editorStore.document.definitions,
-    onGradientStopColorChange: editorStore.setGradientStopColor,
-    onShapeFillChange: editorStore.setShapeFillColor,
-    onShapeFillOpacityChange: editorStore.setShapeFillOpacity,
-    onShapeOpacityChange: editorStore.setShapeOpacity,
-    onShapePositionChange: editorStore.setShapePosition,
-    onShapeStrokeAdd: editorStore.addShapeStroke,
-    onShapeStrokeColorChange: editorStore.setShapeStrokeColor,
-    onShapeStrokeRemove: editorStore.removeShapeStroke,
-    onShapeStrokeWidthChange: editorStore.setShapeStrokeWidth,
-    onTextAnchorChange: editorStore.setTextAnchor,
-    onTextContentChange: editorStore.setTextContent,
-    onTextFillColorChange: editorStore.setTextFillColor,
-    onTextFontFamilyChange: editorStore.setTextFontFamily,
-    onTextFontSizeChange: editorStore.setTextFontSize,
-    onTextFontStyleChange: editorStore.setTextFontStyle,
-    onTextFontWeightChange: editorStore.setTextFontWeight,
-    onTextPositionChange: editorStore.setTextPosition,
+    onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
+    onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
+    onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
+    onShapeOpacityChange: editorStore.svgNodeEditing.setShapeOpacity,
+    onShapePositionChange: editorStore.svgNodeEditing.setShapePosition,
+    onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
+    onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
+    onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
+    onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
+    onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
+    onTextContentChange: editorStore.svgNodeEditing.setTextContent,
+    onTextFillColorChange: editorStore.svgNodeEditing.setTextFillColor,
+    onTextFontFamilyChange: editorStore.svgNodeEditing.setTextFontFamily,
+    onTextFontSizeChange: editorStore.svgNodeEditing.setTextFontSize,
+    onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
+    onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
+    onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
     selectedNode: editorStore.selectedNode,
   }
   const scene = (
@@ -218,10 +218,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onClearSelection={() => editorStore.setSelectedNode(null)}
       onDocumentChangeEnd={editorStore.commitHistoryTransaction}
       onDocumentChangeStart={editorStore.beginHistoryTransaction}
-      onGroupPositionChange={editorStore.setGroupPosition}
+      onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
       onSelectNode={handleSceneSelectNode}
-      onShapePositionChange={editorStore.setShapePosition}
-      onTextPositionChange={editorStore.setTextPosition}
+      onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
+      onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}
       onViewportOffsetChange={setViewportOffset}
       onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
