@@ -10,6 +10,7 @@ import type {
 import { SvgParseError } from '../errors'
 import type { SvgImportWarning } from '../types'
 import { parseNumberAttribute } from './parseNumber'
+import { parsePaint } from './parsePaint'
 import { parseShapeStyle, parseTextStyle } from './parseStyle'
 import { parseTransform } from './parseTransform'
 
@@ -54,7 +55,7 @@ const attributeNamesByElement = {
     'stroke-opacity',
     'stroke-width',
   ]),
-  g: new Set<string>(),
+  g: new Set(['fill']),
   line: new Set([
     'fill',
     'fill-opacity',
@@ -222,6 +223,14 @@ function parseShape(element: Element): EditorShape {
   }
 }
 
+function parseGroupFill(element: Element): Pick<EditorGroup, 'fill'> {
+  const fill = element.getAttribute('fill')
+
+  return fill === null
+    ? {}
+    : { fill: parsePaint(fill, { type: 'color', value: '#000000' }) }
+}
+
 function parseText(element: Element): EditorText {
   const tspans = Array.from(element.children)
   const style = parseTextStyle(element)
@@ -377,6 +386,7 @@ function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
     if (element.localName === 'g') {
       const group: EditorGroup = {
         ...parseBase(element),
+        ...parseGroupFill(element),
         children: Array.from(element.children).map((child) =>
           parseNode(child, warnings),
         ),

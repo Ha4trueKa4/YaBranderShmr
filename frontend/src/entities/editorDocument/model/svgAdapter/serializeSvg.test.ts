@@ -72,6 +72,21 @@ describe('serializeSvg', () => {
     expect(parseSvg(serialized)).toEqual(document)
   })
 
+  it('round-trips a group fill', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <g id="logo" fill="#123456"><path id="logo-mark" d="M0 0 L20 20" /></g>
+      </svg>
+    `)
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain(
+      '<g data-editor-id="logo" data-name="logo" id="logo" opacity="1" fill="#123456">',
+    )
+    expect(parseSvg(serialized)).toEqual(document)
+  })
+
   it('preserves the viewBox origin when serializing', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">

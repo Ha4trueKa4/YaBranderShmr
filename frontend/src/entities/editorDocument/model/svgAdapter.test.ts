@@ -421,6 +421,32 @@ describe('parseSvg', () => {
     )
   })
 
+  it('keeps an inherited group fill on editable children', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="logo-gradient"><stop offset="0%" stop-color="#fff" /></linearGradient>
+        </defs>
+        <g id="logo" fill="url(#logo-gradient)">
+          <path id="logo-mark" d="M0 0 L20 20" />
+        </g>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        children: [{ id: 'logo-mark', isLocked: false, type: 'shape' }],
+        fill: { gradientId: 'logo-gradient', type: 'gradient' },
+        id: 'logo',
+        isLocked: false,
+        type: 'group',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'logo' }),
+    )
+  })
+
   it('locks unsupported elements without discarding editable siblings', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">

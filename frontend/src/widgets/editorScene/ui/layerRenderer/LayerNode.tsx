@@ -6,6 +6,7 @@ import type {
 import { observer } from 'mobx-react-lite'
 import type { PointerEvent as ReactPointerEvent, RefCallback } from 'react'
 
+import { getPaintValue } from './model/getPaintValue'
 import { getTransformValue } from './model/getTransformValue'
 import { ShapeLayer } from './ShapeLayer'
 import { TextLayer } from './TextLayer'
@@ -43,7 +44,11 @@ export const LayerNode = observer(function LayerNode({
 
   if (node.type === 'group') {
     return (
-      <g opacity={node.opacity} transform={getTransformValue(node.transform)}>
+      <g
+        fill={node.fill ? getPaintValue(node.fill) : undefined}
+        opacity={node.opacity}
+        transform={getTransformValue(node.transform)}
+      >
         {node.children.map((child) => (
           <LayerNode
             key={child.id}

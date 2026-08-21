@@ -118,6 +118,7 @@ export type EditorElement = EditorShape | EditorText
 
 export type EditorGroup = EditorElementBase & {
   children: EditorNode[]
+  fill?: Paint
   type: 'group'
 }
 
