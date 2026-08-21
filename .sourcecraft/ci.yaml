@@ -98,6 +98,7 @@ workflows:
           AWS_EC2_METADATA_DISABLED: "true"
           VITE_API_URL: ${{ secrets.VITE_API_URL_DEV }}
           VITE_HEALTH_URL: ${{ secrets.VITE_HEALTH_URL_DEV }}
+          VITE_YANDEX_OAUTH_CLIENT_ID: ${{ secrets.YANDEX_OAUTH_CLIENT_ID }}
         cubes:
           - name: install-check-and-build
             image: docker.io/library/node:22-bookworm
