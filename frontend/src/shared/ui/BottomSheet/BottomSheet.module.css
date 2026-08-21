@@ -25,7 +25,12 @@
   max-height: min(80dvh, 40rem);
   overflow: hidden;
   position: relative;
+  transition: transform 180ms ease-out;
   width: min(100%, 40rem);
+}
+
+.sheetDragging {
+  transition: none;
 }
 
 .handle {
@@ -33,6 +38,8 @@
   border-radius: 999px;
   height: 0.25rem;
   margin: var(--space-2) auto;
+  touch-action: none;
+  user-select: none;
   width: 2.5rem;
 }
 
@@ -43,6 +50,8 @@
   justify-content: space-between;
   min-height: 3rem;
   padding: 0 var(--space-4);
+  touch-action: none;
+  user-select: none;
 }
 
 .header h2 {
