@@ -117,6 +117,7 @@ private fun ProjectContent(
                     draft = uiState.draft,
                     onDraftChange = onDraftChange,
                     onSendClick = onSendClick,
+                    isSending = uiState.isSending,
                 )
             }
         }

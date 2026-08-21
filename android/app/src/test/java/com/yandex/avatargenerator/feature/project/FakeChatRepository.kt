@@ -1,34 +1,31 @@
 package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
-import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
-import java.time.Instant
 
 /**
  * Репозиторий-подделка для тестов ViewModel.
  *
  * @param chatResult что вернуть на очередной [getChat] — успех или ошибка;
- *  поле `var`, чтобы в тесте retry подменить ошибку успехом.
- * @param sentAt время отправленного сообщения — фиксированное, чтобы результат
- *  [sendMessage] можно было сравнить с ожидаемым.
+ *  поле `var`, чтобы в тесте retry подменить ошибку успехом, а в тесте отправки —
+ *  подсунуть ленту, какой она станет после генерации.
  */
 internal class FakeChatRepository(
     var chatResult: Result<ProjectChat> = Result.success(EMPTY_CHAT),
-    private val sentAt: Instant = SENT_AT,
 ) : ChatRepository {
 
     var getChatCallCount: Int = 0
         private set
 
     /**
-     * Тексты, дошедшие до репозитория: по ним видно, что отправка не сработала.
-     * При заданном [sendError] текст всё равно попадает сюда — попытка отправки
-     * была, упала она уже после.
+     * Промпты, дошедшие до репозитория: по ним видно, что отправка состоялась.
+     * При заданном [sendError] промпт всё равно попадает сюда — попытка была,
+     * упала она уже после.
      */
-    val sentTexts: MutableList<String> = mutableListOf()
+    val sentPrompts: MutableList<String> = mutableListOf()
 
-    /** Ошибка, которую должен бросить [sendMessage]; null — отправка успешна. */
+    /** Ошибка, которую должен вернуть [sendPrompt]; null — генерация удалась. */
     var sendError: Throwable? = null
 
     override suspend fun getChat(projectId: String): Result<ProjectChat> {
@@ -36,16 +33,14 @@ internal class FakeChatRepository(
         return chatResult
     }
 
-    override suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage> {
-        sentTexts += text
+    override suspend fun sendPrompt(projectId: String, prompt: String): Result<GeneratedVersion> {
+        sentPrompts += prompt
         sendError?.let { return Result.failure(it) }
-        return Result.success(
-            ChatMessage.Outgoing(id = "sent-${sentTexts.size}", text = text, sentAt = sentAt),
-        )
+        return Result.success(GeneratedVersion(previewUrl = GENERATED_URL))
     }
 
     companion object {
-        val SENT_AT: Instant = Instant.parse("2026-08-12T11:32:00Z")
+        const val GENERATED_URL: String = "https://s3.example/generated.svg"
         val EMPTY_CHAT = ProjectChat(
             id = "project-1",
             title = "Project",

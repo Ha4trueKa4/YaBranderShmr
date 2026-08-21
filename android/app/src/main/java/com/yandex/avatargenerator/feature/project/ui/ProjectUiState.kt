@@ -23,12 +23,16 @@ internal sealed interface ProjectUiState {
      * @property draft текст в поле ввода. Живёт в состоянии ViewModel, а не в
      *  `remember` экрана: так переживает поворот без `rememberSaveable` и
      *  покрывается юнит-тестом.
+     * @property isSending идёт генерация по отправленному промпту. Пока она идёт
+     *  (это до двух минут), кнопка отправки неактивна: повторное нажатие создало
+     *  бы вторую версию по второму промпту, а ждать её пользователь не собирался.
      */
     data class Content(
         val title: String,
         val isPublic: Boolean,
         val messages: List<ChatMessage>,
         val draft: String = "",
+        val isSending: Boolean = false,
     ) : ProjectUiState
 
     /** Загрузка не удалась; пользователю доступен повтор. */

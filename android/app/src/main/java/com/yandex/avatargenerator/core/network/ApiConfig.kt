@@ -11,4 +11,11 @@ object ApiConfig {
     const val RequestTimeoutMillis: Long = 30_000
     const val ConnectTimeoutMillis: Long = 15_000
     const val SocketTimeoutMillis: Long = 30_000
+
+    /**
+     * Отдельный таймаут для `POST /projects/{id}/generate`: LLM думает дольше
+     * общих 30 секунд. Ставится на самом запросе через `timeout { }` — поднимать
+     * ради него потолок всему клиенту нельзя.
+     */
+    const val GenerationTimeoutMillis: Long = 120_000
 }

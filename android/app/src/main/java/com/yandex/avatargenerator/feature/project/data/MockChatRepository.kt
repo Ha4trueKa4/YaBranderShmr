@@ -2,18 +2,18 @@ package com.yandex.avatargenerator.feature.project.data
 
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
 
 /**
  * Мок диалога с ИИ — только для `@Preview` и ручной проверки вёрстки: в графе
  * Koin его больше нет, боевой источник — [ChatRepositoryImpl].
  *
  * @param networkDelayMillis имитация задержки загрузки — чтобы видеть Loading.
- * @param sendDelayMillis имитация задержки отправки.
+ * @param sendDelayMillis имитация задержки генерации.
  * @param title заголовок проекта в шапке.
  * @param messages стартовая лента; параметр вынесен наружу, чтобы в `@Preview` и
  *  при ручной проверке можно было подсунуть `emptyList()` (новый проект).
@@ -33,18 +33,12 @@ class MockChatRepository(
     }
 
     /**
-     * Ответа ИИ мок не имитирует осознанно: генерация — задача бэкенда,
-     * а экрану достаточно увидеть, что исходящее сообщение попало в ленту.
+     * Новую версию мок не создаёт: генерация — задача бэкенда, а `@Preview`
+     * ленту всё равно не перезапрашивает. Отдаём успех с пустой ссылкой.
      */
-    override suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage> {
+    override suspend fun sendPrompt(projectId: String, prompt: String): Result<GeneratedVersion> {
         delay(sendDelayMillis)
-        return Result.success(
-            ChatMessage.Outgoing(
-                id = UUID.randomUUID().toString(),
-                text = text,
-                sentAt = Instant.now(),
-            ),
-        )
+        return Result.success(GeneratedVersion(previewUrl = null))
     }
 
     companion object {

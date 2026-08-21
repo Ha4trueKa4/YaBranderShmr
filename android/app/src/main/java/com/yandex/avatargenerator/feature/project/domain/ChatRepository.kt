@@ -1,6 +1,6 @@
 package com.yandex.avatargenerator.feature.project.domain
 
-import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 
 /**
@@ -28,10 +28,21 @@ interface ChatRepository {
     suspend fun getChat(projectId: String): Result<ProjectChat>
 
     /**
-     * Отправляет сообщение пользователя.
+     * Отправляет промпт на генерацию (`POST /projects/{id}/generate`).
      *
-     * @return созданное сообщение — а не `Unit`: серверный `id` и время
-     *  проставляет источник данных, и UI из-за этого менять не придётся.
+     * Вызов долгий — модель отвечает десятками секунд. Успех означает, что
+     * версия создана и **сервер сам дописал в историю пару «промпт → версия»**,
+     * поэтому после него ленту надо перечитать через [getChat]: ни номера новой
+     * версии, ни её `version_id` в ответе нет.
+     *
+     * При ошибке перечитывать нечего: запись в историю идёт после успешного
+     * сохранения версии, так что «осиротевших» промптов в ней не появляется.
+     *
+     * @return ссылку на новую версию. `Result.failure` с
+     *  [com.yandex.avatargenerator.core.domain.NetworkException]: 400 — промпт
+     *  пуст или длиннее 1500 байт, 403 — чужой проект либо просроченный токен,
+     *  `ClientError(422)` — модель вернула невалидный SVG (тот же промпт есть
+     *  смысл повторить), `ServerError` — генератор временно недоступен.
      */
-    suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage>
+    suspend fun sendPrompt(projectId: String, prompt: String): Result<GeneratedVersion>
 }

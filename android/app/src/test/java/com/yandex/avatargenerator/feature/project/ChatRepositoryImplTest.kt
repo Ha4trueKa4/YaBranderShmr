@@ -6,22 +6,30 @@ import com.yandex.avatargenerator.feature.project.data.ChatRepositoryImpl
 import com.yandex.avatargenerator.feature.project.data.ProjectRepositoryImpl
 import com.yandex.avatargenerator.feature.project.data.VersionsRepositoryImpl
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.HttpResponseData
+import io.ktor.http.content.TextContent
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -69,34 +77,54 @@ private const val VersionsJson = """
 }
 """
 
+private const val GeneratedUrl = "https://s3.example/generated.svg?signature=xyz"
+
+/** Ответ генерации: кроме ссылки в нём нет ничего — ни version_id, ни номера. */
+private const val GenerateJson = """
+{"url": "$GeneratedUrl"}
+"""
+
 private typealias Responder = MockRequestHandleScope.() -> HttpResponseData
 
 class ChatRepositoryImplTest {
 
     private val requestedPaths = CopyOnWriteArrayList<String>()
 
+    private val requestedMethods = CopyOnWriteArrayList<HttpMethod>()
+
+    /** Тела отправленных запросов — по ним проверяем контракт `POST /generate`. */
+    private val sentBodies = CopyOnWriteArrayList<String>()
+
     /**
-     * Экран собирается из трёх ручек — мок раскладывает ответы по путям.
-     * Проект и версии идут через боевые репозитории, как и в графе Koin.
+     * Экран собирается из трёх ручек, отправка промпта — четвёртая: мок
+     * раскладывает ответы по путям. Проект и версии идут через боевые
+     * репозитории, как и в графе Koin.
      */
     private fun repository(
         project: Responder = { respondJson(ProjectJson) },
         chat: Responder = { respondJson(ChatJson) },
         versions: Responder = { respondJson(VersionsJson) },
+        generate: Responder = { respondJson(GenerateJson) },
     ): ChatRepositoryImpl {
         val client = HttpClient(
             MockEngine { request ->
                 val path = request.url.encodedPath
                 requestedPaths += path
+                requestedMethods += request.method
+                (request.body as? TextContent)?.let { sentBodies += it.text }
                 when {
                     path.endsWith("/chat") -> chat()
                     path.endsWith("/versions") -> versions()
+                    path.endsWith("/generate") -> generate()
                     else -> project()
                 }
             },
         ) {
             expectSuccess = true
             install(ContentNegotiation) { json(ApiJson) }
+            // Плагин нужен здесь, потому что sendPrompt задаёт свой таймаут
+            // через timeout { } — без плагина настройка просто не сработала бы.
+            install(HttpTimeout)
             defaultRequest {
                 url("http://localhost:8080/api/v1/")
                 contentType(ContentType.Application.Json)
@@ -299,5 +327,101 @@ class ChatRepositoryImplTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun `удачная генерация отдаёт ссылку на новую версию`() = runTest {
+        val generated = repository().sendPrompt("p-1", "Violet logo").getOrThrow()
+
+        assertEquals(GeneratedVersion(previewUrl = GeneratedUrl), generated)
+    }
+
+    @Test
+    fun `ответ 200 без url — не ошибка`() = runTest {
+        // Версия создана, просто ссылку не прислали: возьмём её из ленты.
+        val repository = repository(generate = { respondJson("{}") })
+
+        assertEquals(
+            GeneratedVersion(previewUrl = null),
+            repository.sendPrompt("p-1", "Violet logo").getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `промпт уходит POST-ом по своему пути, сегмент кодируется`() = runTest {
+        repository().sendPrompt("a b", "Violet logo")
+
+        assertEquals(listOf("/api/v1/projects/a%20b/generate"), requestedPaths.toList())
+        assertEquals(listOf(HttpMethod.Post), requestedMethods.toList())
+    }
+
+    @Test
+    fun `в теле уходит только промпт — модель бэкенд подставит сам`() = runTest {
+        repository().sendPrompt("p-1", "Violet logo, please")
+
+        val body = Json.parseToJsonElement(sentBodies.single()) as JsonObject
+        assertEquals("Violet logo, please", body.getValue("prompt").jsonPrimitive.content)
+        // explicitNulls = false: незаполненная модель в JSON не попадает,
+        // иначе бэкенд получил бы null вместо своего дефолта.
+        assertFalse("тело: $body", body.containsKey("model"))
+    }
+
+    @Test
+    fun `400 на пустой или слишком длинный промпт — ClientError`() = runTest {
+        val repository = repository(
+            generate = { respondError(HttpStatusCode.BadRequest, """{"message":"Prompt too long"}""") },
+        )
+
+        val error = repository.sendPrompt("p-1", "x").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.ClientError)
+        assertEquals(400, (error as NetworkException.ClientError).code)
+        assertEquals("Prompt too long", error.serverMessage)
+    }
+
+    @Test
+    fun `403 — чужой проект или просроченный токен`() = runTest {
+        val repository = repository(generate = { respondError(HttpStatusCode.Forbidden) })
+
+        val error = repository.sendPrompt("p-1", "Violet logo").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.Forbidden)
+    }
+
+    @Test
+    fun `422 — модель вернула невалидный SVG`() = runTest {
+        // Отдельно от 400: тот же промпт есть смысл повторить.
+        val repository = repository(
+            generate = {
+                respondError(HttpStatusCode.UnprocessableEntity, """{"message":"Invalid SVG"}""")
+            },
+        )
+
+        val error = repository.sendPrompt("p-1", "Violet logo").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.ClientError)
+        assertEquals(422, (error as NetworkException.ClientError).code)
+    }
+
+    @Test
+    fun `503 — генератор временно недоступен`() = runTest {
+        val repository = repository(
+            generate = { respondError(HttpStatusCode.ServiceUnavailable) },
+        )
+
+        val error = repository.sendPrompt("p-1", "Violet logo").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.ServerError)
+    }
+
+    @Test
+    fun `неудачная генерация не перезапрашивает ленту`() = runTest {
+        // Бэкенд пишет промпт в историю только после успешного сохранения
+        // версии, так что после ошибки читать нечего.
+        val repository = repository(generate = { respondError(HttpStatusCode.ServiceUnavailable) })
+
+        repository.sendPrompt("p-1", "Violet logo")
+
+        assertEquals(listOf("/api/v1/projects/p-1/generate"), requestedPaths.toList())
     }
 }

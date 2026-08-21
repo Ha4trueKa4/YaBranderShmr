@@ -1,7 +1,9 @@
 package com.yandex.avatargenerator.feature.project.data
 
 import com.yandex.avatargenerator.feature.project.data.dto.ChatMessageDto
+import com.yandex.avatargenerator.feature.project.data.dto.GenerateProjectResponseDto
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
 
 private const val UserRole = "user"
 private const val AssistantRole = "assistant"
@@ -70,3 +72,7 @@ internal fun buildChatTimeline(
         }
     }
 }
+
+/** Ответ 200 без `url` — не ошибка: версия создана, ссылку возьмём из ленты. */
+internal fun GenerateProjectResponseDto.toDomain(): GeneratedVersion =
+    GeneratedVersion(previewUrl = url)

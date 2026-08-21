@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import com.yandex.avatargenerator.feature.project.ui.MaxPromptBytes
 import com.yandex.avatargenerator.feature.project.ui.ProjectUiState
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,20 @@ internal class ProjectViewModelTest {
             id = "out-1",
             text = "Violet logo, please",
             sentAt = Instant.parse("2026-08-12T11:30:00Z"),
+        ),
+    )
+
+    /** Лента, какой её отдаёт сервер после удачной генерации. */
+    private val reloadedMessages = messages + listOf(
+        ChatMessage.Outgoing(
+            id = "chat-1-user",
+            text = "Make it rounder",
+            sentAt = Instant.parse("2026-08-12T11:32:00Z"),
+        ),
+        ChatMessage.Incoming(
+            id = "chat-2-assistant",
+            versionId = "v-2",
+            sentAt = Instant.parse("2026-08-12T11:32:20Z"),
         ),
     )
     private val chat = ProjectChat(
@@ -135,7 +150,7 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `send appends the message and clears the draft`() = runTest(dispatcher) {
+    fun `промпт появляется в ленте сразу, до ответа сервера`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.success(chat)
         val viewModel = viewModel()
         advanceUntilIdle()
@@ -143,21 +158,60 @@ internal class ProjectViewModelTest {
         // По краям пробелы: до репозитория должен дойти обрезанный текст.
         viewModel.onDraftChange("  Make it rounder  ")
         viewModel.send()
-        advanceUntilIdle()
+        // advanceUntilIdle нет намеренно: генерация ещё идёт.
 
-        val expected = ChatMessage.Outgoing(
-            id = "sent-1",
-            text = "Make it rounder",
-            sentAt = FakeChatRepository.SENT_AT,
-        )
         val content = contentOf(viewModel)
-        assertEquals(messages + expected, content.messages)
         assertEquals("", content.draft)
-        assertEquals(listOf("Make it rounder"), chatRepository.sentTexts)
+        assertEquals(true, content.isSending)
+        assertEquals(
+            listOf("Make it rounder"),
+            content.messages.filterIsInstance<ChatMessage.Outgoing>()
+                .map { it.text } - messages.filterIsInstance<ChatMessage.Outgoing>().map { it.text },
+        )
     }
 
     @Test
-    fun `send returns the draft back when sending fails`() = runTest(dispatcher) {
+    fun `после удачной генерации лента перечитывается, а не дописывается`() =
+        runTest(dispatcher) {
+            chatRepository.chatResult = Result.success(chat)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.onDraftChange("Make it rounder")
+            // Сервер сам дописал пару «промпт → версия» — на перезапросе придёт
+            // уже она, с серверными ключами.
+            chatRepository.chatResult = Result.success(chat.copy(messages = reloadedMessages))
+            viewModel.send()
+            advanceUntilIdle()
+
+            val content = contentOf(viewModel)
+            // Оптимистичное сообщение не осталось рядом с серверным.
+            assertEquals(reloadedMessages, content.messages)
+            assertEquals(false, content.isSending)
+            assertEquals(listOf("Make it rounder"), chatRepository.sentPrompts)
+            assertEquals(2, chatRepository.getChatCallCount)
+        }
+
+    @Test
+    fun `неудачный перезапрос ленты не превращается в Error`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
+        viewModel.send()
+        advanceUntilIdle()
+
+        // Версия создана — показывать ошибку было бы враньём. Лента остаётся
+        // с оптимистичным сообщением, экран разблокирован.
+        val content = contentOf(viewModel)
+        assertEquals(messages.size + 1, content.messages.size)
+        assertEquals(false, content.isSending)
+    }
+
+    @Test
+    fun `ошибка генерации возвращает текст и убирает промпт из ленты`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.success(chat)
         chatRepository.sendError = IllegalStateException("network is down")
         val viewModel = viewModel()
@@ -171,10 +225,26 @@ internal class ProjectViewModelTest {
         // Возвращается уже обрезанный текст — именно тот, что уходил в репозиторий.
         assertEquals("Make it rounder", content.draft)
         assertEquals(messages, content.messages)
+        assertEquals(false, content.isSending)
     }
 
     @Test
-    fun `send does not overwrite a new draft when sending fails`() = runTest(dispatcher) {
+    fun `после ошибки генерации лента не перезапрашивается`() = runTest(dispatcher) {
+        // 422 и 503 бэкенд в историю не пишет — перечитывать нечего.
+        chatRepository.chatResult = Result.success(chat)
+        chatRepository.sendError = IllegalStateException("boom")
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(1, chatRepository.getChatCallCount)
+    }
+
+    @Test
+    fun `ошибка генерации не перетирает новый черновик`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.success(chat)
         chatRepository.sendError = IllegalStateException("network is down")
         val viewModel = viewModel()
@@ -182,14 +252,30 @@ internal class ProjectViewModelTest {
 
         viewModel.onDraftChange("Make it rounder")
         viewModel.send()
-        // Отправка ещё не завершилась (StandardTestDispatcher), пользователь
-        // успевает начать новое сообщение — его перетирать нельзя.
+        // Генерация ещё идёт (StandardTestDispatcher), пользователь успевает
+        // начать новое сообщение — его перетирать нельзя.
         viewModel.onDraftChange("Actually, make it square")
         advanceUntilIdle()
 
         val content = contentOf(viewModel)
         assertEquals("Actually, make it square", content.draft)
         assertEquals(messages, content.messages)
+    }
+
+    @Test
+    fun `второй send во время генерации игнорируется`() = runTest(dispatcher) {
+        // Иначе одно нажатие «на всякий случай» создало бы лишнюю версию.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        viewModel.onDraftChange("And bluer")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(listOf("Make it rounder"), chatRepository.sentPrompts)
     }
 
     @Test
@@ -205,7 +291,21 @@ internal class ProjectViewModelTest {
         val content = contentOf(viewModel)
         assertEquals(messages, content.messages)
         assertEquals("   ", content.draft)
-        assertEquals(emptyList<String>(), chatRepository.sentTexts)
+        assertEquals(emptyList<String>(), chatRepository.sentPrompts)
+    }
+
+    @Test
+    fun `черновик обрезается по лимиту промпта в байтах`() = runTest(dispatcher) {
+        // Кириллица — два байта на символ, значит влезает вдвое меньше символов.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("я".repeat(MaxPromptBytes))
+
+        val draft = contentOf(viewModel).draft
+        assertEquals(MaxPromptBytes / 2, draft.length)
+        assertEquals(MaxPromptBytes, draft.toByteArray().size)
     }
 
     private fun contentOf(viewModel: ProjectViewModel): ProjectUiState.Content =
