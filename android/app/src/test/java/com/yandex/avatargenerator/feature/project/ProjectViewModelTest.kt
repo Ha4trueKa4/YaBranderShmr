@@ -1,7 +1,6 @@
 package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
-import com.yandex.avatargenerator.feature.project.domain.model.Project
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import com.yandex.avatargenerator.feature.project.ui.ProjectUiState
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
@@ -22,7 +21,6 @@ import java.time.Instant
 internal class ProjectViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var projectRepository: FakeProjectRepository
     private lateinit var chatRepository: FakeChatRepository
 
     private val messages = listOf<ChatMessage>(
@@ -33,22 +31,16 @@ internal class ProjectViewModelTest {
             sentAt = Instant.parse("2026-08-12T11:30:00Z"),
         ),
     )
-    private val chat = ProjectChat(id = PROJECT_ID, title = "chat title", messages = messages)
-    private val project = Project(
+    private val chat = ProjectChat(
         id = PROJECT_ID,
-        authorId = "author-1",
-        name = "Orion Brand AI",
-        description = null,
+        title = "Orion Brand AI",
         isPublic = true,
-        createdAt = null,
-        url = null,
-        data = null,
+        messages = messages,
     )
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        projectRepository = FakeProjectRepository()
         chatRepository = FakeChatRepository()
     }
 
@@ -57,7 +49,7 @@ internal class ProjectViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ProjectViewModel(projectRepository, chatRepository, PROJECT_ID)
+    private fun viewModel() = ProjectViewModel(chatRepository, PROJECT_ID)
 
     @Test
     fun `starts in loading state`() {
@@ -69,26 +61,26 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `content берёт название и видимость из проекта, а сообщения из чата`() = runTest(dispatcher) {
-        projectRepository.projectResult = Result.success(project)
-        chatRepository.chatResult = Result.success(chat)
-        val viewModel = viewModel()
+    fun `content берёт название, видимость и сообщения из ответа репозитория`() =
+        runTest(dispatcher) {
+            chatRepository.chatResult = Result.success(chat)
+            val viewModel = viewModel()
 
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        assertEquals(
-            ProjectUiState.Content(
-                title = project.name,
-                isPublic = project.isPublic,
-                messages = messages,
-                draft = "",
-            ),
-            viewModel.uiState.value,
-        )
-    }
+            assertEquals(
+                ProjectUiState.Content(
+                    title = chat.title,
+                    isPublic = chat.isPublic,
+                    messages = messages,
+                    draft = "",
+                ),
+                viewModel.uiState.value,
+            )
+        }
 
     @Test
-    fun `падение загрузки чата даёт Error`() = runTest(dispatcher) {
+    fun `падение загрузки даёт Error`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
         val viewModel = viewModel()
 
@@ -98,37 +90,37 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `падение загрузки проекта даёт Error`() = runTest(dispatcher) {
-        projectRepository.projectResult = Result.failure(IllegalStateException("404"))
+    fun `пустая лента — это Content, а не Error`() = runTest(dispatcher) {
+        // Новый проект и недоступная история у не-автора выглядят одинаково:
+        // экран открывается, просто показывать в ленте нечего.
+        chatRepository.chatResult = Result.success(chat.copy(messages = emptyList()))
         val viewModel = viewModel()
 
         advanceUntilIdle()
 
-        assertEquals(ProjectUiState.Error, viewModel.uiState.value)
+        assertEquals(emptyList<ChatMessage>(), contentOf(viewModel).messages)
     }
 
     @Test
-    fun `retry после ошибки перезагружает проект и чат`() = runTest(dispatcher) {
+    fun `retry после ошибки перезагружает чат`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        projectRepository.projectResult = Result.success(project)
         chatRepository.chatResult = Result.success(chat)
         viewModel.retry()
         advanceUntilIdle()
 
         assertEquals(
             ProjectUiState.Content(
-                title = project.name,
-                isPublic = project.isPublic,
+                title = chat.title,
+                isPublic = chat.isPublic,
                 messages = messages,
                 draft = "",
             ),
             viewModel.uiState.value,
         )
         assertEquals(2, chatRepository.getChatCallCount)
-        assertEquals(2, projectRepository.getProjectCallCount)
     }
 
     @Test

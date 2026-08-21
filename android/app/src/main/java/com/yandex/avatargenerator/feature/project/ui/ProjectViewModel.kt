@@ -3,9 +3,6 @@ package com.yandex.avatargenerator.feature.project.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
-import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,12 +10,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel экрана проекта: грузит по [projectId] сам проект (название, видимость)
- * через [ProjectRepository] и диалог с ИИ через [ChatRepository], держит черновик
- * ввода и отправляет сообщения.
+ * ViewModel экрана проекта: грузит по [projectId] диалог с ИИ через
+ * [ChatRepository], держит черновик ввода и отправляет сообщения.
+ *
+ * Название и видимость проекта приходят в том же ответе репозитория — своего
+ * запроса за проектом ViewModel не делает: репозиторий всё равно ходит за ним,
+ * чтобы взять ссылку на последнюю версию, и второй такой же запрос был бы лишним.
  */
 internal class ProjectViewModel(
-    private val projectRepository: ProjectRepository,
     private val chatRepository: ChatRepository,
     private val projectId: String,
 ) : ViewModel() {
@@ -78,26 +77,24 @@ internal class ProjectViewModel(
         }
     }
 
+    /**
+     * Пустая лента — валидное состояние (новый проект, недоступная история у
+     * не-автора), а не [ProjectUiState.Error]: ошибку репозиторий отдаёт только
+     * когда не загрузился сам проект.
+     */
     private fun load() {
         _uiState.value = ProjectUiState.Loading
         viewModelScope.launch {
-            val (projectResult, chatResult) = coroutineScope {
-                val project = async { projectRepository.getProject(projectId) }
-                val chat = async { chatRepository.getChat(projectId) }
-                project.await() to chat.await()
-            }
-
-            val project = projectResult.getOrNull()
-            val chat = chatResult.getOrNull()
-            _uiState.value = if (project != null && chat != null) {
-                ProjectUiState.Content(
-                    title = project.name,
-                    isPublic = project.isPublic,
-                    messages = chat.messages,
-                )
-            } else {
-                ProjectUiState.Error
-            }
+            _uiState.value = chatRepository.getChat(projectId).fold(
+                onSuccess = { chat ->
+                    ProjectUiState.Content(
+                        title = chat.title,
+                        isPublic = chat.isPublic,
+                        messages = chat.messages,
+                    )
+                },
+                onFailure = { ProjectUiState.Error },
+            )
         }
     }
 }

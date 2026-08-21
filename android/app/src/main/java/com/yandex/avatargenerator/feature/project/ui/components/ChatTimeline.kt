@@ -67,14 +67,15 @@ internal fun ChatTimeline(
                     )
                 }
 
+                // Своего текста у ответа ИИ нет — в истории лежит только версия.
                 is ChatMessage.Incoming -> Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start,
                 ) {
                     BrandChatBubble(
-                        text = message.text,
+                        text = stringResource(R.string.project_assistant_message),
                         isOutgoing = false,
-                        imageUrl = message.imageUrl,
+                        imageUrl = message.previewUrl,
                         timeLabel = rememberMessageTimeLabel(message.sentAt),
                     )
                 }
