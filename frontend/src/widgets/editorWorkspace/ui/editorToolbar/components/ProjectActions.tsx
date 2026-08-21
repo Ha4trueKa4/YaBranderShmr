@@ -2,6 +2,7 @@ import { authStore } from '@app/providers/auth'
 import { getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
 import { Download, History, Save } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import styles from '../EditorToolbar.module.css'
 
 interface ProjectActionsProps {
@@ -26,6 +27,7 @@ export function ProjectActions({
   onSaveVersion,
 }: ProjectActionsProps) {
   const session = authStore.getSession
+  const { t } = useTranslation()
 
   return (
     <div className={styles.projectActions}>
@@ -38,11 +40,11 @@ export function ProjectActions({
             variant="secondary"
           >
             <Save className={styles.actionIcon} />
-            Save version
+            {t('Save')}
           </Button>
           <Button onClick={onOpenVersionHistory} variant="secondary">
             <History className={styles.actionIcon} />
-            Version history
+            {t('History')}
           </Button>
         </>
       ) : (
