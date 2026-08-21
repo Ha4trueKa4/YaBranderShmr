@@ -156,6 +156,34 @@
     <string name="profile_error_title">Не удалось загрузить профиль</string>
     <string name="profile_error_retry">Повторить</string>
 
+    <!-- Настройки -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_open_description">Настройки</string>
+    <string name="settings_back_description">Назад</string>
+
+    <string name="settings_section_account">АККАУНТ</string>
+    <string name="settings_section_appearance">ОФОРМЛЕНИЕ</string>
+    <string name="settings_section_about">О ПРИЛОЖЕНИИ</string>
+
+    <string name="settings_account_username">Имя пользователя</string>
+    <string name="settings_account_email">Email</string>
+
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_system">Системный</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_about_terms">Условия использования</string>
+    <string name="settings_about_privacy">Политика конфиденциальности</string>
+    <string name="settings_about_version">Версия</string>
+
+    <string name="settings_logout">Выйти</string>
+
     <!-- Относительное время: подписи строк чата.
          Сокращения мин/ч не склоняются — поэтому обычные string, а не plurals. -->
     <string name="chats_time_just_now">только что</string>

@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,19 +41,38 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
  *
  * @param onActionClick клик по кнопке: для чужого профиля — подписка/отписка,
  *   для своего — переход к редактированию профиля.
+ * @param onOpenSettings открыть настройки; задаётся только для своего профиля —
+ *   тогда в правом верхнем углу обложки показывается кнопка-шестерёнка.
  */
 @Composable
 fun ProfileHeader(
     profile: UserProfile,
     isOwnProfile: Boolean,
     onActionClick: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Cover(avatarUrl = profile.avatarUrl, initials = initials(profile.displayName))
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Cover(avatarUrl = profile.avatarUrl, initials = initials(profile.displayName))
+            if (isOwnProfile && onOpenSettings != null) {
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(AppSpacing.xs),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings),
+                        contentDescription = stringResource(R.string.settings_open_description),
+                        tint = AppColors.OnAccent,
+                    )
+                }
+            }
+        }
 
         Column(
             modifier = Modifier
