@@ -1,0 +1,13 @@
+{
+  "Leave without saving": "Выйти без сохранения",
+  "Leave without saving?": "Выйти без сохранения?",
+  "Something went wrong. Please try again.": "Что-то пошло не так. Попробуйте снова.",
+  "The request conflicts with existing data. Please try again.": "Запрос конфликтует с существующими данными. Попробуйте снова.",
+  "The request contains invalid data. Please try again.": "Запрос содержит некорректные данные. Попробуйте снова.",
+  "The requested content was not found.": "Запрошенный контент не найден.",
+  "The service is temporarily unavailable. Please try again.": "Сервис временно недоступен. Попробуйте снова.",
+  "Unable to connect to the service. Please try again.": "Не удалось подключиться к сервису. Попробуйте снова.",
+  "Unable to load data. Please try again.": "Не удалось загрузить данные. Попробуйте снова.",
+  "Unable to load the profile. Please sign in and try again.": "Не удалось загрузить профиль. Войдите в аккаунт и попробуйте снова.",
+  "You do not have permission to perform this action.": "У вас нет прав для выполнения этого действия."
+}

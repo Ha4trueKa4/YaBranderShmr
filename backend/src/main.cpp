@@ -12,6 +12,7 @@
 #include "./components/auth_checker.hpp"
 #include "./handlers/auth/login_handler.hpp"
 #include "./handlers/auth/register_handler.hpp"
+#include "./handlers/auth/yandex_oauth_handler.hpp"
 #include "handlers/check/check.hpp"
 #include "handlers/get_models/get_models.hpp"
 #include "handlers/projects/append_projects.h"
@@ -38,6 +39,7 @@ int main(int argc, char* argv[]) {
             .Append<userver::server::handlers::TestsControl>()
             .Append<ya_brander::auth::LoginHandler>()
             .Append<ya_brander::auth::RegisterHandler>()
+            .Append<ya_brander::auth::YandexOAuthHandler>()
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-vector-db")
             .Append<userver::components::Postgres>("postgres-db-1")

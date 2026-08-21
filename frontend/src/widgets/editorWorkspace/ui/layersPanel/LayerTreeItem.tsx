@@ -1,6 +1,7 @@
 import type { EditorNode } from '@entities/editorDocument'
 import { ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import { getLayerPresentation } from '../layerPresentation'
 import styles from './LayersPanel.module.css'
@@ -9,10 +10,10 @@ interface LayerTreeItemProps {
   depth: number
   expandedGroupIds: ReadonlySet<string>
   node: EditorNode
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onToggleGroup: (groupId: string) => void
   onToggleVisibility: (nodeId: string) => void
-  selectedNodeId: string | null
+  selectedNodeIds: ReadonlySet<string>
 }
 
 export const LayerTreeItem = observer(function LayerTreeItem({
@@ -22,12 +23,13 @@ export const LayerTreeItem = observer(function LayerTreeItem({
   onSelectNode,
   onToggleGroup,
   onToggleVisibility,
-  selectedNodeId,
+  selectedNodeIds,
 }: LayerTreeItemProps) {
+  const { t } = useTranslation()
   const isGroup = node.type === 'group'
   const hasChildren = isGroup && node.children.length > 0
   const isExpanded = isGroup && expandedGroupIds.has(node.id)
-  const isSelected = node.id === selectedNodeId
+  const isSelected = selectedNodeIds.has(node.id)
   const presentation = getLayerPresentation(node)
   const LayerIcon = presentation.icon
   const VisibilityIcon = node.isVisible ? Eye : EyeOff
@@ -44,9 +46,9 @@ export const LayerTreeItem = observer(function LayerTreeItem({
         }}
       >
         <button
-          aria-label={`Select layer ${node.name}`}
+          aria-label={t('Select layer {{layerName}}', { layerName: node.name })}
           className={styles.selectRowButton}
-          onClick={() => onSelectNode(node.id)}
+          onClick={(event) => onSelectNode(node.id, event.shiftKey)}
           type="button"
         />
         {isGroup ? (
@@ -91,7 +93,7 @@ export const LayerTreeItem = observer(function LayerTreeItem({
               onSelectNode={onSelectNode}
               onToggleGroup={onToggleGroup}
               onToggleVisibility={onToggleVisibility}
-              selectedNodeId={selectedNodeId}
+              selectedNodeIds={selectedNodeIds}
             />
           ))}
         </div>

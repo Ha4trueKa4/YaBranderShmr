@@ -3,11 +3,27 @@ import SwiftUI
 struct ProjectRow: View {
     let item: ProjectListItem
     let action: () -> Void
+    let refreshPreview: (@Sendable () async throws -> URL)?
+
+    init(
+        item: ProjectListItem,
+        refreshPreview: (@Sendable () async throws -> URL)? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.item = item
+        self.refreshPreview = refreshPreview
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
-                ProjectThumbnail(colors: item.placeholderColors)
+                ProjectThumbnail(
+                    url: item.previewURL,
+                    isPrivate: item.isPrivate,
+                    colors: item.placeholderColors,
+                    refreshURL: refreshPreview
+                )
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)

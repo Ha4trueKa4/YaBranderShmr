@@ -48,6 +48,7 @@ struct MainShellView: View {
 
         case .create:
             ProjectsView(
+                session: session,
                 onOpenChat: { item in
                     router.push(.chat(projectID: item.id, title: item.title), in: .create)
                 },

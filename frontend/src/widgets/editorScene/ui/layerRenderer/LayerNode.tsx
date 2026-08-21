@@ -13,7 +13,7 @@ import { TextLayer } from './TextLayer'
 interface LayerNodeProps {
   canMoveLayers: boolean
   node: EditorNode
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePointerDown: (
     node: EditorShape,
     event: ReactPointerEvent<SVGGElement>,
@@ -76,11 +76,11 @@ export const LayerNode = observer(function LayerNode({
         onPointerUp={onShapePointerUp}
         ref={registerEditableElement(node.id)}
         style={{
-          cursor: node.isLocked
-            ? 'not-allowed'
-            : canMoveLayers
-              ? 'grab'
-              : 'pointer',
+          cursor: canMoveLayers
+            ? node.isLocked
+              ? 'not-allowed'
+              : 'default'
+            : 'inherit',
         }}
       >
         <TextLayer node={node} />
@@ -97,11 +97,11 @@ export const LayerNode = observer(function LayerNode({
       onPointerUp={onShapePointerUp}
       ref={registerEditableElement(node.id)}
       style={{
-        cursor: node.isLocked
-          ? 'not-allowed'
-          : canMoveLayers
-            ? 'grab'
-            : 'pointer',
+        cursor: canMoveLayers
+          ? node.isLocked
+            ? 'not-allowed'
+            : 'default'
+          : 'inherit',
       }}
     >
       <ShapeLayer node={node} />

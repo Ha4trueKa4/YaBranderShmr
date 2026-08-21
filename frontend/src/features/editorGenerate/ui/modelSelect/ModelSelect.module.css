@@ -40,6 +40,11 @@
 
 .chevron {
   flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
 }
 
 .value {

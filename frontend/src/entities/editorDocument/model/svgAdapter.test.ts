@@ -65,6 +65,57 @@ describe('parseSvg', () => {
     })
   })
 
+  it('preserves a non-zero viewBox origin', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">
+        <text id="title" x="0" y="200">A</text>
+      </svg>
+    `)
+
+    expect(document).toMatchObject({
+      height: 300,
+      viewBoxX: -250,
+      viewBoxY: 100,
+      width: 500,
+    })
+  })
+
+  it('keeps transforms independent when source nodes have no transform', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <rect id="first" width="10" height="10" />
+        <rect id="second" width="10" height="10" />
+      </svg>
+    `)
+    const [first, second] = document.layers
+
+    if (first?.type !== 'shape' || second?.type !== 'shape') {
+      throw new Error('Expected two editable shapes')
+    }
+
+    first.transform.x = 10
+
+    expect(second.transform.x).toBe(0)
+  })
+
+  it('locks transforms that cannot be represented without changing their order', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <rect id="scaled" width="10" height="10" transform="scale(2) translate(100 0)" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'scaled', isLocked: true, type: 'raw' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'scaled',
+      elementName: 'rect',
+      reason: 'Unsupported SVG transform order: scale(2) translate(100 0)',
+    })
+  })
+
   it('generates type-based names for editable layers without an id', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
@@ -198,6 +249,24 @@ describe('parseSvg', () => {
       style: { lineHeight: 24 },
       text: 'Hello\nworld',
       type: 'text',
+    })
+  })
+
+  it('locks text with individually positioned tspans', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <text id="title" x="20" y="40"><tspan x="20" dy="0">Hello</tspan><tspan x="100" dy="24">world</tspan></text>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'title', isLocked: true, type: 'raw' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'title',
+      elementName: 'text',
+      reason: 'Text with individually positioned lines is not editable',
     })
   })
 
