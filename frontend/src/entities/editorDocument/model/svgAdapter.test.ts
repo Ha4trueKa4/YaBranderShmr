@@ -404,7 +404,7 @@ describe('parseSvg', () => {
   it('parses a dashed line as an editable shape', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
-        <line id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
+        <line xmlns="http://www.w3.org/2000/svg" id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
       </svg>
     `)
 

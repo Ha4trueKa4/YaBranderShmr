@@ -23,6 +23,7 @@ const commonAttributeNames = new Set([
   'id',
   'opacity',
   'transform',
+  'xmlns',
 ])
 
 const attributeNamesByElement = {
