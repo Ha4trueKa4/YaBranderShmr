@@ -37,7 +37,6 @@ struct ProfileView: View {
         } else {
             profileContent
                 .ignoresSafeArea(edges: .top)
-                .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -56,24 +55,26 @@ struct ProfileView: View {
     private var profileHeader: some View {
         VStack(spacing: 0) {
             cover
-
+            
             VStack(spacing: 12) {
                 avatar
                     .offset(y: -32)
                     .padding(.bottom, -32)
-
-                Text(viewModel.name)
-                    .font(.system(size: 20, weight: .bold))
-
+                
                 if viewModel.name.isEmpty {
                     if viewModel.isLoading {
-                        ProgressView()
+                        ShimmerPlaceholder()
+                            .frame(maxWidth: 150, idealHeight: 20)
+                            .clipShape(Capsule())
                     } else if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
-                            .font(.system(size: 13))
+                            .font(.system(size: 20))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
+                } else {
+                    Text(viewModel.name)
+                        .font(.system(size: 20, weight: .bold))
                 }
 
                 stats
@@ -99,20 +100,26 @@ struct ProfileView: View {
     }
 
     private var cover: some View {
-        LinearGradient(
-            colors: [Color(.startGradient), Color(.endGradient)],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-        .frame(height: 132)
-        .accessibilityHidden(true)
-        .overlay(alignment: .topTrailing) {
-            if isCurrentUser {
-                signOutButton
-                    .padding(.top, 48)
-                    .padding(.trailing, 12)
+        let baseHeight = CGFloat(132)
+        
+        return GeometryReader { proxy in
+            LinearGradient(
+                colors: [Color(.startGradient), Color(.endGradient)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: baseHeight + max(0, proxy.frame(in: .global).origin.y))
+            .accessibilityHidden(true)
+            .overlay(alignment: .trailing) {
+                if isCurrentUser {
+                    signOutButton
+                        .padding(.top, 48)
+                        .padding(.trailing, 12)
+                }
             }
+            .offset(y: -max(0, proxy.frame(in: .global).origin.y))
         }
+        .frame(minHeight: baseHeight)
     }
 
     private var signOutButton: some View {
