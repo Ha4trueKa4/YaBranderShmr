@@ -156,6 +156,34 @@
     <string name="profile_error_title">Couldn\'t load profile</string>
     <string name="profile_error_retry">Retry</string>
 
+    <!-- Настройки -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_open_description">Settings</string>
+    <string name="settings_back_description">Back</string>
+
+    <string name="settings_section_account">ACCOUNT</string>
+    <string name="settings_section_appearance">APPEARANCE</string>
+    <string name="settings_section_about">ABOUT</string>
+
+    <string name="settings_account_username">Username</string>
+    <string name="settings_account_email">Email</string>
+
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_about_terms">Terms of Use</string>
+    <string name="settings_about_privacy">Privacy Policy</string>
+    <string name="settings_about_version">Version</string>
+
+    <string name="settings_logout">Log Out</string>
+
     <!-- Относительное время: подписи строк чата.
          Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->
     <string name="chats_time_just_now">just now</string>
