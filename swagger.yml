@@ -592,15 +592,18 @@ paths:
 
   /projects/{id}/generate:
     post:
-      summary: Изменение/генерация проекта с помощью ИИ
+      summary: Запуск генерации/правки проекта с помощью ИИ (асинхронно)
       description: >
-        Генерирует (если у проекта ещё нет версий) либо правит (иначе) SVG по
-        запросу пользователя. В промпт модели автоматически подмешивается
-        история последних 10 предыдущих запросов пользователя по этому же
-        проекту (без ответов модели) — как контекст, не как повторное задание.
-        При успешной генерации пара "запрос пользователя + ссылка на созданную
-        версию" добавляется в историю чата проекта, доступную через
-        GET /projects/{id}/chat.
+        Запускает в фоне генерацию (если у проекта ещё нет версий) либо правку
+        (иначе) SVG по запросу пользователя — сам запрос не ждёт завершения
+        обращения к LLM и сразу отвечает job_id. В промпт модели автоматически
+        подмешивается история последних 10 предыдущих запросов пользователя по
+        этому же проекту (без ответов модели) — как контекст, не как повторное
+        задание. Сообщение пользователя добавляется в историю чата проекта
+        (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
+        независимо от того, чем закончится сама генерация. Результат (или
+        ошибку) генерации нужно опрашивать через
+        GET /projects/{id}/generate/{job_id}.
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -626,19 +629,21 @@ paths:
                   type: string
                   example: "deepseek-v4-flash/latest"
       responses:
-        '200':
-          description: Сгенерированный SVG-код проекта
+        '202':
+          description: >
+            Генерация запущена в фоне. Дальнейший статус — через
+            GET /projects/{id}/generate/{job_id}.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  url:
+                  job_id:
                     type: string
-                    description: "S3 ссылка на объект проекта (отсутствует, если проект пуст)"
-                    example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+                    description: Идентификатор фоновой задачи генерации.
+                    example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         '400':
-          description: Не передан prompt
+          description: Не передан prompt, либо prompt длиннее 1500 символов
           content:
             application/json:
               schema:
@@ -649,6 +654,62 @@ paths:
           description: Не авторизован
         '403':
           description: Нет прав на генерацию в чужом проекте
+        '404':
+          description: Проект не найден
+
+  /projects/{id}/generate/{job_id}:
+    get:
+      summary: Статус фоновой задачи генерации (long polling)
+      description: >
+        Опрос результата задачи, запущенной POST /projects/{id}/generate.
+        Запрос "подвисает" на сервере до ~25 секунд, ожидая завершения
+        генерации (long polling) — если за это время задача не завершилась,
+        возвращается status="pending" и клиенту следует повторить запрос ещё
+        раз. Состояние задачи хранится в памяти процесса бэкенда и не
+        переживает его перезапуск.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          description: Идентификатор задачи, полученный из ответа POST .../generate
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий статус задачи генерации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatus'
+              examples:
+                Pending:
+                  summary: Ещё выполняется (таймаут long-poll'а истёк)
+                  value:
+                    status: "pending"
+                Done:
+                  summary: Готово
+                  value:
+                    status: "done"
+                    url: "https://s3.yandexcloud.net/bucket/project_version.svg"
+                Error:
+                  summary: Генерация упала (например, LLM вернул невалидный SVG)
+                  value:
+                    status: "error"
+                    message: "Generation service is temporarily unavailable. Please try again later."
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на просмотр генерации в чужом проекте
+        '404':
+          description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
 
   /projects/{id}/versions:
     get:
@@ -1116,8 +1177,13 @@ components:
       type: object
       description: >
         Одно сообщение в истории чата проекта. Пользовательские сообщения
-        несут текст запроса (text), сообщения ассистента — идентификатор
-        созданной версии (version_id) вместо самого SVG или ссылки на него.
+        несут текст запроса (text), сообщения ассистента — либо идентификатор
+        созданной версии (version_id), либо, если генерация упала, текст
+        ошибки (error) — вместо самого SVG или ссылки на него. Сообщение
+        пользователя и ответ ассистента одного обмена связаны общим job_id
+        (идентификатором фоновой задачи генерации из POST .../generate);
+        пользовательское сообщение появляется в истории сразу при старте
+        задачи, ответ ассистента — только после её завершения.
       required:
         - role
         - created_at
@@ -1131,11 +1197,37 @@ components:
           example: "Добавь логотип с изображением кружки"
         version_id:
           type: string
-          description: "Только для role=assistant — id созданной версии проекта"
+          description: "Только для role=assistant при успешной генерации — id созданной версии проекта"
           example: "5a4e8657-151f-4088-a660-ac99b15994b7"
+        error:
+          type: string
+          description: "Только для role=assistant при неудачной генерации — текст ошибки"
+          example: "Generation service is temporarily unavailable. Please try again later."
+        job_id:
+          type: string
+          description: Идентификатор фоновой задачи генерации, к которой относится сообщение.
+          example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         created_at:
           type: string
           format: date-time
+
+    GenerationStatus:
+      type: object
+      description: Текущее состояние фоновой задачи генерации.
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ pending, done, error ]
+        url:
+          type: string
+          description: "Только при status=done — presigned-ссылка на сгенерированный SVG-объект"
+          example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+        message:
+          type: string
+          description: "Только при status=error — текст ошибки"
+          example: "Generation service is temporarily unavailable. Please try again later."
 
     VersionUrl:
       type: object
