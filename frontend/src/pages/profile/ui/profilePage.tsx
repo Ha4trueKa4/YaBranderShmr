@@ -150,6 +150,12 @@ export function ProfilePage() {
     }
   }
 
+  async function handleProjectVersionRestored() {
+    await queryClient.invalidateQueries({
+      queryKey: userProfileQueryKey(userId),
+    })
+  }
+
   return (
     <div className={styles.page}>
       <Header />
@@ -183,6 +189,7 @@ export function ProfilePage() {
             isDeletingProjectPending={isDeletingProjectPending}
             onDeleteProject={handleDeleteProject}
             onOpenProject={handleOpenProject}
+            onProjectVersionRestored={handleProjectVersionRestored}
             onUpdateProjectMetadata={handleUpdateProjectMetadata}
             projects={projects}
           />

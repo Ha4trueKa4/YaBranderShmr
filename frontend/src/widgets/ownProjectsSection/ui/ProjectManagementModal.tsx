@@ -14,12 +14,14 @@ type ProjectNameFormValues = { name: string }
 
 interface ProjectManagementModalProps {
   onClose: () => void
+  onOpenVersionHistory: () => void
   onSubmit: (values: { isPublic: boolean; name: string }) => Promise<void>
   project: Project
 }
 
 export function ProjectManagementModal({
   onClose,
+  onOpenVersionHistory,
   onSubmit,
   project,
 }: ProjectManagementModalProps) {
@@ -102,6 +104,12 @@ export function ProjectManagementModal({
                   {t('Private')}
                 </Button>
               </div>
+            </div>
+            <div className={styles.visibility}>
+              <span>{t('Versions')}</span>
+              <Button onClick={onOpenVersionHistory} variant="outline">
+                {t('Version history')}
+              </Button>
             </div>
             <div className={styles.actions}>
               <Button onClick={onClose} variant="secondary">

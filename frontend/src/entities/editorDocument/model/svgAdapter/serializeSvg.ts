@@ -94,6 +94,7 @@ function serializeShapeStyle(
     fill: serializePaint(style.fill),
     'fill-opacity': style.fillOpacity,
     stroke: serializePaint(style.stroke),
+    'stroke-dasharray': style.strokeDasharray,
     'stroke-linecap': style.strokeLineCap,
     'stroke-linejoin': style.strokeLineJoin,
     'stroke-opacity': style.strokeOpacity,
@@ -156,7 +157,12 @@ function serializeText(node: EditorText): string {
 }
 
 function serializeGroup(node: EditorGroup): string {
-  return `<g${serializeAttributes(serializeBaseAttributes(node))}>${node.children.map(serializeNode).join('')}</g>`
+  const attributes = {
+    ...serializeBaseAttributes(node),
+    fill: node.fill ? serializePaint(node.fill) : undefined,
+  }
+
+  return `<g${serializeAttributes(attributes)}>${node.children.map(serializeNode).join('')}</g>`
 }
 
 function serializeNode(node: EditorNode): string {

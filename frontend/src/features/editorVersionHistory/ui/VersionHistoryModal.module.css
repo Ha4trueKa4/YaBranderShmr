@@ -41,12 +41,29 @@
   padding: var(--space-5) var(--space-6);
 }
 
+.titleGroup {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
 .closeButton {
   flex: 0 0 auto;
   margin-top: 0.125rem;
 }
 
-.closeButton svg {
+.backButton {
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+}
+
+.closeButton svg,
+.backButton svg {
   height: 1.25rem;
   width: 1.25rem;
 }

@@ -1,4 +1,10 @@
-export const themeOptions = ['system', 'dark', 'light'] as const
+export const themeOptions = [
+  'system',
+  'dark',
+  'light',
+  'sephia',
+  'yandex',
+] as const
 export type Theme = (typeof themeOptions)[number]
 
 const themeStorageKey = 'brandkit-theme'
@@ -10,7 +16,9 @@ export function getInitialTheme(): Theme {
     if (
       storedTheme === 'system' ||
       storedTheme === 'dark' ||
-      storedTheme === 'light'
+      storedTheme === 'light' ||
+      storedTheme === 'sephia' ||
+      storedTheme === 'yandex'
     ) {
       return storedTheme
     }
