@@ -68,7 +68,9 @@ fun ProfileHeader(
                     Icon(
                         painter = painterResource(R.drawable.ic_settings),
                         contentDescription = stringResource(R.string.settings_open_description),
-                        tint = AppColors.OnAccent,
+                        // Акцентный фиолетовый, а не белый: на ярком циан-конце градиента
+                        // (правый-верхний угол обложки) белая иконка в тёмной теме блёкнет.
+                        tint = AppColors.Accent,
                     )
                 }
             }
