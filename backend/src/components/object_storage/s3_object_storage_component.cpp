@@ -48,7 +48,8 @@ std::chrono::system_clock::time_point ParseS3Time(const std::string& iso) {
   std::tm tm{};
   // Ignore fractional seconds / 'Z'; strptime reads up to seconds.
   if (::strptime(iso.c_str(), "%Y-%m-%dT%H:%M:%S", &tm) == nullptr) {
-    return std::chrono::system_clock::time_point::min();  // unparseable -> treat as very old
+    LOG_ERROR() << "S3 ListKeys: failed to parse LastModified timestamp: " << iso;
+    throw std::runtime_error("object storage ListKeys: unparseable LastModified timestamp: " + iso);
   }
 
   const std::time_t t = ::timegm(&tm);  // interpret tm as UTC
