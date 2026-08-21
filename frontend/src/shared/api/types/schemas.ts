@@ -6,6 +6,7 @@ export {
   zGetFeedResponse,
   zGetProjectsByIdPath,
   zGetProjectsByIdResponse,
+  zGetProjectsByIdVersionsResponse,
   zGetUsersByIdPath,
   zGetUsersByIdResponse,
   zGetUsersByIdSubscribersResponse,
@@ -32,5 +33,6 @@ export {
   zRegisterRequest,
   zUserProfile,
   zValidationError,
+  zVersionUrl,
   zYandexAuthRequest,
 } from './generated/zod.gen'

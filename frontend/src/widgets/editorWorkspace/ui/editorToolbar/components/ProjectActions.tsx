@@ -11,6 +11,7 @@ interface ProjectActionsProps {
   onCreateCopy: () => void
   onExport: () => void
   onOpenProfile: () => void
+  onOpenVersionHistory: () => void
   onSaveVersion: () => void
 }
 
@@ -21,6 +22,7 @@ export function ProjectActions({
   onCreateCopy,
   onExport,
   onOpenProfile,
+  onOpenVersionHistory,
   onSaveVersion,
 }: ProjectActionsProps) {
   const session = authStore.getSession
@@ -28,14 +30,19 @@ export function ProjectActions({
   return (
     <div className={styles.projectActions}>
       {canEdit ? (
-        <Button
-          className={styles.saveVersion}
-          loading={isSavingVersion}
-          onClick={onSaveVersion}
-          variant="secondary"
-        >
-          Save version
-        </Button>
+        <>
+          <Button
+            className={styles.saveVersion}
+            loading={isSavingVersion}
+            onClick={onSaveVersion}
+            variant="secondary"
+          >
+            Save version
+          </Button>
+          <Button onClick={onOpenVersionHistory} variant="secondary">
+            Version history
+          </Button>
+        </>
       ) : (
         <Button
           className={styles.saveVersion}

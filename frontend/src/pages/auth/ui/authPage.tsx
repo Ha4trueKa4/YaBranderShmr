@@ -10,8 +10,9 @@ import type {
   LoginRequest,
   RegisterRequest,
 } from '@shared/api/types'
-import { useToast } from '@shared/ui'
+import { IconButton, useToast } from '@shared/ui'
 import { LoginForm, RegisterForm } from '@widgets'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -63,6 +64,10 @@ export function AuthPage() {
     }
   }
 
+  function handleBack() {
+    navigate(returnPath, { viewTransition: true })
+  }
+
   async function handleLogin(values: LoginRequest) {
     try {
       const response = await login(values)
@@ -85,6 +90,13 @@ export function AuthPage() {
 
   return (
     <main className={styles.page}>
+      <IconButton
+        aria-label={t('Back')}
+        className={styles.backButton}
+        onClick={handleBack}
+      >
+        <ArrowLeft className={styles.backIcon} />
+      </IconButton>
       <aside className={styles.promoPanel}>
         <p className={styles.brandName}>{t('Brandkit AI')}</p>
         <div className={styles.promoContent}>

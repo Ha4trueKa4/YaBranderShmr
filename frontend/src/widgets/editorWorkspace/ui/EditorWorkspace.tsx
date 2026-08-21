@@ -1,6 +1,7 @@
 import { AppRoute } from '@app/providers/router/routes'
 import { type EditorDocument, EditorStore } from '@entities/editorDocument'
 import { exportEditorDocument } from '@features/editorExport'
+import { VersionHistoryModal } from '@features/editorVersionHistory'
 import {
   ConfirmUnsavedChangeModal,
   type ImageExportFileType,
@@ -49,7 +50,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const navigate = useNavigate()
   const toast = useToast()
   const { t } = useTranslation()
-  const [editorStore] = useState(() => new EditorStore(document))
+  const [editorStore, setEditorStore] = useState(
+    () => new EditorStore(document),
+  )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
   const [zoom, setZoom] = useState(1)
@@ -57,10 +60,13 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
   const {
     createCopy,
+    hasUnsavedChanges,
     isCreatingCopy,
     isSavingVersion,
+    markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,
@@ -99,6 +105,13 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   function handleExport() {
     setIsImageExportModalOpen(true)
+  }
+
+  function handleRestoreDocument(restoredDocument: EditorDocument) {
+    setEditorStore(new EditorStore(restoredDocument))
+    markDocumentAsSaved(restoredDocument)
+    setSceneRenderVersion((version) => version + 1)
+    setIsMobileInspectorOpen(false)
   }
 
   async function handleImageExport(fileType: ImageExportFileType) {
@@ -215,6 +228,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
           onOpenProperties={() => setIsMobileInspectorOpen(true)}
+          onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onSaveVersion={saveVersion}
           onToolChange={setActiveTool}
           onZoomIn={handleZoomIn}
@@ -246,12 +260,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               canEdit={canEdit}
               isCreatingProjectCopy={isCreatingCopy}
               isSavingVersion={isSavingVersion}
+              onBack={() => navigate(-1)}
               onCreateCopy={createCopy}
               onEditProjectName={renameProject}
               onExport={handleExport}
               onOpenProfile={() =>
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
+              onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
               onToolChange={setActiveTool}
               onRedo={handleToolbarAction}
               onSaveVersion={saveVersion}
@@ -275,6 +291,15 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         onClose={() => setIsImageExportModalOpen(false)}
         onExport={handleImageExport}
       />
+      {canEdit && (
+        <VersionHistoryModal
+          hasUnsavedChanges={hasUnsavedChanges}
+          isOpen={isVersionHistoryOpen}
+          onClose={() => setIsVersionHistoryOpen(false)}
+          onRestoreDocument={handleRestoreDocument}
+          projectId={projectId}
+        />
+      )}
     </section>
   )
 })

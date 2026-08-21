@@ -11,6 +11,7 @@ interface MobileEditorHeaderProps {
   onBack: () => void
   onCreateCopy: () => void
   onExport: () => void
+  onOpenVersionHistory: () => void
   onSaveVersion: () => void
   projectName: string
 }
@@ -22,6 +23,7 @@ export function MobileEditorHeader({
   onBack,
   onCreateCopy,
   onExport,
+  onOpenVersionHistory,
   onSaveVersion,
   projectName,
 }: MobileEditorHeaderProps) {
@@ -54,6 +56,10 @@ export function MobileEditorHeader({
                     {
                       label: isSavingVersion ? 'Saving…' : 'Save',
                       onClick: onSaveVersion,
+                    },
+                    {
+                      label: 'Version history',
+                      onClick: onOpenVersionHistory,
                     },
                   ]
                 : [

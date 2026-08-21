@@ -46,6 +46,10 @@ export function useEditorProjectActions({
     [canEdit, hasUnsavedChanges],
   )
 
+  const markDocumentAsSaved = useCallback((nextDocument: EditorDocument) => {
+    setSavedProjectSvg(serializeSvg(nextDocument))
+  }, [])
+
   const renameProject = useCallback(
     async (nextProjectName: string) => {
       if (nextProjectName === projectName) {
@@ -144,6 +148,8 @@ export function useEditorProjectActions({
     createCopy,
     isCreatingCopy: isCopyingProject || isCreatingProjectCopy,
     isSavingVersion,
+    hasUnsavedChanges,
+    markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,
