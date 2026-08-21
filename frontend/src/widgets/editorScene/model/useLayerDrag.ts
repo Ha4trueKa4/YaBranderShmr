@@ -33,10 +33,23 @@ type DragTarget = {
   startPosition: PointerPosition
 }
 type DragState = {
+  hitNodeId: string
   pointerId: number
+  startClientPosition: PointerPosition
   startPointerPosition: PointerPosition
   targets: DragTarget[]
 }
+
+type TapState = {
+  clientX: number
+  clientY: number
+  nodeId: string
+  timestamp: number
+}
+
+const DOUBLE_TAP_MAX_DELAY = 300
+const DOUBLE_TAP_MAX_DISTANCE = 20
+const TAP_MAX_DISTANCE = 8
 
 function roundCoordinate(value: number) {
   return Math.round(value * 100) / 100
@@ -146,6 +159,7 @@ export function useLayerDrag({
 }: UseLayerDragParams) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
+  const lastTapReference = useRef<TapState | null>(null)
 
   const startDrag = useCallback(
     (node: EditorShape | EditorText, event: ReactPointerEvent<SVGGElement>) => {
@@ -155,6 +169,23 @@ export function useLayerDrag({
 
       if (event.shiftKey) {
         onSelectNode(node.id, true)
+
+        return
+      }
+
+      const lastTap = lastTapReference.current
+      const horizontalOffset = lastTap ? event.clientX - lastTap.clientX : 0
+      const verticalOffset = lastTap ? event.clientY - lastTap.clientY : 0
+      const isDoubleTap =
+        lastTap &&
+        lastTap.nodeId === node.id &&
+        event.timeStamp - lastTap.timestamp <= DOUBLE_TAP_MAX_DELAY &&
+        Math.hypot(horizontalOffset, verticalOffset) <= DOUBLE_TAP_MAX_DISTANCE
+
+      if (isDoubleTap) {
+        lastTapReference.current = null
+        onSelectNode(node.id, false)
+        event.preventDefault()
 
         return
       }
@@ -232,7 +263,9 @@ export function useLayerDrag({
       event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       dragStateReference.current = {
+        hitNodeId: node.id,
         pointerId: event.pointerId,
+        startClientPosition: { x: event.clientX, y: event.clientY },
         startPointerPosition: pointerPosition,
         targets: dragTargets.map(toDragTarget),
       }
@@ -304,7 +337,9 @@ export function useLayerDrag({
 
   const onPointerUp = useCallback(
     (event: ReactPointerEvent<SVGGElement>) => {
-      if (dragStateReference.current?.pointerId !== event.pointerId) {
+      const dragState = dragStateReference.current
+
+      if (!dragState || dragState.pointerId !== event.pointerId) {
         return
       }
 
@@ -312,7 +347,22 @@ export function useLayerDrag({
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
 
+      const horizontalOffset = event.clientX - dragState.startClientPosition.x
+      const verticalOffset = event.clientY - dragState.startClientPosition.y
+      const hasMoved =
+        Math.hypot(horizontalOffset, verticalOffset) > TAP_MAX_DISTANCE
+
       dragStateReference.current = null
+
+      if (!hasMoved && event.type !== 'pointercancel') {
+        lastTapReference.current = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          nodeId: dragState.hitNodeId,
+          timestamp: event.timeStamp,
+        }
+      }
+
       onDocumentChangeEnd()
     },
     [onDocumentChangeEnd],
