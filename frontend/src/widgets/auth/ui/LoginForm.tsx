@@ -4,8 +4,8 @@ import { useId } from 'react'
 import { Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { type LoginSubmitHandler, useLoginForm } from '../model'
-import yandexIcon from './assets/yandexIcon.svg'
 import styles from './AuthForms.module.css'
+import yandexIcon from './assets/yandexIcon.svg'
 
 interface LoginFormProps {
   isPending?: boolean
