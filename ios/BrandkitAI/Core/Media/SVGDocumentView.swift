@@ -87,21 +87,14 @@ struct SVGDocumentView: View {
             ShimmerPlaceholder()
 
         case .ready(let svg):
-            SVGWebView(svgText: svg) {
-                withAnimation(.easeIn(duration: 0.2)) {
-                    isRendered = true
-                }
-            }
-            .opacity(isRendered ? 1 : 0)
-            .overlay {
-                if !isRendered {
-                    ShimmerPlaceholder()
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard isRendered else { return }
-                onTap?()
+            if let onTap {
+                readyBase(svg)
+                    .onTapGesture {
+                        guard isRendered else { return }
+                        onTap()
+                    }
+            } else {
+                readyBase(svg)
             }
 
         case .failure:
@@ -132,6 +125,21 @@ struct SVGDocumentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func readyBase(_ svg: String) -> some View {
+        SVGWebView(svgText: svg) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                isRendered = true
+            }
+        }
+        .opacity(isRendered ? 1 : 0)
+        .overlay {
+            if !isRendered {
+                ShimmerPlaceholder()
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     private func load() async {

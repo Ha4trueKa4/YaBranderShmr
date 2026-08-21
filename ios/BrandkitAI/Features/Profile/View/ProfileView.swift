@@ -7,7 +7,7 @@ struct ProfileView: View {
     var isCurrentUser: Bool
     var onBack: (() -> Void)?
     var onEditProfile: () -> Void
-    var onOpenProject: () -> Void
+    var onOpenProject: (UUID, String, URL?) -> Void
 
     init(
         session: SessionStore,
@@ -15,7 +15,7 @@ struct ProfileView: View {
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
-        onOpenProject: @escaping () -> Void = {}
+        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in }
     ) {
         self.session = session
         self.isCurrentUser = isCurrentUser
@@ -33,7 +33,9 @@ struct ProfileView: View {
     var body: some View {
         if let onBack {
             profileContent
-                .customNavigationBar(title: "Profile", onBack: onBack)
+                .customNavigationBar(title: "", onBack: onBack)
+                .toolbarBackground(Color.background, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
         } else {
             profileContent
                 .ignoresSafeArea(edges: .top)
@@ -129,12 +131,7 @@ struct ProfileView: View {
     }
 
     private var avatar: some View {
-        Text(viewModel.initials)
-            .font(.system(size: 19, weight: .bold))
-            .foregroundStyle(Color(.onAccent))
-            .frame(width: 64, height: 64)
-            .background(Color(.endGradient), in: .circle)
-            .overlay { Circle().stroke(Color(.background), lineWidth: 3) }
+        AvatarView(initials: viewModel.initials, size: 64, strokeWidth: 3)
             .accessibilityLabel("Profile picture")
     }
 
@@ -181,9 +178,10 @@ struct ProfileView: View {
     private func projectCard(_ project: ProfileViewModel.Project) -> some View {
         FeedListCardView(
             title: project.title,
-            coverColors: project.colors,
+            previewURL: project.previewURL,
+            coverColors: project.previewURL == nil ? project.colors : nil,
             coverHeight: project.coverHeight,
-            onTap: onOpenProject
+            onTap: { onOpenProject(project.id, project.title, project.previewURL) }
         )
     }
 
@@ -201,6 +199,18 @@ struct ProfileView: View {
                 currentUserService: MockCurrentUserService(),
                 userProfileService: MockUserProfileService()
             )
+        )
+    }
+}
+
+#Preview {
+    NavigationStack {
+        ProfileView(
+            session: SessionStore(
+                currentUserService: MockCurrentUserService(),
+                userProfileService: MockUserProfileService(),
+            ),
+            onBack: {}
         )
     }
 }

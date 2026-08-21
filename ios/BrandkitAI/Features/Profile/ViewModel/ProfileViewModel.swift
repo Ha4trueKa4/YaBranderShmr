@@ -8,6 +8,7 @@ final class ProfileViewModel {
         let title: String
         let colors: [Color]
         let coverHeight: CGFloat
+        let previewURL: URL?
     }
 
     private(set) var name = ""
@@ -66,7 +67,8 @@ final class ProfileViewModel {
                     id: project.id,
                     title: project.name,
                     colors: Self.palette(for: project.name),
-                    coverHeight: Self.coverHeight(for: offset)
+                    coverHeight: Self.coverHeight(for: offset),
+                    previewURL: project.url
                 )
             }
         } catch {
