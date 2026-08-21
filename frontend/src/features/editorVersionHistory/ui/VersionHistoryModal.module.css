@@ -29,9 +29,7 @@
 }
 
 .header,
-.previewFooter,
-.confirmation,
-.confirmationActions {
+.previewFooter {
   align-items: center;
   display: flex;
 }
@@ -55,9 +53,7 @@
 
 .title,
 .subtitle,
-.previewFooter p,
-.confirmation h3,
-.confirmation p {
+.previewFooter p {
   margin: 0;
 }
 
@@ -68,7 +64,6 @@
 
 .subtitle,
 .previewFooter p,
-.confirmation p,
 .versionMeta {
   color: var(--color-text-secondary);
   font-size: var(--font-size-label);
@@ -171,28 +166,6 @@
   place-items: center;
 }
 
-.confirmation {
-  background: var(--color-surface-elevated);
-  border-top: 1px solid var(--color-border);
-  gap: var(--space-4);
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-6);
-}
-
-.confirmation h3 {
-  color: var(--color-text-primary);
-  font-size: var(--font-size-body);
-}
-
-.confirmation p {
-  margin-top: var(--space-1);
-}
-
-.confirmationActions {
-  flex-shrink: 0;
-  gap: var(--space-2);
-}
-
 @media (max-width: 42rem) {
   .overlay {
     padding: 0;
@@ -218,14 +191,5 @@
 
   .preview {
     min-height: 18rem;
-  }
-
-  .confirmation {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .confirmationActions {
-    justify-content: flex-end;
   }
 }

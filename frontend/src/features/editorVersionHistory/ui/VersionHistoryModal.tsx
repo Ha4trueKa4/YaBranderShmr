@@ -7,7 +7,14 @@ import {
 import { getApiErrorMessage } from '@shared/api/api'
 import type { VersionInfo } from '@shared/api/types'
 import { useEscAction, useLockBodyScroll } from '@shared/lib'
-import { Button, IconButton, Portal, Spinner, useToast } from '@shared/ui'
+import {
+  Button,
+  ConfirmationModal,
+  IconButton,
+  Portal,
+  Spinner,
+  useToast,
+} from '@shared/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -144,7 +151,7 @@ export function VersionHistoryModal({
   }, [isOpen])
 
   useLockBodyScroll(isOpen)
-  useEscAction(handleClose, isOpen)
+  useEscAction(handleClose, isOpen && !isRestoreConfirmationOpen)
 
   if (!isOpen) {
     return null
@@ -162,154 +169,150 @@ export function VersionHistoryModal({
   }
 
   return (
-    <Portal>
-      <div className={styles.overlay}>
-        <button
-          className={styles.backdrop}
-          onClick={handleClose}
-          type="button"
-        />
-        <section className={styles.modal}>
-          <header className={styles.header}>
-            <div>
-              <h2 className={styles.title}>{t('Version history')}</h2>
-              <p className={styles.subtitle}>
-                {t('Choose a saved version to preview or restore.')}
-              </p>
-            </div>
-            <IconButton
-              className={styles.closeButton}
-              onClick={handleClose}
-              size="sm"
-            >
-              <X />
-            </IconButton>
-          </header>
-          <div className={styles.content}>
-            <div className={styles.versionList}>
-              {versionsQuery.isPending && (
-                <div className={styles.centered}>
-                  <Spinner />
-                </div>
-              )}
-              {versionsQuery.isError && (
-                <p className={styles.empty}>
-                  {t('Unable to load version history. Please try again.')}
+    <>
+      <Portal>
+        <div className={styles.overlay}>
+          <button
+            className={styles.backdrop}
+            onClick={handleClose}
+            type="button"
+          />
+          <section className={styles.modal}>
+            <header className={styles.header}>
+              <div>
+                <h2 className={styles.title}>{t('Version history')}</h2>
+                <p className={styles.subtitle}>
+                  {t('Choose a saved version to preview or restore.')}
                 </p>
-              )}
-              {!versionsQuery.isPending &&
-                !versionsQuery.isError &&
-                versions.length === 0 && (
+              </div>
+              <IconButton
+                className={styles.closeButton}
+                onClick={handleClose}
+                size="sm"
+              >
+                <X />
+              </IconButton>
+            </header>
+            <div className={styles.content}>
+              <div className={styles.versionList}>
+                {versionsQuery.isPending && (
+                  <div className={styles.centered}>
+                    <Spinner />
+                  </div>
+                )}
+                {versionsQuery.isError && (
                   <p className={styles.empty}>
-                    {t('There are no saved versions yet.')}
+                    {t('Unable to load version history. Please try again.')}
                   </p>
                 )}
-              {versions.map((version) => {
-                const isCurrent = version.id === currentVersionId
-                const isSelected = version.id === selectedVersionId
+                {!versionsQuery.isPending &&
+                  !versionsQuery.isError &&
+                  versions.length === 0 && (
+                    <p className={styles.empty}>
+                      {t('There are no saved versions yet.')}
+                    </p>
+                  )}
+                {versions.map((version) => {
+                  const isCurrent = version.id === currentVersionId
+                  const isSelected = version.id === selectedVersionId
 
-                return (
-                  <button
-                    className={`${styles.versionRow} ${isSelected ? styles.versionRowSelected : ''}`}
-                    key={
-                      version.id ??
-                      `${version.version_num}-${version.created_at}`
-                    }
-                    onClick={() => setSelectedVersion(version)}
-                    type="button"
-                  >
-                    <span>{getVersionLabel(version)}</span>
-                    <span className={styles.versionMeta}>
-                      {formatVersionDate(version.created_at, i18n.language)}
-                      {isCurrent && (
-                        <span className={styles.currentBadge}>
-                          {t('Current')}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <div className={styles.preview}>
-              {!selectedVersion && (
-                <p className={styles.empty}>
-                  {t('Select a version to see its preview.')}
-                </p>
-              )}
-              {selectedVersion && versionQuery.isPending && (
-                <div className={styles.centered}>
-                  <Spinner />
-                </div>
-              )}
-              {selectedVersion && versionQuery.isError && (
-                <p className={styles.empty}>
-                  {t('Unable to load this version. Please try again.')}
-                </p>
-              )}
-              {selectedVersion &&
-                previewUrl &&
-                !versionQuery.isPending &&
-                !versionQuery.isError && (
-                  <>
-                    <div className={styles.previewCanvas}>
-                      <img alt="" src={previewUrl} />
-                    </div>
-                    <div className={styles.previewFooter}>
-                      <div>
-                        <strong>{getVersionLabel(selectedVersion)}</strong>
-                        <p>
-                          {formatVersionDate(
-                            selectedVersion.created_at,
-                            i18n.language,
-                          )}
-                        </p>
-                      </div>
-                      {!isSelectedCurrentVersion && (
-                        <Button
-                          onClick={() => setIsRestoreConfirmationOpen(true)}
-                        >
-                          {t('Restore version')}
-                        </Button>
-                      )}
-                    </div>
-                  </>
+                  return (
+                    <button
+                      className={`${styles.versionRow} ${isSelected ? styles.versionRowSelected : ''}`}
+                      key={
+                        version.id ??
+                        `${version.version_num}-${version.created_at}`
+                      }
+                      onClick={() => setSelectedVersion(version)}
+                      type="button"
+                    >
+                      <span>{getVersionLabel(version)}</span>
+                      <span className={styles.versionMeta}>
+                        {formatVersionDate(version.created_at, i18n.language)}
+                        {isCurrent && (
+                          <span className={styles.currentBadge}>
+                            {t('Current')}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className={styles.preview}>
+                {!selectedVersion && (
+                  <p className={styles.empty}>
+                    {t('Select a version to see its preview.')}
+                  </p>
                 )}
-            </div>
-          </div>
-          {isRestoreConfirmationOpen && selectedVersion && (
-            <div className={styles.confirmation}>
-              <div>
-                <h3>{t('Restore this version?')}</h3>
-                <p>
-                  {hasUnsavedChanges
-                    ? t(
-                        'Your unsaved changes will be replaced. The current saved version will remain in the history.',
-                      )
-                    : t(
-                        'The current saved version will remain in the history. A new version will be created.',
-                      )}
-                </p>
+                {selectedVersion && versionQuery.isPending && (
+                  <div className={styles.centered}>
+                    <Spinner />
+                  </div>
+                )}
+                {selectedVersion && versionQuery.isError && (
+                  <p className={styles.empty}>
+                    {t('Unable to load this version. Please try again.')}
+                  </p>
+                )}
+                {selectedVersion &&
+                  previewUrl &&
+                  !versionQuery.isPending &&
+                  !versionQuery.isError && (
+                    <>
+                      <div className={styles.previewCanvas}>
+                        <img alt="" src={previewUrl} />
+                      </div>
+                      <div className={styles.previewFooter}>
+                        <div>
+                          <strong>{getVersionLabel(selectedVersion)}</strong>
+                          <p>
+                            {formatVersionDate(
+                              selectedVersion.created_at,
+                              i18n.language,
+                            )}
+                          </p>
+                        </div>
+                        {!isSelectedCurrentVersion && (
+                          <Button
+                            onClick={() => setIsRestoreConfirmationOpen(true)}
+                          >
+                            {t('Restore version')}
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
               </div>
-              <div className={styles.confirmationActions}>
-                <Button
-                  disabled={restoreVersion.isPending}
-                  onClick={() => setIsRestoreConfirmationOpen(false)}
-                  variant="secondary"
-                >
-                  {t('Cancel')}
-                </Button>
-                <Button
-                  loading={restoreVersion.isPending}
-                  onClick={() => restoreVersion.mutate()}
-                >
-                  {t('Restore version')}
-                </Button>
-              </div>
             </div>
-          )}
-        </section>
-      </div>
-    </Portal>
+          </section>
+        </div>
+      </Portal>
+      {selectedVersion && (
+        <ConfirmationModal
+          cancelLabel={t('Cancel')}
+          confirmLabel={t('Restore version')}
+          confirmVariant="primary"
+          description={
+            hasUnsavedChanges
+              ? t(
+                  'Your unsaved changes will be replaced. The current saved version will remain in the history.',
+                )
+              : t(
+                  'The current saved version will remain in the history. A new version will be created.',
+                )
+          }
+          isConfirming={restoreVersion.isPending}
+          isOpen={isRestoreConfirmationOpen}
+          onCancel={() => {
+            if (!restoreVersion.isPending) {
+              setIsRestoreConfirmationOpen(false)
+            }
+          }}
+          onConfirm={() => restoreVersion.mutate()}
+          title={t('Restore this version?')}
+        />
+      )}
+    </>
   )
 }
