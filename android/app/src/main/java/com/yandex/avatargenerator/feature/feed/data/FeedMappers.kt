@@ -6,9 +6,7 @@ import com.yandex.avatargenerator.feature.feed.domain.model.FeedAuthor
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedPage
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+import com.yandex.avatargenerator.feature.project.data.toInstantOrNull
 
 /** Значение параметра `scope` для бэкенда. */
 internal val FeedTab.scope: String
@@ -40,13 +38,3 @@ private fun FeedItemDto.toDomainOrNull(): FeedProject? {
         publishedAt = createdAt?.toInstantOrNull(),
     )
 }
-
-/**
- * Разбирает `created_at`. `Instant.parse` берёт формы с `Z` и с офсетом
- * (`+03:00`); дату без зоны (`2026-08-14T10:00:00`) трактуем как UTC. Кривой
- * формат не роняет разбор — вернём `null`.
- */
-private fun String.toInstantOrNull(): Instant? =
-    runCatching { Instant.parse(this) }
-        .recoverCatching { LocalDateTime.parse(this).toInstant(ZoneOffset.UTC) }
-        .getOrNull()
