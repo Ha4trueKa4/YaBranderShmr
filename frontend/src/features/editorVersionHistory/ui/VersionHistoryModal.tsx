@@ -37,6 +37,7 @@ interface VersionHistoryModalProps {
   isOpen: boolean
   onClose: () => void
   onRestoreDocument: (document: EditorDocument) => void
+  onVersionRestored?: () => Promise<void> | void
   projectId: string
 }
 
@@ -66,6 +67,7 @@ export function VersionHistoryModal({
   isOpen,
   onClose,
   onRestoreDocument,
+  onVersionRestored,
   projectId,
 }: VersionHistoryModalProps) {
   const { i18n, t } = useTranslation()
@@ -135,6 +137,7 @@ export function VersionHistoryModal({
           queryKey: projectSvgQueryPrefix(projectId),
         }),
       ])
+      await onVersionRestored?.()
       toast.info(t('Version restored.'))
       onClose()
     },
