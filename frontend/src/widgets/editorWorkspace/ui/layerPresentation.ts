@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Circle,
   Folder,
-  Lock,
+  Layers,
   Minus,
   PenTool,
   Square,
@@ -20,7 +20,7 @@ const presentationByNodeType: Record<
   LayerPresentation
 > = {
   group: { icon: Folder, label: 'Group' },
-  raw: { icon: Lock, label: 'Locked SVG' },
+  raw: { icon: Layers, label: 'SVG with effects' },
   text: { icon: Type, label: 'Text' },
 }
 

@@ -199,7 +199,9 @@ export function useLayerDrag({
       }
 
       const preferredNode =
-        (selectedNode?.type === 'shape' || selectedNode?.type === 'text') &&
+        (selectedNode?.type === 'shape' ||
+          selectedNode?.type === 'text' ||
+          selectedNode?.type === 'raw') &&
         isPointerWithinNode(
           selectedNode,
           getEditableElement,
