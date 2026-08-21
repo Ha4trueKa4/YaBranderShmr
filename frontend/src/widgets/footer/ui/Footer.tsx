@@ -21,6 +21,8 @@ export function Footer() {
     { label: t('System'), value: 'system' },
     { label: t('Dark'), value: 'dark' },
     { label: t('Light'), value: 'light' },
+    { label: t('Sephia Colors'), value: 'sephia' },
+    { label: t('Yandex Colors'), value: 'yandex' },
   ]
   const languageSelectOptions = languageOptions.map((option) => ({
     label: option.label,
@@ -28,7 +30,13 @@ export function Footer() {
   }))
 
   function handleThemeChange(value: string) {
-    if (value === 'system' || value === 'dark' || value === 'light') {
+    if (
+      value === 'system' ||
+      value === 'dark' ||
+      value === 'light' ||
+      value === 'sephia' ||
+      value === 'yandex'
+    ) {
       changeTheme(value)
       setTheme(value)
     }

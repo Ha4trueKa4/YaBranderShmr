@@ -33,9 +33,30 @@
   padding: 0;
 }
 
-.brand img {
+.brandMark,
+.yandexLogo {
   width: 2rem;
   height: 2rem;
+}
+
+.brandMark {
+  display: block;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary);
+}
+
+.yandexLogo {
+  display: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary);
+}
+
+:global(:root[data-theme="yandex"]) .brandMark {
+  display: none;
+}
+
+:global(:root[data-theme="yandex"]) .yandexLogo {
+  display: block;
 }
 
 .navigation {
