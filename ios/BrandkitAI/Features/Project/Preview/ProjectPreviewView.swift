@@ -51,7 +51,14 @@ struct ProjectPreviewView: View {
                     refreshURL: { try await viewModel.versionImageURL() }
                 )
             } else if let url = viewModel.imageURL {
-                SVGDocumentView(source: .url(url))
+                if case .owned = viewModel.mode {
+                    SVGDocumentView(
+                        source: .url(url, isPrivate: viewModel.imageIsPrivate),
+                        refreshURL: { try await viewModel.refreshOwnedImageURL() }
+                    )
+                } else {
+                    SVGDocumentView(source: .url(url))
+                }
             } else {
                 pendingImage
             }

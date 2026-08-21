@@ -153,8 +153,11 @@ struct SVGDocumentView: View {
                 return
             }
 
-            if let data = await SVGCache.shared.dataIfCached(for: cacheKey),
-               let svg = String(data: data, encoding: .utf8) {
+            let cachedData = await SVGCache.shared.dataIfCached(for: cacheKey)
+            guard !Task.isCancelled else { return }
+
+            if let cachedData,
+               let svg = String(data: cachedData, encoding: .utf8) {
                 if case .ready(let current) = phase, current == svg {
                     return
                 }
@@ -188,6 +191,7 @@ struct SVGDocumentView: View {
 
         do {
             let url = try await refreshURL()
+            guard !Task.isCancelled else { return }
             let cacheKey = source.cacheKey(for: url) ?? url.absoluteString
             await download(url: url, cacheKey: cacheKey)
         } catch {
@@ -199,6 +203,7 @@ struct SVGDocumentView: View {
     private func download(url: URL, cacheKey: String) async {
         do {
             let data = try await SVGCache.shared.data(for: url, key: cacheKey)
+            guard !Task.isCancelled else { return }
             guard let svg = String(data: data, encoding: .utf8) else {
                 phase = .failure
                 return

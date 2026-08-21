@@ -90,8 +90,8 @@ struct AppRouteView: View {
                 isCurrentUser: false,
                 userID: userID,
                 onBack: { router.pop() },
-                onOpenProject: { projectID, title, imageURL in
-                    router.push(.projectImage(projectID: projectID, title: title, imageURL: imageURL))
+                onOpenProject: { projectID, _, _ in
+                    router.push(.publicProject(projectID: projectID))
                 }
             )
         }
