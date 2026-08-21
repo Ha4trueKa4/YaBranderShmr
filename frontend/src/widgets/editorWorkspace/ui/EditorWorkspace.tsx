@@ -171,8 +171,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   useEditorKeyboardShortcuts({
     canEdit,
     onDeleteSelectedNode: handleDeleteSelection,
+    onMoveEnd: editorStore.commitHistoryTransaction,
+    onMoveStart: editorStore.beginHistoryTransaction,
     onMoveSelectedNode: editorStore.moveSelectedNode,
     onRedo: handleRedo,
+    onSaveVersion: saveVersion,
     onUndo: handleUndo,
   })
 

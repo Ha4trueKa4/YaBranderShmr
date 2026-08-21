@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface UseEditorKeyboardShortcutsParams {
   canEdit: boolean
   onDeleteSelectedNode: () => boolean
+  onMoveEnd: () => void
+  onMoveStart: () => void
   onMoveSelectedNode: (offsetX: number, offsetY: number) => boolean
   onRedo: () => boolean
+  onSaveVersion: () => void
   onUndo: () => boolean
 }
 
@@ -27,21 +30,39 @@ function isEditableElement(target: EventTarget | null) {
 export function useEditorKeyboardShortcuts({
   canEdit,
   onDeleteSelectedNode,
+  onMoveEnd,
+  onMoveStart,
   onMoveSelectedNode,
   onRedo,
+  onSaveVersion,
   onUndo,
 }: UseEditorKeyboardShortcutsParams) {
+  const pressedArrowKeysReference = useRef(new Set<string>())
+
   useEffect(() => {
     if (!canEdit) {
       return
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (
-        event.defaultPrevented ||
-        event.altKey ||
-        isEditableElement(event.target)
-      ) {
+      if (event.defaultPrevented || event.altKey) {
+        return
+      }
+
+      const isSaveShortcut =
+        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's'
+
+      if (isSaveShortcut) {
+        event.preventDefault()
+
+        if (!event.repeat) {
+          onSaveVersion()
+        }
+
+        return
+      }
+
+      if (isEditableElement(event.target)) {
         return
       }
 
@@ -64,8 +85,24 @@ export function useEditorKeyboardShortcuts({
 
       const offset = arrowKeyOffsets[event.key as keyof typeof arrowKeyOffsets]
 
-      if (offset && onMoveSelectedNode(offset.x, offset.y)) {
-        event.preventDefault()
+      if (offset) {
+        const pressedArrowKeys = pressedArrowKeysReference.current
+        const isNewArrowKey = !pressedArrowKeys.has(event.key)
+
+        if (isNewArrowKey) {
+          onMoveStart()
+        }
+
+        if (onMoveSelectedNode(offset.x, offset.y)) {
+          pressedArrowKeys.add(event.key)
+          event.preventDefault()
+
+          return
+        }
+
+        if (isNewArrowKey && pressedArrowKeys.size === 0) {
+          onMoveEnd()
+        }
 
         return
       }
@@ -75,8 +112,45 @@ export function useEditorKeyboardShortcuts({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
+    function finishKeyboardMove() {
+      const pressedArrowKeys = pressedArrowKeysReference.current
 
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [canEdit, onDeleteSelectedNode, onMoveSelectedNode, onRedo, onUndo])
+      if (pressedArrowKeys.size === 0) {
+        return
+      }
+
+      pressedArrowKeys.clear()
+      onMoveEnd()
+    }
+
+    function handleKeyUp(event: KeyboardEvent) {
+      if (!pressedArrowKeysReference.current.delete(event.key)) {
+        return
+      }
+
+      if (pressedArrowKeysReference.current.size === 0) {
+        onMoveEnd()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', finishKeyboardMove)
+
+    return () => {
+      finishKeyboardMove()
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', finishKeyboardMove)
+    }
+  }, [
+    canEdit,
+    onDeleteSelectedNode,
+    onMoveEnd,
+    onMoveSelectedNode,
+    onMoveStart,
+    onRedo,
+    onSaveVersion,
+    onUndo,
+  ])
 }
