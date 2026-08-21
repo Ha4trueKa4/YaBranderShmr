@@ -15,6 +15,7 @@ import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
+  document: EditorNode[]
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   isReadOnly: boolean
   onDocumentChangeEnd: () => void
@@ -47,6 +48,13 @@ type TapState = {
   clientY: number
   nodeId: string
   timestamp: number
+}
+
+type LayerCycleState = {
+  clientX: number
+  clientY: number
+  nodeIds: string[]
+  nextNodeIndex: number
 }
 
 const DOUBLE_TAP_MAX_DELAY = 300
@@ -142,8 +150,35 @@ function isPointerWithinNode(
   return isPointerWithinElement(getEditableElement(node.id), clientX, clientY)
 }
 
+function getVisibleLeafNodes(nodes: EditorNode[]): EditorNode[] {
+  return nodes.flatMap((node) => {
+    if (!node.isVisible) {
+      return []
+    }
+
+    return node.type === 'group' ? getVisibleLeafNodes(node.children) : [node]
+  })
+}
+
+function getOverlappingNodeIds(
+  nodes: EditorNode[],
+  getEditableElement: (nodeId: string) => SVGGElement | undefined,
+  clientX: number,
+  clientY: number,
+) {
+  return getVisibleLeafNodes(nodes)
+    .filter(
+      (node) =>
+        (node.type === 'raw' || !node.isLocked) &&
+        isPointerWithinElement(getEditableElement(node.id), clientX, clientY),
+    )
+    .map((node) => node.id)
+    .reverse()
+}
+
 export function useLayerDrag({
   activeTool,
+  document,
   getEditableElement,
   isReadOnly,
   onDocumentChangeEnd,
@@ -158,6 +193,7 @@ export function useLayerDrag({
 }: UseLayerDragParams) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
+  const layerCycleStateReference = useRef<LayerCycleState | null>(null)
   const lastTapReference = useRef<TapState | null>(null)
 
   const startDrag = useCallback(
@@ -186,7 +222,35 @@ export function useLayerDrag({
 
       if (isDoubleTap) {
         lastTapReference.current = null
-        onSelectNode(node.id, false)
+        const overlappingNodeIds = getOverlappingNodeIds(
+          document,
+          getEditableElement,
+          event.clientX,
+          event.clientY,
+        )
+        const layerCycleState = layerCycleStateReference.current
+        const canContinueCycle =
+          layerCycleState &&
+          Math.hypot(
+            event.clientX - layerCycleState.clientX,
+            event.clientY - layerCycleState.clientY,
+          ) <= DOUBLE_TAP_MAX_DISTANCE &&
+          layerCycleState.nodeIds.length === overlappingNodeIds.length &&
+          layerCycleState.nodeIds.every(
+            (nodeId, index) => nodeId === overlappingNodeIds[index],
+          )
+        const nextNodeIndex = canContinueCycle
+          ? layerCycleState.nextNodeIndex % overlappingNodeIds.length
+          : 1
+        const nodeIdToSelect = overlappingNodeIds.at(nextNodeIndex) ?? node.id
+
+        layerCycleStateReference.current = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          nodeIds: overlappingNodeIds,
+          nextNodeIndex: nextNodeIndex + 1,
+        }
+        onSelectNode(nodeIdToSelect, false)
         event.preventDefault()
 
         return
@@ -279,6 +343,7 @@ export function useLayerDrag({
     },
     [
       activeTool,
+      document,
       getEditableElement,
       isReadOnly,
       onDocumentChangeStart,

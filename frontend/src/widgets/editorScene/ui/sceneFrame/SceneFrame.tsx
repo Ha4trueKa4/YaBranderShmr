@@ -77,6 +77,7 @@ export function SceneFrame({
     svgReference,
   } = useLayerDrag({
     activeTool,
+    document: document.layers,
     getEditableElement,
     isReadOnly,
     onDocumentChangeEnd,
