@@ -8,6 +8,8 @@ import styles from './BottomSheet.module.css'
 
 export interface BottomSheetProps extends PropsWithChildren {
   actions?: ReactNode
+  className?: string
+  contentClassName?: string
   isOpen: boolean
   onClose: () => void
   title: string
@@ -16,6 +18,8 @@ export interface BottomSheetProps extends PropsWithChildren {
 export function BottomSheet({
   actions,
   children,
+  className,
+  contentClassName,
   isOpen,
   onClose,
   title,
@@ -31,7 +35,9 @@ export function BottomSheet({
     <Portal>
       <div className={styles.overlay}>
         <button className={styles.backdrop} onClick={onClose} type="button" />
-        <section className={styles.sheet}>
+        <section
+          className={[styles.sheet, className].filter(Boolean).join(' ')}
+        >
           <div className={styles.handle} />
           <header className={styles.header}>
             <h2>{title}</h2>
@@ -42,7 +48,13 @@ export function BottomSheet({
               </IconButton>
             </div>
           </header>
-          <div className={styles.content}>{children}</div>
+          <div
+            className={[styles.content, contentClassName]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {children}
+          </div>
         </section>
       </div>
     </Portal>

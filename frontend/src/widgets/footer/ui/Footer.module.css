@@ -21,13 +21,13 @@
   font-size: var(--font-size-caption);
 }
 
-.controls,
+.desktopControls,
 .control {
   display: inline-flex;
   align-items: center;
 }
 
-.controls {
+.desktopControls {
   grid-column: 1;
   grid-row: 1;
   gap: var(--space-4);
@@ -40,7 +40,35 @@
 }
 
 .select {
-  width: auto;
+  width: 7.5rem;
+}
+
+.mobileSettings {
+  display: none;
+}
+
+.sheetControls {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.settingsSheet {
+  overflow: visible;
+}
+
+.settingsSheetContent {
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+.sheetControl {
+  justify-content: flex-start;
+}
+
+.sheetControl .select {
+  margin-left: auto;
 }
 
 @media (width < 760px) {
@@ -53,14 +81,16 @@
     display: flex;
     width: min(100% - 2rem, var(--content-max-width));
     min-height: 4rem;
-    flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
     gap: var(--space-2);
     padding: var(--space-2) 0;
   }
 
-  .controls {
-    flex-wrap: wrap;
-    justify-content: center;
+  .desktopControls {
+    display: none;
+  }
+
+  .mobileSettings {
+    display: inline-flex;
   }
 }
