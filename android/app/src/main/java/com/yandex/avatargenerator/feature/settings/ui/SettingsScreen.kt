@@ -1,8 +1,5 @@
 package com.yandex.avatargenerator.feature.settings.ui
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +34,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.compose.ui.platform.LocalContext
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.settings.domain.model.AppLanguage
 import com.yandex.avatargenerator.feature.settings.domain.model.ThemeMode
@@ -55,9 +51,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Экран настроек: аккаунт (никнейм/email), оформление (тема + язык), о приложении
  * (условия, политика, версия) и разлогин. Открывается из шапки своего профиля.
  *
- * Навигация отдана наружу коллбэками; ViewModel — из Koin. Смена языка требует
- * пересоздания Activity (перечитать ресурсы в новой локали) — делаем это по
- * событию [SettingsEvent.LanguageChanged].
+ * Навигация отдана наружу коллбэками; ViewModel — из Koin. Смена темы/языка
+ * применяется вживую на корне Compose (`MainActivity`), без пересоздания Activity.
  *
  * @param onBack закрыть экран (стрелка «назад»).
  * @param onLoggedOut разлогин завершён — увести на экран входа.
@@ -70,7 +65,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(viewModel, lifecycleOwner) {
@@ -78,7 +72,6 @@ fun SettingsScreen(
             viewModel.events.collect { event ->
                 when (event) {
                     SettingsEvent.LoggedOut -> onLoggedOut()
-                    SettingsEvent.LanguageChanged -> context.findActivity()?.recreate()
                 }
             }
         }
@@ -301,11 +294,4 @@ private fun AppLanguage.labelRes(): Int = when (this) {
     AppLanguage.SYSTEM -> R.string.settings_language_system
     AppLanguage.RUSSIAN -> R.string.settings_language_ru
     AppLanguage.ENGLISH -> R.string.settings_language_en
-}
-
-/** Разворачивает цепочку [ContextWrapper] до [Activity] — нужно для `recreate()`. */
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AvatarGenerator</string>
+    <string name="app_name" translatable="false">AvatarGenerator</string>
 
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>

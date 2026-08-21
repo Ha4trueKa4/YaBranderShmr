@@ -115,6 +115,9 @@
     <string name="project_input_placeholder">Опишите, что изменить…</string>
     <string name="project_send_description">Отправить сообщение</string>
 
+    <!-- Своего текста у ответа ИИ нет: в истории чата лежит только ссылка на версию -->
+    <string name="project_assistant_message">Готово — вот новая версия:</string>
+
     <string name="project_system_created">Проект успешно создан</string>
     <string name="project_system_version_saved">Версия %1$s сохранена</string>
 

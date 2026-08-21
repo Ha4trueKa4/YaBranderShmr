@@ -5,7 +5,4 @@ sealed interface SettingsEvent {
 
     /** Сессия завершена — уводим на экран входа. */
     data object LoggedOut : SettingsEvent
-
-    /** Язык сохранён — пересоздаём Activity, чтобы ресурсы перечитались в новой локали. */
-    data object LanguageChanged : SettingsEvent
 }

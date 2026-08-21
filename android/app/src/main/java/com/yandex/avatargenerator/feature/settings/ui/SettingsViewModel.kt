@@ -20,8 +20,9 @@ import kotlinx.coroutines.launch
  * ViewModel экрана настроек: сводит тему, язык и данные текущей сессии в
  * [SettingsUiState], пишет выбор темы/языка в [SettingsRepository] и разлогинивает.
  *
- * Смена языка и разлогин — разовые [SettingsEvent] через [events]: Activity/навигация
- * реагируют на них (пересоздание для локали, переход на вход).
+ * Разлогин — разовое [SettingsEvent] через [events] (навигация уводит на вход).
+ * Смена темы/языка события не требует: применяется вживую на корне Compose
+ * (см. `MainActivity`), без пересоздания Activity.
  */
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
@@ -49,7 +50,12 @@ class SettingsViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = SettingsUiState.Initial,
+        // Тема/язык — из синхронного кэша, а не SYSTEM: иначе селектор при открытии
+        // мигнул бы «Системная», пока combine асинхронно не подтянет сохранённый выбор.
+        initialValue = SettingsUiState.Initial.copy(
+            themeMode = settingsRepository.lastThemeMode,
+            language = settingsRepository.lastLanguage,
+        ),
     )
 
     fun setThemeMode(mode: ThemeMode) {
@@ -57,10 +63,9 @@ class SettingsViewModel(
     }
 
     fun setLanguage(language: AppLanguage) {
-        viewModelScope.launch {
-            settingsRepository.setLanguage(language)
-            _events.send(SettingsEvent.LanguageChanged)
-        }
+        // Язык применяется вживую (подмена локали на корне Compose) — пересоздания и
+        // события не требуется.
+        viewModelScope.launch { settingsRepository.setLanguage(language) }
     }
 
     fun logout() {
