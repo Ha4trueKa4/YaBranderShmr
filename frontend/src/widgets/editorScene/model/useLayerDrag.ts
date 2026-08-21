@@ -14,8 +14,9 @@ import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
-  getEditableElement: (nodeId: string) => SVGGElement | undefined
   isReadOnly: boolean
+  onDocumentChangeEnd: () => void
+  onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
@@ -73,39 +74,6 @@ function hasLockedDescendant(node: EditorGroup): boolean {
   )
 }
 
-function getEditableDescendants(
-  node: EditorNode,
-): (EditorShape | EditorText)[] {
-  if (node.type === 'shape' || node.type === 'text') {
-    return [node]
-  }
-
-  if (node.type === 'group') {
-    return node.children.flatMap(getEditableDescendants)
-  }
-
-  return []
-}
-
-function isPointerWithinElement(
-  element: SVGGElement | undefined,
-  clientX: number,
-  clientY: number,
-) {
-  if (!element) {
-    return false
-  }
-
-  const bounds = element.getBoundingClientRect()
-
-  return (
-    clientX >= bounds.left &&
-    clientX <= bounds.right &&
-    clientY >= bounds.top &&
-    clientY <= bounds.bottom
-  )
-}
-
 function toDragTarget(
   node: EditorShape | EditorText | EditorGroup,
 ): DragTarget {
@@ -126,8 +94,9 @@ function toDragTarget(
 
 export function useLayerDrag({
   activeTool,
-  getEditableElement,
   isReadOnly,
+  onDocumentChangeEnd,
+  onDocumentChangeStart,
   onGroupPositionChange,
   onSelectNode,
   onShapePositionChange,
@@ -162,26 +131,13 @@ export function useLayerDrag({
           ? selectedNode
           : null
 
-      const isPointerWithinSelection = selectedNodes
-        .flatMap(getEditableDescendants)
-        .some((selected) =>
-          isPointerWithinElement(
-            getEditableElement(selected.id),
-            event.clientX,
-            event.clientY,
-          ),
-        )
-      const selectedGroupToDrag =
-        selectedGroup ??
-        (isPointerWithinSelection && selectedNode?.type === 'group'
-          ? selectedNode
-          : null)
+      const selectedGroupToDrag = selectedGroup
       const isSelectedNode = selectedNodes.some(
         (selected) => selected.id === node.id,
       )
 
       if (
-        (node.isLocked && (isSelectedNode || !isPointerWithinSelection)) ||
+        node.isLocked ||
         selectedGroupToDrag?.isLocked ||
         (selectedGroupToDrag && hasLockedDescendant(selectedGroupToDrag))
       ) {
@@ -190,7 +146,7 @@ export function useLayerDrag({
 
       const dragTargets = selectedGroupToDrag
         ? [selectedGroupToDrag]
-        : isPointerWithinSelection || isSelectedNode
+        : isSelectedNode
           ? selectedNodes.filter(
               (selected): selected is EditorShape | EditorText =>
                 (selected.type === 'shape' || selected.type === 'text') &&
@@ -202,11 +158,7 @@ export function useLayerDrag({
         return
       }
 
-      if (
-        !selectedGroupToDrag &&
-        !isPointerWithinSelection &&
-        !isSelectedNode
-      ) {
+      if (!selectedGroupToDrag && !isSelectedNode) {
         onSelectNode(node.id, false)
       }
 
@@ -227,11 +179,12 @@ export function useLayerDrag({
         startPointerPosition: pointerPosition,
         targets: dragTargets.map(toDragTarget),
       }
+      onDocumentChangeStart()
     },
     [
       activeTool,
-      getEditableElement,
       isReadOnly,
+      onDocumentChangeStart,
       onSelectNode,
       selectedNode,
       selectedNodes,
@@ -291,17 +244,21 @@ export function useLayerDrag({
     [onGroupPositionChange, onShapePositionChange, onTextPositionChange],
   )
 
-  const onPointerUp = useCallback((event: ReactPointerEvent<SVGGElement>) => {
-    if (dragStateReference.current?.pointerId !== event.pointerId) {
-      return
-    }
+  const onPointerUp = useCallback(
+    (event: ReactPointerEvent<SVGGElement>) => {
+      if (dragStateReference.current?.pointerId !== event.pointerId) {
+        return
+      }
 
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
 
-    dragStateReference.current = null
-  }, [])
+      dragStateReference.current = null
+      onDocumentChangeEnd()
+    },
+    [onDocumentChangeEnd],
+  )
 
   return {
     onPointerMove,
