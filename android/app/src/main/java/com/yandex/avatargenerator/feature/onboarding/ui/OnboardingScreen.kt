@@ -54,7 +54,11 @@ internal fun OnboardingScreen(
         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(AppColors.Background)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.Background)
+    ) {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -70,9 +74,13 @@ internal fun OnboardingScreen(
                 )
             }
         }
+        // Индикатор общий для всех страниц: на Welcome он лежит на насыщенном
+        // градиенте, дальше — на фоне палитры, который в светлой теме светлый.
+        val onGradient = uiState.pages[pagerState.currentPage] == OnboardingPage.Welcome
         PageIndicator(
             pageCount = uiState.pages.size,
             currentPage = pagerState.currentPage,
+            color = if (onGradient) AppColors.OnAccent else AppColors.TextPrimary,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing)

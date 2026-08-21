@@ -1,7 +1,6 @@
 package com.yandex.avatargenerator.feature.onboarding.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTextLink
+import com.yandex.avatargenerator.ui.components.brandSurface
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
@@ -73,18 +73,16 @@ private fun LogoMockup(modifier: Modifier = Modifier) {
         modifier = modifier
             .width(OnboardingDefaults.IllustrationWidth)
             .height(OnboardingDefaults.IllustrationHeight)
-            .background(AppColors.Surface, RoundedCornerShape(OnboardingDefaults.IllustrationRadius))
-            .border(
-                width = OnboardingDefaults.BorderWidth,
-                color = AppColors.Border,
-                shape = RoundedCornerShape(OnboardingDefaults.IllustrationRadius),
-            )
+            .brandSurface(RoundedCornerShape(OnboardingDefaults.IllustrationRadius))
             .padding(OnboardingDefaults.IllustrationPadding),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(AppColors.Background, RoundedCornerShape(OnboardingDefaults.IllustrationInnerRadius)),
+                .background(
+                    AppColors.Background,
+                    RoundedCornerShape(OnboardingDefaults.IllustrationInnerRadius)
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(
                 space = OnboardingDefaults.IllustrationInnerSpacing,

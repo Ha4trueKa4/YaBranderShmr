@@ -1,7 +1,5 @@
 package com.yandex.avatargenerator.feature.onboarding.ui.components
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingStep
 import com.yandex.avatargenerator.feature.onboarding.ui.onboardingSteps
-import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.components.brandSurface
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
-import androidx.compose.ui.semantics.heading
 
 /** Строка списка «How it works»: плитка с иконкой + заголовок и подпись. */
 @Composable
@@ -38,12 +36,7 @@ internal fun StepRow(
         Box(
             modifier = Modifier
                 .size(OnboardingDefaults.StepIconTileSize)
-                .background(AppColors.Surface, RoundedCornerShape(OnboardingDefaults.StepIconTileRadius))
-                .border(
-                    width = OnboardingDefaults.BorderWidth,
-                    color = AppColors.Border,
-                    shape = RoundedCornerShape(OnboardingDefaults.StepIconTileRadius),
-                ),
+                .brandSurface(RoundedCornerShape(OnboardingDefaults.StepIconTileRadius)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
