@@ -5,14 +5,14 @@ import {
   areDocumentsEqual,
   createDocumentSnapshot,
   editorHistoryLimit,
-} from './documentSnapshot'
+} from './editorHistory/documentSnapshot'
 import {
   commitHistory,
   createHistory,
   type EditorHistory,
   redoHistory,
   undoHistory,
-} from './history'
+} from './editorHistory/history'
 import { createSvgNodeEditing, type SvgNodeEditing } from './svgNodeEditing'
 import { findAncestorGroupIds, findNode } from './tree/findNode'
 import type { EditorDocument, EditorNode } from './types'

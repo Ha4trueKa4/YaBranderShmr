@@ -1,6 +1,6 @@
 import { toJS } from 'mobx'
 
-import type { EditorDocument } from './types'
+import type { EditorDocument } from '../types'
 
 export const editorHistoryLimit = 50
 
