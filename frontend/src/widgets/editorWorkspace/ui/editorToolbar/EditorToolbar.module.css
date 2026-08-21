@@ -100,10 +100,16 @@
 .projectActions {
   gap: var(--space-3);
   margin-left: auto;
+  white-space: nowrap;
 }
 
 .saveVersion {
   width: 7.75rem;
+}
+
+.actionIcon {
+  height: 1rem;
+  width: 1rem;
 }
 
 .avatar {
