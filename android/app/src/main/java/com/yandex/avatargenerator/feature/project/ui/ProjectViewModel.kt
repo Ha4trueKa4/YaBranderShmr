@@ -2,8 +2,12 @@ package com.yandex.avatargenerator.feature.project.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yandex.avatargenerator.core.domain.NetworkException
+import com.yandex.avatargenerator.core.network.ApiConfig
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,10 +47,9 @@ internal class ProjectViewModel(
     /**
      * Отправляет черновик на генерацию.
      *
-     * Промпт кладётся в ленту сразу, до ответа сервера: генерация идёт десятками
-     * секунд, и всё это время экран не должен выглядеть так, будто нажатие
-     * пропало. Поле очищается там же — иначе ввод «залипает» с уже отправленным
-     * текстом.
+     * Промпт кладётся в ленту сразу, до ответа сервера: генерация идёт минутами,
+     * и всё это время экран не должен выглядеть так, будто нажатие пропало. Поле
+     * очищается там же — иначе ввод «залипает» с уже отправленным текстом.
      *
      * По успеху лента перечитывается целиком: ни номера новой версии, ни её
      * `version_id` в ответе генерации нет, а сам сервер уже дописал в историю
@@ -54,9 +57,11 @@ internal class ProjectViewModel(
      * бы в ленте со своим локальным ключом и продублировало серверную запись при
      * следующем открытии экрана.
      *
-     * По ошибке оптимистичное сообщение убирается, а текст возвращается в поле,
-     * чтобы не пропасть без следа. Перезапрашивать ленту тут нечего: при 422 и
-     * 503 бэкенд промпт в историю не пишет.
+     * Таймаут — не отказ: сервер доводит генерацию до конца независимо от того,
+     * дождался клиент или нет, поэтому вместо ошибки ждём версию опросом (см.
+     * [awaitGeneratedVersion]). На остальных ошибках (400, 403, 422, 503) версии
+     * не появится — оптимистичное сообщение убирается, а текст возвращается в
+     * поле, чтобы не пропасть без следа.
      */
     fun send() {
         val state = _uiState.value
@@ -64,6 +69,8 @@ internal class ProjectViewModel(
         val text = state.draft.trim()
         if (text.isEmpty()) return
 
+        // Снимаем до отправки: по смене этой версии узнаём, что генерация дошла.
+        val baselineVersionId = state.messages.lastVersionId()
         val pending = ChatMessage.Outgoing(
             id = UUID.randomUUID().toString(),
             text = text,
@@ -77,17 +84,58 @@ internal class ProjectViewModel(
             // TODO: индикация неотправленного сообщения со статусом и повтором.
             chatRepository.sendPrompt(projectId, text).fold(
                 onSuccess = { reloadAfterSend() },
-                onFailure = {
-                    _uiState.updateContent { content ->
-                        content.copy(
-                            messages = content.messages.filterNot { it.id == pending.id },
-                            // Новый черновик не перетираем: пользователь мог начать
-                            // писать следующее сообщение, пока шла генерация.
-                            draft = if (content.draft.isEmpty()) text else content.draft,
-                            isSending = false,
-                        )
+                onFailure = { error ->
+                    if (error is NetworkException.Timeout) {
+                        awaitGeneratedVersion(pending, text, baselineVersionId)
+                    } else {
+                        dropPending(pending, text)
                     }
                 },
+            )
+        }
+    }
+
+    /**
+     * Ждёт версию, которую сервер дописывает уже после клиентского таймаута.
+     *
+     * Опрашиваем ленту, а не `/versions` напрямую: [ChatRepository.getChat] сам
+     * ходит и за версиями, и за историей, так что при удачном опросе экран сразу
+     * получает готовое содержимое, а не повод сделать ещё один запрос.
+     *
+     * Упавший опрос цикл не прерывает: сеть может лежать ровно на этом тике, а
+     * версия на сервере от этого никуда не денется. Если за всё окно новой
+     * версии не появилось — считаем генерацию неудавшейся и ведём себя как при
+     * обычной ошибке.
+     */
+    private suspend fun awaitGeneratedVersion(
+        pending: ChatMessage.Outgoing,
+        text: String,
+        baselineVersionId: String?,
+    ) {
+        val attempts = ApiConfig.GenerationPollWindowMillis / ApiConfig.GenerationPollIntervalMillis
+        repeat(attempts.toInt()) {
+            delay(ApiConfig.GenerationPollIntervalMillis)
+            val chat = chatRepository.getChat(projectId).getOrNull() ?: return@repeat
+            if (chat.messages.lastVersionId() != baselineVersionId) {
+                applyChat(chat)
+                return
+            }
+        }
+        dropPending(pending, text)
+    }
+
+    /**
+     * Убирает оптимистичное сообщение и возвращает текст в поле ввода.
+     *
+     * Новый черновик не перетираем: пользователь мог начать писать следующее
+     * сообщение, пока шла генерация.
+     */
+    private fun dropPending(pending: ChatMessage.Outgoing, text: String) {
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.filterNot { it.id == pending.id },
+                draft = if (content.draft.isEmpty()) text else content.draft,
+                isSending = false,
             )
         }
     }
@@ -102,17 +150,22 @@ internal class ProjectViewModel(
      */
     private suspend fun reloadAfterSend() {
         val chat = chatRepository.getChat(projectId).getOrNull()
+        if (chat == null) {
+            _uiState.updateContent { it.copy(isSending = false) }
+        } else {
+            applyChat(chat)
+        }
+    }
+
+    /** Серверная лента заменяет локальную целиком — оптимистичное сообщение уходит с ней. */
+    private fun applyChat(chat: ProjectChat) {
         _uiState.updateContent { content ->
-            if (chat == null) {
-                content.copy(isSending = false)
-            } else {
-                content.copy(
-                    title = chat.title,
-                    isPublic = chat.isPublic,
-                    messages = chat.messages,
-                    isSending = false,
-                )
-            }
+            content.copy(
+                title = chat.title,
+                isPublic = chat.isPublic,
+                messages = chat.messages,
+                isSending = false,
+            )
         }
     }
 
@@ -137,6 +190,10 @@ internal class ProjectViewModel(
         }
     }
 }
+
+/** Версия последнего ответа ИИ в ленте; `null` — ответов ещё не было. */
+private fun List<ChatMessage>.lastVersionId(): String? =
+    filterIsInstance<ChatMessage.Incoming>().lastOrNull()?.versionId
 
 /** Правка состояния, только если экран всё ещё показывает содержимое. */
 private inline fun MutableStateFlow<ProjectUiState>.updateContent(

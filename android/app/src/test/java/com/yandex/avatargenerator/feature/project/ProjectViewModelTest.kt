@@ -1,5 +1,6 @@
 package com.yandex.avatargenerator.feature.project
 
+import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import com.yandex.avatargenerator.feature.project.ui.MaxPromptBytes
@@ -306,6 +307,68 @@ internal class ProjectViewModelTest {
         val draft = contentOf(viewModel).draft
         assertEquals(MaxPromptBytes / 2, draft.length)
         assertEquals(MaxPromptBytes, draft.toByteArray().size)
+    }
+
+    @Test
+    fun `таймаут ждёт версию опросом, а не считается ошибкой`() = runTest(dispatcher) {
+        // Сервер доводит генерацию до конца и после обрыва — версия появляется
+        // с задержкой, и промпт из ленты выбрасывать нельзя.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        chatRepository.sendError = NetworkException.Timeout()
+        // Первый опрос застаёт ленту прежней (модель ещё считает), второй — уже
+        // с серверной парой «промпт → версия».
+        chatRepository.chatResults += Result.success(chat)
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals(reloadedMessages, content.messages)
+        assertEquals("", content.draft)
+        assertEquals(false, content.isSending)
+        // Загрузка экрана плюс два опроса: как только версия нашлась, опрос встал.
+        assertEquals(3, chatRepository.getChatCallCount)
+    }
+
+    @Test
+    fun `упавший опрос не прерывает ожидание версии`() = runTest(dispatcher) {
+        // Сеть могла лечь ровно на этом тике — версия на сервере от этого никуда
+        // не делась.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        chatRepository.sendError = NetworkException.Timeout()
+        chatRepository.chatResults += Result.failure(IllegalStateException("network is down"))
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(reloadedMessages, contentOf(viewModel).messages)
+    }
+
+    @Test
+    fun `если версия так и не появилась, промпт возвращается в поле`() = runTest(dispatcher) {
+        // Окно опроса вышло — считаем генерацию неудавшейся и ведём себя как при
+        // обычной ошибке.
+        chatRepository.chatResult = Result.success(chat)
+        chatRepository.sendError = NetworkException.Timeout()
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals("Make it rounder", content.draft)
+        assertEquals(messages, content.messages)
+        assertEquals(false, content.isSending)
     }
 
     private fun contentOf(viewModel: ProjectViewModel): ProjectUiState.Content =

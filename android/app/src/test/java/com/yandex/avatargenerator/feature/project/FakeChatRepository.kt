@@ -19,6 +19,13 @@ internal class FakeChatRepository(
         private set
 
     /**
+     * Очередь ответов [getChat] — нужна тестам ожидания после таймаута: там
+     * лента меняется по ходу опроса. Пока очередь не пуста, ответ берётся из
+     * неё, дальше — из [chatResult].
+     */
+    val chatResults: MutableList<Result<ProjectChat>> = mutableListOf()
+
+    /**
      * Промпты, дошедшие до репозитория: по ним видно, что отправка состоялась.
      * При заданном [sendError] промпт всё равно попадает сюда — попытка была,
      * упала она уже после.
@@ -30,7 +37,7 @@ internal class FakeChatRepository(
 
     override suspend fun getChat(projectId: String): Result<ProjectChat> {
         getChatCallCount++
-        return chatResult
+        return if (chatResults.isEmpty()) chatResult else chatResults.removeAt(0)
     }
 
     override suspend fun sendPrompt(projectId: String, prompt: String): Result<GeneratedVersion> {
