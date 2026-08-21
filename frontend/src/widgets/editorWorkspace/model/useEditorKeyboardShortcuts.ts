@@ -4,6 +4,8 @@ interface UseEditorKeyboardShortcutsParams {
   canEdit: boolean
   onDeleteSelectedNode: () => boolean
   onMoveSelectedNode: (offsetX: number, offsetY: number) => boolean
+  onRedo: () => boolean
+  onUndo: () => boolean
 }
 
 const arrowKeyOffsets = {
@@ -26,6 +28,8 @@ export function useEditorKeyboardShortcuts({
   canEdit,
   onDeleteSelectedNode,
   onMoveSelectedNode,
+  onRedo,
+  onUndo,
 }: UseEditorKeyboardShortcutsParams) {
   useEffect(() => {
     if (!canEdit) {
@@ -35,11 +39,26 @@ export function useEditorKeyboardShortcuts({
     function handleKeyDown(event: KeyboardEvent) {
       if (
         event.defaultPrevented ||
-        event.metaKey ||
-        event.ctrlKey ||
         event.altKey ||
         isEditableElement(event.target)
       ) {
+        return
+      }
+
+      const isUndoShortcut =
+        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z'
+
+      if (isUndoShortcut) {
+        const wasHandled = event.shiftKey ? onRedo() : onUndo()
+
+        if (wasHandled) {
+          event.preventDefault()
+        }
+
+        return
+      }
+
+      if (event.metaKey || event.ctrlKey) {
         return
       }
 
@@ -59,5 +78,5 @@ export function useEditorKeyboardShortcuts({
     window.addEventListener('keydown', handleKeyDown)
 
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [canEdit, onDeleteSelectedNode, onMoveSelectedNode])
+  }, [canEdit, onDeleteSelectedNode, onMoveSelectedNode, onRedo, onUndo])
 }

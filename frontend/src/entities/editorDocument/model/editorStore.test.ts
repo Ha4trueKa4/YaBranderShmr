@@ -81,6 +81,40 @@ const document: EditorDocument = {
 }
 
 describe('EditorStore selection', () => {
+  it('undoes and redoes a document change', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.setShapeFillColor('wheel', '#FF0000')
+
+    expect(store.canUndo).toBe(true)
+    expect(store.undo()).toBe(true)
+    expect(store.selectedNode).toBeNull()
+    expect(store.document.layers[0]).toMatchObject({
+      children: [{ style: { fill: { value: '#000000' } } }],
+    })
+    expect(store.canRedo).toBe(true)
+
+    expect(store.redo()).toBe(true)
+    expect(store.document.layers[0]).toMatchObject({
+      children: [{ style: { fill: { value: '#FF0000' } } }],
+    })
+  })
+
+  it('records a history transaction as one change', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.beginHistoryTransaction()
+    store.setShapePosition('wheel', 10, 10)
+    store.setShapePosition('wheel', 20, 20)
+
+    expect(store.commitHistoryTransaction()).toBe(true)
+    expect(store.undo()).toBe(true)
+    expect(store.document.layers[0]).toMatchObject({
+      children: [{ transform: { x: 0, y: 0 } }],
+    })
+    expect(store.canUndo).toBe(false)
+  })
+
   it('returns a group as the selected node', () => {
     const store = new EditorStore(document, 'taxi')
 

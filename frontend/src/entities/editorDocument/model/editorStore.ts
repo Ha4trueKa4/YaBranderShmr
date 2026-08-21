@@ -3,6 +3,18 @@ import { makeAutoObservable } from 'mobx'
 import { removeNode } from './commands/removeNode'
 import { setNodeVisibility } from './commands/setNodeVisibility'
 import { toggleNodeVisibility } from './commands/toggleNodeVisibility'
+import {
+  areDocumentsEqual,
+  createDocumentSnapshot,
+  editorHistoryLimit,
+} from './documentSnapshot'
+import {
+  commitHistory,
+  createHistory,
+  type EditorHistory,
+  redoHistory,
+  undoHistory,
+} from './history'
 import { findAncestorGroupIds, findNode } from './tree/findNode'
 import type { EditorDocument, EditorNode, TextStyle } from './types'
 
@@ -15,21 +27,25 @@ function isValidHexColor(color: string) {
 
 /**
  * Состояние взаимодействия с редактором.
- * Undo/redo и операции редактирования будут добавлены отдельными feature.
+ * История хранит только документ. Выделение и состояние интерфейса не являются
+ * частью SVG и поэтому не восстанавливаются при undo/redo.
  */
 export class EditorStore {
   document: EditorDocument
+  history: EditorHistory<EditorDocument>
   expandedGroupIds: Set<string>
   selectedNodeId: string | null
   selectedNodeIds: Set<string>
   zoom = 1
+  private transactionInitialDocument: EditorDocument | null = null
 
   constructor(
     document: EditorDocument,
     selectedNodeId: string | null = null,
     expandedGroupIds: string[] = [],
   ) {
-    this.document = document
+    this.document = createDocumentSnapshot(document)
+    this.history = createHistory(createDocumentSnapshot(this.document))
     this.expandedGroupIds = new Set(expandedGroupIds)
     this.selectedNodeId = selectedNodeId
     this.selectedNodeIds = new Set(selectedNodeId ? [selectedNodeId] : [])
@@ -45,6 +61,62 @@ export class EditorStore {
     return [...this.selectedNodeIds]
       .map((nodeId) => findNode(this.document.layers, nodeId))
       .filter((node): node is EditorNode => node !== null)
+  }
+
+  get canUndo(): boolean {
+    return this.history.past.length > 0
+  }
+
+  get canRedo(): boolean {
+    return this.history.future.length > 0
+  }
+
+  beginHistoryTransaction() {
+    if (!this.transactionInitialDocument) {
+      this.transactionInitialDocument = createDocumentSnapshot(this.document)
+    }
+  }
+
+  commitHistoryTransaction(): boolean {
+    const initialDocument = this.transactionInitialDocument
+
+    if (!initialDocument) {
+      return false
+    }
+
+    this.transactionInitialDocument = null
+
+    return this.commitDocumentChange(initialDocument)
+  }
+
+  undo(): boolean {
+    this.commitHistoryTransaction()
+    const nextHistory = undoHistory(this.history)
+
+    if (!nextHistory) {
+      return false
+    }
+
+    this.history = nextHistory
+    this.document = createDocumentSnapshot(nextHistory.present)
+    this.removeMissingSelectedNodes()
+
+    return true
+  }
+
+  redo(): boolean {
+    this.commitHistoryTransaction()
+    const nextHistory = redoHistory(this.history, editorHistoryLimit)
+
+    if (!nextHistory) {
+      return false
+    }
+
+    this.history = nextHistory
+    this.document = createDocumentSnapshot(nextHistory.present)
+    this.removeMissingSelectedNodes()
+
+    return true
   }
 
   setSelectedNode(nodeId: string | null) {
@@ -96,11 +168,15 @@ export class EditorStore {
   }
 
   setNodeVisibility(nodeId: string, isVisible: boolean) {
-    setNodeVisibility(this.document.layers, nodeId, isVisible)
+    this.applyDocumentChange(() =>
+      setNodeVisibility(this.document.layers, nodeId, isVisible),
+    )
   }
 
   toggleNodeVisibility(nodeId: string) {
-    toggleNodeVisibility(this.document.layers, nodeId)
+    this.applyDocumentChange(() =>
+      toggleNodeVisibility(this.document.layers, nodeId),
+    )
   }
 
   deleteSelectedNode(): boolean {
@@ -110,7 +186,9 @@ export class EditorStore {
       return false
     }
 
-    const wasDeleted = removeNode(this.document.layers, selectedNode.id)
+    const wasDeleted = this.applyDocumentChange(() =>
+      removeNode(this.document.layers, selectedNode.id),
+    )
 
     if (wasDeleted) {
       this.setSelectedNode(null)
@@ -137,25 +215,17 @@ export class EditorStore {
       return false
     }
 
-    for (const selectedNode of selectedNodes) {
-      if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
-        selectedNode.transform.x += offsetX
-        selectedNode.transform.y += offsetY
-
-        continue
+    return this.applyDocumentChange(() => {
+      for (const selectedNode of selectedNodes) {
+        if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
+          selectedNode.transform.x += offsetX
+          selectedNode.transform.y += offsetY
+        } else if (selectedNode.type === 'text') {
+          selectedNode.x += offsetX
+          selectedNode.y += offsetY
+        }
       }
-
-      if (selectedNode.type === 'text') {
-        selectedNode.x += offsetX
-        selectedNode.y += offsetY
-
-        continue
-      }
-
-      return false
-    }
-
-    return true
+    })
   }
 
   setShapeFillColor(nodeId: string, color: string) {
@@ -164,7 +234,9 @@ export class EditorStore {
       return
     }
 
-    node.style.fill = { type: 'color', value: color }
+    this.applyDocumentChange(() => {
+      node.style.fill = { type: 'color', value: color }
+    })
   }
 
   setShapeFillOpacity(nodeId: string, opacity: number) {
@@ -174,7 +246,9 @@ export class EditorStore {
       return
     }
 
-    node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
+    this.applyDocumentChange(() => {
+      node.style.fillOpacity = Math.min(Math.max(opacity, 0), 1)
+    })
   }
 
   setGradientStopColor(gradientId: string, stopIndex: number, color: string) {
@@ -195,7 +269,9 @@ export class EditorStore {
       return
     }
 
-    gradient.stops[stopIndex].color = color
+    this.applyDocumentChange(() => {
+      gradient.stops[stopIndex].color = color
+    })
   }
 
   setShapeOpacity(nodeId: string, opacity: number) {
@@ -205,7 +281,9 @@ export class EditorStore {
       return
     }
 
-    node.opacity = Math.min(Math.max(opacity, 0), 1)
+    this.applyDocumentChange(() => {
+      node.opacity = Math.min(Math.max(opacity, 0), 1)
+    })
   }
 
   setShapePosition(nodeId: string, x: number, y: number) {
@@ -215,8 +293,10 @@ export class EditorStore {
       return
     }
 
-    node.transform.x = x
-    node.transform.y = y
+    this.applyDocumentChange(() => {
+      node.transform.x = x
+      node.transform.y = y
+    })
   }
 
   setGroupPosition(nodeId: string, x: number, y: number) {
@@ -231,8 +311,10 @@ export class EditorStore {
       return
     }
 
-    node.transform.x = x
-    node.transform.y = y
+    this.applyDocumentChange(() => {
+      node.transform.x = x
+      node.transform.y = y
+    })
   }
 
   addShapeStroke(nodeId: string) {
@@ -254,11 +336,13 @@ export class EditorStore {
       return
     }
 
-    node.style.stroke = {
-      type: 'color',
-      value: currentStrokeColor ?? '#000000',
-    }
-    node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+    this.applyDocumentChange(() => {
+      node.style.stroke = {
+        type: 'color',
+        value: currentStrokeColor ?? '#000000',
+      }
+      node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+    })
   }
 
   setShapeStrokeColor(nodeId: string, color: string) {
@@ -268,8 +352,10 @@ export class EditorStore {
       return
     }
 
-    node.style.stroke = { type: 'color', value: color }
-    node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+    this.applyDocumentChange(() => {
+      node.style.stroke = { type: 'color', value: color }
+      node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+    })
   }
 
   setShapeStrokeWidth(nodeId: string, strokeWidth: number) {
@@ -279,7 +365,9 @@ export class EditorStore {
       return
     }
 
-    node.style.strokeWidth = strokeWidth
+    this.applyDocumentChange(() => {
+      node.style.strokeWidth = strokeWidth
+    })
   }
 
   removeShapeStroke(nodeId: string) {
@@ -289,15 +377,19 @@ export class EditorStore {
       return
     }
 
-    node.style.stroke = { type: 'none' }
-    node.style.strokeWidth = 0
+    this.applyDocumentChange(() => {
+      node.style.stroke = { type: 'none' }
+      node.style.strokeWidth = 0
+    })
   }
 
   setTextContent(nodeId: string, text: string) {
     const node = this.getEditableText(nodeId)
 
     if (node) {
-      node.text = text.slice(0, maximumTextLength)
+      this.applyDocumentChange(() => {
+        node.text = text.slice(0, maximumTextLength)
+      })
     }
   }
 
@@ -305,7 +397,9 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node) {
-      node.style.fill = { type: 'color', value: color }
+      this.applyDocumentChange(() => {
+        node.style.fill = { type: 'color', value: color }
+      })
     }
   }
 
@@ -313,7 +407,9 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node) {
-      node.style.fontFamily = fontFamily
+      this.applyDocumentChange(() => {
+        node.style.fontFamily = fontFamily
+      })
     }
   }
 
@@ -321,7 +417,9 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node && Number.isFinite(fontSize) && fontSize > 0) {
-      node.style.fontSize = fontSize
+      this.applyDocumentChange(() => {
+        node.style.fontSize = fontSize
+      })
     }
   }
 
@@ -332,7 +430,9 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node) {
-      node.style.fontStyle = fontStyle
+      this.applyDocumentChange(() => {
+        node.style.fontStyle = fontStyle
+      })
     }
   }
 
@@ -340,7 +440,9 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node && Number.isFinite(fontWeight) && fontWeight > 0) {
-      node.style.fontWeight = fontWeight
+      this.applyDocumentChange(() => {
+        node.style.fontWeight = fontWeight
+      })
     }
   }
 
@@ -351,7 +453,9 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node) {
-      node.style.textAnchor = textAnchor
+      this.applyDocumentChange(() => {
+        node.style.textAnchor = textAnchor
+      })
     }
   }
 
@@ -359,8 +463,10 @@ export class EditorStore {
     const node = this.getEditableText(nodeId)
 
     if (node && Number.isFinite(x) && Number.isFinite(y)) {
-      node.x = x
-      node.y = y
+      this.applyDocumentChange(() => {
+        node.x = x
+        node.y = y
+      })
     }
   }
 
@@ -376,6 +482,37 @@ export class EditorStore {
     }
 
     this.expandedGroupIds.add(groupId)
+  }
+
+  private applyDocumentChange(change: () => void): boolean {
+    const initialDocument = this.transactionInitialDocument
+      ? null
+      : createDocumentSnapshot(this.document)
+
+    change()
+
+    return initialDocument ? this.commitDocumentChange(initialDocument) : true
+  }
+
+  private commitDocumentChange(initialDocument: EditorDocument): boolean {
+    const nextDocument = createDocumentSnapshot(this.document)
+
+    if (areDocumentsEqual(initialDocument, nextDocument)) {
+      return false
+    }
+
+    this.history = commitHistory(this.history, nextDocument, editorHistoryLimit)
+
+    return true
+  }
+
+  private removeMissingSelectedNodes() {
+    const existingNodeIds = [...this.selectedNodeIds].filter((nodeId) =>
+      findNode(this.document.layers, nodeId),
+    )
+
+    this.selectedNodeIds = new Set(existingNodeIds)
+    this.selectedNodeId = existingNodeIds.at(-1) ?? null
   }
 
   private getEditableText(nodeId: string) {

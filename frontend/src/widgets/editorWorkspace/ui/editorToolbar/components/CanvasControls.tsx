@@ -8,6 +8,8 @@ import styles from '../EditorToolbar.module.css'
 
 interface CanvasControlsProps {
   activeTool: CanvasTool
+  canRedo: boolean
+  canUndo: boolean
   onToolChange: (tool: CanvasTool) => void
   onRedo: () => void
   onUndo: () => void
@@ -18,6 +20,8 @@ interface CanvasControlsProps {
 
 export function CanvasControls({
   activeTool,
+  canRedo,
+  canUndo,
   onToolChange,
   onRedo,
   onUndo,
@@ -68,10 +72,20 @@ export function CanvasControls({
         </IconButton>
       </Tooltip>
       <span className={styles.divider} />
-      <IconButton onClick={onUndo} size="sm" title={t('Undo')}>
+      <IconButton
+        disabled={!canUndo}
+        onClick={onUndo}
+        size="sm"
+        title={t('Undo')}
+      >
         <img alt="" src={iconRotateLeft} />
       </IconButton>
-      <IconButton onClick={onRedo} size="sm" title={t('Redo')}>
+      <IconButton
+        disabled={!canRedo}
+        onClick={onRedo}
+        size="sm"
+        title={t('Redo')}
+      >
         <img alt="" src={iconRotateRight} />
       </IconButton>
     </div>

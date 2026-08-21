@@ -8,6 +8,8 @@ import styles from './EditorToolbar.module.css'
 
 export interface EditorToolbarProps {
   canEdit: boolean
+  canRedo: boolean
+  canUndo: boolean
   activeTool: CanvasTool
   isCreatingProjectCopy: boolean
   isSavingVersion: boolean
@@ -29,6 +31,8 @@ export interface EditorToolbarProps {
 
 export function EditorToolbar({
   canEdit,
+  canRedo,
+  canUndo,
   activeTool,
   isCreatingProjectCopy,
   isSavingVersion,
@@ -64,6 +68,8 @@ export function EditorToolbar({
       {canEdit && (
         <CanvasControls
           activeTool={activeTool}
+          canRedo={canRedo}
+          canUndo={canUndo}
           onToolChange={onToolChange}
           onRedo={onRedo}
           onUndo={onUndo}

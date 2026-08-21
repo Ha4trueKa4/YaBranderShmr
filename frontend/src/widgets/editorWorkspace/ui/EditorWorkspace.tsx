@@ -79,9 +79,25 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   })
   const navigationBlocker = useBlocker(shouldBlockNavigation)
 
-  function handleToolbarAction() {
-    // TODO: подключить действия после реализации editorStore.
-  }
+  const handleUndo = useCallback(() => {
+    const wasUndone = editorStore.undo()
+
+    if (wasUndone) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    return wasUndone
+  }, [editorStore])
+
+  const handleRedo = useCallback(() => {
+    const wasRedone = editorStore.redo()
+
+    if (wasRedone) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    return wasRedone
+  }, [editorStore])
 
   function handleZoomIn() {
     setZoom((currentZoom) => Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM))
@@ -156,6 +172,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     canEdit,
     onDeleteSelectedNode: handleDeleteSelection,
     onMoveSelectedNode: editorStore.moveSelectedNode,
+    onRedo: handleRedo,
+    onUndo: handleUndo,
   })
 
   function handleCancelExit() {
@@ -198,6 +216,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       document={editorStore.document}
       isReadOnly={!canEdit}
       onClearSelection={() => editorStore.setSelectedNode(null)}
+      onDocumentChangeEnd={editorStore.commitHistoryTransaction}
+      onDocumentChangeStart={editorStore.beginHistoryTransaction}
       onGroupPositionChange={editorStore.setGroupPosition}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.setShapePosition}
@@ -258,6 +278,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             <EditorToolbar
               activeTool={activeTool}
               canEdit={canEdit}
+              canRedo={editorStore.canRedo}
+              canUndo={editorStore.canUndo}
               isCreatingProjectCopy={isCreatingCopy}
               isSavingVersion={isSavingVersion}
               onBack={() => navigate(-1)}
@@ -269,9 +291,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               }
               onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
               onToolChange={setActiveTool}
-              onRedo={handleToolbarAction}
+              onRedo={handleRedo}
               onSaveVersion={saveVersion}
-              onUndo={handleToolbarAction}
+              onUndo={handleUndo}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               projectName={projectName}
