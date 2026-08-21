@@ -59,6 +59,19 @@ describe('serializeSvg', () => {
     expect(parseSvg(serialized)).toEqual(document)
   })
 
+  it('round-trips a stroke dash array', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <line id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
+      </svg>
+    `)
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain('stroke-dasharray="4 6"')
+    expect(parseSvg(serialized)).toEqual(document)
+  })
+
   it('preserves the viewBox origin when serializing', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">

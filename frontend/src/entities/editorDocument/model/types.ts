@@ -19,6 +19,7 @@ export type ShapeStyle = {
   fill: Paint
   fillOpacity: number
   stroke: Paint
+  strokeDasharray?: string
   strokeLineCap?: 'butt' | 'round' | 'square'
   strokeLineJoin?: 'bevel' | 'miter' | 'round'
   strokeOpacity: number

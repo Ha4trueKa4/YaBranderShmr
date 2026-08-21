@@ -94,6 +94,7 @@ function serializeShapeStyle(
     fill: serializePaint(style.fill),
     'fill-opacity': style.fillOpacity,
     stroke: serializePaint(style.stroke),
+    'stroke-dasharray': style.strokeDasharray,
     'stroke-linecap': style.strokeLineCap,
     'stroke-linejoin': style.strokeLineJoin,
     'stroke-opacity': style.strokeOpacity,

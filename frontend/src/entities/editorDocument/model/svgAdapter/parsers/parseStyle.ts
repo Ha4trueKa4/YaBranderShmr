@@ -31,6 +31,7 @@ function parseFontWeight(value: string | null): number | undefined {
 }
 
 export function parseShapeStyle(element: Element): ShapeStyle {
+  const strokeDasharray = element.getAttribute('stroke-dasharray')
   const strokeLineCap = element.getAttribute('stroke-linecap')
   const strokeLineJoin = element.getAttribute('stroke-linejoin')
 
@@ -41,6 +42,7 @@ export function parseShapeStyle(element: Element): ShapeStyle {
     }),
     fillOpacity: parseOpacity(element, 'fill-opacity'),
     stroke: parsePaint(element.getAttribute('stroke'), { type: 'none' }),
+    ...(strokeDasharray === null ? {} : { strokeDasharray }),
     ...(strokeLineCap === 'butt' ||
     strokeLineCap === 'round' ||
     strokeLineCap === 'square'
