@@ -222,6 +222,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onDocumentChangeEnd={editorStore.commitHistoryTransaction}
       onDocumentChangeStart={editorStore.beginHistoryTransaction}
       onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
+      onRawPositionChange={editorStore.svgNodeEditing.setRawPosition}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
       onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}

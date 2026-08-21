@@ -1,5 +1,6 @@
 import type {
   EditorNode,
+  EditorRawNode,
   EditorShape,
   EditorText,
 } from '@entities/editorDocument'
@@ -15,6 +16,10 @@ interface LayerNodeProps {
   canMoveLayers: boolean
   node: EditorNode
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
+  onRawPointerDown: (
+    node: EditorRawNode,
+    event: ReactPointerEvent<SVGGElement>,
+  ) => void
   onShapePointerDown: (
     node: EditorShape,
     event: ReactPointerEvent<SVGGElement>,
@@ -32,6 +37,7 @@ export const LayerNode = observer(function LayerNode({
   canMoveLayers,
   node,
   onSelectNode,
+  onRawPointerDown,
   onShapePointerDown,
   onShapePointerMove,
   onShapePointerUp,
@@ -55,6 +61,7 @@ export const LayerNode = observer(function LayerNode({
             canMoveLayers={canMoveLayers}
             node={child}
             onSelectNode={onSelectNode}
+            onRawPointerDown={onRawPointerDown}
             onShapePointerDown={onShapePointerDown}
             onShapePointerMove={onShapePointerMove}
             onShapePointerUp={onShapePointerUp}
@@ -67,8 +74,21 @@ export const LayerNode = observer(function LayerNode({
   }
 
   if (node.type === 'raw') {
-    // biome-ignore lint/security/noDangerouslySetInnerHtml: raw SVG is sanitized before import.
-    return <g dangerouslySetInnerHTML={{ __html: node.rawSvg }} />
+    return (
+      <g
+        data-editor-node-id={node.id}
+        onPointerCancel={onShapePointerUp}
+        onPointerDown={(event) => onRawPointerDown(node, event)}
+        onPointerMove={onShapePointerMove}
+        onPointerUp={onShapePointerUp}
+        ref={registerEditableElement(node.id)}
+        style={{ cursor: canMoveLayers ? 'default' : 'inherit' }}
+        transform={getTransformValue(node.transform)}
+      >
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: raw SVG is sanitized before import. */}
+        <g dangerouslySetInnerHTML={{ __html: node.rawSvg }} />
+      </g>
+    )
   }
 
   if (node.type === 'text') {

@@ -1,5 +1,6 @@
 import type {
   EditorDocument,
+  EditorRawNode,
   EditorShape,
   EditorText,
 } from '@entities/editorDocument'
@@ -13,6 +14,10 @@ interface LayerRendererProps {
   canMoveLayers: boolean
   document: EditorDocument
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
+  onRawPointerDown: (
+    node: EditorRawNode,
+    event: ReactPointerEvent<SVGGElement>,
+  ) => void
   onShapePointerDown: (
     node: EditorShape,
     event: ReactPointerEvent<SVGGElement>,
@@ -31,6 +36,7 @@ export const LayerRenderer = observer(function LayerRenderer({
   canMoveLayers,
   document,
   onSelectNode,
+  onRawPointerDown,
   onShapePointerDown,
   onShapePointerMove,
   onShapePointerUp,
@@ -47,6 +53,7 @@ export const LayerRenderer = observer(function LayerRenderer({
           canMoveLayers={canMoveLayers}
           node={node}
           onSelectNode={onSelectNode}
+          onRawPointerDown={onRawPointerDown}
           onShapePointerDown={onShapePointerDown}
           onShapePointerMove={onShapePointerMove}
           onShapePointerUp={onShapePointerUp}

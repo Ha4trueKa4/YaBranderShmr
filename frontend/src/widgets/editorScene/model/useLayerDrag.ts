@@ -1,6 +1,7 @@
 import type {
   EditorGroup,
   EditorNode,
+  EditorRawNode,
   EditorShape,
   EditorText,
 } from '@entities/editorDocument'
@@ -19,6 +20,7 @@ interface UseLayerDragParams {
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -28,7 +30,7 @@ interface UseLayerDragParams {
 
 type PointerPosition = { x: number; y: number }
 type DragTarget = {
-  elementType: 'group' | 'shape' | 'text'
+  elementType: 'group' | 'raw' | 'shape' | 'text'
   nodeId: string
   startPosition: PointerPosition
 }
@@ -89,7 +91,7 @@ function hasLockedDescendant(node: EditorGroup): boolean {
 }
 
 function toDragTarget(
-  node: EditorShape | EditorText | EditorGroup,
+  node: EditorShape | EditorText | EditorGroup | EditorRawNode,
 ): DragTarget {
   if (node.type === 'text') {
     return {
@@ -131,10 +133,6 @@ function isPointerWithinNode(
   clientX: number,
   clientY: number,
 ): boolean {
-  if (node.type === 'raw') {
-    return false
-  }
-
   if (node.type === 'group') {
     return node.children.some((child) =>
       isPointerWithinNode(child, getEditableElement, clientX, clientY),
@@ -151,6 +149,7 @@ export function useLayerDrag({
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onGroupPositionChange,
+  onRawPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -162,7 +161,10 @@ export function useLayerDrag({
   const lastTapReference = useRef<TapState | null>(null)
 
   const startDrag = useCallback(
-    (node: EditorShape | EditorText, event: ReactPointerEvent<SVGGElement>) => {
+    (
+      node: EditorShape | EditorText | EditorRawNode,
+      event: ReactPointerEvent<SVGGElement>,
+    ) => {
       if (isReadOnly || event.button !== 0 || activeTool !== 'select') {
         return
       }
@@ -225,7 +227,7 @@ export function useLayerDrag({
       )
 
       if (
-        node.isLocked ||
+        (node.isLocked && node.type !== 'raw') ||
         selectedGroupToDrag?.isLocked ||
         (selectedGroupToDrag && hasLockedDescendant(selectedGroupToDrag))
       ) {
@@ -237,8 +239,10 @@ export function useLayerDrag({
         : isSelectedNode
           ? selectedNodes.filter(
               (selected): selected is EditorShape | EditorText =>
-                (selected.type === 'shape' || selected.type === 'text') &&
-                !selected.isLocked,
+                (selected.type === 'shape' ||
+                  selected.type === 'text' ||
+                  selected.type === 'raw') &&
+                (!selected.isLocked || selected.type === 'raw'),
             )
           : [preferredNode]
 
@@ -296,6 +300,13 @@ export function useLayerDrag({
     [startDrag],
   )
 
+  const onRawPointerDown = useCallback(
+    (node: EditorRawNode, event: ReactPointerEvent<SVGGElement>) => {
+      startDrag(node, event)
+    },
+    [startDrag],
+  )
+
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<SVGGElement>) => {
       const dragState = dragStateReference.current
@@ -327,12 +338,19 @@ export function useLayerDrag({
           onShapePositionChange(target.nodeId, x, y)
         } else if (target.elementType === 'text') {
           onTextPositionChange(target.nodeId, x, y)
+        } else if (target.elementType === 'raw') {
+          onRawPositionChange(target.nodeId, x, y)
         } else {
           onGroupPositionChange(target.nodeId, x, y)
         }
       }
     },
-    [onGroupPositionChange, onShapePositionChange, onTextPositionChange],
+    [
+      onGroupPositionChange,
+      onRawPositionChange,
+      onShapePositionChange,
+      onTextPositionChange,
+    ],
   )
 
   const onPointerUp = useCallback(
@@ -371,6 +389,7 @@ export function useLayerDrag({
   return {
     onPointerMove,
     onPointerUp,
+    onRawPointerDown,
     onShapePointerDown,
     onTextPointerDown,
     svgReference,
