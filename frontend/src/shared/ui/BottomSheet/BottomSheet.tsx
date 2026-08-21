@@ -1,5 +1,8 @@
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
+import { X } from 'lucide-react'
 import type { PropsWithChildren, ReactNode } from 'react'
 
+import { IconButton } from '../IconButton'
 import { Portal } from '../Portal'
 import styles from './BottomSheet.module.css'
 
@@ -17,6 +20,9 @@ export function BottomSheet({
   onClose,
   title,
 }: BottomSheetProps) {
+  useLockBodyScroll(isOpen)
+  useEscAction(onClose, isOpen)
+
   if (!isOpen) {
     return null
   }
@@ -29,7 +35,12 @@ export function BottomSheet({
           <div className={styles.handle} />
           <header className={styles.header}>
             <h2>{title}</h2>
-            {actions}
+            <div className={styles.headerActions}>
+              {actions}
+              <IconButton onClick={onClose} size="sm">
+                <X />
+              </IconButton>
+            </div>
           </header>
           <div className={styles.content}>{children}</div>
         </section>

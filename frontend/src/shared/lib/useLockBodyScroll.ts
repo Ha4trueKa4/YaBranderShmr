@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 let lockCount = 0
 let initialOverflow = ''
 
-export function useBodyScroll(isLocked: boolean) {
+export function useLockBodyScroll(isLocked: boolean) {
   useEffect(() => {
     if (!isLocked) {
       return

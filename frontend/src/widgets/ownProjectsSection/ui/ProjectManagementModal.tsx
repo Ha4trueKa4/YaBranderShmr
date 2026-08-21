@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Project } from '@shared/api/types'
-import { Button, FormField, Input, Portal } from '@shared/ui'
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
+import { Button, FormField, IconButton, Input, Portal } from '@shared/ui'
+import { X } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +23,9 @@ export function ProjectManagementModal({
   onSubmit,
   project,
 }: ProjectManagementModalProps) {
+  useLockBodyScroll(true)
+  useEscAction(onClose)
+
   const { t } = useTranslation()
   const nameInputId = useId()
   const [isPublic, setIsPublic] = useState(project.is_public ?? false)
@@ -43,7 +48,16 @@ export function ProjectManagementModal({
       <div className={styles.overlay}>
         <button className={styles.backdrop} onClick={onClose} type="button" />
         <section className={styles.modal}>
-          <h2 className={styles.title}>{t('Manage project')}</h2>
+          <header className={styles.header}>
+            <h2 className={styles.title}>{t('Manage project')}</h2>
+            <IconButton
+              className={styles.closeButton}
+              onClick={onClose}
+              size="sm"
+            >
+              <X />
+            </IconButton>
+          </header>
           <form
             className={styles.form}
             onSubmit={form.handleSubmit(async ({ name }) => {

@@ -1,7 +1,7 @@
 export { cn } from './cn'
 export { getAvatarInitials } from './getAvatarInitials'
-export { useBodyScroll } from './useBodyScroll'
 export { useEscAction } from './useEscAction'
+export { useLockBodyScroll } from './useLockBodyScroll'
 export type {
   UseVirtualGridOptions,
   UseVirtualGridResult,

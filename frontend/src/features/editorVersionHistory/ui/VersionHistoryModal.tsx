@@ -6,7 +6,7 @@ import {
 } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
 import type { VersionInfo } from '@shared/api/types'
-import { useBodyScroll, useEscAction } from '@shared/lib'
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
 import { Button, IconButton, Portal, Spinner, useToast } from '@shared/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
@@ -143,7 +143,7 @@ export function VersionHistoryModal({
     }
   }, [isOpen])
 
-  useBodyScroll(isOpen)
+  useLockBodyScroll(isOpen)
   useEscAction(handleClose, isOpen)
 
   if (!isOpen) {
