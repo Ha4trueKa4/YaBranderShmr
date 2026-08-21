@@ -105,9 +105,12 @@ export function ProjectManagementModal({
                 </Button>
               </div>
             </div>
-            <Button onClick={onOpenVersionHistory} variant="outline">
-              {t('Version history')}
-            </Button>
+            <div className={styles.visibility}>
+              <span>{t('Versions')}</span>
+              <Button onClick={onOpenVersionHistory} variant="outline">
+                {t('Version history')}
+              </Button>
+            </div>
             <div className={styles.actions}>
               <Button onClick={onClose} variant="secondary">
                 {t('Cancel')}

@@ -137,6 +137,10 @@ export function OwnProjectsSection({
         <VersionHistoryModal
           hasUnsavedChanges={false}
           isOpen
+          onBack={() => {
+            setVersionHistoryProjectId(null)
+            setEditedProjectId(versionHistoryProjectId)
+          }}
           onClose={() => setVersionHistoryProjectId(null)}
           onRestoreDocument={() => undefined}
           onVersionRestored={onProjectVersionRestored}

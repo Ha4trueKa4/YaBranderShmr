@@ -16,7 +16,7 @@ import {
   useToast,
 } from '@shared/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -35,6 +35,7 @@ const versionQueryKey = (projectId: string, versionId: string) =>
 interface VersionHistoryModalProps {
   hasUnsavedChanges: boolean
   isOpen: boolean
+  onBack?: () => void
   onClose: () => void
   onRestoreDocument: (document: EditorDocument) => void
   onVersionRestored?: () => Promise<void> | void
@@ -65,6 +66,7 @@ function formatVersionDate(value: string | undefined, language: string) {
 export function VersionHistoryModal({
   hasUnsavedChanges,
   isOpen,
+  onBack,
   onClose,
   onRestoreDocument,
   onVersionRestored,
@@ -171,6 +173,12 @@ export function VersionHistoryModal({
     }
   }
 
+  function handleBack() {
+    if (!restoreVersion.isPending) {
+      onBack?.()
+    }
+  }
+
   return (
     <>
       <Portal>
@@ -183,18 +191,31 @@ export function VersionHistoryModal({
           <section className={styles.modal}>
             <header className={styles.header}>
               <div>
-                <h2 className={styles.title}>{t('Version history')}</h2>
+                <div className={styles.titleGroup}>
+                  {onBack && (
+                    <IconButton
+                      className={styles.backButton}
+                      onClick={handleBack}
+                      size="sm"
+                    >
+                      <ArrowLeft />
+                    </IconButton>
+                  )}
+                  <h2 className={styles.title}>{t('Version history')}</h2>
+                </div>
                 <p className={styles.subtitle}>
                   {t('Choose a saved version to preview or restore.')}
                 </p>
               </div>
-              <IconButton
-                className={styles.closeButton}
-                onClick={handleClose}
-                size="sm"
-              >
-                <X />
-              </IconButton>
+              <div className={styles.headerActions}>
+                <IconButton
+                  className={styles.closeButton}
+                  onClick={handleClose}
+                  size="sm"
+                >
+                  <X />
+                </IconButton>
+              </div>
             </header>
             <div className={styles.content}>
               <div className={styles.versionList}>
