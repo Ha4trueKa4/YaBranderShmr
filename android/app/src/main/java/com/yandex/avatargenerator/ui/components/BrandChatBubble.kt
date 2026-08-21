@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -28,6 +31,12 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
 /** Радиус «хвостика» пузыря у края собеседника — точечное значение вне шкалы AppShape. */
 private val TailCorner = 4.dp
+
+/** Минимальная высота картинки в пузыре: ниже не сжимаем, выше растём под пропорции. */
+private val MinImageHeight = 100.dp
+
+/** Доля высоты экрана, за которую картинке расти нельзя. */
+private const val MaxImageHeightFraction = 0.5f
 
 /**
  * Пузырь сообщения чата (см. "Chat Bubbles" в Component Sandbox). Исходящее
@@ -66,14 +75,18 @@ fun BrandChatBubble(
     ) {
         Text(text = text, style = AppTypography.body.copy(color = foreground))
         if (imageUrl != null) {
+            val screenHeight = LocalWindowInfo.current.containerSize.height
+            val maxImageHeight = with(LocalDensity.current) {
+                (screenHeight * MaxImageHeightFraction).toDp()
+            }.coerceAtLeast(MinImageHeight)
             Spacer(modifier = Modifier.height(AppSpacing.s))
             AsyncImage(
                 model = imageUrl,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .heightIn(min = MinImageHeight, max = maxImageHeight)
                     .clip(RoundedCornerShape(AppShape.s))
                     .background(AppColors.SurfaceVariant)
             )
@@ -107,6 +120,12 @@ private fun BrandChatBubblePreview() {
                 isOutgoing = false,
                 imageUrl = "https://placehold.co/248x100",
                 timeLabel = "11:33"
+            )
+            BrandChatBubble(
+                text = "И квадратная аватарка — пузырь растёт под её пропорции:",
+                isOutgoing = false,
+                imageUrl = "https://placehold.co/512x512",
+                timeLabel = "11:34"
             )
         }
     }
