@@ -187,11 +187,16 @@
     color: var(--color-accent-primary);
   }
 
+  .cancelButton,
   .doneButton {
     border: 0;
     background: transparent;
     font: inherit;
     font-weight: var(--font-weight-semibold);
+  }
+
+  .cancelButton {
+    color: var(--color-text-secondary);
   }
 
   .colorPickerContent {
