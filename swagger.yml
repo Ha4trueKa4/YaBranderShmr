@@ -1071,6 +1071,55 @@ paths:
         '404':
           description: Проект не найден
 
+  /models:
+    get:
+      summary: Получение списка доступных ИИ-моделей
+      description: Возвращает список всех языковых и других ИИ-моделей (Yandex, DeepSeek, OpenAI и др.), доступных для использования в сервисе. Формат ответа совместим с OpenAI API.
+      tags:
+        - Models
+      responses:
+        '200':
+          description: Успешный запрос. Возвращает объект со списком моделей.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - object
+                  - data
+                properties:
+                  object:
+                    type: string
+                    example: "list"
+                    description: Тип корневого объекта.
+                  data:
+                    type: array
+                    description: Массив доступных моделей.
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - object
+                        - owned_by
+                        - created
+                      properties:
+                        id:
+                          type: string
+                          example: "gpt://b1gttnvmtpd0tagdlb7o/deepseek-v4-flash/latest"
+                          description: Уникальный идентификатор (URI) модели.
+                        object:
+                          type: string
+                          example: "model"
+                          description: Тип сущности элемента массива.
+                        owned_by:
+                          type: string
+                          example: "Yandex"
+                          description: Владелец или разработчик модели (Yandex, DeepSeek, OpenAI, Alibaba).
+                        created:
+                          type: integer
+                          example: 0
+                          description: Временная метка создания модели (Unix timestamp).
+
   /feed:
     get:
       summary: Лента публичных проектов
