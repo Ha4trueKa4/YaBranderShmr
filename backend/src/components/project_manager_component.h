@@ -135,6 +135,7 @@ private:
   VersionStorageComponent& version_storage_;
   LLMClientComponent& llm_client_;
   PromptConstructorComponent& prompt_constructor_;
+  PromptPolisherComponent& prompt_polisher_;
 
   userver::engine::Mutex jobs_mutex_;
   std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
