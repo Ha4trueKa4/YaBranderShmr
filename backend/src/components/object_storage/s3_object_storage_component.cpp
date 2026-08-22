@@ -271,11 +271,18 @@ void S3ObjectStorageComponent::Delete(const std::string& key) {
   }
 }
 
-void S3ObjectStorageComponent::DeleteMany(
-    const std::vector<std::string>& keys) {
-  for (const auto& key : keys) {
-    Delete(key);
-  }
+std::size_t S3ObjectStorageComponent::DeleteMany(
+        const std::vector<std::string>& keys) {
+    std::size_t deleted = 0;
+    for (const auto& key : keys) {
+        try {
+            Delete(key);   // 204/200/404 считается как "удалено"; остальное exception
+            ++deleted;
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "DeleteMany: failed to delete " << key << ": " << e.what();
+        }
+    }
+    return deleted;
 }
 
 std::string S3ObjectStorageComponent::GetUrl(const std::string& key,
