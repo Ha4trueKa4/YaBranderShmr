@@ -88,6 +88,9 @@ services:
       - POSTGRES_DB=ya_brander_db_1
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
+      - HTTP_PROXY=http://172.20.0.1:7890
+      - HTTPS_PROXY=http://172.20.0.1:7890
+      - NO_PROXY=localhost,127.0.0.1,postgres,vector-postgres,service-postgres,service-vector-postgres
       - PREFIX=${PREFIX:-~/.local}
       - CCACHE_DIR=/ya_brander/.ccache
       - CORES_DIR=/cores
