@@ -1,5 +1,6 @@
 import { authStore } from '@app/providers/auth'
 import {
+  deleteProject,
   getProjectSvg,
   projectQueryKey,
   projectSvgQueryKey,
@@ -54,6 +55,24 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       generationProcessStore.begin(draft)
       pendingGenerationStore.save(draft)
 
+      let createdProjectId: string | undefined
+      let generationStarted = false
+
+      const deleteUnfinishedProject = async () => {
+        if (!createdProjectId) {
+          return
+        }
+
+        try {
+          await deleteProject(createdProjectId)
+          queryClient.removeQueries({
+            queryKey: projectQueryKey(createdProjectId),
+          })
+        } catch (error) {
+          console.error('Unable to delete unfinished project', error)
+        }
+      }
+
       try {
         const project = await createProject(draft)
 
@@ -61,6 +80,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           toast.error(t('Unable to create the project. Please try again.'))
           return
         }
+
+        createdProjectId = project.id
 
         const generation = await generateProject({
           model: draft.model,
@@ -70,11 +91,15 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const jobId = generation.job_id
 
         if (!jobId) {
+          await deleteUnfinishedProject()
+          pendingGenerationStore.take()
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
           return
         }
+
+        generationStarted = true
 
         generationProcessStore.trackJob(project.id, jobId)
 
@@ -85,6 +110,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         )
 
         if (generatedProject.status === 'error') {
+          await deleteUnfinishedProject()
+          pendingGenerationStore.take()
           toast.error(
             generatedProject.message ??
               t('The generated project is unavailable. Please try again.'),
@@ -95,6 +122,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
+          await deleteUnfinishedProject()
+          pendingGenerationStore.take()
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -112,6 +141,14 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         pendingGenerationStore.take()
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
+        if (
+          createdProjectId &&
+          !generationStarted &&
+          !(error instanceof ApiError && error.status === 401)
+        ) {
+          await deleteUnfinishedProject()
+        }
+
         if (!(error instanceof ApiError && error.status === 401)) {
           pendingGenerationStore.take()
         }
