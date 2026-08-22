@@ -300,6 +300,38 @@ REFERENCE_SVG = (
 )
 
 
+async def _generate_and_wait(service_client, project_id, headers, payload):
+    """POST /generate (асинхронный job) + поллинг до status != pending.
+
+    Нужен тестам references: реальный вызов LLM происходит в фоновой
+    корутине, поэтому mock_yandex_gpt.next_call() можно проверять только
+    после того, как job реально завершился.
+    """
+    response = await service_client.post(
+        f"/api/v1/projects/{project_id}/generate",
+        json=payload,
+        headers=headers,
+    )
+    assert response.status == 202
+    job_id = response.json()["job_id"]
+
+    status = "pending"
+    data = {}
+    for _ in range(10):
+        poll = await service_client.get(
+            f"/api/v1/projects/{project_id}/generate/{job_id}",
+            headers=headers,
+        )
+        assert poll.status == 200
+        data = poll.json()
+        status = data["status"]
+        if status != "pending":
+            break
+
+    assert status == "done"
+    return data
+
+
 async def test_generate_ai_initial_with_own_reference(
         service_client, project_a, project_a2, auth_header_a, mock_yandex_gpt
 ):
@@ -312,13 +344,11 @@ async def test_generate_ai_initial_with_own_reference(
     assert patch_resp.status == 200
 
     project_id = project_a["id"]
-    response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип", "references": [project_a2["id"]]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_a2["id"]]},
     )
 
-    assert response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС 1" in call["request"].json["input"]
     assert REFERENCE_SVG in call["request"].json["input"]
@@ -337,13 +367,11 @@ async def test_generate_ai_initial_with_public_reference_from_other_user(
     assert patch_resp.status == 200
 
     project_id = project_a["id"]
-    response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип", "references": [project_b["id"]]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_b["id"]]},
     )
 
-    assert response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС 1" in call["request"].json["input"]
 
@@ -361,13 +389,11 @@ async def test_generate_ai_initial_reference_private_skipped(
     assert patch_resp.status == 200
 
     project_id = project_a["id"]
-    response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип", "references": [project_b["id"]]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_b["id"]]},
     )
 
-    assert response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
@@ -379,13 +405,11 @@ async def test_generate_ai_initial_reference_nonexistent_silently_skipped(
     project_id = project_a["id"]
     fake_id = "00000000-0000-0000-0000-000000000000"
 
-    response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип", "references": [fake_id]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [fake_id]},
     )
 
-    assert response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
@@ -396,13 +420,11 @@ async def test_generate_ai_initial_reference_default_svg_silently_skipped(
     """Референс на проект без реальной версии (kDefaultSvg) -> пропускается"""
     project_id = project_a["id"]
 
-    response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип", "references": [project_a2["id"]]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_a2["id"]]},
     )
 
-    assert response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
@@ -420,22 +442,19 @@ async def test_generate_ai_edit_mode_references_ignored(
 
     project_id = project_a["id"]
 
-    # Первый вызов без references -> переводит project_a в edit-режим
-    first_response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип"},
-        headers=auth_header_a,
+    # Первый вызов без references -> дожидаемся done, чтобы project_a
+    # гарантированно перешёл в edit-режим до второго вызова
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип"},
     )
-    assert first_response.status == 200
     mock_yandex_gpt.next_call()  # первый вызов, не проверяем
 
     # Второй вызов уже в edit-режиме, с валидным references
-    second_response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Поменяй цвет", "references": [project_a2["id"]]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Поменяй цвет", "references": [project_a2["id"]]},
     )
-    assert second_response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
@@ -468,12 +487,10 @@ async def test_generate_ai_references_self_reference_no_error(
     """Самоссылка в references (свой же пустой проект) -> не ошибка"""
     project_id = project_a["id"]
 
-    response = await service_client.post(
-        f"/api/v1/projects/{project_id}/generate",
-        json={"prompt": "Сделай логотип", "references": [project_id]},
-        headers=auth_header_a,
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_id]},
     )
 
-    assert response.status == 200
     call = mock_yandex_gpt.next_call()
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]

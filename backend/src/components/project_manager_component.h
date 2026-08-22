@@ -53,7 +53,15 @@ public:
   /// @throws std::exception если не удалось создать job (например, недоступна
   ///         БД при записи сообщения пользователя) — в этом случае job_id
   ///         никому не отдаётся и в jobs_ ничего не остаётся.
-  std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
+  /// @param caller_id Автор запроса (уже проверен хендлером как владелец
+  ///        project_id) — используется для проверки доступа к
+  ///        reference_project_ids внутри ResolveReferenceSvgs.
+  /// @param reference_project_ids Id (не более 2) других проектов, чьи SVG
+  ///        подмешиваются в промпт — учитываются только при первичной
+  ///        генерации project_id (см. ResolveReferenceSvgs).
+  std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model,
+                              const std::string& caller_id,
+                              const std::vector<std::string>& reference_project_ids = {});
 
   /// @brief Ждёт завершения job'а генерации не дольше timeout (long polling).
   /// @returns std::nullopt, если job с таким id не найден для этого проекта.
@@ -120,7 +128,9 @@ private:
   /// @brief Собственно генерация (построение промпта, вызов LLM, сохранение
   ///        версии), выполняется в фоновой корутине из StartGeneration.
   ///        @returns id сохранённой версии.
-  std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
+  std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model,
+                           const std::string& caller_id,
+                           const std::vector<std::string>& reference_project_ids);
 
   /// @brief Удаляет из jobs_ завершённые job'ы старше kJobRetention, а
   ///        зависшие в kPending (задача так и не запустилась/не завершилась,

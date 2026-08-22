@@ -213,7 +213,9 @@ std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
     return result;
 }
 
-std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt,
+                                                    const std::string& model, const std::string& caller_id,
+                                                    const std::vector<std::string>& reference_project_ids) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
 
     std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
@@ -260,7 +262,9 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
     }
 }
 
-std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt,
+                                                     const std::string& model, const std::string& caller_id,
+                                                     const std::vector<std::string>& reference_project_ids) {
     std::string job_id = userver::utils::generators::GenerateUuid();
 
     // Сообщение пользователя пишем ДО создания записи в jobs_: если этот
@@ -277,7 +281,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         jobs_.emplace(job_id, entry);
     }
 
-    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, job_id, entry] {
+    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
         // Статус job'а зависит только от того, удалась ли сама генерация
         // (RunGeneration). Запись результата в chat_history — best-effort
         // бухгалтерия ПОСЛЕ того, как статус уже определён и разослан
@@ -288,7 +292,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         bool succeeded = false;
         try {
             userver::engine::SemaphoreLock semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model);
+            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
             succeeded = true;
         } catch (const std::exception& e) {
             LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
