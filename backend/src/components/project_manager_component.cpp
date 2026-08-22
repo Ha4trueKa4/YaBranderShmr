@@ -246,7 +246,7 @@ userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std:
     pending["role"] = "assistant";
     pending["status"] = cancel_requested ? "cancelling" : "pending";
     pending["job_id"] = active_job_id;
-    pending["created_at"] = std::chrono::system_clock::now();
+    pending["created_at"] = userver::utils::datetime::Timestring(std::chrono::system_clock::now(), "UTC");;
     result.PushBack(std::move(pending));
     return result.ExtractValue();
 }
