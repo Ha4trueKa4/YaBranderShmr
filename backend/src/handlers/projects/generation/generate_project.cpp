@@ -1,12 +1,22 @@
 #include "generate_project.h"
 
+#include <algorithm>
+#include <string_view>
+
 #include <userver/formats/json/serialize.hpp>
 #include <userver/logging/log.hpp>
 
 namespace ya_brander::handlers {
 
 namespace {
-constexpr std::size_t kMaxPromptLength = 1500;
+constexpr std::size_t kMaxPromptLength = 5000;
+
+std::size_t Utf8Length(std::string_view value) {
+  return static_cast<std::size_t>(
+      std::count_if(value.begin(), value.end(), [](const char character) {
+        return (static_cast<unsigned char>(character) & 0xC0U) != 0x80U;
+      }));
+}
 }
 
 GenerateProjectHandler::GenerateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
@@ -40,10 +50,10 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
     return err.ExtractValue();
   }
 
-  if (prompt.size() > kMaxPromptLength) {
+  if (Utf8Length(prompt) > kMaxPromptLength) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
     userver::formats::json::ValueBuilder err;
-    err["message"] = "Prompt is too long (max 1500 characters)";
+    err["message"] = "Prompt is too long (max 5000 characters)";
     return err.ExtractValue();
   }
 
