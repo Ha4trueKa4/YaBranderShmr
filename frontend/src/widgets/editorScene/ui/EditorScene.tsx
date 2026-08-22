@@ -20,6 +20,11 @@ interface EditorSceneProps {
     nodeId: string,
     transform: { scaleX: number; scaleY: number; x: number; y: number },
   ) => void
+  onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
@@ -42,6 +47,7 @@ export function EditorScene({
   onGroupPositionChange,
   onShapePositionChange,
   onShapeTransformChange,
+  onShapeRotationChange,
   onTextPositionChange,
   onViewportOffsetChange,
   onZoomChange,
@@ -65,6 +71,7 @@ export function EditorScene({
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
         onShapeTransformChange={onShapeTransformChange}
+        onShapeRotationChange={onShapeRotationChange}
         onTextPositionChange={onTextPositionChange}
         onViewportOffsetChange={onViewportOffsetChange}
         onZoomChange={onZoomChange}

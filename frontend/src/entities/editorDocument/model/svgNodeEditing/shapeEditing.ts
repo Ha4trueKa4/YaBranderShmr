@@ -102,6 +102,28 @@ export function createShapeEditing({
       })
     },
 
+    setShapeRotation(
+      nodeId: string,
+      rotation: number,
+      rotationCenter: { x: number; y: number },
+    ) {
+      const node = getEditableShape(getDocument(), nodeId)
+
+      if (
+        !node ||
+        !Number.isFinite(rotation) ||
+        !Number.isFinite(rotationCenter.x) ||
+        !Number.isFinite(rotationCenter.y)
+      ) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.transform.rotation = rotation
+        node.transform.rotationCenter = rotationCenter
+      })
+    },
+
     setShapeTransform(
       nodeId: string,
       transform: { scaleX: number; scaleY: number; x: number; y: number },

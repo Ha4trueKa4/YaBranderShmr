@@ -5,13 +5,16 @@ import { useLayoutEffect, useState } from 'react'
 import { constrainSelectionBounds } from './model/constrainSelectionBounds'
 import {
   getSelectionBounds,
+  getSelectionOutline,
   type SelectionBounds,
+  type SelectionPoint,
 } from './model/getSelectionBounds'
 import styles from './SelectionOverlay.module.css'
 
 type SelectionBoundsByNode = {
   bounds: SelectionBounds
   nodeId: string
+  outline: SelectionPoint[] | null
 }
 
 function hasSameBounds(
@@ -26,6 +29,24 @@ function hasSameBounds(
   )
 }
 
+function hasSameOutline(
+  firstOutline: SelectionPoint[] | null,
+  secondOutline: SelectionPoint[] | null,
+) {
+  if (!firstOutline || !secondOutline) {
+    return firstOutline === secondOutline
+  }
+
+  return (
+    firstOutline.length === secondOutline.length &&
+    firstOutline.every(
+      (point, index) =>
+        point.x === secondOutline[index]?.x &&
+        point.y === secondOutline[index]?.y,
+    )
+  )
+}
+
 function hasSameSelection(
   firstSelection: SelectionBoundsByNode[],
   secondSelection: SelectionBoundsByNode[],
@@ -35,7 +56,8 @@ function hasSameSelection(
     firstSelection.every(
       (item, index) =>
         item.nodeId === secondSelection[index]?.nodeId &&
-        hasSameBounds(item.bounds, secondSelection[index].bounds),
+        hasSameBounds(item.bounds, secondSelection[index].bounds) &&
+        hasSameOutline(item.outline, secondSelection[index].outline),
     )
   )
 }
@@ -112,9 +134,21 @@ export const SelectionOverlay = observer(function SelectionOverlay({
 
   useLayoutEffect(() => {
     const nextSelection = selectedElements.flatMap((element) => {
-      const bounds = getSelectionBounds(getEditableElement(element.id))
+      const editableElement = getEditableElement(element.id)
+      const bounds = getSelectionBounds(editableElement)
 
-      return bounds ? [{ bounds, nodeId: element.id }] : []
+      return bounds
+        ? [
+            {
+              bounds,
+              nodeId: element.id,
+              outline:
+                element.transform.rotation === 0
+                  ? null
+                  : getSelectionOutline(editableElement, 4),
+            },
+          ]
+        : []
     })
 
     setSelectionBounds((currentSelection) =>
@@ -128,7 +162,7 @@ export const SelectionOverlay = observer(function SelectionOverlay({
     return null
   }
 
-  return selectionBounds.map(({ bounds, nodeId }) => {
+  return selectionBounds.map(({ bounds, nodeId, outline }) => {
     const constrainedBounds = constrainSelectionBounds(
       bounds,
       canvasWidth,
@@ -137,7 +171,13 @@ export const SelectionOverlay = observer(function SelectionOverlay({
       canvasY,
     )
 
-    return (
+    return outline ? (
+      <polygon
+        className={styles.overlay}
+        key={nodeId}
+        points={outline.map((point) => `${point.x},${point.y}`).join(' ')}
+      />
+    ) : (
       <rect
         className={styles.overlay}
         height={constrainedBounds.height}

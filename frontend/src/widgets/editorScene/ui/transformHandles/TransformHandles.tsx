@@ -12,8 +12,11 @@ import type { CanvasTool } from '../../model/canvasTool'
 import { constrainSelectionBounds } from '../selectionOverlay/model/constrainSelectionBounds'
 import {
   getSelectionBounds,
+  getSelectionOutline,
   type SelectionBounds,
+  type SelectionPoint,
 } from '../selectionOverlay/model/getSelectionBounds'
+import { getPointerAngle, getRotation } from './model/getRotation'
 import {
   getScaledTransform,
   type ScaleHandle,
@@ -33,6 +36,14 @@ type ScaleState = {
   nodeId: string
   pointerId: number
 }
+type RotateState = {
+  center: PointerPosition
+  initialRotation: number
+  rotationCenter: PointerPosition
+  nodeId: string
+  pointerId: number
+  startPointerAngle: number
+}
 
 interface TransformHandlesProps {
   activeTool: CanvasTool
@@ -46,6 +57,11 @@ interface TransformHandlesProps {
   onShapeTransformChange: (
     nodeId: string,
     transform: Pick<EditorShape['transform'], 'scaleX' | 'scaleY' | 'x' | 'y'>,
+  ) => void
+  onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: PointerPosition,
   ) => void
   selectedNode: EditorNode | null
   selectedNodes: EditorNode[]
@@ -79,6 +95,24 @@ function hasSameBounds(
     firstBounds?.width === secondBounds?.width &&
     firstBounds?.x === secondBounds?.x &&
     firstBounds?.y === secondBounds?.y
+  )
+}
+
+function hasSameOutline(
+  firstOutline: SelectionPoint[] | null,
+  secondOutline: SelectionPoint[] | null,
+) {
+  if (!firstOutline || !secondOutline) {
+    return firstOutline === secondOutline
+  }
+
+  return (
+    firstOutline.length === secondOutline.length &&
+    firstOutline.every(
+      (point, index) =>
+        point.x === secondOutline[index]?.x &&
+        point.y === secondOutline[index]?.y,
+    )
   )
 }
 
@@ -152,30 +186,40 @@ export const TransformHandles = observer(function TransformHandles({
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onShapeTransformChange,
+  onShapeRotationChange,
   selectedNode,
   selectedNodes,
   svgReference,
 }: TransformHandlesProps) {
   const [bounds, setBounds] = useState<SelectionBounds | null>(null)
+  const [outline, setOutline] = useState<SelectionPoint[] | null>(null)
   const scaleStateReference = useRef<ScaleState | null>(null)
+  const rotateStateReference = useRef<RotateState | null>(null)
   const selectedShape =
     selectedNodes.length === 1 && selectedNode?.type === 'shape'
       ? selectedNode
       : null
   const shapeRenderSignature = getShapeRenderSignature(selectedShape)
-  const canScale =
-    activeTool === 'select' &&
-    selectedShape !== null &&
-    !selectedShape.isLocked &&
-    selectedShape.transform.rotation === 0
+  const canTransform =
+    activeTool === 'select' && selectedShape !== null && !selectedShape.isLocked
+  const canScale = canTransform && selectedShape.transform.rotation === 0
 
   useLayoutEffect(() => {
     const nextBounds = shapeRenderSignature
       ? getSelectionBounds(getEditableElement(selectedShape?.id ?? ''))
       : null
+    const nextOutline =
+      selectedShape?.transform.rotation === 0
+        ? null
+        : getSelectionOutline(getEditableElement(selectedShape?.id ?? ''), 4)
 
     setBounds((currentBounds) =>
       hasSameBounds(currentBounds, nextBounds) ? currentBounds : nextBounds,
+    )
+    setOutline((currentOutline) =>
+      hasSameOutline(currentOutline, nextOutline)
+        ? currentOutline
+        : nextOutline,
     )
   }, [getEditableElement, selectedShape, shapeRenderSignature])
 
@@ -249,7 +293,98 @@ export const TransformHandles = observer(function TransformHandles({
     onDocumentChangeEnd()
   }
 
-  if (!canScale || !bounds || !selectedShape) {
+  function startRotating(event: ReactPointerEvent<SVGCircleElement>) {
+    const svg = svgReference.current
+
+    if (
+      !canTransform ||
+      !selectedShape ||
+      !bounds ||
+      !svg ||
+      event.button !== 0
+    ) {
+      return
+    }
+
+    const pointer = getSvgPointerPosition(svg, event.clientX, event.clientY)
+
+    if (!pointer) {
+      return
+    }
+
+    const center = selectedShape.transform.rotationCenter
+      ? {
+          x:
+            selectedShape.transform.x +
+            selectedShape.transform.rotationCenter.x,
+          y:
+            selectedShape.transform.y +
+            selectedShape.transform.rotationCenter.y,
+        }
+      : {
+          x: bounds.x + bounds.width / 2,
+          y: bounds.y + bounds.height / 2,
+        }
+
+    event.preventDefault()
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    rotateStateReference.current = {
+      center,
+      initialRotation: selectedShape.transform.rotation,
+      nodeId: selectedShape.id,
+      pointerId: event.pointerId,
+      rotationCenter: {
+        x: center.x - selectedShape.transform.x,
+        y: center.y - selectedShape.transform.y,
+      },
+      startPointerAngle: getPointerAngle(center, pointer),
+    }
+    onDocumentChangeStart()
+  }
+
+  function handleRotatePointerMove(event: ReactPointerEvent<SVGCircleElement>) {
+    const rotateState = rotateStateReference.current
+    const svg = svgReference.current
+
+    if (!rotateState || rotateState.pointerId !== event.pointerId || !svg) {
+      return
+    }
+
+    const pointer = getSvgPointerPosition(svg, event.clientX, event.clientY)
+
+    if (!pointer) {
+      return
+    }
+
+    event.preventDefault()
+    onShapeRotationChange(
+      rotateState.nodeId,
+      getRotation(
+        rotateState.initialRotation,
+        rotateState.startPointerAngle,
+        getPointerAngle(rotateState.center, pointer),
+      ),
+      rotateState.rotationCenter,
+    )
+  }
+
+  function stopRotating(event: ReactPointerEvent<SVGCircleElement>) {
+    const rotateState = rotateStateReference.current
+
+    if (!rotateState || rotateState.pointerId !== event.pointerId) {
+      return
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    rotateStateReference.current = null
+    onDocumentChangeEnd()
+  }
+
+  if (!canTransform || !bounds || !selectedShape) {
     return null
   }
 
@@ -261,19 +396,19 @@ export const TransformHandles = observer(function TransformHandles({
     canvasY,
   )
   const northWest = getHandlePosition(
-    getCornerCenter(handleBounds, 'northWest'),
+    outline?.[0] ?? getCornerCenter(handleBounds, 'northWest'),
     CORNER_HANDLE_SIZE,
   )
   const northEast = getHandlePosition(
-    getCornerCenter(handleBounds, 'northEast'),
+    outline?.[1] ?? getCornerCenter(handleBounds, 'northEast'),
     ROTATION_HANDLE_SIZE,
   )
   const southWest = getHandlePosition(
-    getCornerCenter(handleBounds, 'southWest'),
+    outline?.[3] ?? getCornerCenter(handleBounds, 'southWest'),
     CORNER_HANDLE_SIZE,
   )
   const southEast = getHandlePosition(
-    getCornerCenter(handleBounds, 'southEast'),
+    outline?.[2] ?? getCornerCenter(handleBounds, 'southEast'),
     CORNER_HANDLE_SIZE,
   )
   const scaleCorners: Array<{
@@ -293,48 +428,54 @@ export const TransformHandles = observer(function TransformHandles({
 
   return (
     <g data-editor-node-id={selectedShape.id}>
-      <rect
-        className={`${styles.sideHitArea} ${styles.north}`}
-        height={SIDE_HIT_AREA_SIZE}
-        onPointerDown={(event) => startScaling('north', event)}
-        {...sideHandlers}
-        width={Math.max(handleBounds.width - CORNER_HANDLE_SIZE, 0)}
-        x={handleBounds.x + CORNER_HANDLE_SIZE / 2}
-        y={handleBounds.y - sideOffset}
-      />
-      <rect
-        className={`${styles.sideHitArea} ${styles.east}`}
-        height={Math.max(handleBounds.height - CORNER_HANDLE_SIZE, 0)}
-        onPointerDown={(event) => startScaling('east', event)}
-        {...sideHandlers}
-        width={SIDE_HIT_AREA_SIZE}
-        x={handleBounds.x + handleBounds.width - sideOffset}
-        y={handleBounds.y + CORNER_HANDLE_SIZE / 2}
-      />
-      <rect
-        className={`${styles.sideHitArea} ${styles.south}`}
-        height={SIDE_HIT_AREA_SIZE}
-        onPointerDown={(event) => startScaling('south', event)}
-        {...sideHandlers}
-        width={Math.max(handleBounds.width - CORNER_HANDLE_SIZE, 0)}
-        x={handleBounds.x + CORNER_HANDLE_SIZE / 2}
-        y={handleBounds.y + handleBounds.height - sideOffset}
-      />
-      <rect
-        className={`${styles.sideHitArea} ${styles.west}`}
-        height={Math.max(handleBounds.height - CORNER_HANDLE_SIZE, 0)}
-        onPointerDown={(event) => startScaling('west', event)}
-        {...sideHandlers}
-        width={SIDE_HIT_AREA_SIZE}
-        x={handleBounds.x - sideOffset}
-        y={handleBounds.y + CORNER_HANDLE_SIZE / 2}
-      />
+      {canScale && (
+        <>
+          <rect
+            className={`${styles.sideHitArea} ${styles.north}`}
+            height={SIDE_HIT_AREA_SIZE}
+            onPointerDown={(event) => startScaling('north', event)}
+            {...sideHandlers}
+            width={Math.max(handleBounds.width - CORNER_HANDLE_SIZE, 0)}
+            x={handleBounds.x + CORNER_HANDLE_SIZE / 2}
+            y={handleBounds.y - sideOffset}
+          />
+          <rect
+            className={`${styles.sideHitArea} ${styles.east}`}
+            height={Math.max(handleBounds.height - CORNER_HANDLE_SIZE, 0)}
+            onPointerDown={(event) => startScaling('east', event)}
+            {...sideHandlers}
+            width={SIDE_HIT_AREA_SIZE}
+            x={handleBounds.x + handleBounds.width - sideOffset}
+            y={handleBounds.y + CORNER_HANDLE_SIZE / 2}
+          />
+          <rect
+            className={`${styles.sideHitArea} ${styles.south}`}
+            height={SIDE_HIT_AREA_SIZE}
+            onPointerDown={(event) => startScaling('south', event)}
+            {...sideHandlers}
+            width={Math.max(handleBounds.width - CORNER_HANDLE_SIZE, 0)}
+            x={handleBounds.x + CORNER_HANDLE_SIZE / 2}
+            y={handleBounds.y + handleBounds.height - sideOffset}
+          />
+          <rect
+            className={`${styles.sideHitArea} ${styles.west}`}
+            height={Math.max(handleBounds.height - CORNER_HANDLE_SIZE, 0)}
+            onPointerDown={(event) => startScaling('west', event)}
+            {...sideHandlers}
+            width={SIDE_HIT_AREA_SIZE}
+            x={handleBounds.x - sideOffset}
+            y={handleBounds.y + CORNER_HANDLE_SIZE / 2}
+          />
+        </>
+      )}
       {scaleCorners.map(({ handle, position }) => (
         <rect
-          className={`${styles.cornerHandle} ${styles[handle]}`}
+          className={`${styles.cornerHandle} ${styles[handle]}${canScale ? '' : ` ${styles.disabled}`}`}
           height={CORNER_HANDLE_SIZE}
           key={handle}
-          onPointerDown={(event) => startScaling(handle, event)}
+          onPointerDown={
+            canScale ? (event) => startScaling(handle, event) : undefined
+          }
           {...sideHandlers}
           width={CORNER_HANDLE_SIZE}
           x={position.x}
@@ -348,6 +489,10 @@ export const TransformHandles = observer(function TransformHandles({
         <circle
           cx={ROTATION_HANDLE_SIZE / 2}
           cy={ROTATION_HANDLE_SIZE / 2}
+          onPointerCancel={stopRotating}
+          onPointerDown={startRotating}
+          onPointerMove={handleRotatePointerMove}
+          onPointerUp={stopRotating}
           r={ROTATION_HANDLE_SIZE / 2 - 1}
         />
         <g transform="translate(2 0.48) scale(0.92)">

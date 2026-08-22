@@ -224,6 +224,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
+      onShapeRotationChange={editorStore.svgNodeEditing.setShapeRotation}
       onShapeTransformChange={editorStore.svgNodeEditing.setShapeTransform}
       onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}
       onViewportOffsetChange={setViewportOffset}
