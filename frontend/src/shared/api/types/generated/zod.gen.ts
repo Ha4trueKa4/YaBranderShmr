@@ -104,14 +104,25 @@ export const zVersionInfo = z.object({
 })
 
 /**
- * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — идентификатор созданной версии (version_id) вместо самого SVG или ссылки на него.
+ * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — либо идентификатор созданной версии (version_id), либо, если генерация упала, текст ошибки (error) — вместо самого SVG или ссылки на него. Сообщение пользователя и ответ ассистента одного обмена связаны общим job_id (идентификатором фоновой задачи генерации из POST .../generate); пользовательское сообщение появляется в истории сразу при старте задачи, ответ ассистента — только после её завершения.
  *
  */
 export const zChatMessage = z.object({
   role: z.enum(['user', 'assistant']),
   text: z.string().optional(),
   version_id: z.string().optional(),
+  error: z.string().optional(),
+  job_id: z.string().optional(),
   created_at: z.iso.datetime({ offset: true }),
+})
+
+/**
+ * Текущее состояние фоновой задачи генерации.
+ */
+export const zGenerationStatus = z.object({
+  status: z.enum(['pending', 'done', 'error']),
+  url: z.string().optional(),
+  message: z.string().optional(),
 })
 
 /**
@@ -270,11 +281,22 @@ export const zPostProjectsByIdGeneratePath = z.object({
 })
 
 /**
- * Сгенерированный SVG-код проекта
+ * Генерация запущена в фоне. Дальнейший статус — через GET /projects/{id}/generate/{job_id}.
+ *
  */
 export const zPostProjectsByIdGenerateResponse = z.object({
-  url: z.string().optional(),
+  job_id: z.string().optional(),
 })
+
+export const zGetProjectsByIdGenerateByJobIdPath = z.object({
+  id: z.string(),
+  job_id: z.string(),
+})
+
+/**
+ * Текущий статус задачи генерации
+ */
+export const zGetProjectsByIdGenerateByJobIdResponse = zGenerationStatus
 
 export const zGetProjectsByIdVersionsPath = z.object({
   id: z.string(),
@@ -317,6 +339,21 @@ export const zGetProjectsByIdChatPath = z.object({
  */
 export const zGetProjectsByIdChatResponse = z.object({
   chat_history: z.array(zChatMessage).optional(),
+})
+
+/**
+ * Успешный запрос. Возвращает объект со списком моделей.
+ */
+export const zGetModelsResponse = z.object({
+  object: z.string(),
+  data: z.array(
+    z.object({
+      id: z.string(),
+      object: z.string(),
+      owned_by: z.string(),
+      created: z.int(),
+    }),
+  ),
 })
 
 export const zGetFeedQuery = z.object({
