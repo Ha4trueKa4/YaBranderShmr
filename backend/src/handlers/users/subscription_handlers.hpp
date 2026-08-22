@@ -47,7 +47,7 @@ public:
       userver::server::request::RequestContext& context) const override;
 
 private:
-  std::shared_ptr<userver::storages::postgres::Cluster> pg_cluster_;
+  userver::storages::postgres::ClusterPtr pg_cluster_;
 };
 
 }  // namespace ya_brander::handlers

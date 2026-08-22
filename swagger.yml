@@ -439,7 +439,9 @@ paths:
         - name: id
           in: path
           required: true
-          description: Идентификатор пользователя (владельца профиля), у которого удаляется подписчик
+          description: >
+            Идентификатор владельца профиля. Сравнивается с UUID из JWT без
+            учёта регистра.
           schema:
             type: string
             example: "123e4567-e89b-12d3-a456-426614174000"
@@ -467,17 +469,10 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
               example:
                 code: "INVALID_UUID"
-                message: "Некорректный формат ID пользователя"
+                message: "Invalid user ID format"
                 field: "id"
         '401':
           description: Отсутствует или некорректен JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthError'
-              example:
-                code: "INVALID_CREDENTIALS"
-                message: "Invalid token"
         '403':
           description: >
             Попытка удалить подписчика из чужого профиля. Только владелец
@@ -490,15 +485,15 @@ paths:
                 message: "Permission denied"
         '404':
           description: >
-            Пользователь (владелец профиля) или подписчик не найден в системе.
-            Также возвращается, если подписка между указанными пользователями
-            не существует.
+            Подписка между указанными пользователями не существует. Сюда также
+            относится случай, когда subscriber_id не принадлежит существующему
+            пользователю.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
               example:
-                message: "User not found"
+                message: "Subscription not found"
         '500':
           description: Внутренняя ошибка сервера
           content:
