@@ -101,7 +101,7 @@ public:
 
   std::string GetLatestVersionUrl(const std::string& project_id);
 
-  /// @brief Возвращает историю чата проекта как есть (JSON-массив).
+  /// @brief Возвращает историю чата проекта (JSON-массив).
   /// @details Каждый элемент — либо сообщение пользователя ({"role":"user",
   ///          "text":...}), либо ответ модели, представленный ссылкой на
   ///          версию ({"role":"assistant","version_id":...}) или, если
@@ -109,6 +109,11 @@ public:
   ///          / {"role":"assistant","status":"cancelled"}. Не самим SVG и не
   ///          presigned-ссылкой (та имеет срок годности) — резолвинг
   ///          version_id в ссылку живёт в отдельном (не этом) эндпоинте.
+  ///          Пока для проекта выполняется активная генерация (см.
+  ///          active_job_by_project_), в конец на лету (без записи в БД)
+  ///          подставляется {"role":"assistant","status":"pending"|"cancelling","job_id":...} —
+  ///          чтобы фронту не нужно было отдельно опрашивать статус генерации
+  ///          только ради индикации "проект делается" в самом чате.
   userver::formats::json::Value GetChatHistory(const std::string& project_id);
 
 private:
