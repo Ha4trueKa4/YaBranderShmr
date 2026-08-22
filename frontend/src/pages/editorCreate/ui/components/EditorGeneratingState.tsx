@@ -32,6 +32,7 @@ export function EditorGeneratingState({
         />
       }
       description={t('This usually takes a few seconds.')}
+      isTitleAnimated
       title={t('Creating your identity…')}
     />
   )
