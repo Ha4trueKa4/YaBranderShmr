@@ -240,9 +240,13 @@ export function useLayerDrag({
             (nodeId, index) => nodeId === overlappingNodeIds[index],
           )
         const nextNodeIndex = canContinueCycle
-          ? layerCycleState.nextNodeIndex % overlappingNodeIds.length
+          ? layerCycleState.nextNodeIndex
           : 1
-        const nodeIdToSelect = overlappingNodeIds.at(nextNodeIndex) ?? node.id
+        const nodeIdToSelect = overlappingNodeIds.at(nextNodeIndex)
+
+        if (!nodeIdToSelect) {
+          return
+        }
 
         layerCycleStateReference.current = {
           clientX: event.clientX,
