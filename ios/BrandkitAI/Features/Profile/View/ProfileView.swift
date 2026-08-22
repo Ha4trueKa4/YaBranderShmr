@@ -7,6 +7,7 @@ struct ProfileView: View {
     var isCurrentUser: Bool
     var onBack: (() -> Void)?
     var onEditProfile: () -> Void
+    var onOpenSettings: () -> Void
     var onOpenProject: (UUID, String, URL?) -> Void
 
     init(
@@ -15,12 +16,14 @@ struct ProfileView: View {
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
+        onOpenSettings: @escaping () -> Void = {},
         onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in }
     ) {
         self.session = session
         self.isCurrentUser = isCurrentUser
         self.onBack = onBack
         self.onEditProfile = onEditProfile
+        self.onOpenSettings = onOpenSettings
         self.onOpenProject = onOpenProject
         _viewModel = State(initialValue: ProfileViewModel(
             currentUserService: session.currentUserService,
@@ -123,7 +126,7 @@ struct ProfileView: View {
             .accessibilityHidden(true)
             .overlay(alignment: .trailing) {
                 if isCurrentUser {
-                    signOutButton
+                    settingsButton
                         .padding(.top, 48)
                         .padding(.trailing, 12)
                 }
@@ -133,17 +136,20 @@ struct ProfileView: View {
         .frame(minHeight: baseHeight)
     }
 
-    private var signOutButton: some View {
-        Button(role: .destructive) {
-            session.signOut()
-        } label: {
-            Image(systemName: "rectangle.portrait.and.arrow.right")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+    private var settingsButton: some View {
+        Button(action: onOpenSettings) {
+            ZStack {
+                Circle()
+                    .fill(Color(.onAccent).opacity(0.25))
+                    .stroke(Color(.onAccent).opacity(0.35), lineWidth: 1)
+                    .frame(width: 38, height: 38)
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: 44, height: 44)
+            }
         }
-        .buttonStyle(.plain)
         .foregroundStyle(Color(.onAccent))
-        .accessibilityLabel("Sign out")
+        .accessibilityLabel("Settings")
     }
 
     private var avatar: some View {

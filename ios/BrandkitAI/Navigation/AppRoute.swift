@@ -10,4 +10,5 @@ enum AppRoute: Hashable {
     case versionHistory(projectID: UUID)
     case publicProject(projectID: UUID)
     case profile(userID: UUID)
+    case settings
 }

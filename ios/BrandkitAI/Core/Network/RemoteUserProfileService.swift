@@ -32,6 +32,25 @@ nonisolated final class RemoteUserProfileService: UserProfileService {
     func unsubscribe(from userID: UUID) async throws {
         try await networkClient.request(.delete, .subscribe(userID: userID), authorization: .required)
     }
+
+    func updateName(_ name: String, for id: UUID) async throws -> String {
+        let dto: UpdateUserProfileDTO = try await networkClient.request(
+            .patch,
+            .userProfile(id: id),
+            authorization: .required,
+            body: UpdateUserProfileRequest(nickname: name)
+        )
+        return dto.nickname
+    }
+}
+
+private nonisolated struct UpdateUserProfileRequest: Encodable, Sendable {
+    let nickname: String
+}
+
+private nonisolated struct UpdateUserProfileDTO: Decodable, Sendable {
+    let id: UUID
+    let nickname: String
 }
 
 private nonisolated struct UserProfileDTO: Decodable, Sendable {

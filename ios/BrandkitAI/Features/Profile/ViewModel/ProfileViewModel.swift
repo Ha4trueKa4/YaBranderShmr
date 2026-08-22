@@ -11,7 +11,7 @@ final class ProfileViewModel {
         let previewURL: URL?
     }
 
-    private(set) var name = ""
+    private var loadedName = ""
     private(set) var projectsCount = 0
     private(set) var followersCount = 0
     private(set) var followingCount = 0
@@ -41,7 +41,13 @@ final class ProfileViewModel {
         self.currentUserService = currentUserService
         self.userProfileService = userProfileService
         self.userID = userID
-        self.name = (userID == nil) ? (currentUserService.name ?? "") : ""
+    }
+
+    var name: String {
+        if userID == nil, let currentName = currentUserService.name {
+            return currentName
+        }
+        return loadedName
     }
 
     var initials: String {
@@ -82,7 +88,7 @@ final class ProfileViewModel {
 
         do {
             let profile = try await userProfileService.profile(for: id)
-            name = profile.name
+            loadedName = profile.name
             followersCount = profile.subscribersCount
             followingCount = profile.subscriptionsCount
             projectsCount = profile.projects.count

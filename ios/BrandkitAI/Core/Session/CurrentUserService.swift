@@ -13,10 +13,14 @@ import Foundation
 protocol CurrentUserService: AnyObject {
     var id: UUID? { get }
     var name: String? { get }
+    /// Email известен только из ответа авторизации: `GET /users/{id}` его
+    /// не отдаёт, поэтому после переустановки приложения может быть `nil`.
+    var email: String? { get }
 
-    /// Восстанавливает id/name из хранилища, а при их отсутствии — из JWT и API.
+    /// Восстанавливает данные из хранилища, а при их отсутствии — из JWT и API.
     func restore() async
 
-    func save(id: UUID, name: String?)
+    func save(id: UUID, name: String?, email: String?)
+    func update(name: String)
     func clear()
 }

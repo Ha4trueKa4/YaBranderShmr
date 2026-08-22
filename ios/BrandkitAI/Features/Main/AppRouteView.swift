@@ -94,6 +94,9 @@ struct AppRouteView: View {
                     router.push(.publicProject(projectID: projectID))
                 }
             )
+
+        case .settings:
+            SettingsView(session: session, onBack: { router.pop() })
         }
     }
 }
