@@ -123,6 +123,26 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsImageExportModalOpen(true)
   }
 
+  function handleOpenMobileProperties() {
+    editorStore.beginHistoryTransaction()
+    setIsMobileInspectorOpen(true)
+  }
+
+  function handleDoneMobileProperties() {
+    editorStore.commitHistoryTransaction()
+    setIsMobileInspectorOpen(false)
+  }
+
+  function handleCancelMobileProperties() {
+    const wasCancelled = editorStore.cancelHistoryTransaction()
+
+    if (wasCancelled) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    setIsMobileInspectorOpen(false)
+  }
+
   function handleRestoreDocument(restoredDocument: EditorDocument) {
     setEditorStore(new EditorStore(restoredDocument))
     markDocumentAsSaved(restoredDocument)
@@ -247,13 +267,17 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
-          onCloseProperties={() => setIsMobileInspectorOpen(false)}
+          onCancelColorPicker={handleCancelMobileProperties}
+          onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
-          onOpenProperties={() => setIsMobileInspectorOpen(true)}
+          onDoneColorPicker={handleDoneMobileProperties}
+          onOpenColorPicker={handleOpenMobileProperties}
+          onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onSaveVersion={saveVersion}
+          onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}

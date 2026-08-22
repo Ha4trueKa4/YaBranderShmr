@@ -18,13 +18,17 @@ interface EditorMobileLayoutProps
   isSavingVersion: boolean
   isPropertiesOpen: boolean
   onBack: () => void
-  onCloseProperties: () => void
+  onCancelColorPicker: () => void
+  onCancelProperties: () => void
   onCreateCopy: () => void
   onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
   onOpenVersionHistory: () => void
+  onOpenColorPicker: () => void
+  onDoneColorPicker: () => void
   onSaveVersion: () => void
+  onDoneProperties: () => void
   onToolChange: (tool: CanvasTool) => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -55,13 +59,17 @@ export function EditorMobileLayout({
   isSavingVersion,
   isPropertiesOpen,
   onBack,
-  onCloseProperties,
+  onCancelColorPicker,
+  onCancelProperties,
   onCreateCopy,
   onDeleteSelection,
   onExport,
   onOpenProperties,
   onOpenVersionHistory,
+  onOpenColorPicker,
+  onDoneColorPicker,
   onSaveVersion,
+  onDoneProperties,
   onToolChange,
   onZoomIn,
   onZoomOut,
@@ -90,6 +98,21 @@ export function EditorMobileLayout({
     }
   }
 
+  function handleOpenColorPicker() {
+    onOpenColorPicker()
+    setIsColorPickerOpen(true)
+  }
+
+  function handleDoneColorPicker() {
+    onDoneColorPicker()
+    setIsColorPickerOpen(false)
+  }
+
+  function handleCancelColorPicker() {
+    onCancelColorPicker()
+    setIsColorPickerOpen(false)
+  }
+
   return (
     <div className={styles.layout}>
       <MobileEditorHeader
@@ -110,7 +133,7 @@ export function EditorMobileLayout({
           fillColor={fillColor}
           hasSelection={hasSelection}
           onDeleteSelection={onDeleteSelection}
-          onOpenColorPicker={() => setIsColorPickerOpen(true)}
+          onOpenColorPicker={handleOpenColorPicker}
         />
       )}
       {canEdit && (
@@ -132,16 +155,26 @@ export function EditorMobileLayout({
           </button>
           <BottomSheet
             actions={
-              <button
-                className={styles.doneButton}
-                onClick={onCloseProperties}
-                type="button"
-              >
-                {t('Done')}
-              </button>
+              <>
+                <button
+                  className={styles.cancelButton}
+                  onClick={onCancelProperties}
+                  type="button"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  className={styles.doneButton}
+                  onClick={onDoneProperties}
+                  type="button"
+                >
+                  {t('Done')}
+                </button>
+              </>
             }
             isOpen={isPropertiesOpen}
-            onClose={onCloseProperties}
+            onClose={onCancelProperties}
+            showCloseButton={false}
             title={t('Element properties')}
           >
             <InspectorPanel
@@ -153,16 +186,26 @@ export function EditorMobileLayout({
           {fillColor && (
             <BottomSheet
               actions={
-                <button
-                  className={styles.doneButton}
-                  onClick={() => setIsColorPickerOpen(false)}
-                  type="button"
-                >
-                  {t('Done')}
-                </button>
+                <>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={handleCancelColorPicker}
+                    type="button"
+                  >
+                    {t('Cancel')}
+                  </button>
+                  <button
+                    className={styles.doneButton}
+                    onClick={handleDoneColorPicker}
+                    type="button"
+                  >
+                    {t('Done')}
+                  </button>
+                </>
               }
               isOpen={isColorPickerOpen}
-              onClose={() => setIsColorPickerOpen(false)}
+              onClose={handleCancelColorPicker}
+              showCloseButton={false}
               title={t('Fill color')}
             >
               <div className={styles.colorPickerContent}>

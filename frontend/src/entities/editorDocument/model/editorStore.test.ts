@@ -115,6 +115,19 @@ describe('EditorStore selection', () => {
     expect(store.canUndo).toBe(false)
   })
 
+  it('restores the initial document when a history transaction is cancelled', () => {
+    const store = new EditorStore(structuredClone(document))
+
+    store.beginHistoryTransaction()
+    store.svgNodeEditing.setShapePosition('wheel', 20, 20)
+
+    expect(store.cancelHistoryTransaction()).toBe(true)
+    expect(store.document.layers[0]).toMatchObject({
+      children: [{ transform: { x: 0, y: 0 } }],
+    })
+    expect(store.canUndo).toBe(false)
+  })
+
   it('returns a group as the selected node', () => {
     const store = new EditorStore(document, 'taxi')
 
