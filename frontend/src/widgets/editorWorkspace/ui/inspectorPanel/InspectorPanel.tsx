@@ -30,6 +30,7 @@ interface InspectorPanelProps {
   onShapeStrokeAdd: (nodeId: string) => void
   onShapeStrokeColorChange: (nodeId: string, color: string) => void
   onShapeStrokeRemove: (nodeId: string) => void
+  onShapeStrokeOpacityChange: (nodeId: string, opacity: number) => void
   onShapeStrokeWidthChange: (nodeId: string, strokeWidth: number) => void
   onShapeTransformChange: (
     nodeId: string,
@@ -110,6 +111,7 @@ export function InspectorPanel({
   onShapeStrokeAdd,
   onShapeStrokeColorChange,
   onShapeStrokeRemove,
+  onShapeStrokeOpacityChange,
   onShapeStrokeWidthChange,
   onShapeTransformChange,
   onTextAnchorChange,
@@ -205,6 +207,9 @@ export function InspectorPanel({
               onShapeStrokeColorChange(selectedNode.id, color)
             }
             onStrokeRemove={() => onShapeStrokeRemove(selectedNode.id)}
+            onStrokeOpacityChange={(opacity) =>
+              onShapeStrokeOpacityChange(selectedNode.id, opacity)
+            }
             onStrokeWidthChange={(strokeWidth) =>
               onShapeStrokeWidthChange(selectedNode.id, strokeWidth)
             }

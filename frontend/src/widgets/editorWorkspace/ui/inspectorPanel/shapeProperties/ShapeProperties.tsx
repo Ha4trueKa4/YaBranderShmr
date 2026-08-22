@@ -33,6 +33,7 @@ interface ShapePropertiesProps {
   onStrokeAdd: () => void
   onStrokeColorChange: (color: string) => void
   onStrokeRemove: () => void
+  onStrokeOpacityChange: (opacity: number) => void
   onStrokeWidthChange: (strokeWidth: number) => void
   onTransformChange: (transform: {
     rotationCenter?: { x: number; y: number }
@@ -58,6 +59,7 @@ export const ShapeProperties = observer(function ShapeProperties({
   onStrokeAdd,
   onStrokeColorChange,
   onStrokeRemove,
+  onStrokeOpacityChange,
   onStrokeWidthChange,
   onTransformChange,
 }: ShapePropertiesProps) {
@@ -135,8 +137,10 @@ export const ShapeProperties = observer(function ShapeProperties({
         onEyeDropperEnd={onEyeDropperEnd}
         onEyeDropperStart={onEyeDropperStart}
         onRemove={onStrokeRemove}
+        onOpacityChange={onStrokeOpacityChange}
         onWidthChange={onStrokeWidthChange}
         stroke={layer.style.stroke}
+        strokeOpacity={layer.style.strokeOpacity}
         strokeWidth={layer.style.strokeWidth}
       />
     </div>

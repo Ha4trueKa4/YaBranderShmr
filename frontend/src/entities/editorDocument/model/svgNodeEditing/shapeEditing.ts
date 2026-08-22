@@ -176,6 +176,18 @@ export function createShapeEditing({
       })
     },
 
+    setShapeStrokeOpacity(nodeId: string, opacity: number) {
+      const node = getEditableShape(getDocument(), nodeId)
+
+      if (!node || !Number.isFinite(opacity)) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.style.strokeOpacity = Math.min(Math.max(opacity, 0), 1)
+      })
+    },
+
     setShapeStrokeWidth(nodeId: string, strokeWidth: number) {
       const node = getEditableShape(getDocument(), nodeId)
 

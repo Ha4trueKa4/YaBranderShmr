@@ -3,6 +3,7 @@ import { Button, Input } from '@shared/ui'
 import { useTranslation } from 'react-i18next'
 import styles from '../Properties.module.css'
 import { FillProperty } from './FillProperty'
+import { OpacityProperty } from './OpacityProperty'
 
 interface StrokePropertyProps {
   onAdd: () => void
@@ -10,8 +11,10 @@ interface StrokePropertyProps {
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
   onRemove: () => void
+  onOpacityChange: (opacity: number) => void
   onWidthChange: (strokeWidth: number) => void
   stroke: Paint
+  strokeOpacity: number
   strokeWidth: number
 }
 
@@ -27,8 +30,10 @@ export function StrokeProperty({
   onEyeDropperEnd,
   onEyeDropperStart,
   onRemove,
+  onOpacityChange,
   onWidthChange,
   stroke,
+  strokeOpacity,
   strokeWidth,
 }: StrokePropertyProps) {
   const { t } = useTranslation()
@@ -66,6 +71,11 @@ export function StrokeProperty({
         onEyeDropperEnd={onEyeDropperEnd}
         onEyeDropperStart={onEyeDropperStart}
         title={t('Stroke')}
+      />
+      <OpacityProperty
+        label="Stroke opacity"
+        onOpacityChange={onOpacityChange}
+        opacity={strokeOpacity}
       />
       <div className={styles.fieldGrid}>
         <div className={styles.field}>

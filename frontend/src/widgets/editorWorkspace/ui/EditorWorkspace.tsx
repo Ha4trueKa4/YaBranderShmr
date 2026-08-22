@@ -250,6 +250,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
     onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
     onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
+    onShapeStrokeOpacityChange:
+      editorStore.svgNodeEditing.setShapeStrokeOpacity,
     onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
     onShapeTransformChange: editorStore.svgNodeEditing.setShapeTransform,
     onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
