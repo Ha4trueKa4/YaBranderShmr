@@ -113,8 +113,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           await deleteUnfinishedProject()
           pendingGenerationStore.take()
           toast.error(
-            generatedProject.message ??
-              t('The generated project is unavailable. Please try again.'),
+            t('The generated project is unavailable. Please try again.'),
           )
           return
         }
