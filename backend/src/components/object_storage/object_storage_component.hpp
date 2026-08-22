@@ -62,7 +62,9 @@ public:
     virtual void SetAcl(const std::string& key, bool make_public) = 0;
 
     /// @brief Удаляет объект. Удаление несуществующего ключа — no-op.
-    virtual void Delete(const std::string& key) = 0;
+    /// @return true, если объект реально был удалён (200/204); false, если
+    ///         его уже не было (404) — вызов всё равно считается успешным.
+    virtual bool Delete(const std::string& key) = 0;
 
     /// @brief Удаляет набор объектов (best-effort). Ошибки по отдельным ключам
     ///        не прерывают остальные; лишь пропускаются.
