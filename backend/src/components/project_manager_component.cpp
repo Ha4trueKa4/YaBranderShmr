@@ -317,7 +317,19 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
     }
 
     bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
-        // Статус job'а зависит только от того, чем закончилась сама
+        // Токен для внешней отмены (CancelGeneration) регистрируем сразу же,
+        // в самом начале корутины — до захвата семафора, чтобы отмена
+        // работала, даже пока job ещё стоит в очереди на генерацию.
+        {
+            std::lock_guard job_lock(entry->mutex);
+            entry->cancel_token = userver::engine::current_task::GetCancellationToken();
+            if (entry->cancel_requested) {
+                entry->cancel_token->RequestCancel();
+            }
+        }
+
+
+		// Статус job'а зависит только от того, чем закончилась сама
         // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
         // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
         // статус уже определён и разослан ожидающим в WaitForGeneration: её
