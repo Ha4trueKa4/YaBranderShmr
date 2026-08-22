@@ -5,12 +5,16 @@ import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 
 interface EditorGeneratingStateProps {
   description: string
+  isCancelling: boolean
   model: string
+  onCancel: () => void
 }
 
 export function EditorGeneratingState({
   description,
+  isCancelling,
   model,
+  onCancel,
 }: EditorGeneratingStateProps) {
   const { t } = useTranslation()
   return (
@@ -18,9 +22,11 @@ export function EditorGeneratingState({
       composer={
         <GenerationPromptComposer
           description={description}
+          isCancelling={isCancelling}
           isGenerating
           model={model}
           onDescriptionChange={() => undefined}
+          onCancel={onCancel}
           onGenerate={() => undefined}
           onModelChange={() => undefined}
         />
