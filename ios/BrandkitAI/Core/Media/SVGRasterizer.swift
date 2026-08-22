@@ -4,10 +4,15 @@ import WebKit
 final class SVGRasterizer: NSObject {
     enum RasterizationError: Error {
         case renderingFailed
+        case timedOut
+        case webContentTerminated
     }
+
+    private static let loadTimeout: Duration = .seconds(10)
 
     private var webView: WKWebView?
     private var loadContinuation: CheckedContinuation<Void, Error>?
+    private var timeoutTask: Task<Void, Never>?
 
     static func pngData(fromSVG svgText: String, maxPixelSide: Int = 2048) async throws -> Data {
         try await SVGRasterizer().render(svgText: svgText, maxPixelSide: maxPixelSide)
@@ -21,12 +26,13 @@ final class SVGRasterizer: NSObject {
         let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: configuration)
         webView.navigationDelegate = self
         self.webView = webView
-        defer { self.webView = nil }
-
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            loadContinuation = continuation
-            webView.loadHTMLString("<!DOCTYPE html><html><body></body></html>", baseURL: nil)
+        defer {
+            finishLoad(.failure(CancellationError()))
+            self.webView = nil
         }
+
+        try await loadBlankPage(in: webView)
+        try Task.checkCancellation()
 
         let result = try await webView.callAsyncJavaScript(
             Self.rasterizeScript,
@@ -41,6 +47,38 @@ final class SVGRasterizer: NSObject {
             throw RasterizationError.renderingFailed
         }
         return data
+    }
+
+    private func loadBlankPage(in webView: WKWebView) async throws {
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                loadContinuation = continuation
+                startLoadTimeout()
+                webView.loadHTMLString("<!DOCTYPE html><html><body></body></html>", baseURL: nil)
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.finishLoad(.failure(CancellationError()))
+            }
+        }
+    }
+
+    private func startLoadTimeout() {
+        timeoutTask?.cancel()
+        timeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.loadTimeout)
+            guard !Task.isCancelled else { return }
+            self?.finishLoad(.failure(RasterizationError.timedOut))
+        }
+    }
+
+    private func finishLoad(_ result: Result<Void, Error>) {
+        timeoutTask?.cancel()
+        timeoutTask = nil
+
+        guard let continuation = loadContinuation else { return }
+        loadContinuation = nil
+        continuation.resume(with: result)
     }
 
     private static let rasterizeScript = """
@@ -71,13 +109,11 @@ final class SVGRasterizer: NSObject {
 
 extension SVGRasterizer: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        loadContinuation?.resume()
-        loadContinuation = nil
+        finishLoad(.success(()))
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        loadContinuation?.resume(throwing: error)
-        loadContinuation = nil
+        finishLoad(.failure(error))
     }
 
     func webView(
@@ -85,7 +121,10 @@ extension SVGRasterizer: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
-        loadContinuation?.resume(throwing: error)
-        loadContinuation = nil
+        finishLoad(.failure(error))
+    }
+    
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        finishLoad(.failure(RasterizationError.webContentTerminated))
     }
 }

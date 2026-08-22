@@ -89,6 +89,11 @@ final class ProfileViewModel {
         do {
             let profile = try await userProfileService.profile(for: id)
             loadedName = profile.name
+
+            if userID == nil {
+                currentUserService.update(name: profile.name)
+            }
+
             followersCount = profile.subscribersCount
             followingCount = profile.subscriptionsCount
             projectsCount = profile.projects.count

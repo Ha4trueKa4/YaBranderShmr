@@ -7,7 +7,7 @@ final class CurrentUserStore: CurrentUserService {
     private enum Key {
         static let id = "currentUser.id"
         static let name = "currentUser.name"
-        static let email = "currentUser.email"
+        static let legacyEmail = "currentUser.email"
     }
 
     private(set) var id: UUID? {
@@ -19,7 +19,7 @@ final class CurrentUserStore: CurrentUserService {
     }
 
     private(set) var email: String? {
-        didSet { UserDefaults.standard.set(email, forKey: Key.email) }
+        didSet { KeychainItem.userEmail.value = email }
     }
 
     private let tokenStore: TokenStore
@@ -31,7 +31,16 @@ final class CurrentUserStore: CurrentUserService {
         self.id = UserDefaults.standard.string(forKey: Key.id)
             .flatMap(UUID.init(uuidString:))
         self.name = UserDefaults.standard.string(forKey: Key.name)
-        self.email = UserDefaults.standard.string(forKey: Key.email)
+        self.email = KeychainItem.userEmail.value
+            ?? UserDefaults.standard.string(forKey: Key.legacyEmail)
+
+        migrateLegacyEmailIfNeeded()
+    }
+
+    private func migrateLegacyEmailIfNeeded() {
+        guard KeychainItem.userEmail.value == nil, let email else { return }
+        KeychainItem.userEmail.value = email
+        UserDefaults.standard.removeObject(forKey: Key.legacyEmail)
     }
 
     func restore() async {
@@ -41,11 +50,11 @@ final class CurrentUserStore: CurrentUserService {
             return
         }
 
-        if id != tokenUserID {
-            id = tokenUserID
+        if let id, id != tokenUserID {
             name = nil
             email = nil
         }
+        id = tokenUserID
 
         if name == nil {
             await refreshName(for: tokenUserID)
@@ -66,6 +75,7 @@ final class CurrentUserStore: CurrentUserService {
         id = nil
         name = nil
         email = nil
+        UserDefaults.standard.removeObject(forKey: Key.legacyEmail)
     }
 
     private func refreshName(for id: UUID) async {
