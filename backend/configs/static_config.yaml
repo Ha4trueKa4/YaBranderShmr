@@ -7,6 +7,10 @@ components_manager:
     fs-task-processor: # Make a separate task processor for filesystem bound tasks.
       worker_threads: $worker-fs-threads
 
+    bg-task-processor: # Фоновые генерации (ProjectManagerComponent) — отдельно от
+      worker_threads: $worker-bg-threads   # main-task-processor, чтобы не конкурировать
+                                            # с обработкой HTTP-запросов (в т.ч. long-poll).
+
   default_task_processor: main-task-processor
 
   components: # Configuring components that were registered via component_list

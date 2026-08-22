@@ -10,6 +10,7 @@
 #include <userver/concurrent/background_task_storage.hpp>
 #include <userver/engine/condition_variable.hpp>
 #include <userver/engine/mutex.hpp>
+#include <userver/engine/semaphore.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/formats/json/value.hpp>
 
@@ -40,7 +41,18 @@ public:
 
   /// @brief Запускает фоновую генерацию: сразу сохраняет сообщение
   ///        пользователя в chat_history и возвращает job_id, не дожидаясь
-  ///        ответа LLM. Сама генерация выполняется в фоновой корутине.
+  ///        ответа LLM. Сама генерация выполняется в фоновой корутине на
+  ///        bg-task-processor (отдельно от main-task-processor, который
+  ///        обслуживает HTTP-запросы, включая long-poll GET .../generate/{job_id}).
+  ///        version_storage_/llm_client_/prompt_constructor_ безопасны для
+  ///        конкурентных вызовов из разных корутин: ни один из них не хранит
+  ///        изменяемое состояние между вызовами (методы, читающие/пишущие
+  ///        данные, либо const, либо работают только через
+  ///        userver::storages::postgres::ClusterPtr / userver::clients::http::Client,
+  ///        которые сами по себе конкурентно-безопасны).
+  /// @throws std::exception если не удалось создать job (например, недоступна
+  ///         БД при записи сообщения пользователя) — в этом случае job_id
+  ///         никому не отдаётся и в jobs_ ничего не остаётся.
   std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
 
   /// @brief Ждёт завершения job'а генерации не дольше timeout (long polling).
@@ -110,9 +122,12 @@ private:
   ///        @returns id сохранённой версии.
   std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
 
-  /// @brief Удаляет из jobs_ завершённые job'ы старше kJobRetention, чтобы
-  ///        карта не росла неограниченно за время жизни процесса. Вызывается
-  ///        под jobs_mutex_.
+  /// @brief Удаляет из jobs_ завершённые job'ы старше kJobRetention, а
+  ///        зависшие в kPending (задача так и не запустилась/не завершилась,
+  ///        например из-за перегрузки task processor'а) — старше
+  ///        kStuckPendingRetention. Без второго условия такой job остался бы
+  ///        в jobs_ навсегда, так как обычное условие смотрит только на
+  ///        завершённые статусы. Вызывается под jobs_mutex_.
   void PruneOldJobsLocked();
 
   userver::storages::postgres::ClusterPtr pg_cluster_;
@@ -122,6 +137,12 @@ private:
 
   userver::engine::Mutex jobs_mutex_;
   std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
+
+  // Ограничивает число одновременно выполняющихся генераций (SendPrompt к
+  // LLM + SaveVersion), чтобы всплеск запросов не перегрузил bg-task-processor
+  // и внешние зависимости (LLM API, S3). Захватывается только на время самой
+  // генерации в фоновой корутине, не на всё время жизни job'а.
+  userver::engine::Semaphore generation_semaphore_;
 
   // Должен быть объявлен последним: при разрушении компонента фоновые задачи
   // должны быть отменены/дожданы раньше, чем уничтожатся поля выше, которые

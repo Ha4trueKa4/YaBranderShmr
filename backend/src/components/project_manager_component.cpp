@@ -11,6 +11,11 @@ const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" vi
 </svg>)SVG";
 
 namespace {
+// Сколько генераций может выполняться одновременно (SendPrompt к LLM +
+// SaveVersion) — защита bg-task-processor и внешних зависимостей (LLM API,
+// S3) от всплеска параллельных запросов.
+constexpr std::size_t kMaxConcurrentGenerations = 8;
+
 std::string EscapeXml(const std::string& input) {
     std::string output;
     output.reserve(input.size() * 1.1);
@@ -36,7 +41,8 @@ ProjectManagerComponent::ProjectManagerComponent(
       version_storage_(context.FindComponent<VersionStorageComponent>()),
       llm_client_(context.FindComponent<LLMClientComponent>()),
       prompt_constructor_(context.FindComponent<PromptConstructorComponent>()),
-      bts_(context.GetTaskProcessor("main-task-processor")) {}
+      generation_semaphore_(kMaxConcurrentGenerations),
+      bts_(context.GetTaskProcessor("bg-task-processor")) {}
 
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
@@ -208,7 +214,11 @@ std::string ProjectManagerComponent::RunGeneration(const std::string& project_id
 }
 
 namespace {
-constexpr std::chrono::minutes kJobRetention{15};
+constexpr std::chrono::minutes kJobRetention{30};
+// Зависший kPending (задача не запустилась/не завершилась) переживает
+// обычный kJobRetention — иначе легитимные ещё выполняющиеся генерации
+// стирались бы из-под клиента. Чистим их только как страховку намного позже.
+constexpr std::chrono::minutes kStuckPendingRetention{60};
 }  // namespace
 
 void ProjectManagerComponent::PruneOldJobsLocked() {
@@ -219,7 +229,9 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
             std::lock_guard job_lock(it->second->mutex);
             status = it->second->status;
         }
-        if (status != JobStatus::kPending && now - it->second->created_at > kJobRetention) {
+        const auto age = now - it->second->created_at;
+        const bool expired = status == JobStatus::kPending ? age > kStuckPendingRetention : age > kJobRetention;
+        if (expired) {
             it = jobs_.erase(it);
         } else {
             ++it;
@@ -229,36 +241,66 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
 
 std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
     std::string job_id = userver::utils::generators::GenerateUuid();
+
+    // Сообщение пользователя пишем ДО создания записи в jobs_: если этот
+    // вызов бросит исключение (например, недоступна БД), job_id никому не
+    // будет отдан и в jobs_ не останется зависшей записи, которую было бы
+    // некому и нечем завершить.
+    AppendUserMessage(project_id, job_id, prompt);
+
     auto entry = std::make_shared<JobEntry>();
     entry->project_id = project_id;
-
     {
         std::lock_guard lock(jobs_mutex_);
         PruneOldJobsLocked();
         jobs_.emplace(job_id, entry);
     }
 
-    AppendUserMessage(project_id, job_id, prompt);
-
     bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, job_id, entry] {
+        // Статус job'а зависит только от того, удалась ли сама генерация
+        // (RunGeneration). Запись результата в chat_history — best-effort
+        // бухгалтерия ПОСЛЕ того, как статус уже определён и разослан
+        // ожидающим в WaitForGeneration: её падение не должно превращать уже
+        // случившийся успех в ошибку (и наоборот) — иначе клиент, опросивший
+        // чуть позже, увидел бы "error" для по факту успешной генерации.
+        std::string version_id;
+        bool succeeded = false;
         try {
-            std::string version_id = RunGeneration(project_id, prompt, model);
-            {
-                std::lock_guard job_lock(entry->mutex);
-                entry->status = JobStatus::kDone;
-                entry->result_version_id = version_id;
-            }
-            entry->cv.NotifyAll();
-            AppendAssistantSuccess(project_id, job_id, version_id);
+            userver::engine::SemaphoreLock semaphore_lock(generation_semaphore_);
+            version_id = RunGeneration(project_id, prompt, model);
+            succeeded = true;
         } catch (const std::exception& e) {
             LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
-            {
-                std::lock_guard job_lock(entry->mutex);
-                entry->status = JobStatus::kError;
-                entry->error_message = e.what();
+            std::lock_guard job_lock(entry->mutex);
+            entry->status = JobStatus::kError;
+            entry->error_message = e.what();
+        }
+
+        if (succeeded) {
+            std::lock_guard job_lock(entry->mutex);
+            entry->status = JobStatus::kDone;
+            entry->result_version_id = version_id;
+        }
+        entry->cv.NotifyAll();
+
+        // Без ретраев: если это упадёт, версия (при succeeded) всё равно
+        // сохранена и доступна через сам проект — просто не появится записью
+        // в chat_history. Громко логируем, чтобы это было видно в мониторинге.
+        try {
+            if (succeeded) {
+                AppendAssistantSuccess(project_id, job_id, version_id);
+            } else {
+                std::string error_message;
+                {
+                    std::lock_guard job_lock(entry->mutex);
+                    error_message = entry->error_message;
+                }
+                AppendAssistantError(project_id, job_id, error_message);
             }
-            entry->cv.NotifyAll();
-            AppendAssistantError(project_id, job_id, e.what());
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id
+                        << ": генерация " << (succeeded ? "succeeded" : "failed")
+                        << ", но запись в chat_history не удалась: " << e.what();
         }
     });
 
