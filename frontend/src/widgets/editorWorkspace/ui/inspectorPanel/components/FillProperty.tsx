@@ -93,7 +93,6 @@ export function FillProperty({
         </div>
         <div>
           <p className={styles.hex}>{draftFill.toUpperCase()}</p>
-          <p className={styles.colorName}>{t('Violet Primary')}</p>
         </div>
       </div>
       {onOpacityChange && (
