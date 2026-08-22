@@ -1,7 +1,9 @@
 import { OwnProjectCard } from '@entities/project'
+import { generationProcessStore } from '@features/editorGenerate'
 import { VersionHistoryModal } from '@features/editorVersionHistory'
 import type { Project } from '@shared/api/types'
 import { ConfirmationModal } from '@shared/ui'
+import { observer } from 'mobx-react-lite'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,7 +22,7 @@ interface OwnProjectsSectionProps {
   projects: Project[]
 }
 
-export function OwnProjectsSection({
+export const OwnProjectsSection = observer(function OwnProjectsSection({
   isDeletingProjectPending,
   onDeleteProject,
   onOpenProject,
@@ -92,6 +94,10 @@ export function OwnProjectsSection({
       <div className={styles.projectsGrid}>
         {managedProjects.map((project) => (
           <OwnProjectCard
+            isGenerating={
+              generationProcessStore.isInProgress &&
+              generationProcessStore.projectId === project.id
+            }
             key={project.id}
             onDeleteClick={() => {
               if (project.id) {
@@ -163,4 +169,4 @@ export function OwnProjectsSection({
       />
     </section>
   )
-}
+})

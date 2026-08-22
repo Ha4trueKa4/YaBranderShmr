@@ -1,6 +1,7 @@
 import type {
   EditorGroup,
   EditorNode,
+  EditorRawNode,
   EditorShape,
   EditorText,
 } from '@entities/editorDocument'
@@ -14,11 +15,13 @@ import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
+  document: EditorNode[]
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   isReadOnly: boolean
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -28,15 +31,16 @@ interface UseLayerDragParams {
 
 type PointerPosition = { x: number; y: number }
 type DragTarget = {
-  elementType: 'group' | 'shape' | 'text'
+  elementType: 'group' | 'raw' | 'shape' | 'text'
   nodeId: string
+  screenToLocalMatrix: DOMMatrix
   startPosition: PointerPosition
+  startPointerPosition: PointerPosition
 }
 type DragState = {
   hitNodeId: string
   pointerId: number
   startClientPosition: PointerPosition
-  startPointerPosition: PointerPosition
   targets: DragTarget[]
 }
 
@@ -55,19 +59,13 @@ function roundCoordinate(value: number) {
   return Math.round(value * 100) / 100
 }
 
-function getSvgPointerPosition(
-  svg: SVGSVGElement,
+function getLocalPointerPosition(
+  screenToLocalMatrix: DOMMatrix,
   clientX: number,
   clientY: number,
-): PointerPosition | null {
-  const screenMatrix = svg.getScreenCTM()
-
-  if (!screenMatrix) {
-    return null
-  }
-
+): PointerPosition {
   const point = new DOMPoint(clientX, clientY).matrixTransform(
-    screenMatrix.inverse(),
+    screenToLocalMatrix,
   )
 
   return { x: point.x, y: point.y }
@@ -89,20 +87,43 @@ function hasLockedDescendant(node: EditorGroup): boolean {
 }
 
 function toDragTarget(
-  node: EditorShape | EditorText | EditorGroup,
-): DragTarget {
+  node: EditorShape | EditorText | EditorGroup | EditorRawNode,
+  element: SVGGElement,
+  clientX: number,
+  clientY: number,
+): DragTarget | null {
+  const screenMatrix = element.getScreenCTM()
+
+  if (!screenMatrix) {
+    return null
+  }
+
+  const screenToLocalMatrix = screenMatrix.inverse()
+
   if (node.type === 'text') {
     return {
       elementType: 'text',
       nodeId: node.id,
+      screenToLocalMatrix,
       startPosition: { x: node.x, y: node.y },
+      startPointerPosition: getLocalPointerPosition(
+        screenToLocalMatrix,
+        clientX,
+        clientY,
+      ),
     }
   }
 
   return {
     elementType: node.type,
     nodeId: node.id,
+    screenToLocalMatrix,
     startPosition: { x: node.transform.x, y: node.transform.y },
+    startPointerPosition: getLocalPointerPosition(
+      screenToLocalMatrix,
+      clientX,
+      clientY,
+    ),
   }
 }
 
@@ -131,10 +152,6 @@ function isPointerWithinNode(
   clientX: number,
   clientY: number,
 ): boolean {
-  if (node.type === 'raw') {
-    return false
-  }
-
   if (node.type === 'group') {
     return node.children.some((child) =>
       isPointerWithinNode(child, getEditableElement, clientX, clientY),
@@ -144,13 +161,41 @@ function isPointerWithinNode(
   return isPointerWithinElement(getEditableElement(node.id), clientX, clientY)
 }
 
+function getVisibleLeafNodes(nodes: EditorNode[]): EditorNode[] {
+  return nodes.flatMap((node) => {
+    if (!node.isVisible) {
+      return []
+    }
+
+    return node.type === 'group' ? getVisibleLeafNodes(node.children) : [node]
+  })
+}
+
+function getOverlappingNodeIds(
+  nodes: EditorNode[],
+  getEditableElement: (nodeId: string) => SVGGElement | undefined,
+  clientX: number,
+  clientY: number,
+) {
+  return getVisibleLeafNodes(nodes)
+    .filter(
+      (node) =>
+        (node.type === 'raw' || !node.isLocked) &&
+        isPointerWithinElement(getEditableElement(node.id), clientX, clientY),
+    )
+    .map((node) => node.id)
+    .reverse()
+}
+
 export function useLayerDrag({
   activeTool,
+  document,
   getEditableElement,
   isReadOnly,
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onGroupPositionChange,
+  onRawPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -162,7 +207,10 @@ export function useLayerDrag({
   const lastTapReference = useRef<TapState | null>(null)
 
   const startDrag = useCallback(
-    (node: EditorShape | EditorText, event: ReactPointerEvent<SVGGElement>) => {
+    (
+      node: EditorShape | EditorText | EditorRawNode,
+      event: ReactPointerEvent<SVGGElement>,
+    ) => {
       if (isReadOnly || event.button !== 0 || activeTool !== 'select') {
         return
       }
@@ -184,20 +232,32 @@ export function useLayerDrag({
 
       if (isDoubleTap) {
         lastTapReference.current = null
-        onSelectNode(node.id, false)
+        const overlappingNodeIds = getOverlappingNodeIds(
+          document,
+          getEditableElement,
+          event.clientX,
+          event.clientY,
+        )
+        const selectedNodeIndex = selectedNode
+          ? overlappingNodeIds.indexOf(selectedNode.id)
+          : -1
+        const nodeIdToSelect =
+          selectedNodeIndex >= 0
+            ? overlappingNodeIds.at(selectedNodeIndex - 1)
+            : undefined
+
+        if (nodeIdToSelect) {
+          onSelectNode(nodeIdToSelect, false)
+        }
         event.preventDefault()
 
         return
       }
 
-      const svg = svgReference.current
-
-      if (!svg) {
-        return
-      }
-
       const preferredNode =
-        (selectedNode?.type === 'shape' || selectedNode?.type === 'text') &&
+        (selectedNode?.type === 'shape' ||
+          selectedNode?.type === 'text' ||
+          selectedNode?.type === 'raw') &&
         isPointerWithinNode(
           selectedNode,
           getEditableElement,
@@ -225,7 +285,7 @@ export function useLayerDrag({
       )
 
       if (
-        node.isLocked ||
+        (node.isLocked && node.type !== 'raw') ||
         selectedGroupToDrag?.isLocked ||
         (selectedGroupToDrag && hasLockedDescendant(selectedGroupToDrag))
       ) {
@@ -237,8 +297,10 @@ export function useLayerDrag({
         : isSelectedNode
           ? selectedNodes.filter(
               (selected): selected is EditorShape | EditorText =>
-                (selected.type === 'shape' || selected.type === 'text') &&
-                !selected.isLocked,
+                (selected.type === 'shape' ||
+                  selected.type === 'text' ||
+                  selected.type === 'raw') &&
+                (!selected.isLocked || selected.type === 'raw'),
             )
           : [preferredNode]
 
@@ -250,13 +312,16 @@ export function useLayerDrag({
         onSelectNode(preferredNode.id, false)
       }
 
-      const pointerPosition = getSvgPointerPosition(
-        svg,
-        event.clientX,
-        event.clientY,
-      )
+      const targets = dragTargets.flatMap((target) => {
+        const element = getEditableElement(target.id)
+        const dragTarget = element
+          ? toDragTarget(target, element, event.clientX, event.clientY)
+          : null
 
-      if (!pointerPosition) {
+        return dragTarget ? [dragTarget] : []
+      })
+
+      if (targets.length !== dragTargets.length) {
         return
       }
 
@@ -266,13 +331,13 @@ export function useLayerDrag({
         hitNodeId: node.id,
         pointerId: event.pointerId,
         startClientPosition: { x: event.clientX, y: event.clientY },
-        startPointerPosition: pointerPosition,
-        targets: dragTargets.map(toDragTarget),
+        targets,
       }
       onDocumentChangeStart()
     },
     [
       activeTool,
+      document,
       getEditableElement,
       isReadOnly,
       onDocumentChangeStart,
@@ -296,30 +361,30 @@ export function useLayerDrag({
     [startDrag],
   )
 
+  const onRawPointerDown = useCallback(
+    (node: EditorRawNode, event: ReactPointerEvent<SVGGElement>) => {
+      startDrag(node, event)
+    },
+    [startDrag],
+  )
+
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<SVGGElement>) => {
       const dragState = dragStateReference.current
-      const svg = svgReference.current
-
-      if (!dragState || dragState.pointerId !== event.pointerId || !svg) {
-        return
-      }
-
-      const pointerPosition = getSvgPointerPosition(
-        svg,
-        event.clientX,
-        event.clientY,
-      )
-
-      if (!pointerPosition) {
+      if (!dragState || dragState.pointerId !== event.pointerId) {
         return
       }
 
       event.preventDefault()
-      const offsetX = pointerPosition.x - dragState.startPointerPosition.x
-      const offsetY = pointerPosition.y - dragState.startPointerPosition.y
 
       for (const target of dragState.targets) {
+        const pointerPosition = getLocalPointerPosition(
+          target.screenToLocalMatrix,
+          event.clientX,
+          event.clientY,
+        )
+        const offsetX = pointerPosition.x - target.startPointerPosition.x
+        const offsetY = pointerPosition.y - target.startPointerPosition.y
         const x = roundCoordinate(target.startPosition.x + offsetX)
         const y = roundCoordinate(target.startPosition.y + offsetY)
 
@@ -327,12 +392,19 @@ export function useLayerDrag({
           onShapePositionChange(target.nodeId, x, y)
         } else if (target.elementType === 'text') {
           onTextPositionChange(target.nodeId, x, y)
+        } else if (target.elementType === 'raw') {
+          onRawPositionChange(target.nodeId, x, y)
         } else {
           onGroupPositionChange(target.nodeId, x, y)
         }
       }
     },
-    [onGroupPositionChange, onShapePositionChange, onTextPositionChange],
+    [
+      onGroupPositionChange,
+      onRawPositionChange,
+      onShapePositionChange,
+      onTextPositionChange,
+    ],
   )
 
   const onPointerUp = useCallback(
@@ -371,6 +443,7 @@ export function useLayerDrag({
   return {
     onPointerMove,
     onPointerUp,
+    onRawPointerDown,
     onShapePointerDown,
     onTextPointerDown,
     svgReference,

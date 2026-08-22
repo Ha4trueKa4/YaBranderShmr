@@ -1,4 +1,4 @@
-import type { EditorElement, EditorNode } from '@entities/editorDocument'
+import type { EditorNode } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 import { useLayoutEffect, useState } from 'react'
 
@@ -64,11 +64,7 @@ function hasSameSelection(
   )
 }
 
-function getSelectedElements(node: EditorNode): EditorElement[] {
-  if (node.type === 'raw') {
-    return []
-  }
-
+function getSelectedElements(node: EditorNode): EditorNode[] {
   if (node.type === 'group') {
     return node.children.flatMap(getSelectedElements)
   }
@@ -76,7 +72,7 @@ function getSelectedElements(node: EditorNode): EditorElement[] {
   return [node]
 }
 
-function getUniqueElements(nodes: EditorNode[]): EditorElement[] {
+function getUniqueElements(nodes: EditorNode[]): EditorNode[] {
   for (const node of nodes) {
     getNodeRenderSignature(node)
   }

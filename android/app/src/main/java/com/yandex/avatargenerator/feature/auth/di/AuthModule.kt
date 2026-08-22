@@ -7,6 +7,7 @@ import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
 import com.yandex.avatargenerator.feature.auth.domain.CurrentUserUseCase
 import com.yandex.avatargenerator.feature.auth.domain.IsAuthorizedUseCase
 import com.yandex.avatargenerator.feature.auth.domain.LoginUseCase
+import com.yandex.avatargenerator.feature.auth.domain.LogoutUseCase
 import com.yandex.avatargenerator.feature.auth.domain.RegisterUseCase
 import com.yandex.avatargenerator.feature.auth.ui.LoginViewModel
 import com.yandex.avatargenerator.feature.auth.ui.RegisterViewModel
@@ -28,6 +29,7 @@ val authModule = module {
     factoryOf(::CurrentUserUseCase)
     factoryOf(::LoginUseCase)
     factoryOf(::RegisterUseCase)
+    factoryOf(::LogoutUseCase)
     viewModelOf(::LoginViewModel)
     viewModelOf(::RegisterViewModel)
 }

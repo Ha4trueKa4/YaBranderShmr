@@ -7,7 +7,8 @@ struct ProfileView: View {
     var isCurrentUser: Bool
     var onBack: (() -> Void)?
     var onEditProfile: () -> Void
-    var onOpenProject: () -> Void
+    var onOpenProject: (UUID, String, URL?) -> Void
+    var onOpenConnections: (UUID, ProfileConnectionsKind) -> Void
 
     init(
         session: SessionStore,
@@ -15,13 +16,15 @@ struct ProfileView: View {
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
-        onOpenProject: @escaping () -> Void = {}
+        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in },
+        onOpenConnections: @escaping (UUID, ProfileConnectionsKind) -> Void = { _, _ in }
     ) {
         self.session = session
         self.isCurrentUser = isCurrentUser
         self.onBack = onBack
         self.onEditProfile = onEditProfile
         self.onOpenProject = onOpenProject
+        self.onOpenConnections = onOpenConnections
         _viewModel = State(initialValue: ProfileViewModel(
             currentUserService: session.currentUserService,
             userProfileService: session.userProfileService,
@@ -32,29 +35,38 @@ struct ProfileView: View {
     @ViewBuilder
     var body: some View {
         if let onBack {
-            profileContent
-                .customNavigationBar(title: "Profile", onBack: onBack)
+            GeometryReader { proxy in
+                profileContent(topInset: proxy.safeAreaInsets.top, onBack: onBack)
+                    .ignoresSafeArea(edges: .top)
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden()
         } else {
-            profileContent
+            profileContent()
         }
     }
 
-    private var profileContent: some View {
-        ScrollView {
+    private func profileContent(
+        topInset: CGFloat = 0,
+        onBack: (() -> Void)? = nil
+    ) -> some View {
+        ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 0) {
-                profileHeader
+                profileHeader(topInset: topInset, onBack: onBack)
                 
                 projectsSection
             }
         }
-        .scrollIndicators(.hidden)
+        .brandRefresher { await viewModel.load() }
         .task { await viewModel.load() }
-        .refreshable { await viewModel.load() }
     }
 
-    private var profileHeader: some View {
+    private func profileHeader(
+        topInset: CGFloat,
+        onBack: (() -> Void)?
+    ) -> some View {
         VStack(spacing: 0) {
-            cover
+            cover(topInset: topInset, onBack: onBack)
             
             VStack(spacing: 12) {
                 avatar
@@ -91,6 +103,8 @@ struct ProfileView: View {
                                     .stroke(Color.accentColor, lineWidth: 1)
                             }
                     }
+                } else if viewModel.canFollow {
+                    followButton
                 }
             }
             .padding(.horizontal, 16)
@@ -99,8 +113,11 @@ struct ProfileView: View {
         .overlay(alignment: .bottom) { separator }
     }
 
-    private var cover: some View {
-        let baseHeight = CGFloat(100)
+    private func cover(
+        topInset: CGFloat,
+        onBack: (() -> Void)?
+    ) -> some View {
+        let baseHeight = CGFloat(100) + topInset
         
         return GeometryReader { proxy in
             LinearGradient(
@@ -110,7 +127,7 @@ struct ProfileView: View {
             )
             .mask {
                 LinearGradient(
-                    colors: [Color(.black).opacity(viewModel.isLoading ? 0 : max(0, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
+                    colors: [Color(.black).opacity(viewModel.isLoading ? 0.3 : max(0.3, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -122,6 +139,13 @@ struct ProfileView: View {
                     signOutButton
                         .padding(.top, 48)
                         .padding(.trailing, 12)
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if let onBack {
+                    NavigationBackButton(action: onBack, foregroundColor: Color(.onAccent))
+                        .padding(.top, topInset + 4)
+                        .padding(.leading, 8)
                 }
             }
             .offset(y: -max(0, onBack == nil ? proxy.frame(in: .global).origin.y : proxy.frame(in: .scrollView).origin.y))
@@ -143,30 +167,67 @@ struct ProfileView: View {
     }
 
     private var avatar: some View {
-        Text(viewModel.initials)
-            .font(.system(size: 19, weight: .bold))
-            .foregroundStyle(Color(.onAccent))
-            .frame(width: 64, height: 64)
-            .background(Color(.endGradient), in: .circle)
-            .overlay { Circle().stroke(Color(.background), lineWidth: 3) }
+        AvatarView(initials: viewModel.initials, size: 64, strokeWidth: 3)
             .accessibilityLabel("Profile picture")
+    }
+
+    private var followButton: some View {
+        FollowButton(
+            isSubscribed: viewModel.isSubscribed,
+            isBusy: viewModel.isFollowBusy,
+            action: viewModel.toggleFollowing
+        )
     }
 
     private var stats: some View {
         HStack(spacing: 8) {
             stat(value: viewModel.projectsCount, title: "Projects")
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followersCount, title: "Followers")
+            connectionStat(
+                value: viewModel.followersCount,
+                title: "Followers",
+                kind: .followers,
+                animated: true
+            )
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followingCount, title: "Following")
+            connectionStat(
+                value: viewModel.followingCount,
+                title: "Following",
+                kind: .following
+            )
         }
         .font(.system(size: 13))
     }
 
-    private func stat(value: Int, title: String) -> some View {
+    private func connectionStat(
+        value: Int,
+        title: String,
+        kind: ProfileConnectionsKind,
+        animated: Bool = false
+    ) -> some View {
+        Button {
+            guard let profileID = viewModel.profileID else { return }
+            onOpenConnections(profileID, kind)
+        } label: {
+            stat(value: value, title: title, animated: animated)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.profileID == nil)
+        .accessibilityHint("Opens \(title.lowercased()) list")
+    }
+
+    private func stat(value: Int, title: String, animated: Bool = false) -> some View {
         HStack(spacing: 3) {
-            Text(value.formatted())
-                .fontWeight(.bold)
+            if animated {
+                Text(value.formatted())
+                    .fontWeight(.bold)
+                    .contentTransition(.numericText(value: Double(value)))
+                    .animation(.easeInOut(duration: 0.2), value: value)
+            } else {
+                Text(value.formatted())
+                    .fontWeight(.bold)
+            }
             Text(title)
                 .foregroundStyle(.secondary)
         }
@@ -195,9 +256,10 @@ struct ProfileView: View {
     private func projectCard(_ project: ProfileViewModel.Project) -> some View {
         FeedListCardView(
             title: project.title,
-            coverColors: project.colors,
+            previewURL: project.previewURL,
+            coverColors: project.previewURL == nil ? project.colors : nil,
             coverHeight: project.coverHeight,
-            onTap: onOpenProject
+            onTap: { onOpenProject(project.id, project.title, project.previewURL) }
         )
     }
 
@@ -215,6 +277,33 @@ struct ProfileView: View {
                 currentUserService: MockCurrentUserService(),
                 userProfileService: MockUserProfileService()
             )
+        )
+    }
+}
+
+#Preview {
+    NavigationStack {
+        ProfileView(
+            session: SessionStore(
+                currentUserService: MockCurrentUserService(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")
+                ),
+                userProfileService: MockUserProfileService(profile: UserProfile(
+                    id: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000") ?? UUID(),
+                    name: "Alex Morgan",
+                    subscribersCount: 340,
+                    subscriptionsCount: 28,
+                    isSubscribed: false,
+                    projects: [
+                        UserProject(id: UUID(), name: "Orion Labs", url: nil),
+                        UserProject(id: UUID(), name: "Cyberpunk Identity", url: nil),
+                        UserProject(id: UUID(), name: "Aether Brand", url: nil)
+                    ]
+                ))
+            ),
+            isCurrentUser: false,
+            userID: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000"),
+            onBack: {}
         )
     }
 }

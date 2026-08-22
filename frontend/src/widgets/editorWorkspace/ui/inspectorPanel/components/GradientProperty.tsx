@@ -6,11 +6,15 @@ import { FillProperty } from './FillProperty'
 
 interface GradientPropertyProps {
   gradient: GradientDefinition
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onStopColorChange: (stopIndex: number, color: string) => void
 }
 
 export function GradientProperty({
   gradient,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onStopColorChange,
 }: GradientPropertyProps) {
   const { t } = useTranslation()
@@ -27,6 +31,8 @@ export function GradientProperty({
           fill={stop.color}
           key={stop.offset}
           onFillChange={(color) => onStopColorChange(index, color)}
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
           title={t('Color stop {{index}} · {{offset}}', {
             index: index + 1,
             offset: stop.offset,

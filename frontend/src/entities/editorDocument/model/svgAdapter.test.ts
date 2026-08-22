@@ -301,6 +301,23 @@ describe('parseSvg', () => {
     ])
   })
 
+  it('keeps an explicitly specified path fill instead of using the SVG black default', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <path id="pelican-neck" d="M290 240 Q320 200 330 170" fill="#ffffff" stroke="#ffffff" stroke-width="20" />
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      id: 'pelican-neck',
+      style: {
+        fill: { type: 'color', value: '#ffffff' },
+        stroke: { type: 'color', value: '#ffffff' },
+      },
+      type: 'shape',
+    })
+  })
+
   it('keeps a contract editor group and its path editable', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">

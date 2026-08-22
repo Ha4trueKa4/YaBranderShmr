@@ -1,13 +1,13 @@
 <resources>
-    <string name="app_name">AvatarGenerator</string>
+    <string name="app_name" translatable="false">AvatarGenerator</string>
 
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>
 
     <!-- Вкладки нижней навигации -->
-    <string name="nav_feed">Лента</string>
-    <string name="nav_create">Создать</string>
-    <string name="nav_profile">Профиль</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_create">Create</string>
+    <string name="nav_profile">Profile</string>
 
     <!-- Вход и регистрация -->
     <string name="auth_sign_in">Sign in</string>
@@ -65,7 +65,7 @@
     <!-- Лента -->
     <string name="feed_brand_name">Brandkit</string>
     <string name="feed_brand_name_accent">AI</string>
-    <string name="feed_search_description">Поиск</string>
+    <string name="feed_search_description">Search</string>
 
     <string name="feed_tab_all">All</string>
     <string name="feed_tab_subscriptions">Subscriptions</string>
@@ -131,6 +131,12 @@
     <string name="public_project_following">Following</string>
     <string name="public_project_download_png">Download PNG</string>
     <string name="public_project_download_svg">Download SVG</string>
+    <string name="public_project_download_saved">%1$s saved to Downloads</string>
+    <string name="public_project_download_saved_gallery">%1$s saved to gallery</string>
+    <string name="public_project_download_failed">Couldn\'t save %1$s</string>
+    <string name="public_project_download_empty">Nothing to export yet</string>
+    <string name="export_format_png">PNG</string>
+    <string name="export_format_svg">SVG</string>
     <string name="public_project_related_title">More from this creator</string>
     <string name="public_project_error_title">Couldn\'t load project</string>
     <string name="public_project_error_retry">Retry</string>
@@ -158,6 +164,34 @@
     <string name="profile_empty_other_subtitle">This user hasn\'t published anything yet</string>
     <string name="profile_error_title">Couldn\'t load profile</string>
     <string name="profile_error_retry">Retry</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_open_description">Settings</string>
+    <string name="settings_back_description">Back</string>
+
+    <string name="settings_section_account">ACCOUNT</string>
+    <string name="settings_section_appearance">APPEARANCE</string>
+    <string name="settings_section_about">ABOUT</string>
+
+    <string name="settings_account_username">Username</string>
+    <string name="settings_account_email">Email</string>
+
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_about_terms">Terms of Use</string>
+    <string name="settings_about_privacy">Privacy Policy</string>
+    <string name="settings_about_version">Version</string>
+
+    <string name="settings_logout">Log Out</string>
 
     <!-- Относительное время: подписи строк чата.
          Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->

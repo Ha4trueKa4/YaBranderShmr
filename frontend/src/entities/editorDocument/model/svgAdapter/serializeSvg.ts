@@ -167,7 +167,11 @@ function serializeGroup(node: EditorGroup): string {
 
 function serializeNode(node: EditorNode): string {
   if (node.type === 'raw') {
-    return node.rawSvg
+    const transform = serializeTransform(node.transform)
+
+    return transform
+      ? `<g${serializeAttributes({ transform })}>${node.rawSvg}</g>`
+      : node.rawSvg
   }
 
   if (node.type === 'group') {

@@ -173,6 +173,12 @@
   --color-auth-muted: #858585;
   --color-auth-promo-background: #ffcc00;
   --color-auth-promo-text: #21201f;
+  --gradient-yandex-soft: linear-gradient(
+    145deg,
+    #fff0eb 0%,
+    #fff7df 52%,
+    #fffcef 100%
+  );
   --gradient-accent: linear-gradient(135deg, #fc3f1d 0%, #ffcc00 100%);
   --shadow-sm: 0 1px 2px rgb(33 32 31 / 8%);
   --shadow-md: 0 8px 24px rgb(33 32 31 / 12%);

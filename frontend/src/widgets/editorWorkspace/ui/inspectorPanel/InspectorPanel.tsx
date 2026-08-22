@@ -10,6 +10,8 @@ interface InspectorPanelProps {
   definitions?: EditorDefinitions
   measuredRotationCenter?: { x: number; y: number }
   onShapeFillChange: (nodeId: string, color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onShapeFillOpacityChange: (nodeId: string, opacity: number) => void
   onGradientStopColorChange: (
     gradientId: string,
@@ -88,6 +90,8 @@ export function InspectorPanel({
   definitions,
   measuredRotationCenter,
   onShapeFillChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onShapeFillOpacityChange,
   onGradientStopColorChange,
   onShapeOpacityChange,
@@ -147,7 +151,7 @@ export function InspectorPanel({
         <div className={styles.content}>
           <p>
             {t(
-              'This SVG layer is locked because its features are not editable yet.',
+              'This SVG layer has effects that cannot be edited yet. You can still move it.',
             )}
           </p>
         </div>
@@ -168,6 +172,8 @@ export function InspectorPanel({
             layer={selectedNode}
             measuredRotationCenter={measuredRotationCenter}
             onFillChange={(color) => onShapeFillChange(selectedNode.id, color)}
+            onEyeDropperEnd={onEyeDropperEnd}
+            onEyeDropperStart={onEyeDropperStart}
             onFillOpacityChange={(opacity) =>
               onShapeFillOpacityChange(selectedNode.id, opacity)
             }
@@ -217,6 +223,8 @@ export function InspectorPanel({
           onFillColorChange={(color) =>
             onTextFillColorChange(selectedNode.id, color)
           }
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
           onFontFamilyChange={(fontFamily) =>
             onTextFontFamilyChange(selectedNode.id, fontFamily)
           }

@@ -30,12 +30,18 @@ namespace ya_brander::components {
       : LoggableComponentBase(config, context),
         http_client_(context.FindComponent<userver::components::HttpClient>()
                          .GetHttpClient()),
-        api_url_(config["api-url"].As<std::string>()) {
-    const char* key = std::getenv("YANDEX_AI_API_KEY");
-    if (key == nullptr || std::string_view(key).empty()) {
+        yandex_api_url_(config["yandex-api-url"].As<std::string>()),
+        openai_api_url_(config["openai-api-url"].As<std::string>()) {
+    const char* yandex_key = std::getenv("YANDEX_AI_API_KEY");
+    if (yandex_key == nullptr || std::string_view(yandex_key).empty()) {
       throw std::runtime_error("YANDEX_AI_API_KEY is not set");
     }
-    api_key_ = key;
+    yandex_api_key_ = yandex_key;
+
+    const char* openai_key = std::getenv("OPENAI_API_KEY");
+    if (openai_key != nullptr && !std::string_view(openai_key).empty()) {
+      openai_api_key_ = openai_key;
+    }
   }
 
   static userver::yaml_config::Schema GetStaticConfigSchema();
@@ -48,8 +54,10 @@ namespace ya_brander::components {
                                  double temperature) const;
  private:
   userver::clients::http::Client& http_client_;
-  std::string api_url_;
-  std::string api_key_;  // Ключ должен быть указан в .env.
+  std::string yandex_api_url_;
+  std::string openai_api_url_;
+  std::string yandex_api_key_;
+  std::string openai_api_key_;
 };
 
 void AppendLLMClient(userver::components::ComponentList& component_list);

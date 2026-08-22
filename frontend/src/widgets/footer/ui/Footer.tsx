@@ -18,11 +18,11 @@ export function Footer() {
   const [theme, setTheme] = useState(getInitialTheme)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const themeOptions = [
+    { label: t('Yandex Colors'), value: 'yandex' },
     { label: t('System'), value: 'system' },
     { label: t('Dark'), value: 'dark' },
     { label: t('Light'), value: 'light' },
     { label: t('Sephia Colors'), value: 'sephia' },
-    { label: t('Yandex Colors'), value: 'yandex' },
   ]
   const languageSelectOptions = languageOptions.map((option) => ({
     label: option.label,

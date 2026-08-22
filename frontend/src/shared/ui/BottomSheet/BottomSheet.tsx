@@ -25,6 +25,7 @@ export interface BottomSheetProps extends PropsWithChildren {
   contentClassName?: string
   isOpen: boolean
   onClose: () => void
+  showCloseButton?: boolean
   title: string
 }
 
@@ -35,6 +36,7 @@ export function BottomSheet({
   contentClassName,
   isOpen,
   onClose,
+  showCloseButton = true,
   title,
 }: BottomSheetProps) {
   const dragStateRef = useRef<DragState | null>(null)
@@ -139,9 +141,11 @@ export function BottomSheet({
             <h2>{title}</h2>
             <div className={styles.headerActions}>
               {actions}
-              <IconButton onClick={onClose} size="sm">
-                <X />
-              </IconButton>
+              {showCloseButton && (
+                <IconButton onClick={onClose} size="sm">
+                  <X />
+                </IconButton>
+              )}
             </div>
           </header>
           <div

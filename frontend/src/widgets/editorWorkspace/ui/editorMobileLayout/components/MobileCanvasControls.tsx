@@ -1,15 +1,12 @@
-import { ColorSwatch, IconButton, Tooltip } from '@shared/ui'
+import { IconButton, Tooltip } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import iconMousePointer from '../../editorToolbar/assets/iconMousePointer.svg'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileCanvasControlsProps {
   activeTool: CanvasTool
-  fillColor: string | null
-  onOpenColorPicker: () => void
   onToolChange: (tool: CanvasTool) => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -19,8 +16,6 @@ interface MobileCanvasControlsProps {
 
 export function MobileCanvasControls({
   activeTool,
-  fillColor,
-  onOpenColorPicker,
   onToolChange,
   onZoomIn,
   onZoomOut,
@@ -32,17 +27,13 @@ export function MobileCanvasControls({
 
   return (
     <div className={styles.canvasControls}>
-      {fillColor ? (
-        <ColorSwatch
-          className={styles.fillSwatch}
-          color={fillColor}
-          onClick={onOpenColorPicker}
-        />
-      ) : (
-        <IconButton className={styles.activeTool} title={t('Select tool')}>
-          <img alt="" src={iconMousePointer} />
-        </IconButton>
-      )}
+      <IconButton
+        className={activeTool === 'select' ? styles.activeTool : undefined}
+        onClick={() => onToolChange('select')}
+        title={t('Select tool')}
+      >
+        <span className={styles.selectIcon} />
+      </IconButton>
       <IconButton
         className={activeTool === 'hand' ? styles.activeTool : undefined}
         onClick={() => onToolChange(activeTool === 'hand' ? 'select' : 'hand')}

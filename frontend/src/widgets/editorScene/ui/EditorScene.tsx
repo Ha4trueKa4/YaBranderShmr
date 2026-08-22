@@ -15,6 +15,7 @@ interface EditorSceneProps {
   onDocumentChangeStart: () => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onMeasuredRotationCenterChange: (
     center: { nodeId: string; x: number; y: number } | null,
   ) => void
@@ -69,6 +70,7 @@ export function EditorScene({
   onDocumentChangeStart,
   onSelectNode,
   onGroupPositionChange,
+  onRawPositionChange,
   onMeasuredRotationCenterChange,
   onShapePositionChange,
   onShapeTransformChange,
@@ -95,6 +97,7 @@ export function EditorScene({
         onDocumentChangeEnd={onDocumentChangeEnd}
         onDocumentChangeStart={onDocumentChangeStart}
         onGroupPositionChange={onGroupPositionChange}
+        onRawPositionChange={onRawPositionChange}
         onMeasuredRotationCenterChange={onMeasuredRotationCenterChange}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}

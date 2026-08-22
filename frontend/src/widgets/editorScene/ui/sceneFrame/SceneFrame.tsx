@@ -28,6 +28,7 @@ interface SceneFrameProps {
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onMeasuredRotationCenterChange: (
     center: { nodeId: string; x: number; y: number } | null,
   ) => void
@@ -82,6 +83,7 @@ export function SceneFrame({
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onGroupPositionChange,
+  onRawPositionChange,
   onMeasuredRotationCenterChange,
   onSelectNode,
   onShapePositionChange,
@@ -109,16 +111,19 @@ export function SceneFrame({
   const {
     onPointerMove,
     onPointerUp,
+    onRawPointerDown,
     onShapePointerDown,
     onTextPointerDown,
     svgReference,
   } = useLayerDrag({
     activeTool,
+    document: document.layers,
     getEditableElement,
     isReadOnly,
     onDocumentChangeEnd,
     onDocumentChangeStart,
     onGroupPositionChange,
+    onRawPositionChange,
     onSelectNode,
     onShapePositionChange,
     onTextPositionChange,
@@ -250,6 +255,7 @@ export function SceneFrame({
               canMoveLayers={activeTool === 'select'}
               document={document}
               onSelectNode={onSelectNode}
+              onRawPointerDown={onRawPointerDown}
               onShapePointerDown={onShapePointerDown}
               onShapePointerMove={onPointerMove}
               onShapePointerUp={onPointerUp}
