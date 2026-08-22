@@ -11,6 +11,10 @@ components_manager:
       worker_threads: $worker-bg-threads   # main-task-processor, чтобы не конкурировать
                                             # с обработкой HTTP-запросов (в т.ч. long-poll).
 
+    grpc-blocking-task-processor: # Для блокирующей инициализации gRPC-каналов (otlp-logger).
+      worker_threads: 2
+      thread_name: grpc-worker
+
   default_task_processor: main-task-processor
 
   components: # Configuring components that were registered via component_list
@@ -18,6 +22,9 @@ components_manager:
       listener: # configuring the main listening socket...
         port: $server-port            # ...to listen on this port and...
         task_processor: main-task-processor    # ...process incoming requests on this task processor.
+      listener-monitor: # internal-only port for /metrics — never published to the host or internet,
+        port: $monitor-port           # only reachable by other containers on the same docker network
+        task_processor: main-task-processor    # (e.g. the otel-collector scraping it for Monium).
 
     cors-middleware:
       allowed-origins:
@@ -75,6 +82,12 @@ components_manager:
       throttling_enabled: false
       url_trailing_slash: strict-match
 
+    handler-server-monitor: # Exposes userver's own metrics (request rates, latencies, etc.)
+      path: /metrics         # in Prometheus format, scraped by the otel-collector below and
+      method: GET            # forwarded to Monium's metrics pipeline. Served only on
+      task_processor: main-task-processor  # listener-monitor, not the public listener.
+      format: prometheus
+
     handler-check:
       path: /check
       method: GET
@@ -119,6 +132,24 @@ components_manager:
 
     dns-client:
       fs-task-processor: fs-task-processor
+
+    # ==========================================
+    # Monium telemetry (OTLP logs + traces)
+    # ==========================================
+    grpc-client-common:
+      blocking-task-processor: grpc-blocking-task-processor
+
+    grpc-client-factory:
+      channel-args: { }
+
+    otlp-logger:
+      client-factory-name: grpc-client-factory
+      endpoint: $monium-otlp-endpoint
+      service-name: ya-brander
+      log-level: $logger-level
+      sinks:
+        logs: both
+        tracing: both
 
     # ==========================================
     # Внешние сервисы (или их моки)

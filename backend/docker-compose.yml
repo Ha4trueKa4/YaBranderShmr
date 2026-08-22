@@ -81,6 +81,19 @@ services:
     networks:
       - postgres
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.159.0
+    container_name: service-otel-collector
+    environment:
+      - MONIUM_PROJECT=${MONIUM_PROJECT}
+      - MONIUM_API_KEY=${MONIUM_API_KEY}
+      - YA_BRANDER_HOST=ya_brander-container
+    volumes:
+      - ./otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - postgres
+      - default
+
   ya_brander-container:
     image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
     privileged: true
