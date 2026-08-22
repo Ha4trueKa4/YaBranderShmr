@@ -258,6 +258,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onTextFontSizeChange: editorStore.svgNodeEditing.setTextFontSize,
     onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
     onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
+    onTextOpacityChange: editorStore.svgNodeEditing.setTextOpacity,
     onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
     onTextRotationChange: editorStore.svgNodeEditing.setTextRotation,
     onTextTransformChange: editorStore.svgNodeEditing.setTextTransform,

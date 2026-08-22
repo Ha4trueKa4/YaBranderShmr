@@ -52,6 +52,7 @@ interface InspectorPanelProps {
     fontStyle: 'italic' | 'normal',
   ) => void
   onTextFontWeightChange: (nodeId: string, fontWeight: number) => void
+  onTextOpacityChange: (nodeId: string, opacity: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onTextRotationChange: (
     nodeId: string,
@@ -115,6 +116,7 @@ export function InspectorPanel({
   onTextFontSizeChange,
   onTextFontStyleChange,
   onTextFontWeightChange,
+  onTextOpacityChange,
   onTextPositionChange,
   onTextRotationChange,
   onTextTransformChange,
@@ -245,6 +247,9 @@ export function InspectorPanel({
           }
           onPositionChange={(x, y) =>
             onTextPositionChange(selectedNode.id, x, y)
+          }
+          onOpacityChange={(opacity) =>
+            onTextOpacityChange(selectedNode.id, opacity)
           }
           onRotationChange={(rotation, rotationCenter) =>
             onTextRotationChange(selectedNode.id, rotation, rotationCenter)
