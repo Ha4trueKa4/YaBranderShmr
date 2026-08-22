@@ -21,7 +21,7 @@ export function FillProperty({
   onEyeDropperStart,
   onOpacityChange,
   opacity = 1,
-  title = 'Fill',
+  title,
 }: FillPropertyProps) {
   const { t } = useTranslation()
   const [draftFill, setDraftFill] = useState(fill)
@@ -73,7 +73,7 @@ export function FillProperty({
 
   return (
     <section className={styles.property}>
-      <p className={styles.title}>{title}</p>
+      <p className={styles.title}>{t(title ?? 'Fill')}</p>
       <div className={styles.colorValue}>
         <div className={styles.colorControl} ref={colorControlRef}>
           <ColorSwatch
