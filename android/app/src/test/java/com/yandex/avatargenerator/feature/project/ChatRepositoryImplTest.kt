@@ -3,10 +3,11 @@ package com.yandex.avatargenerator.feature.project
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.core.network.ApiJson
 import com.yandex.avatargenerator.feature.project.data.ChatRepositoryImpl
+import com.yandex.avatargenerator.feature.project.data.GenerationPolling
 import com.yandex.avatargenerator.feature.project.data.ProjectRepositoryImpl
 import com.yandex.avatargenerator.feature.project.data.VersionsRepositoryImpl
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
-import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -24,6 +25,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -33,6 +35,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.ConnectException
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -79,9 +82,11 @@ private const val VersionsJson = """
 
 private const val GeneratedUrl = "https://s3.example/generated.svg?signature=xyz"
 
-/** Ответ генерации: кроме ссылки в нём нет ничего — ни version_id, ни номера. */
+private const val JobId = "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+
+/** Ответ 202: генерация только поставлена в очередь, результата в нём нет. */
 private const val GenerateJson = """
-{"url": "$GeneratedUrl"}
+{"job_id": "$JobId"}
 """
 
 private typealias Responder = MockRequestHandleScope.() -> HttpResponseData
@@ -100,11 +105,23 @@ class ChatRepositoryImplTest {
      * раскладывает ответы по путям. Проект и версии идут через боевые
      * репозитории, как и в графе Koin.
      */
+    /**
+     * Ответы статус-ручки по порядку опросов: первый вызов берёт первый элемент,
+     * последний повторяется дальше — так задаётся «pending, pending, done».
+     */
+    private fun statuses(vararg responders: Responder): Responder {
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        return {
+            responders[calls.getAndIncrement().coerceAtMost(responders.lastIndex)].invoke(this)
+        }
+    }
+
     private fun repository(
         project: Responder = { respondJson(ProjectJson) },
         chat: Responder = { respondJson(ChatJson) },
         versions: Responder = { respondJson(VersionsJson) },
         generate: Responder = { respondJson(GenerateJson) },
+        status: Responder = { respondJson("""{"status":"done","url":"$GeneratedUrl"}""") },
     ): ChatRepositoryImpl {
         val client = HttpClient(
             MockEngine { request ->
@@ -116,13 +133,14 @@ class ChatRepositoryImplTest {
                     path.endsWith("/chat") -> chat()
                     path.endsWith("/versions") -> versions()
                     path.endsWith("/generate") -> generate()
+                    path.contains("/generate/") -> status()
                     else -> project()
                 }
             },
         ) {
             expectSuccess = true
             install(ContentNegotiation) { json(ApiJson) }
-            // Плагин нужен здесь, потому что sendPrompt задаёт свой таймаут
+            // Плагин нужен здесь, потому что опрос статуса задаёт свой таймаут
             // через timeout { } — без плагина настройка просто не сработала бы.
             install(HttpTimeout)
             defaultRequest {
@@ -134,6 +152,13 @@ class ChatRepositoryImplTest {
             client = client,
             projectRepository = ProjectRepositoryImpl(client),
             versionsRepository = VersionsRepositoryImpl(client),
+            // Боевые тайминги — минуты; мок отвечает мгновенно, так что здесь
+            // важны только пропорции, а не значения.
+            polling = GenerationPolling(
+                statusTimeoutMillis = 100,
+                guardMillis = 1,
+                deadlineMillis = 200,
+            ),
         )
     }
 
@@ -330,26 +355,23 @@ class ChatRepositoryImplTest {
     }
 
     @Test
-    fun `удачная генерация отдаёт ссылку на новую версию`() = runTest {
-        val generated = repository().sendPrompt("p-1", "Violet logo").getOrThrow()
-
-        assertEquals(GeneratedVersion(previewUrl = GeneratedUrl), generated)
+    fun `старт генерации отдаёт job_id`() = runTest {
+        assertEquals(JobId, repository().startGeneration("p-1", "Violet logo").getOrThrow())
     }
 
     @Test
-    fun `ответ 200 без url — не ошибка`() = runTest {
-        // Версия создана, просто ссылку не прислали: возьмём её из ленты.
+    fun `202 без job_id — ошибка контракта, а не успех`() = runTest {
+        // Иначе опрашивать было бы нечего, а экран решил бы, что всё идёт.
         val repository = repository(generate = { respondJson("{}") })
 
-        assertEquals(
-            GeneratedVersion(previewUrl = null),
-            repository.sendPrompt("p-1", "Violet logo").getOrThrow(),
-        )
+        val error = repository.startGeneration("p-1", "Violet logo").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.Serialization)
     }
 
     @Test
     fun `промпт уходит POST-ом по своему пути, сегмент кодируется`() = runTest {
-        repository().sendPrompt("a b", "Violet logo")
+        repository().startGeneration("a b", "Violet logo")
 
         assertEquals(listOf("/api/v1/projects/a%20b/generate"), requestedPaths.toList())
         assertEquals(listOf(HttpMethod.Post), requestedMethods.toList())
@@ -357,7 +379,7 @@ class ChatRepositoryImplTest {
 
     @Test
     fun `в теле уходит только промпт — модель бэкенд подставит сам`() = runTest {
-        repository().sendPrompt("p-1", "Violet logo, please")
+        repository().startGeneration("p-1", "Violet logo, please")
 
         val body = Json.parseToJsonElement(sentBodies.single()) as JsonObject
         assertEquals("Violet logo, please", body.getValue("prompt").jsonPrimitive.content)
@@ -372,7 +394,7 @@ class ChatRepositoryImplTest {
             generate = { respondError(HttpStatusCode.BadRequest, """{"message":"Prompt too long"}""") },
         )
 
-        val error = repository.sendPrompt("p-1", "x").exceptionOrNull()
+        val error = repository.startGeneration("p-1", "x").exceptionOrNull()
 
         assertTrue("получили $error", error is NetworkException.ClientError)
         assertEquals(400, (error as NetworkException.ClientError).code)
@@ -383,45 +405,188 @@ class ChatRepositoryImplTest {
     fun `403 — чужой проект или просроченный токен`() = runTest {
         val repository = repository(generate = { respondError(HttpStatusCode.Forbidden) })
 
-        val error = repository.sendPrompt("p-1", "Violet logo").exceptionOrNull()
+        val error = repository.startGeneration("p-1", "Violet logo").exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.Forbidden)
+    }
+
+    /*
+     * Тесты опроса идут на runBlocking, а не runTest: виртуальные часы runTest
+     * перематываются вперёд, как только на тест-диспетчере не осталось задач, —
+     * а движок Ktor работает на своём. Общий дедлайн срабатывал бы мгновенно,
+     * и любой сценарий заканчивался бы TimedOut. Ждать по-настоящему при этом
+     * не приходится: тайминги подменены на миллисекунды (см. `repository`).
+     */
+
+    @Test
+    fun `статус опрашивается по своему пути, job_id кодируется`() = runBlocking {
+        repository().awaitGeneration("a b", "job 1")
+
+        assertEquals(listOf("/api/v1/projects/a%20b/generate/job%201"), requestedPaths.toList())
+        assertEquals(listOf(HttpMethod.Get), requestedMethods.toList())
+    }
+
+    @Test
+    fun `done отдаёт ссылку на новую версию`() = runBlocking {
+        val outcome = repository().awaitGeneration("p-1", JobId).getOrThrow()
+
+        assertEquals(GenerationOutcome.Done(previewUrl = GeneratedUrl), outcome)
+    }
+
+    @Test
+    fun `pending опрашивается ещё раз, пока не придёт done`() = runBlocking {
+        // Long polling: сервер держит запрос 25 секунд и отвечает pending, если
+        // за это время генерация не успела.
+        val repository = repository(
+            status = statuses(
+                { respondJson("""{"status":"pending"}""") },
+                { respondJson("""{"status":"pending"}""") },
+                { respondJson("""{"status":"done","url":"$GeneratedUrl"}""") },
+            ),
+        )
+
+        val outcome = repository.awaitGeneration("p-1", JobId).getOrThrow()
+
+        assertEquals(GenerationOutcome.Done(previewUrl = GeneratedUrl), outcome)
+        assertEquals(3, requestedPaths.size)
+    }
+
+    @Test
+    fun `error отдаёт текст ошибки, а не Result-failure`() = runBlocking {
+        // Провал генерации — это доведённое до конца ожидание: экран показывает
+        // пузырь ошибки, а не «что-то пошло не так со связью».
+        val repository = repository(
+            status = { respondJson("""{"status":"error","message":"Invalid SVG"}""") },
+        )
+
+        assertEquals(
+            GenerationOutcome.Failed(message = "Invalid SVG"),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `error без текста — тоже Failed, подпись подставит экран`() = runBlocking {
+        val repository = repository(status = { respondJson("""{"status":"error"}""") })
+
+        assertEquals(
+            GenerationOutcome.Failed(message = null),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `обрыв связи между опросами не прерывает ожидание`() = runBlocking {
+        // Сеть моргнула — задача на сервере от этого никуда не делась.
+        val repository = repository(
+            status = statuses(
+                { throw ConnectException("network is down") },
+                { respondJson("""{"status":"done","url":"$GeneratedUrl"}""") },
+            ),
+        )
+
+        assertEquals(
+            GenerationOutcome.Done(previewUrl = GeneratedUrl),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `403 на статус-ручке прерывает опрос ошибкой`() = runBlocking {
+        // О судьбе генерации ничего не известно, повторять запрос бессмысленно.
+        val repository = repository(status = { respondError(HttpStatusCode.Forbidden) })
+
+        val error = repository.awaitGeneration("p-1", JobId).exceptionOrNull()
 
         assertTrue("получили $error", error is NetworkException.Forbidden)
     }
 
     @Test
-    fun `422 — модель вернула невалидный SVG`() = runTest {
-        // Отдельно от 400: тот же промпт есть смысл повторить.
+    fun `404 ищет результат в истории и находит версию`() = runBlocking {
+        // Задача живёт в памяти бэкенда: рестарт теряет её уже после того, как
+        // генерация успела завершиться и попасть в историю.
         val repository = repository(
-            generate = {
-                respondError(HttpStatusCode.UnprocessableEntity, """{"message":"Invalid SVG"}""")
+            status = { respondError(HttpStatusCode.NotFound) },
+            chat = {
+                respondJson(
+                    """
+                    {"chat_history": [
+                      {"role": "user", "text": "Violet logo", "job_id": "$JobId"},
+                      {"role": "assistant", "version_id": "v-9", "job_id": "$JobId"}
+                    ]}
+                    """,
+                )
             },
         )
 
-        val error = repository.sendPrompt("p-1", "Violet logo").exceptionOrNull()
-
-        assertTrue("получили $error", error is NetworkException.ClientError)
-        assertEquals(422, (error as NetworkException.ClientError).code)
+        // Ссылки в истории нет — её экран возьмёт из перечитанной ленты.
+        assertEquals(
+            GenerationOutcome.Done(previewUrl = null),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
     }
 
     @Test
-    fun `503 — генератор временно недоступен`() = runTest {
+    fun `404 находит в истории и провал генерации`() = runBlocking {
         val repository = repository(
-            generate = { respondError(HttpStatusCode.ServiceUnavailable) },
+            status = { respondError(HttpStatusCode.NotFound) },
+            chat = {
+                respondJson(
+                    """
+                    {"chat_history": [
+                      {"role": "assistant", "error": "Invalid SVG", "job_id": "$JobId"}
+                    ]}
+                    """,
+                )
+            },
         )
 
-        val error = repository.sendPrompt("p-1", "Violet logo").exceptionOrNull()
-
-        assertTrue("получили $error", error is NetworkException.ServerError)
+        assertEquals(
+            GenerationOutcome.Failed(message = "Invalid SVG"),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
     }
 
     @Test
-    fun `неудачная генерация не перезапрашивает ленту`() = runTest {
-        // Бэкенд пишет промпт в историю только после успешного сохранения
-        // версии, так что после ошибки читать нечего.
-        val repository = repository(generate = { respondError(HttpStatusCode.ServiceUnavailable) })
+    fun `404 без ответа в истории — провал без текста`() = runBlocking {
+        // Бэкенд упал в середине генерации: результата не будет вообще.
+        val repository = repository(
+            status = { respondError(HttpStatusCode.NotFound) },
+            chat = { respondJson("""{"chat_history":[{"role":"user","text":"Violet logo"}]}""") },
+        )
 
-        repository.sendPrompt("p-1", "Violet logo")
+        assertEquals(
+            GenerationOutcome.Failed(message = null),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+        // Пара попыток: запись в историю могла отстать от рестарта.
+        assertEquals(2, requestedPaths.count { it.endsWith("/chat") })
+    }
 
-        assertEquals(listOf("/api/v1/projects/p-1/generate"), requestedPaths.toList())
+    @Test
+    fun `вечный pending упирается в общий дедлайн`() = runBlocking {
+        // runTest крутит виртуальное время — пять минут тест по-настоящему не ждёт.
+        val repository = repository(status = { respondJson("""{"status":"pending"}""") })
+
+        assertEquals(
+            GenerationOutcome.TimedOut,
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `незнакомый статус не считается результатом`() = runBlocking {
+        // Контракт мог расшириться — спрашиваем ещё раз вместо того, чтобы гадать.
+        val repository = repository(
+            status = statuses(
+                { respondJson("""{"status":"queued"}""") },
+                { respondJson("""{"status":"done","url":"$GeneratedUrl"}""") },
+            ),
+        )
+
+        assertEquals(
+            GenerationOutcome.Done(previewUrl = GeneratedUrl),
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
     }
 }

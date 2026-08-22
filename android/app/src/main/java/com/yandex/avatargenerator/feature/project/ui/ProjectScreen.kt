@@ -51,6 +51,7 @@ internal fun ProjectScreen(
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::send,
         onPreviewNeeded = viewModel::onPreviewNeeded,
+        onRetryGeneration = viewModel::retryGeneration,
         modifier = modifier,
     )
 }
@@ -72,6 +73,7 @@ private fun ProjectContent(
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onPreviewNeeded: (String) -> Unit,
+    onRetryGeneration: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -112,6 +114,7 @@ private fun ProjectContent(
                 ChatTimeline(
                     messages = uiState.messages,
                     onPreviewNeeded = onPreviewNeeded,
+                    onRetry = onRetryGeneration,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -159,6 +162,7 @@ private fun ProjectScreenContentPreview() {
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }
@@ -179,6 +183,7 @@ private fun ProjectScreenEmptyChatPreview() {
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }
@@ -194,6 +199,50 @@ private fun ProjectScreenLoadingPreview() {
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
+            onRetryGeneration = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun ProjectScreenGeneratingPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.generatingMessages(),
+                draft = "",
+                isSending = true,
+            ),
+            onBackClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun ProjectScreenFailedGenerationPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.failedMessages(),
+                draft = "",
+            ),
+            onBackClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }
@@ -209,6 +258,7 @@ private fun ProjectScreenErrorPreview() {
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }

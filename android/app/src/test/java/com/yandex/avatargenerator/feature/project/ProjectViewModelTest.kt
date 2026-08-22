@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import com.yandex.avatargenerator.feature.project.ui.MaxPromptBytes
 import com.yandex.avatargenerator.feature.project.ui.ProjectUiState
@@ -64,6 +65,20 @@ internal class ProjectViewModelTest {
             versionId = "v-2",
             sentAt = Instant.parse("2026-08-12T11:32:00Z"),
             previewUrl = LATEST_URL,
+        ),
+    )
+
+    /** Лента, какой её отдаёт сервер после провала: промпт и запись об ошибке. */
+    private val failedMessages = messages + listOf(
+        ChatMessage.Outgoing(
+            id = "chat-1-user",
+            text = "Make it rounder",
+            sentAt = Instant.parse("2026-08-12T11:32:00Z"),
+        ),
+        ChatMessage.Failed(
+            id = "chat-2-assistant",
+            text = "Invalid SVG",
+            sentAt = Instant.parse("2026-08-12T11:32:20Z"),
         ),
     )
 
@@ -233,9 +248,9 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `ошибка генерации возвращает текст и убирает промпт из ленты`() = runTest(dispatcher) {
+    fun `неотправленный промпт возвращается в поле и уходит из ленты`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.success(chat)
-        chatRepository.sendError = IllegalStateException("network is down")
+        chatRepository.startError = IllegalStateException("network is down")
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -251,10 +266,10 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `после ошибки генерации лента не перезапрашивается`() = runTest(dispatcher) {
-        // 422 и 503 бэкенд в историю не пишет — перечитывать нечего.
+    fun `после неудачного старта лента не перезапрашивается`() = runTest(dispatcher) {
+        // Задачи нет, промпт до сервера не дошёл — перечитывать нечего.
         chatRepository.chatResult = Result.success(chat)
-        chatRepository.sendError = IllegalStateException("boom")
+        chatRepository.startError = IllegalStateException("boom")
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -266,9 +281,9 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `ошибка генерации не перетирает новый черновик`() = runTest(dispatcher) {
+    fun `неудачный старт не перетирает новый черновик`() = runTest(dispatcher) {
         chatRepository.chatResult = Result.success(chat)
-        chatRepository.sendError = IllegalStateException("network is down")
+        chatRepository.startError = IllegalStateException("network is down")
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -331,65 +346,146 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `таймаут ждёт версию опросом, а не считается ошибкой`() = runTest(dispatcher) {
-        // Сервер доводит генерацию до конца и после обрыва — версия появляется
-        // с задержкой, и промпт из ленты выбрасывать нельзя.
+    fun `скелетон ответа появляется сразу после старта задачи`() = runTest(dispatcher) {
+        // Ждать теперь можно минутами — спиннера в кнопке отправки мало.
         chatRepository.chatResult = Result.success(chat)
+        chatRepository.awaitResult = Result.success(GenerationOutcome.TimedOut)
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        chatRepository.sendError = NetworkException.Timeout()
-        // Первый опрос застаёт ленту прежней (модель ещё считает), второй — уже
-        // с серверной парой «промпт → версия».
-        chatRepository.chatResults += Result.success(chat)
-        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
         viewModel.onDraftChange("Make it rounder")
         viewModel.send()
         advanceUntilIdle()
 
-        val content = contentOf(viewModel)
-        assertEquals(reloadedMessages, content.messages)
-        assertEquals("", content.draft)
-        assertEquals(false, content.isSending)
-        // Загрузка экрана плюс два опроса: как только версия нашлась, опрос встал.
-        assertEquals(3, chatRepository.getChatCallCount)
+        // TimedOut скелетон снимает, поэтому проверяем сам факт ожидания задачи.
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
     }
 
     @Test
-    fun `упавший опрос не прерывает ожидание версии`() = runTest(dispatcher) {
-        // Сеть могла лечь ровно на этом тике — версия на сервере от этого никуда
-        // не делась.
+    fun `провал генерации перечитывает ленту и не возвращает текст в поле`() =
+        runTest(dispatcher) {
+            // Промпт уже лежит на сервере — вернуть его в поле значит поощрить
+            // дубль, а после перезахода он всё равно всплывёт в ленте.
+            chatRepository.chatResult = Result.success(chat)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            chatRepository.awaitResult =
+                Result.success(GenerationOutcome.Failed("Invalid SVG"))
+            chatRepository.chatResult = Result.success(chat.copy(messages = failedMessages))
+            viewModel.onDraftChange("Make it rounder")
+            viewModel.send()
+            advanceUntilIdle()
+
+            val content = contentOf(viewModel)
+            assertEquals(failedMessages, content.messages)
+            assertEquals("", content.draft)
+            assertEquals(false, content.isSending)
+        }
+
+    @Test
+    fun `если ленту перечитать не удалось, пузырь ошибки рисуется локально`() =
+        runTest(dispatcher) {
+            chatRepository.chatResult = Result.success(chat)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            chatRepository.awaitResult =
+                Result.success(GenerationOutcome.Failed("Invalid SVG"))
+            chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
+            viewModel.onDraftChange("Make it rounder")
+            viewModel.send()
+            advanceUntilIdle()
+
+            val content = contentOf(viewModel)
+            // Оптимистичный промпт остался: на сервере он есть.
+            assertEquals("Make it rounder", content.messages.filterIsInstance<ChatMessage.Outgoing>().last().text)
+            assertEquals(
+                "Invalid SVG",
+                content.messages.filterIsInstance<ChatMessage.Failed>().single().text,
+            )
+            assertEquals(false, content.isSending)
+        }
+
+    @Test
+    fun `сорвавшийся опрос показывает ошибку без служебного текста`() = runTest(dispatcher) {
+        // Текст NetworkException служебный — пользователю его показывать нельзя,
+        // подпись возьмёт UI из strings.xml.
         chatRepository.chatResult = Result.success(chat)
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        chatRepository.sendError = NetworkException.Timeout()
-        chatRepository.chatResults += Result.failure(IllegalStateException("network is down"))
-        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        chatRepository.awaitResult = Result.failure(NetworkException.Forbidden())
+        chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
         viewModel.onDraftChange("Make it rounder")
         viewModel.send()
         advanceUntilIdle()
 
-        assertEquals(reloadedMessages, contentOf(viewModel).messages)
+        assertEquals(
+            null,
+            contentOf(viewModel).messages.filterIsInstance<ChatMessage.Failed>().single().text,
+        )
     }
 
     @Test
-    fun `если версия так и не появилась, промпт возвращается в поле`() = runTest(dispatcher) {
-        // Окно опроса вышло — считаем генерацию неудавшейся и ведём себя как при
-        // обычной ошибке.
-        chatRepository.chatResult = Result.success(chat)
-        chatRepository.sendError = NetworkException.Timeout()
+    fun `дедлайн ожидания оставляет промпт и говорит, что генерация идёт`() =
+        runTest(dispatcher) {
+            // Это не провал: задача могла остаться считаться на сервере.
+            chatRepository.chatResult = Result.success(chat)
+            chatRepository.awaitResult = Result.success(GenerationOutcome.TimedOut)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.onDraftChange("Make it rounder")
+            viewModel.send()
+            advanceUntilIdle()
+
+            val content = contentOf(viewModel)
+            assertEquals("Make it rounder", content.messages.filterIsInstance<ChatMessage.Outgoing>().last().text)
+            assertEquals(1, content.messages.filterIsInstance<ChatMessage.System.GenerationStillRunning>().size)
+            assertEquals(emptyList<ChatMessage.Pending>(), content.messages.filterIsInstance<ChatMessage.Pending>())
+            assertEquals("", content.draft)
+            assertEquals(false, content.isSending)
+            // Ленту не перечитывали: результата всё равно ещё нет.
+            assertEquals(1, chatRepository.getChatCallCount)
+        }
+
+    @Test
+    fun `Повторить отправляет промпт, стоящий над пузырём ошибки`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat.copy(messages = failedMessages))
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        viewModel.onDraftChange("Make it rounder")
-        viewModel.send()
+        viewModel.retryGeneration("chat-2-assistant")
         advanceUntilIdle()
 
-        val content = contentOf(viewModel)
-        assertEquals("Make it rounder", content.draft)
-        assertEquals(messages, content.messages)
-        assertEquals(false, content.isSending)
+        assertEquals(listOf("Make it rounder"), chatRepository.sentPrompts)
+    }
+
+    @Test
+    fun `Повторить во время генерации игнорируется`() = runTest(dispatcher) {
+        // Иначе одно нажатие «на всякий случай» завело бы вторую задачу.
+        chatRepository.chatResult = Result.success(chat.copy(messages = failedMessages))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.retryGeneration("chat-2-assistant")
+        viewModel.retryGeneration("chat-2-assistant")
+        advanceUntilIdle()
+
+        assertEquals(listOf("Make it rounder"), chatRepository.sentPrompts)
+    }
+
+    @Test
+    fun `Повторить по неизвестному сообщению ничего не отправляет`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.retryGeneration("no-such-message")
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), chatRepository.sentPrompts)
     }
 
     @Test

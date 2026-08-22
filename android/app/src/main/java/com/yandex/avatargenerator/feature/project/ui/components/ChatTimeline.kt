@@ -34,11 +34,14 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  * @param onPreviewNeeded вызывается, когда пузырь ответа ИИ без картинки дошёл
  *  до экрана: ссылку на превью прошлой версии запрашивают по требованию, а не
  *  пачкой при открытии. Повторные вызовы по одной версии отсекает ViewModel.
+ * @param onRetry «Повторить» на пузыре провалившейся генерации; параметр — id
+ *  этого пузыря, промпт для повтора ViewModel найдёт над ним сама.
  */
 @Composable
 internal fun ChatTimeline(
     messages: List<ChatMessage>,
     onPreviewNeeded: (String) -> Unit,
+    onRetry: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -91,6 +94,24 @@ internal fun ChatTimeline(
                     }
                 }
 
+                is ChatMessage.Pending -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                ) {
+                    ChatPendingBubble()
+                }
+
+                is ChatMessage.Failed -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                ) {
+                    ChatFailedBubble(
+                        text = message.text,
+                        onRetry = { onRetry(message.id) },
+                        timeLabel = rememberMessageTimeLabel(message.sentAt),
+                    )
+                }
+
                 is ChatMessage.System.ProjectCreated -> Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -101,6 +122,15 @@ internal fun ChatTimeline(
                 is ChatMessage.System.VersionSaved -> ChatVersionDivider(
                     text = stringResource(R.string.project_system_version_saved, message.version),
                 )
+
+                is ChatMessage.System.GenerationStillRunning -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    ChatSystemTag(
+                        text = stringResource(R.string.project_generation_still_running),
+                    )
+                }
             }
         }
     }
@@ -110,6 +140,10 @@ internal fun ChatTimeline(
 @Composable
 private fun ChatTimelinePreview() {
     AvatarGeneratorTheme {
-        ChatTimeline(messages = MockChatRepository.defaultMessages(), onPreviewNeeded = {})
+        ChatTimeline(
+            messages = MockChatRepository.defaultMessages(),
+            onPreviewNeeded = {},
+            onRetry = {},
+        )
     }
 }

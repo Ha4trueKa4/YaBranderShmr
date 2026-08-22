@@ -1,6 +1,6 @@
 package com.yandex.avatargenerator.feature.project.domain
 
-import com.yandex.avatargenerator.feature.project.domain.model.GeneratedVersion
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 
 /**
@@ -28,25 +28,40 @@ interface ChatRepository {
     suspend fun getChat(projectId: String): Result<ProjectChat>
 
     /**
-     * Отправляет промпт на генерацию (`POST /projects/{id}/generate`).
+     * Ставит промпт в очередь на генерацию (`POST /projects/{id}/generate`).
      *
-     * Вызов долгий — модель отвечает десятками секунд. Успех означает, что
-     * версия создана и **сервер сам дописал в историю пару «промпт → версия»**,
-     * поэтому после него ленту надо перечитать через [getChat]: ни номера новой
-     * версии, ни её `version_id` в ответе нет.
+     * Отвечает сразу, за миллисекунды: сама генерация уходит в фон, результат
+     * забирает [awaitGeneration]. К моменту успешного возврата сервер **уже
+     * дописал промпт в историю чата** — поэтому «осиротевший» промпт без ответа
+     * в ленте нормален, пока генерация идёт, и убирать его с экрана после
+     * неудачи нельзя: при следующем открытии он всё равно придёт с сервера.
      *
-     * При ошибке перечитывать нечего: запись в историю идёт после успешного
-     * сохранения версии, так что «осиротевших» промптов в ней не появляется.
-     * Исключение — [com.yandex.avatargenerator.core.domain.NetworkException.Timeout]:
-     * сервер доводит генерацию до конца независимо от того, дождался клиент или
-     * нет, поэтому версия там как раз появляется — просто позже. Такой ответ
-     * нужно не показывать ошибкой, а дождаться опросом [getChat].
+     * Ретраев у вызова нет и быть не должно: повтор создал бы вторую задачу и
+     * вторую пару сообщений в истории.
      *
-     * @return ссылку на новую версию. `Result.failure` с
+     * @return `job_id` фоновой задачи. `Result.failure` с
      *  [com.yandex.avatargenerator.core.domain.NetworkException]: 400 — промпт
      *  пуст или длиннее 1500 байт, 403 — чужой проект либо просроченный токен,
-     *  `ClientError(422)` — модель вернула невалидный SVG (тот же промпт есть
-     *  смысл повторить), `ServerError` — генератор временно недоступен.
+     *  404 — проекта нет, `Serialization` — сервер не прислал `job_id`. Только в
+     *  этом случае промпт до сервера не дошёл.
      */
-    suspend fun sendPrompt(projectId: String, prompt: String): Result<GeneratedVersion>
+    suspend fun startGeneration(projectId: String, prompt: String): Result<String>
+
+    /**
+     * Дожидается результата задачи [jobId] опросом статус-ручки
+     * (`GET /projects/{id}/generate/{job_id}`, long polling до 25 секунд на
+     * запрос) и возвращает исход — см. [GenerationOutcome].
+     *
+     * Вызов долгий: ждёт до общего дедлайна (минуты). Обрыв сети между опросами
+     * ожидание не прерывает — задача на сервере от этого никуда не девается.
+     *
+     * Отдельно от [startGeneration], потому что экран должен показать скелетон
+     * ответа сразу по `job_id`, не дожидаясь результата, и различить «промпт не
+     * ушёл» (ошибка отправки — текст можно вернуть в поле ввода) от «промпт ушёл,
+     * генерация провалилась» (текст уже на сервере, возвращать его нельзя).
+     *
+     * @return исход ожидания. `Result.failure` — опрос сорвался и о судьбе
+     *  генерации ничего не известно (403, неразобранный ответ).
+     */
+    suspend fun awaitGeneration(projectId: String, jobId: String): Result<GenerationOutcome>
 }

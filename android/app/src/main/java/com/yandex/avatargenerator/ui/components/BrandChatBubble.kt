@@ -3,6 +3,7 @@ package com.yandex.avatargenerator.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -52,6 +54,11 @@ private const val MaxImageHeightFraction = 0.5f
  * @param imageCacheKey стабильный ключ кэша картинки. Нужен, когда [imageUrl] —
  *  presigned-ссылка: она новая при каждом запросе, и по самому URL Coil грузил
  *  бы одну и ту же картинку заново на каждом обновлении ленты.
+ * @param textColor цвет текста поверх заливки. По умолчанию — контрастный к ней;
+ *  переопределяют, чтобы подкрасить сообщение (например, ошибку генерации).
+ * @param action слот под текстом: место для действия по сообщению («Повторить»).
+ *  Живёт внутри пузыря, чтобы кнопка была явно привязана к нему, а не висела
+ *  отдельной строкой в ленте.
  */
 @Composable
 fun BrandChatBubble(
@@ -60,7 +67,9 @@ fun BrandChatBubble(
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
     imageCacheKey: String? = null,
-    timeLabel: String? = null
+    timeLabel: String? = null,
+    textColor: Color? = null,
+    action: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val shape: Shape = RoundedCornerShape(
         topStart = AppShape.l,
@@ -69,7 +78,8 @@ fun BrandChatBubble(
         bottomStart = if (isOutgoing) AppShape.l else TailCorner
     )
     val background = if (isOutgoing) AppColors.Accent else AppColors.SurfaceVariant
-    val foreground = if (isOutgoing) AppColors.OnAccent else AppColors.TextPrimary
+    val foreground = textColor
+        ?: if (isOutgoing) AppColors.OnAccent else AppColors.TextPrimary
     val timeColor = if (isOutgoing) AppColors.OnAccent.copy(alpha = 0.7f) else AppColors.TextMuted
 
     Column(
@@ -100,6 +110,10 @@ fun BrandChatBubble(
                     .clip(RoundedCornerShape(AppShape.s))
                     .background(AppColors.SurfaceVariant)
             )
+        }
+        if (action != null) {
+            Spacer(modifier = Modifier.height(AppSpacing.xs))
+            action()
         }
         if (timeLabel != null) {
             Spacer(modifier = Modifier.height(AppSpacing.xxs))

@@ -124,6 +124,12 @@
     <string name="project_error_title">Не удалось загрузить проект</string>
     <string name="project_error_retry">Повторить</string>
 
+    <!-- Ожидание и провал генерации: пузыри в ленте на месте будущего ответа ИИ -->
+    <!-- Заглушка на случай, когда сервер прислал ошибку без текста -->
+    <string name="project_generation_failed">Не удалось сгенерировать. Попробуйте ещё раз.</string>
+    <string name="project_generation_retry">Повторить</string>
+    <string name="project_generation_still_running">Генерация ещё идёт — загляните позже</string>
+
     <!-- Экран публичного проекта -->
     <string name="public_project_follow">Подписаться</string>
     <string name="public_project_following">Вы подписаны</string>
