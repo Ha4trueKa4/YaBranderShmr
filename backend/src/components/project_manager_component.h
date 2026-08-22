@@ -2,6 +2,7 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -11,6 +12,7 @@
 #include <userver/engine/condition_variable.hpp>
 #include <userver/engine/mutex.hpp>
 #include <userver/engine/semaphore.hpp>
+#include <userver/engine/task/cancel.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/formats/json/value.hpp>
 
@@ -22,6 +24,21 @@
 #include "prompt_constructor/prompt_constructor_component.h"
 
 namespace ya_brander::components {
+
+/// @brief Бросается StartGeneration, если для проекта уже есть незавершённый
+///        (kPending) job генерации — одновременно может выполняться не
+///        больше одной генерации на проект.
+class GenerationInProgressError : public std::runtime_error {
+public:
+  GenerationInProgressError(const std::string& project_id, const std::string& active_job_id)
+      : std::runtime_error("Generation already in progress for project " + project_id),
+        active_job_id_(active_job_id) {}
+
+  const std::string& active_job_id() const noexcept { return active_job_id_; }
+
+private:
+  std::string active_job_id_;
+};
 
 class ProjectManagerComponent final : public userver::components::LoggableComponentBase {
 public:
@@ -50,6 +67,8 @@ public:
   ///        данные, либо const, либо работают только через
   ///        userver::storages::postgres::ClusterPtr / userver::clients::http::Client,
   ///        которые сами по себе конкурентно-безопасны).
+  /// @throws GenerationInProgressError если для проекта уже выполняется
+  ///         другой job (не больше одной генерации на проект одновременно).
   /// @throws std::exception если не удалось создать job (например, недоступна
   ///         БД при записи сообщения пользователя) — в этом случае job_id
   ///         никому не отдаётся и в jobs_ ничего не остаётся.
@@ -59,6 +78,17 @@ public:
   /// @returns std::nullopt, если job с таким id не найден для этого проекта.
   std::optional<models::GenerationJob> WaitForGeneration(const std::string& project_id, const std::string& job_id,
                                                           std::chrono::milliseconds timeout);
+
+  /// @brief Запрашивает отмену job'а генерации. Если он ещё kPending —
+  ///        асинхронно (не дожидаясь здесь) прерывает фоновую корутину через
+  ///        engine::TaskCancellationToken (реально прерывает блокирующие
+  ///        ожидания — сетевой вызов к LLM, запись в S3/БД — а не просто
+  ///        игнорирует уже посчитанный результат) и возвращает status
+  ///        "cancelling"; финальный статус "cancelled" появится чуть позже —
+  ///        см. WaitForGeneration. Если job уже завершён — не трогает его,
+  ///        просто возвращает текущий (уже финальный) статус.
+  /// @returns std::nullopt, если job с таким id не найден для этого проекта.
+  std::optional<models::GenerationJob> CancelGeneration(const std::string& project_id, const std::string& job_id);
 
   std::vector<models::Version> ListVersions(const std::string& project_id);
 
@@ -73,13 +103,15 @@ public:
   /// @brief Возвращает историю чата проекта как есть (JSON-массив).
   /// @details Каждый элемент — либо сообщение пользователя ({"role":"user",
   ///          "text":...}), либо ответ модели, представленный ссылкой на
-  ///          версию ({"role":"assistant","version_id":...}), а не самим SVG
-  ///          и не presigned-ссылкой (та имеет срок годности) — резолвинг
+  ///          версию ({"role":"assistant","version_id":...}) или, если
+  ///          генерация упала/была отменена — {"role":"assistant","error":...}
+  ///          / {"role":"assistant","status":"cancelled"}. Не самим SVG и не
+  ///          presigned-ссылкой (та имеет срок годности) — резолвинг
   ///          version_id в ссылку живёт в отдельном (не этом) эндпоинте.
   userver::formats::json::Value GetChatHistory(const std::string& project_id);
 
 private:
-  enum class JobStatus { kPending, kDone, kError };
+  enum class JobStatus { kPending, kDone, kError, kCancelled };
 
   /// @brief Состояние одной фоновой задачи генерации. Хранится в jobs_ по
   ///        shared_ptr, чтобы фоновая корутина и WaitForGeneration могли
@@ -93,6 +125,14 @@ private:
     JobStatus status = JobStatus::kPending;
     std::string result_version_id;
     std::string error_message;
+
+    // Токен для запроса отмены фоновой корутины извне (из CancelGeneration).
+    // Выставляется самой корутиной в самом начале (engine::current_task::
+    // GetCancellationToken()), поэтому в первые мгновения после старта может
+    // быть ещё не установлен — на этот случай cancel_requested выставляется
+    // отдельно и проверяется корутиной сразу после установки токена.
+    bool cancel_requested = false;
+    std::optional<userver::engine::TaskCancellationToken> cancel_token;
   };
 
   /// @brief Сырой project.chat_history одним запросом (jsonb напрямую, без
@@ -117,6 +157,9 @@ private:
   void AppendAssistantError(const std::string& project_id, const std::string& job_id,
                              const std::string& error_message);
 
+  /// @brief Добавляет запись об отменённой генерации в конец project.chat_history.
+  void AppendAssistantCancelled(const std::string& project_id, const std::string& job_id);
+
   /// @brief Собственно генерация (построение промпта, вызов LLM, сохранение
   ///        версии), выполняется в фоновой корутине из StartGeneration.
   ///        @returns id сохранённой версии.
@@ -127,7 +170,10 @@ private:
   ///        например из-за перегрузки task processor'а) — старше
   ///        kStuckPendingRetention. Без второго условия такой job остался бы
   ///        в jobs_ навсегда, так как обычное условие смотрит только на
-  ///        завершённые статусы. Вызывается под jobs_mutex_.
+  ///        завершённые статусы. Заодно чистит active_job_by_project_ от
+  ///        ссылки на удаляемый job — иначе зависший job навсегда заблокировал
+  ///        бы новые генерации для своего проекта даже после того, как сам он
+  ///        уже вычищен из jobs_. Вызывается под jobs_mutex_.
   void PruneOldJobsLocked();
 
   userver::storages::postgres::ClusterPtr pg_cluster_;
@@ -138,11 +184,21 @@ private:
   userver::engine::Mutex jobs_mutex_;
   std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
 
+  // project_id -> job_id незавершённого job'а этого проекта (если есть).
+  // Не больше одной активной генерации на проект: StartGeneration проверяет
+  // и резервирует запись здесь атомарно, под тем же jobs_mutex_, что и
+  // вставку в jobs_ — иначе два конкурентных запроса могли бы оба проскочить
+  // проверку до того, как любой из них зарезервирует слот.
+  std::unordered_map<std::string, std::string> active_job_by_project_;
+
   // Ограничивает число одновременно выполняющихся генераций (SendPrompt к
   // LLM + SaveVersion), чтобы всплеск запросов не перегрузил bg-task-processor
   // и внешние зависимости (LLM API, S3). Захватывается только на время самой
-  // генерации в фоновой корутине, не на всё время жизни job'а.
-  userver::engine::Semaphore generation_semaphore_;
+  // генерации в фоновой корутине, не на всё время жизни job'а. Обязательно
+  // CancellableSemaphore, а не Semaphore: последний игнорирует отмену
+  // корутины, из-за чего CancelGeneration не смог бы прервать job, стоящий в
+  // очереди на этот семафор.
+  userver::engine::CancellableSemaphore generation_semaphore_;
 
   // Должен быть объявлен последним: при разрушении компонента фоновые задачи
   // должны быть отменены/дожданы раньше, чем уничтожатся поля выше, которые

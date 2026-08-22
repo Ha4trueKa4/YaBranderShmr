@@ -90,6 +90,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/get_project_chat.cpp
         src/handlers/projects/generation/generate_project.cpp
         src/handlers/projects/generation/generate_status.cpp
+        src/handlers/projects/generation/cancel_generation.cpp
         src/handlers/projects/generation/append_generation.cpp
         src/handlers/projects/versions/get_version.cpp
         src/handlers/projects/versions/restore_version.cpp

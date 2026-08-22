@@ -198,6 +198,14 @@ components_manager:
       max_requests_in_flight: 300
       max_requests_per_second: 300
 
+    handler-projects-generate-cancel:
+      path: /api/v1/projects/{id}/generate/{job_id}/cancel
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
+
     handler-projects-versions-list:
       path: /api/v1/projects/{id}/versions
       method: GET

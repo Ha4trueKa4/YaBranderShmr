@@ -51,12 +51,20 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
   // ещё до обращения к LLM — так оно не теряется, даже если сама генерация
   // потом упадёт. Результат (или ошибка) генерации опрашивается отдельным
   // long-poll эндпоинтом GET .../generate/{job_id}.
-  std::string job_id = project_manager_.StartGeneration(id, prompt, model);
+  try {
+    std::string job_id = project_manager_.StartGeneration(id, prompt, model);
 
-  request.SetResponseStatus(userver::server::http::HttpStatus::kAccepted);
-  userver::formats::json::ValueBuilder res;
-  res["job_id"] = job_id;
-  return res.ExtractValue();
+    request.SetResponseStatus(userver::server::http::HttpStatus::kAccepted);
+    userver::formats::json::ValueBuilder res;
+    res["job_id"] = job_id;
+    return res.ExtractValue();
+  } catch (const components::GenerationInProgressError& error) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
+    userver::formats::json::ValueBuilder err;
+    err["message"] = error.what();
+    err["job_id"] = error.active_job_id();
+    return err.ExtractValue();
+  }
 }
 
 }  // namespace ya_brander::handlers
