@@ -16,6 +16,7 @@ interface EditProfileModalProps {
   isOpen: boolean
   name: string
   onClose: () => void
+  onEditPassword: () => void
   onSubmit: (name: string) => Promise<void>
 }
 
@@ -24,10 +25,12 @@ export function EditProfileModal({
   isOpen,
   name,
   onClose,
+  onEditPassword,
   onSubmit,
 }: EditProfileModalProps) {
   const { t } = useTranslation()
   const nameInputId = useId()
+  const passwordButtonId = useId()
   const editProfileFormSchema = z.object({
     name: z
       .string()
@@ -86,6 +89,15 @@ export function EditProfileModal({
                 id={nameInputId}
                 invalid={Boolean(form.formState.errors.name)}
               />
+            </FormField>
+            <FormField htmlFor={passwordButtonId} label={t('Password')}>
+              <Button
+                id={passwordButtonId}
+                onClick={onEditPassword}
+                variant="outline"
+              >
+                {t('Change password')}
+              </Button>
             </FormField>
             <div className={styles.actions}>
               <Button
