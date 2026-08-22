@@ -12,9 +12,34 @@
   display: grid;
   place-items: center;
   min-height: 0;
-  border: 1px dashed var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    repeating-linear-gradient(
+      to right,
+      var(--color-border) 0 12px,
+      transparent 12px 20px
+    )
+    top / 20px 1px repeat-x border-box,
+    repeating-linear-gradient(
+      to right,
+      var(--color-border) 0 12px,
+      transparent 12px 20px
+    )
+    bottom / 20px 1px repeat-x border-box,
+    repeating-linear-gradient(
+      to bottom,
+      var(--color-border) 0 12px,
+      transparent 12px 20px
+    )
+    left / 1px 20px repeat-y border-box,
+    repeating-linear-gradient(
+      to bottom,
+      var(--color-border) 0 12px,
+      transparent 12px 20px
+    )
+    right / 1px 20px repeat-y border-box;
 }
 
 .previewCompact {

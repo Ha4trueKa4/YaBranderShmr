@@ -38,10 +38,10 @@
   max-height: 12rem;
   min-height: 1.5rem;
   outline: 0;
-  padding: var(--space-2) var(--space-4) 0
-    calc(var(--space-4) + 1.125rem + var(--space-2));
+  padding: var(--space-2) var(--space-4) 0;
   resize: none;
   scrollbar-width: none;
+  text-indent: calc(1.125rem + var(--space-2));
   width: 100%;
 }
 
@@ -62,7 +62,7 @@
 }
 
 .characterCounter {
-  align-self: center;
+  align-self: flex-end;
   color: var(--color-text-muted);
   font-size: var(--font-size-caption);
 }
@@ -90,7 +90,7 @@
   min-height: 1.125rem;
 }
 
-@media (width < 480px) {
+@media (width < 720px) {
   .actions {
     align-items: stretch;
     flex-direction: column;
@@ -114,14 +114,18 @@
 @media (width < 400px) {
   .actionControls {
     align-self: stretch;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 1fr;
   }
 
-  .textarea {
-    padding-left: calc(var(--space-3) + 1.125rem + var(--space-2));
+  .actionControls > * {
+    width: 100%;
   }
 
   .actionControls .modelSelect > * {
+    width: 100%;
+  }
+
+  .generateButton {
     width: 100%;
   }
 }
