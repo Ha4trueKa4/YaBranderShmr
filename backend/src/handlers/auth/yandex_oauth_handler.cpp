@@ -6,6 +6,8 @@
 #include <random>
 #include <stdexcept>
 
+#include <jwt-cpp/jwt.h>
+
 #include <userver/clients/http/component.hpp>
 #include <userver/components/component.hpp>
 #include <userver/crypto/base64.hpp>
@@ -25,6 +27,7 @@ namespace {
 
 constexpr std::string_view kTokenUrl = "https://oauth.yandex.ru/token";
 constexpr std::string_view kProfileUrl = "https://login.yandex.ru/info?format=json";
+constexpr std::string_view kProfileJwtUrl = "https://login.yandex.ru/info?format=jwt";
 
 constexpr std::string_view kLoginUniqueConstraint = "users_login_key";
 constexpr std::string_view kEmailUniqueConstraint = "users_email_key";
@@ -61,6 +64,23 @@ std::string GenerateLoginSuffix() {
     static thread_local std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<int> dist(1000, 9999);
     return std::to_string(dist(rng));
+}
+
+// uid в JWT-профиле от Яндекса — числовой ID пользователя, и разные клиенты
+// (в частности iOS SDK) кодируют его в payload как JSON-число, а не строку.
+// claim::as_string() в этом случае кидает std::bad_cast, поэтому тип клейма
+// проверяем сами и приводим к строке вручную.
+std::string ClaimToString(const jwt::claim& claim) {
+    switch (claim.get_type()) {
+        case jwt::json::type::string:
+            return claim.as_string();
+        case jwt::json::type::integer:
+            return std::to_string(claim.as_integer());
+        case jwt::json::type::number:
+            return std::to_string(static_cast<int64_t>(claim.as_number()));
+        default:
+            throw std::runtime_error("Unexpected JWT claim type");
+    }
 }
 
 }  // namespace
@@ -132,6 +152,42 @@ YandexOAuthHandler::YandexProfile YandexOAuthHandler::FetchProfile(const std::st
     return profile;
 }
 
+YandexOAuthHandler::YandexProfile YandexOAuthHandler::FetchProfileFromJwt(
+    const std::string& access_token) const {
+    auto request = http_client_.CreateRequest();
+    request.method(userver::clients::http::HttpMethod::kGet);
+    request.url(std::string(kProfileJwtUrl));
+    request.headers({{"Authorization", "OAuth " + access_token}});
+    request.timeout(10000);
+
+    auto response = request.perform();
+    if (response->status_code() != 200) {
+        throw std::runtime_error("Failed to fetch Yandex profile (jwt): HTTP " +
+                                  std::to_string(response->status_code()));
+    }
+
+    // login.yandex.ru/info?format=jwt отдаёт не JSON, а сам JWT телом ответа.
+    // jwt_secret по умолчанию (мы его не переопределяли) равен client_secret
+    // приложения — им и проверяем подпись, без обращения к Яндексу.
+    const auto decoded = jwt::decode(response->body());
+    auto verifier = jwt::verify().allow_algorithm(jwt::algorithm::hs256{client_secret_});
+    verifier.verify(decoded);
+
+    if (!decoded.has_payload_claim("uid")) {
+        throw std::runtime_error("Yandex profile JWT is missing the 'uid' claim");
+    }
+
+    YandexProfile profile;
+    profile.provider_id = ClaimToString(decoded.get_payload_claim("uid"));
+    if (decoded.has_payload_claim("email")) {
+        profile.email = ClaimToString(decoded.get_payload_claim("email"));
+    }
+    if (decoded.has_payload_claim("login")) {
+        profile.login = ClaimToString(decoded.get_payload_claim("login"));
+    }
+    return profile;
+}
+
 YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const YandexProfile& profile) const {
     // 1. Пользователь уже входил через Yandex ID раньше.
     {
@@ -200,15 +256,18 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
     userver::server::request::RequestContext&) const {
 
     const auto code = request_json["code"].As<std::string>("");
-    if (code.empty()) {
+    const auto sdk_access_token = request_json["access_token"].As<std::string>("");
+    if (code.empty() && sdk_access_token.empty()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeError("INVALID_CODE", "Authorization code is required");
+        return MakeError("INVALID_REQUEST", "Either code or access_token is required");
     }
 
     UserRecord user;
     try {
-        const auto access_token = ExchangeCodeForToken(code);
-        const auto profile = FetchProfile(access_token);
+        // code — веб-флоу (обмен на токен на бэке), access_token — SDK-флоу
+        // (токен уже финальный, меняем сразу на профиль).
+        const auto profile = !code.empty() ? FetchProfile(ExchangeCodeForToken(code))
+                                            : FetchProfileFromJwt(sdk_access_token);
 
         if (profile.email.empty()) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);

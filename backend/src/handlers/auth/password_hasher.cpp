@@ -3,6 +3,7 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
+#include <cctype>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
@@ -94,6 +95,17 @@ bool PasswordHasher::Verify(const std::string& password, const std::string& stor
         diff |= actual_hash[i] ^ expected_hash[i];
     }
     return diff == 0;
+}
+
+bool PasswordHasher::IsValidPassword(const std::string& password) {
+    if (password.size() < 8 || password.size() > 128) return false;
+    bool has_letter = false;
+    bool has_digit = false;
+    for (unsigned char c : password) {
+        if (std::isalpha(c)) has_letter = true;
+        if (std::isdigit(c)) has_digit = true;
+    }
+    return has_letter && has_digit;
 }
 
 }  // namespace ya_brander::auth

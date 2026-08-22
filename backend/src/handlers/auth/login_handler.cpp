@@ -1,5 +1,7 @@
 #include "login_handler.hpp"
 
+#include <optional>
+
 #include <userver/components/component.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/server/http/http_status.hpp>
@@ -44,9 +46,16 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
     const auto row = result.Front();
     const auto user_id = row[0].As<std::string>();
     const auto nickname = row[1].As<std::string>();
-    const auto password_hash = row[2].As<std::string>();
+    const auto password_hash = row[2].As<std::optional<std::string>>();
 
-    if (!PasswordHasher::Verify(password, password_hash)) {
+    if (!password_hash.has_value()) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return MakeError("NO_PASSWORD_SET",
+                          "This account has no password. Sign in with Yandex ID, "
+                          "or set a password from account settings after signing in.");
+    }
+
+    if (!PasswordHasher::Verify(password, *password_hash)) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
         return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }
