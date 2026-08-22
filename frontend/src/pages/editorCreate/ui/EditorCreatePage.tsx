@@ -6,6 +6,8 @@ import {
 } from '@entities/project'
 import {
   DEFAULT_GENERATION_MODEL,
+  GenerationPollingTimeoutError,
+  pollGenerationStatus,
   useGenerateProjectMutation,
 } from '@features/editorGenerate'
 import {
@@ -63,11 +65,34 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
-        const generatedProject = await generateProject({
+        const generation = await generateProject({
           model: draft.model,
           projectId: project.id,
           prompt: draft.description,
         })
+        const jobId = generation.job_id
+
+        if (!jobId) {
+          toast.error(
+            t('The generated project is unavailable. Please try again.'),
+          )
+          return
+        }
+
+        const generatedProject = await pollGenerationStatus(
+          queryClient,
+          project.id,
+          jobId,
+        )
+
+        if (generatedProject.status === 'error') {
+          toast.error(
+            generatedProject.message ??
+              t('The generated project is unavailable. Please try again.'),
+          )
+          return
+        }
+
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
@@ -92,7 +117,11 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           pendingGenerationStore.take()
         }
 
-        toast.error(getApiErrorMessage(error))
+        toast.error(
+          error instanceof GenerationPollingTimeoutError
+            ? t('Generation is taking too long. Please try again.')
+            : getApiErrorMessage(error),
+        )
       } finally {
         setGenerationInProgress(false)
       }
