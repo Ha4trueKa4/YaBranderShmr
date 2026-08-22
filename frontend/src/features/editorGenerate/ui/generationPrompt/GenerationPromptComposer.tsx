@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { DEFAULT_GENERATION_MODEL, ModelSelect } from '../modelSelect'
 import styles from './GenerationPrompt.module.css'
 
+const MAX_PROMPT_LENGTH = 1500
+
 interface GenerationPromptComposerProps {
   description: string
   error?: string
@@ -55,6 +57,7 @@ export function GenerationPromptComposer({
               onGenerate()
             }
           }}
+          maxLength={MAX_PROMPT_LENGTH}
           placeholder={t(
             'e.g. Modern abstract technology logo with overlapping gradients…',
           )}
@@ -62,21 +65,26 @@ export function GenerationPromptComposer({
           value={description}
         />
         <div className={styles.actions}>
-          <ModelSelect
-            disabled={isGenerating}
-            onChange={onModelChange}
-            onUnauthorizedSelect={onUnauthorizedModelSelect}
-            value={model || DEFAULT_GENERATION_MODEL}
-            variant="compact"
-          />
-          <Button
-            className={styles.generateButton}
-            loading={isGenerating}
-            onClick={onGenerate}
-            type="button"
-          >
-            {t('Generate')}
-          </Button>
+          <span className={styles.characterCounter}>
+            {description.length}/{MAX_PROMPT_LENGTH}
+          </span>
+          <div className={styles.actionControls}>
+            <ModelSelect
+              disabled={isGenerating}
+              onChange={onModelChange}
+              onUnauthorizedSelect={onUnauthorizedModelSelect}
+              value={model || DEFAULT_GENERATION_MODEL}
+              variant="compact"
+            />
+            <Button
+              className={styles.generateButton}
+              loading={isGenerating}
+              onClick={onGenerate}
+              type="button"
+            >
+              {t('Generate')}
+            </Button>
+          </div>
         </div>
       </div>
       <p className={styles.error}>{error}</p>
