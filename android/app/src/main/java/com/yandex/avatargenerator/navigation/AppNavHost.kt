@@ -13,8 +13,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.yandex.avatargenerator.R
-import com.yandex.avatargenerator.feature.auth.ui.LoginScreen
-import com.yandex.avatargenerator.feature.auth.ui.RegisterScreen
+import com.yandex.avatargenerator.feature.auth.ui.login.LoginScreen
+import com.yandex.avatargenerator.feature.auth.ui.register.RegisterScreen
 import com.yandex.avatargenerator.feature.auth.ui.rememberCurrentUser
 import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
 import com.yandex.avatargenerator.feature.createproject.ui.CreateProjectScreen

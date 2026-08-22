@@ -7,11 +7,13 @@ import { GradientProperty } from '../components/GradientProperty'
 import { PropertyField } from '../components/PropertyField'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
 import { StrokeProperty } from '../components/StrokeProperty'
+import { TransformProperties } from '../components/TransformProperties'
 import styles from '../Properties.module.css'
 
 interface ShapePropertiesProps {
   definitions?: EditorDefinitions
   layer: EditorShape
+  measuredRotationCenter?: { x: number; y: number }
   onFillChange: (color: string) => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
@@ -23,25 +25,39 @@ interface ShapePropertiesProps {
   ) => void
   onOpacityChange: (opacity: number) => void
   onPositionChange: (x: number, y: number) => void
+  onRotationChange: (
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onStrokeAdd: () => void
   onStrokeColorChange: (color: string) => void
   onStrokeRemove: () => void
   onStrokeWidthChange: (strokeWidth: number) => void
+  onTransformChange: (transform: {
+    rotationCenter?: { x: number; y: number }
+    scaleX: number
+    scaleY: number
+    x: number
+    y: number
+  }) => void
 }
 
 export const ShapeProperties = observer(function ShapeProperties({
   definitions,
   layer,
+  measuredRotationCenter,
   onFillChange,
   onEyeDropperEnd,
   onEyeDropperStart,
   onFillOpacityChange,
   onGradientStopColorChange,
   onPositionChange,
+  onRotationChange,
   onStrokeAdd,
   onStrokeColorChange,
   onStrokeRemove,
   onStrokeWidthChange,
+  onTransformChange,
 }: ShapePropertiesProps) {
   const fill = layer.style.fill
   const gradient =
@@ -70,6 +86,12 @@ export const ShapeProperties = observer(function ShapeProperties({
           />
         </div>
       </div>
+      <TransformProperties
+        layer={layer}
+        measuredRotationCenter={measuredRotationCenter}
+        onRotationChange={onRotationChange}
+        onTransformChange={onTransformChange}
+      />
       {isEditableGradient && gradient ? (
         <GradientProperty
           gradient={gradient}

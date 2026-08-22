@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AvatarGenerator"
 include(":app")
+include(":core:mvi")

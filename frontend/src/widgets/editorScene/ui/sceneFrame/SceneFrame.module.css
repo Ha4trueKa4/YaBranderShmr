@@ -43,6 +43,7 @@
   display: block;
   height: 100%;
   touch-action: none;
+  user-select: none;
   width: 100%;
 }
 

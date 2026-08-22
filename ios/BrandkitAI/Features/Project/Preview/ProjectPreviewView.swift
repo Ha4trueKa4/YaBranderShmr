@@ -1,28 +1,35 @@
 import SwiftUI
 
 struct ProjectPreviewView: View {
+    private struct ExportedFile: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
+
+    private enum ExportKind {
+        case png
+        case svg
+    }
+
     @State private var viewModel: ProjectPreviewViewModel
+    @State private var activeExport: ExportKind?
+    @State private var exportedFile: ExportedFile?
+    @State private var exportFailed = false
 
     var onBack: (() -> Void)?
     var onOpenAuthor: (UUID) -> Void = { _ in }
     var onOpenProject: (UUID) -> Void = { _ in }
-    var onDownloadPNG: () -> Void = {}
-    var onDownloadSVG: () -> Void = {}
 
     init(
         viewModel: ProjectPreviewViewModel,
         onBack: (() -> Void)? = nil,
         onOpenAuthor: @escaping (UUID) -> Void = { _ in },
-        onOpenProject: @escaping (UUID) -> Void = { _ in },
-        onDownloadPNG: @escaping () -> Void = {},
-        onDownloadSVG: @escaping () -> Void = {}
+        onOpenProject: @escaping (UUID) -> Void = { _ in }
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onBack = onBack
         self.onOpenAuthor = onOpenAuthor
         self.onOpenProject = onOpenProject
-        self.onDownloadPNG = onDownloadPNG
-        self.onDownloadSVG = onDownloadSVG
     }
 
     var body: some View {
@@ -37,6 +44,46 @@ struct ProjectPreviewView: View {
         .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .task { await viewModel.load() }
+        .sheet(item: $exportedFile) { file in
+            ShareSheet(items: [file.url])
+        }
+        .alert("Couldn't export the file. Try again.", isPresented: $exportFailed) {
+            Button("Close", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Экспорт
+
+    private func exportSVG() {
+        export(.svg) { data in
+            try SVGExporter.writeSVGFile(data, named: viewModel.title)
+        }
+    }
+
+    private func exportPNG() {
+        export(.png) { data in
+            guard let svgText = String(data: data, encoding: .utf8) else {
+                throw SVGRasterizer.RasterizationError.renderingFailed
+            }
+            let pngData = try await SVGRasterizer.pngData(fromSVG: svgText)
+            return try SVGExporter.writePNGFile(pngData, named: viewModel.title)
+        }
+    }
+
+    private func export(_ kind: ExportKind, makeFile: @escaping (Data) async throws -> URL) {
+        guard activeExport == nil else { return }
+        activeExport = kind
+
+        Task {
+            defer { activeExport = nil }
+            do {
+                let data = try await viewModel.exportSVGData()
+                exportedFile = ExportedFile(url: try await makeFile(data))
+            } catch {
+                guard !Task.isCancelled else { return }
+                exportFailed = true
+            }
+        }
     }
 
     private var imagePlaceholder: some View {
@@ -112,18 +159,20 @@ struct ProjectPreviewView: View {
                 .padding(.top, 6)
 
             downloadButton(
-                title: "Download PNG",
-                systemImage: "square.and.arrow.down",
+                title: "Export PNG",
+                systemImage: "photo",
                 isPrimary: true,
-                action: onDownloadPNG
+                isBusy: activeExport == .png,
+                action: exportPNG
             )
             .padding(.top, 20)
 
             downloadButton(
-                title: "Download SVG",
+                title: "Export SVG",
                 systemImage: "chevron.left.forwardslash.chevron.right",
                 isPrimary: false,
-                action: onDownloadSVG
+                isBusy: activeExport == .svg,
+                action: exportSVG
             )
             .padding(.top, 12)
 
@@ -213,28 +262,37 @@ struct ProjectPreviewView: View {
     }
 
     private func downloadButton(
-        title: String,
+        title: LocalizedStringKey,
         systemImage: String,
         isPrimary: Bool,
+        isBusy: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .foregroundStyle(isPrimary ? Color.white : Color.secondary)
-                .background {
-                    RoundedRectangle(cornerRadius: 9)
-                        .fill(isPrimary ? Color.accentColor : Color(.secondarySystemBackground))
+            Group {
+                if isBusy {
+                    ProgressView()
+                        .tint(isPrimary ? Color(.onAccent) : nil)
+                } else {
+                    Label(title, systemImage: systemImage)
                 }
-                .overlay {
-                    if !isPrimary {
-                        RoundedRectangle(cornerRadius: 9).stroke(Color(.separator), lineWidth: 1)
-                    }
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .foregroundStyle(isPrimary ? Color(.onAccent) : Color.secondary)
+            .background {
+                RoundedRectangle(cornerRadius: 9)
+                    .fill(isPrimary ? Color.accentColor : Color(.secondarySystemBackground))
+            }
+            .overlay {
+                if !isPrimary {
+                    RoundedRectangle(cornerRadius: 9).stroke(Color(.separator), lineWidth: 1)
                 }
+            }
         }
         .buttonStyle(.plain)
+        .disabled(activeExport != nil)
     }
 }
 
