@@ -30,7 +30,13 @@ interface SceneFrameProps {
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onShapeTransformChange: (
     nodeId: string,
-    transform: { scaleX: number; scaleY: number; x: number; y: number },
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
   ) => void
   onShapeRotationChange: (
     nodeId: string,

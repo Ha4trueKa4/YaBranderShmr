@@ -126,7 +126,13 @@ export function createShapeEditing({
 
     setShapeTransform(
       nodeId: string,
-      transform: { scaleX: number; scaleY: number; x: number; y: number },
+      transform: {
+        rotationCenter?: { x: number; y: number }
+        scaleX: number
+        scaleY: number
+        x: number
+        y: number
+      },
     ) {
       const node = getEditableShape(getDocument(), nodeId)
 
@@ -136,6 +142,9 @@ export function createShapeEditing({
         !Number.isFinite(transform.y) ||
         !Number.isFinite(transform.scaleX) ||
         !Number.isFinite(transform.scaleY) ||
+        (transform.rotationCenter &&
+          (!Number.isFinite(transform.rotationCenter.x) ||
+            !Number.isFinite(transform.rotationCenter.y))) ||
         transform.scaleX <= 0 ||
         transform.scaleY <= 0
       ) {
@@ -147,6 +156,10 @@ export function createShapeEditing({
         node.transform.y = transform.y
         node.transform.scaleX = transform.scaleX
         node.transform.scaleY = transform.scaleY
+
+        if (transform.rotationCenter) {
+          node.transform.rotationCenter = transform.rotationCenter
+        }
       })
     },
 

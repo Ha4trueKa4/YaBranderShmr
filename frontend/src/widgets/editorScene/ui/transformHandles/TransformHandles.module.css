@@ -3,6 +3,13 @@
   pointer-events: all;
 }
 
+.rotatedSideHitArea {
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 16;
+  vector-effect: non-scaling-stroke;
+}
+
 .north,
 .south {
   cursor: ns-resize;
@@ -29,10 +36,6 @@
 
 .southWest {
   cursor: nesw-resize;
-}
-
-.disabled {
-  cursor: default;
 }
 
 .rotationHandle {
