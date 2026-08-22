@@ -1,7 +1,5 @@
 package com.yandex.avatargenerator.feature.feed.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,13 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.ui.components.BrandSkeletonBox
+import com.yandex.avatargenerator.ui.components.brandSurface
 import com.yandex.avatargenerator.ui.components.rememberBrandShimmerBrush
-import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 
@@ -57,13 +54,10 @@ private fun SkeletonColumn(
 
 @Composable
 private fun SkeletonCard(thumbHeight: Dp, brush: Brush) {
-    val shape = RoundedCornerShape(AppShape.l)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(AppColors.Surface)
-            .border(1.dp, AppColors.Border, shape),
+            .brandSurface(RoundedCornerShape(AppShape.l)),
     ) {
         BrandSkeletonBox(
             modifier = Modifier

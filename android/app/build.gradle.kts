@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -30,11 +32,30 @@ android {
         buildConfigField("boolean", "NETWORK_LOGGING", "false")
     }
 
+    // Пароли лежат в keystore.properties (в .gitignore). Без файла конфигурация
+    // не падает, но release собирается неподписанным.
+    val keystoreProperties = Properties().apply {
+        val file = rootProject.file("keystore.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             buildConfigField("boolean", "NETWORK_LOGGING", "true")
         }
         release {
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                 enable = false
             }
@@ -48,9 +69,18 @@ android {
         compose = true
         buildConfig = true
     }
+    // Язык переключается в приложении (подмена локали на корне Compose), поэтому все
+    // локали должны лежать в base APK: иначе в AAB из Play на устройстве оказались бы
+    // ресурсы только системной локали и смена языка ничего бы не поменяла.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
 }
 
 dependencies {
+    implementation(project(":core:mvi"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

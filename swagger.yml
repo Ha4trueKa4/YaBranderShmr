@@ -101,14 +101,222 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Неверный email, пароль или одно из полей не передано
+          description: >
+            Неверный email/пароль, одно из полей не передано, либо аккаунт
+            зарегистрирован через Yandex ID и пароля у него нет.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthError'
+              examples:
+                InvalidCredentials:
+                  summary: Неверный email или пароль
+                  value:
+                    code: "INVALID_CREDENTIALS"
+                    message: "Invalid email or password"
+                NoPasswordSet:
+                  summary: Аккаунт создан через Yandex ID, пароля нет
+                  value:
+                    code: "NO_PASSWORD_SET"
+                    message: "This account has no password. Sign in with Yandex ID, or set a password from account settings after signing in."
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /auth/yandex:
+    post:
+      summary: Вход/регистрация через Yandex ID
+      description: >
+        Единая точка входа для обоих Yandex ID флоу — веб (redirect) и
+        мобильный/десктопный SDK. Тело запроса — либо {code}, либо
+        {access_token}, ровно одно из двух (см. YandexAuthRequest).
+
+
+        code — веб-флоу: бэкенд сам меняет code на access_token на
+        oauth.yandex.ru/token (Basic client_id:client_secret), затем
+        забирает профиль через GET login.yandex.ru/info?format=json.
+
+
+        access_token — SDK-флоу: клиент уже получил финальный access_token
+        через нативный Yandex ID SDK, менять его не на что. Бэкенд идёт
+        только в GET login.yandex.ru/info?format=jwt — Яндекс отдаёт профиль
+        как JWT, подписанный client_secret приложения, и бэкенд проверяет
+        подпись/exp локально, без дополнительного похода в oauth.yandex.ru.
+
+
+        В обоих случаях дальше общая логика: по provider_id/email ищется
+        существующий пользователь либо создаётся новый без пароля
+        (password_hash = NULL). Если email уже занят другим аккаунтом без
+        привязанного provider — см. 409, автолинковки нет намеренно.
+      tags: [ Auth ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexAuthRequest'
+      responses:
+        '200':
+          description: Успешный вход (существующий или только что созданный аккаунт)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: >
+            Не передано ни code, ни access_token, либо Yandex-приложение не
+            запросило скоуп login:email и профиль пришёл без email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                MissingCredential:
+                  summary: Не передан ни code, ни access_token
+                  value:
+                    code: "INVALID_REQUEST"
+                    message: "Either code or access_token is required"
+                MissingEmailScope:
+                  summary: Yandex-приложение не запросило email
+                  value:
+                    code: "YANDEX_EMAIL_SCOPE_REQUIRED"
+                    message: "Yandex ID app must request the login:email scope"
+        '409':
+          description: >
+            Email из профиля Yandex уже принадлежит существующему аккаунту без
+            привязанного provider (например, зарегистрированному по паролю).
+            Автоматическая привязка намеренно не выполняется — иначе аккаунт
+            можно угнать, заранее зарегистрировав чужой email своим паролем.
+            Пользователю нужно войти по паролю и привязать Yandex ID явно
+            (отдельный флоу, пока не реализован).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
               example:
-                code: "INVALID_CREDENTIALS"
-                message: "Invalid email or password"
+                code: "EMAIL_EXISTS"
+                message: "This email is already registered with a password. Log in with your password and link Yandex ID from account settings."
+        '502':
+          description: >
+            Yandex API недоступен, code невалиден/просрочен, access_token
+            невалиден/просрочен/подпись JWT не сходится, либо не удалось
+            получить профиль.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "YANDEX_OAUTH_FAILED"
+                message: "Yandex authentication is temporarily unavailable. Please try again."
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /auth/method:
+    get:
+      summary: Способ входа текущего пользователя
+      description: >
+        Возвращает, есть ли у авторизованного пользователя пароль и привязан
+        ли внешний провайдер (сейчас — только Yandex ID). Используется, например,
+        чтобы в настройках аккаунта показать "Установить пароль" для пользователей,
+        зарегистрированных только через Yandex ID (has_password = false).
+      tags: [ Auth ]
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Текущий способ(-ы) входа пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMethodResponse'
+        '401':
+          description: Отсутствует или некорректен JWT
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "User not found"
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /auth/password:
+    post:
+      summary: Установить или сменить пароль
+      description: >
+        Если у пользователя ещё нет пароля (аккаунт создан через Yandex ID) —
+        current_password передавать не нужно, пароль устанавливается сразу.
+        Если пароль уже есть — current_password обязателен и проверяется,
+        иначе 400/401.
+      tags: [ Auth ]
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPasswordRequest'
+      responses:
+        '200':
+          description: Пароль установлен или изменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                PasswordSet:
+                  summary: Пароля не было (Yandex ID) — установлен впервые
+                  value:
+                    message: "Password set successfully"
+                PasswordChanged:
+                  summary: Пароль уже был — заменён на новый
+                  value:
+                    message: "Password changed successfully"
+        '400':
+          description: >
+            new_password не проходит требования, либо у пользователя уже есть
+            пароль, а current_password не передан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                InvalidPassword:
+                  summary: Новый пароль не проходит требования
+                  value:
+                    code: "INVALID_PASSWORD"
+                    message: "Password must be 8-128 chars and contain letters and digits"
+                    field: "new_password"
+                CurrentPasswordRequired:
+                  summary: У пользователя уже есть пароль, но current_password не передан
+                  value:
+                    code: "CURRENT_PASSWORD_REQUIRED"
+                    message: "Current password is required to change an existing password"
+                    field: "current_password"
+        '401':
+          description: >
+            Отсутствует/некорректен JWT, либо (если пароль уже был) неверный
+            current_password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_CURRENT_PASSWORD"
+                message: "Current password is incorrect"
+                field: "current_password"
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "User not found"
         '500':
           description: Внутренняя ошибка сервера
 
@@ -324,7 +532,81 @@ paths:
           description: Некорректный формат ID
         '404':
           description: Пользователь не найден
-
+  /users/{id}/subscribers/{subscriber_id}:
+    delete:
+      summary: Удалить подписчика из своего аккаунта
+      description: >
+        Позволяет авторизованному пользователю удалить конкретного подписчика
+        из списка своих подписчиков. Только владелец профиля может удалять
+        своих подписчиков — это эндпоинт для модерации аудитории.
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: >
+            Идентификатор владельца профиля. Сравнивается с UUID из JWT без
+            учёта регистра.
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: subscriber_id
+          in: path
+          required: true
+          description: Идентификатор пользователя, которого необходимо удалить из подписчиков
+          schema:
+            type: string
+            example: "987fcdeb-51a2-43d1-b789-123456789abc"
+      responses:
+        '200':
+          description: Подписчик успешно удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscriber removed successfully"
+        '400':
+          description: Некорректный формат ID пользователя или подписчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_UUID"
+                message: "Invalid user ID format"
+                field: "id"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: >
+            Попытка удалить подписчика из чужого профиля. Только владелец
+            аккаунта может управлять своими подписчиками.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Permission denied"
+        '404':
+          description: >
+            Подписка между указанными пользователями не существует. Сюда также
+            относится случай, когда subscriber_id не принадлежит существующему
+            пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscription not found"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/{id}/subscriptions:
     get:
       summary: Получить список всех подписок пользователя
@@ -522,15 +804,22 @@ paths:
 
   /projects/{id}/generate:
     post:
-      summary: Изменение/генерация проекта с помощью ИИ
+      summary: Запуск генерации/правки проекта с помощью ИИ (асинхронно)
       description: >
-        Генерирует (если у проекта ещё нет версий) либо правит (иначе) SVG по
-        запросу пользователя. В промпт модели автоматически подмешивается
-        история последних 10 предыдущих запросов пользователя по этому же
-        проекту (без ответов модели) — как контекст, не как повторное задание.
-        При успешной генерации пара "запрос пользователя + ссылка на созданную
-        версию" добавляется в историю чата проекта, доступную через
-        GET /projects/{id}/chat.
+        Запускает в фоне генерацию (если у проекта ещё нет версий) либо правку
+        (иначе) SVG по запросу пользователя — сам запрос не ждёт завершения
+        обращения к LLM и сразу отвечает job_id. В промпт модели автоматически
+        подмешивается история последних 10 предыдущих запросов пользователя по
+        этому же проекту (без ответов модели) — как контекст, не как повторное
+        задание. Сообщение пользователя добавляется в историю чата проекта
+        (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
+        независимо от того, чем закончится сама генерация. Результат (или
+        ошибку) генерации нужно опрашивать через
+        GET /projects/{id}/generate/{job_id}. Одновременно для одного проекта
+        может выполняться только одна генерация — если предыдущая ещё не
+        завершена, запрос отклоняется с 409 (её можно дождаться через
+        GET .../generate/{job_id} или прервать через
+        POST .../generate/{job_id}/cancel).
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -554,21 +843,26 @@ paths:
                   example: "Добавь логотип с изображением кружки"
                 model:
                   type: string
+                  description: >
+                    Модель генерации. gpt-5.6-luna отправляется напрямую в
+                    OpenAI, остальные доступные модели — в Yandex AI Studio.
                   example: "deepseek-v4-flash/latest"
       responses:
-        '200':
-          description: Сгенерированный SVG-код проекта
+        '202':
+          description: >
+            Генерация запущена в фоне. Дальнейший статус — через
+            GET /projects/{id}/generate/{job_id}.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  url:
+                  job_id:
                     type: string
-                    description: "S3 ссылка на объект проекта (отсутствует, если проект пуст)"
-                    example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+                    description: Идентификатор фоновой задачи генерации.
+                    example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         '400':
-          description: Не передан prompt
+          description: Не передан prompt, либо prompt длиннее 1500 символов
           content:
             application/json:
               schema:
@@ -579,6 +873,126 @@ paths:
           description: Не авторизован
         '403':
           description: Нет прав на генерацию в чужом проекте
+        '404':
+          description: Проект не найден
+        '409':
+          description: Для проекта уже выполняется другая генерация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job_id:
+                    type: string
+                    description: Идентификатор уже выполняющейся задачи.
+              example:
+                message: "Generation already in progress for project 0e8bd340-2dbd-4a8b-88ef-c76329ad80c9"
+                job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+
+  /projects/{id}/generate/{job_id}:
+    get:
+      summary: Статус фоновой задачи генерации (long polling)
+      description: >
+        Опрос результата задачи, запущенной POST /projects/{id}/generate.
+        Запрос "подвисает" на сервере до ~25 секунд, ожидая завершения
+        генерации (long polling) — если за это время задача не завершилась,
+        возвращается status="pending" и клиенту следует повторить запрос ещё
+        раз. Состояние задачи хранится в памяти процесса бэкенда и не
+        переживает его перезапуск.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          description: Идентификатор задачи, полученный из ответа POST .../generate
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий статус задачи генерации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatus'
+              examples:
+                Pending:
+                  summary: Ещё выполняется (таймаут long-poll'а истёк)
+                  value:
+                    status: "pending"
+                Done:
+                  summary: Готово
+                  value:
+                    status: "done"
+                    url: "https://s3.yandexcloud.net/bucket/project_version.svg"
+                Error:
+                  summary: Генерация упала (например, LLM вернул невалидный SVG)
+                  value:
+                    status: "error"
+                    message: "Generation service is temporarily unavailable. Please try again later."
+                Cancelled:
+                  summary: Генерация прервана через POST .../generate/{job_id}/cancel
+                  value:
+                    status: "cancelled"
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на просмотр генерации в чужом проекте
+        '404':
+          description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
+
+  /projects/{id}/generate/{job_id}/cancel:
+    post:
+      summary: Отменить выполняющуюся генерацию
+      description: >
+        Запрашивает отмену задачи. Реально прерывает фоновую работу (сетевой
+        вызов к LLM, запись результата) через кооперативную отмену корутины —
+        это не просто отметка "игнорировать результат". Ответ этого запроса
+        отдаётся немедленно и может содержать status="cancelling" — это
+        означает, что отмена запрошена, но фоновая задача ещё не успела её
+        обработать; окончательный status="cancelled" нужно дождаться через
+        GET .../generate/{job_id}. Если задача уже завершилась (done/error) к
+        моменту вызова — отмена не имеет эффекта, в ответе просто вернётся её
+        актуальный финальный статус. Отмена также добавляет запись в историю
+        чата проекта (GET /projects/{id}/chat) с тем же job_id, что и исходное
+        сообщение пользователя.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий статус задачи после запроса отмены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatus'
+              example:
+                status: "cancelling"
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на отмену генерации в чужом проекте
+        '404':
+          description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
 
   /projects/{id}/versions:
     get:
@@ -711,6 +1125,11 @@ paths:
         фронт/мобилка сверяются со своим локальным кэшем по version_id (он
         совпадает с id из GET /projects/{id}/versions) и только при промахе
         кэша идут за свежей ссылкой в GET /projects/{id}/versions/{version_id}.
+        Пока для проекта выполняется генерация, последним элементом массива
+        приходит служебная заглушка {"role":"assistant","status":"pending"}
+        (см. схему ChatMessage) — этого достаточно, чтобы показать в чате
+        индикатор "проект генерируется", не опрашивая отдельно
+        GET .../generate/{job_id}.
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -732,12 +1151,80 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ChatMessage'
+              example:
+                chat_history:
+                  - role: "user"
+                    text: "Добавь логотип с изображением кружки"
+                    job_id: "5a4e8657-151f-4088-a660-ac99b15994b7"
+                    created_at: "2026-08-15T00:01:55.123456+00:00"
+                  - role: "assistant"
+                    version_id: "5a4e8657-151f-4088-a660-ac99b15994b7"
+                    job_id: "5a4e8657-151f-4088-a660-ac99b15994b7"
+                    created_at: "2026-08-15T00:02:01.654321+00:00"
+                  - role: "user"
+                    text: "Сделай фон белым"
+                    job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+                    created_at: "2026-08-22T15:39:43.180295+00:00"
+                  - role: "assistant"
+                    status: "pending"
+                    job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+                    created_at: "2026-08-22T15:40:03.000000+00:00"
         '401':
           description: Отсутствует или некорректен JWT
         '403':
           description: Вы авторизованы, но не автор проекта
         '404':
           description: Проект не найден
+
+  /models:
+    get:
+      summary: Получение списка доступных ИИ-моделей
+      description: Возвращает список всех языковых и других ИИ-моделей (Yandex, DeepSeek, OpenAI и др.), доступных для использования в сервисе. Формат ответа совместим с OpenAI API.
+      tags:
+        - Models
+      responses:
+        '200':
+          description: Успешный запрос. Возвращает объект со списком моделей.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - object
+                  - data
+                properties:
+                  object:
+                    type: string
+                    example: "list"
+                    description: Тип корневого объекта.
+                  data:
+                    type: array
+                    description: >
+                      Массив доступных моделей. Гарантирован только id — это
+                      отфильтрованный проброс ответа Yandex AI Studio плюс
+                      опциональная запись для OpenAI (у неё есть только id и
+                      owned_by, без object/created).
+                    items:
+                      type: object
+                      required:
+                        - id
+                      properties:
+                        id:
+                          type: string
+                          example: "gpt://b1gttnvmtpd0tagdlb7o/deepseek-v4-flash/latest"
+                          description: Уникальный идентификатор (URI) модели.
+                        object:
+                          type: string
+                          example: "model"
+                          description: Тип сущности элемента массива.
+                        owned_by:
+                          type: string
+                          example: "Yandex"
+                          description: Владелец или разработчик модели (Yandex, DeepSeek, OpenAI, Alibaba).
+                        created:
+                          type: integer
+                          example: 0
+                          description: Временная метка создания модели (Unix timestamp).
 
   /feed:
     get:
@@ -841,6 +1328,64 @@ components:
           type: string
           format: password
           example: "StrongPassword123!"
+
+    YandexAuthRequest:
+      description: >
+        Ровно одно из полей: code — веб-флоу (redirect), access_token —
+        SDK-флоу (мобильный/десктопный нативный Yandex ID SDK).
+      oneOf:
+        - type: object
+          required: [ code ]
+          properties:
+            code:
+              type: string
+              description: Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
+              example: "7677812"
+        - type: object
+          required: [ access_token ]
+          properties:
+            access_token:
+              type: string
+              description: >
+                Финальный OAuth-токен, полученный нативным Yandex ID SDK.
+                Бэкенд не меняет его на другой — идёт напрямую в
+                login.yandex.ru/info?format=jwt.
+              example: "y0_AgAAAAAB1234..."
+
+    AuthMethodResponse:
+      type: object
+      required:
+        - has_password
+        - provider
+      properties:
+        has_password:
+          type: boolean
+          description: Можно ли войти по email+паролю (POST /auth/login)
+          example: false
+        provider:
+          type: string
+          nullable: true
+          description: Привязанный внешний провайдер, либо null, если ни один не привязан
+          enum: [ yandex, null ]
+          example: "yandex"
+
+    SetPasswordRequest:
+      type: object
+      required:
+        - new_password
+      properties:
+        current_password:
+          type: string
+          format: password
+          description: Обязателен, только если у пользователя уже есть пароль
+          example: "oldPassword123"
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          description: "8-128 символов, обязательно хотя бы одна буква и одна цифра"
+          example: "newStrongPassword456"
 
     AuthResponse:
       type: object
@@ -1037,7 +1582,20 @@ components:
       description: >
         Одно сообщение в истории чата проекта. Пользовательские сообщения
         несут текст запроса (text), сообщения ассистента — идентификатор
-        созданной версии (version_id) вместо самого SVG или ссылки на него.
+        созданной версии (version_id) при успехе, текст ошибки (error) при
+        неудачной генерации, либо status=cancelled, если генерацию прервали
+        через POST .../generate/{job_id}/cancel — вместо самого SVG или
+        ссылки на него. Сообщение пользователя и ответ ассистента одного
+        обмена связаны общим job_id (идентификатором фоновой задачи генерации
+        из POST .../generate); пользовательское сообщение появляется в
+        истории сразу при старте задачи, ответ ассистента — только после её
+        завершения (в т.ч. отменой). Пока задача ещё не завершилась (не
+        больше одной активной генерации на проект), в конец истории на лету
+        подставляется — только в ответе, не в БД — служебное сообщение
+        {"role":"assistant","status":"pending"|"cancelling","job_id":...}
+        (без version_id/error), сигнализирующее фронту "проект генерируется" /
+        "генерация отменяется", не требуя отдельного опроса
+        GET .../generate/{job_id} только ради этого индикатора.
       required:
         - role
         - created_at
@@ -1051,11 +1609,49 @@ components:
           example: "Добавь логотип с изображением кружки"
         version_id:
           type: string
-          description: "Только для role=assistant — id созданной версии проекта"
+          description: "Только для role=assistant при успешной генерации — id созданной версии проекта"
           example: "5a4e8657-151f-4088-a660-ac99b15994b7"
+        error:
+          type: string
+          description: "Только для role=assistant при неудачной генерации — текст ошибки"
+          example: "Generation service is temporarily unavailable. Please try again later."
+        status:
+          type: string
+          description: >
+            Для role=assistant: "cancelled" — запись о завершённой отмене
+            (хранится в БД); "pending"/"cancelling" — служебная заглушка ещё
+            выполняющейся/отменяемой генерации (см. описание схемы выше, в
+            БД не хранится).
+          enum: [ pending, cancelling, cancelled ]
+        job_id:
+          type: string
+          description: Идентификатор фоновой задачи генерации, к которой относится сообщение.
+          example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         created_at:
           type: string
           format: date-time
+          description: "Для служебной заглушки pending/cancelling — момент чтения истории, а не старта задачи"
+
+    GenerationStatus:
+      type: object
+      description: >
+        Текущее состояние фоновой задачи генерации. "cancelling" — переходное
+        состояние сразу после POST .../generate/{job_id}/cancel, пока фоновая
+        задача ещё не заметила запрос отмены; "cancelled" — уже финальное.
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ pending, done, error, cancelling, cancelled ]
+        url:
+          type: string
+          description: "Только при status=done — presigned-ссылка на сгенерированный SVG-объект"
+          example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+        message:
+          type: string
+          description: "Только при status=error — текст ошибки"
+          example: "Generation service is temporarily unavailable. Please try again later."
 
     VersionUrl:
       type: object

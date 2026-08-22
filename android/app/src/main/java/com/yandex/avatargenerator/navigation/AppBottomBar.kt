@@ -67,7 +67,8 @@ fun AppBottomBar(
             TopLevelDestination.entries.forEach { tab ->
                 NavItem(
                     tab = tab,
-                    selected = currentDestination.isOnRoute(tab.destination.route),
+                    selected = currentDestination.isOnRoute(tab.destination.route) ||
+                        currentDestination.isOnAnyRoute(tab.detailRoutes),
                     onClick = { onTabSelected(tab) },
                 )
             }

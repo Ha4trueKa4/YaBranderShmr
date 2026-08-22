@@ -1,13 +1,13 @@
 <resources>
-    <string name="app_name">AvatarGenerator</string>
+    <string name="app_name" translatable="false">AvatarGenerator</string>
 
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>
 
     <!-- Вкладки нижней навигации -->
-    <string name="nav_feed">Лента</string>
-    <string name="nav_create">Создать</string>
-    <string name="nav_profile">Профиль</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_create">Create</string>
+    <string name="nav_profile">Profile</string>
 
     <!-- Вход и регистрация -->
     <string name="auth_sign_in">Sign in</string>
@@ -65,7 +65,7 @@
     <!-- Лента -->
     <string name="feed_brand_name">Brandkit</string>
     <string name="feed_brand_name_accent">AI</string>
-    <string name="feed_search_description">Поиск</string>
+    <string name="feed_search_description">Search</string>
 
     <string name="feed_tab_all">All</string>
     <string name="feed_tab_subscriptions">Subscriptions</string>
@@ -117,17 +117,32 @@
     <string name="project_input_placeholder">Describe what to change…</string>
     <string name="project_send_description">Send message</string>
 
+    <!-- Своего текста у ответа ИИ нет: в истории чата лежит только ссылка на версию -->
+    <string name="project_assistant_message">Done — here\'s your new version:</string>
+
     <string name="project_system_created">Project created successfully</string>
     <string name="project_system_version_saved">Version %1$s saved</string>
 
     <string name="project_error_title">Couldn\'t load project</string>
     <string name="project_error_retry">Retry</string>
 
+    <!-- Ожидание и провал генерации: пузыри в ленте на месте будущего ответа ИИ -->
+    <!-- Заглушка на случай, когда сервер прислал ошибку без текста -->
+    <string name="project_generation_failed">Generation failed. Please try again.</string>
+    <string name="project_generation_retry">Retry</string>
+    <string name="project_generation_still_running">Still generating — check back in a bit</string>
+
     <!-- Экран публичного проекта -->
     <string name="public_project_follow">Follow</string>
     <string name="public_project_following">Following</string>
     <string name="public_project_download_png">Download PNG</string>
     <string name="public_project_download_svg">Download SVG</string>
+    <string name="public_project_download_saved">%1$s saved to Downloads</string>
+    <string name="public_project_download_saved_gallery">%1$s saved to gallery</string>
+    <string name="public_project_download_failed">Couldn\'t save %1$s</string>
+    <string name="public_project_download_empty">Nothing to export yet</string>
+    <string name="export_format_png">PNG</string>
+    <string name="export_format_svg">SVG</string>
     <string name="public_project_related_title">More from this creator</string>
     <string name="public_project_error_title">Couldn\'t load project</string>
     <string name="public_project_error_retry">Retry</string>
@@ -144,7 +159,10 @@
 
     <!-- Профиль (свой/чужой) -->
     <string name="profile_handle">\@%1$s</string>
-    <string name="profile_stats">%1$d Projects · %2$s Followers · %3$d Following</string>
+    <string name="profile_stat_projects">%1$d Projects</string>
+    <string name="profile_stat_followers">%1$s Followers</string>
+    <string name="profile_stat_following">%1$d Following</string>
+    <string name="profile_stat_separator">·</string>
     <string name="profile_action_edit">Edit Profile</string>
     <string name="profile_action_following">Following</string>
     <string name="profile_action_follow">Follow</string>
@@ -155,6 +173,49 @@
     <string name="profile_empty_other_subtitle">This user hasn\'t published anything yet</string>
     <string name="profile_error_title">Couldn\'t load profile</string>
     <string name="profile_error_retry">Retry</string>
+
+    <!-- Подписки (подписчики/подписки) -->
+    <string name="subscriptions_title_followers">Followers</string>
+    <string name="subscriptions_title_following">Following</string>
+    <string name="subscriptions_followers_count">%1$d followers</string>
+    <string name="subscriptions_action_follow">Follow</string>
+    <string name="subscriptions_action_unfollow">Unfollow</string>
+    <string name="subscriptions_you">You</string>
+    <string name="subscriptions_back_description">Back</string>
+    <string name="subscriptions_error_title">Couldn\'t load the list</string>
+    <string name="subscriptions_error_retry">Retry</string>
+    <string name="subscriptions_empty_followers_title">No followers yet</string>
+    <string name="subscriptions_empty_followers_subtitle">When someone follows this profile, they\'ll show up here</string>
+    <string name="subscriptions_empty_following_title">Not following anyone yet</string>
+    <string name="subscriptions_empty_following_subtitle">Profiles this user follows will appear here</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_open_description">Settings</string>
+    <string name="settings_back_description">Back</string>
+
+    <string name="settings_section_account">ACCOUNT</string>
+    <string name="settings_section_appearance">APPEARANCE</string>
+    <string name="settings_section_about">ABOUT</string>
+
+    <string name="settings_account_username">Username</string>
+    <string name="settings_account_email">Email</string>
+
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_about_terms">Terms of Use</string>
+    <string name="settings_about_privacy">Privacy Policy</string>
+    <string name="settings_about_version">Version</string>
+
+    <string name="settings_logout">Log Out</string>
 
     <!-- Относительное время: подписи строк чата.
          Сокращения min/hr не склоняются — поэтому обычные string, а не plurals. -->

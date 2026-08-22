@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ConfirmationModal } from '../ConfirmationModal'
 
 export interface ConfirmUnsavedChangeModalProps {
@@ -11,15 +12,17 @@ export function ConfirmUnsavedChangeModal({
   onCancel,
   onConfirm,
 }: ConfirmUnsavedChangeModalProps) {
+  const { t } = useTranslation()
+
   return (
     <ConfirmationModal
-      cancelLabel="Stay"
-      confirmLabel="Leave without saving"
-      description="Your unsaved changes will be lost."
+      cancelLabel={t('Stay')}
+      confirmLabel={t('Leave without saving')}
+      description={t('Your unsaved changes will be lost.')}
       isOpen={isOpen}
       onCancel={onCancel}
       onConfirm={onConfirm}
-      title="Leave without saving?"
+      title={t('Leave without saving?')}
     />
   )
 }

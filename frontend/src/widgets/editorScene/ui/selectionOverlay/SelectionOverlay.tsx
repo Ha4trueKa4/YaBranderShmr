@@ -5,90 +5,191 @@ import { useLayoutEffect, useState } from 'react'
 import { constrainSelectionBounds } from './model/constrainSelectionBounds'
 import {
   getSelectionBounds,
+  getSelectionOutline,
   type SelectionBounds,
+  type SelectionPoint,
 } from './model/getSelectionBounds'
 import styles from './SelectionOverlay.module.css'
 
+type SelectionBoundsByNode = {
+  bounds: SelectionBounds
+  nodeId: string
+  outline: SelectionPoint[] | null
+}
+
+const SELECTION_STROKE_WIDTH = 1
+
 function hasSameBounds(
-  firstBounds: SelectionBounds | null,
-  secondBounds: SelectionBounds | null,
+  firstBounds: SelectionBounds,
+  secondBounds: SelectionBounds,
 ) {
   return (
-    firstBounds?.height === secondBounds?.height &&
-    firstBounds?.width === secondBounds?.width &&
-    firstBounds?.x === secondBounds?.x &&
-    firstBounds?.y === secondBounds?.y
+    firstBounds.height === secondBounds.height &&
+    firstBounds.width === secondBounds.width &&
+    firstBounds.x === secondBounds.x &&
+    firstBounds.y === secondBounds.y
   )
+}
+
+function hasSameOutline(
+  firstOutline: SelectionPoint[] | null,
+  secondOutline: SelectionPoint[] | null,
+) {
+  if (!firstOutline || !secondOutline) {
+    return firstOutline === secondOutline
+  }
+
+  return (
+    firstOutline.length === secondOutline.length &&
+    firstOutline.every(
+      (point, index) =>
+        point.x === secondOutline[index]?.x &&
+        point.y === secondOutline[index]?.y,
+    )
+  )
+}
+
+function hasSameSelection(
+  firstSelection: SelectionBoundsByNode[],
+  secondSelection: SelectionBoundsByNode[],
+) {
+  return (
+    firstSelection.length === secondSelection.length &&
+    firstSelection.every(
+      (item, index) =>
+        item.nodeId === secondSelection[index]?.nodeId &&
+        hasSameBounds(item.bounds, secondSelection[index].bounds) &&
+        hasSameOutline(item.outline, secondSelection[index].outline),
+    )
+  )
+}
+
+function getSelectedElements(node: EditorNode): EditorNode[] {
+  if (node.type === 'group') {
+    return node.children.flatMap(getSelectedElements)
+  }
+
+  return [node]
+}
+
+function getUniqueElements(nodes: EditorNode[]): EditorNode[] {
+  for (const node of nodes) {
+    getNodeRenderSignature(node)
+  }
+
+  const elements = nodes.flatMap(getSelectedElements)
+
+  return [...new Map(elements.map((element) => [element.id, element])).values()]
+}
+
+function getNodeRenderSignature(node: EditorNode): string {
+  const transform = [
+    node.transform.x,
+    node.transform.y,
+    node.transform.rotation,
+    node.transform.scaleX,
+    node.transform.scaleY,
+    node.transform.rotationCenter?.x ?? '',
+    node.transform.rotationCenter?.y ?? '',
+  ].join(',')
+
+  if (node.type === 'group') {
+    return `${node.id}:${transform}[${node.children.map(getNodeRenderSignature).join('|')}]`
+  }
+
+  if (node.type === 'text') {
+    return `${node.id}:${transform}:${node.x},${node.y}:${node.text}:${node.style.fontFamily},${node.style.fontSize},${node.style.fontStyle ?? ''},${node.style.fontWeight ?? ''},${node.style.letterSpacing ?? ''}`
+  }
+
+  if (node.type === 'shape') {
+    return `${node.id}:${transform}:${JSON.stringify(node.geometry)}:${node.style.strokeWidth}`
+  }
+
+  return node.id
 }
 
 interface SelectionOverlayProps {
   canvasHeight: number
   canvasWidth: number
+  canvasX: number
+  canvasY: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
-  selectedNode: EditorNode | null
+  selectedNodes: EditorNode[]
+  zoom: number
 }
 
 export const SelectionOverlay = observer(function SelectionOverlay({
   canvasHeight,
   canvasWidth,
+  canvasX,
+  canvasY,
   getEditableElement,
-  selectedNode,
+  selectedNodes,
+  zoom,
 }: SelectionOverlayProps) {
-  const [bounds, setBounds] = useState<SelectionBounds | null>(null)
-  const selectedElement =
-    selectedNode?.type === 'shape' || selectedNode?.type === 'text'
-      ? selectedNode
-      : null
-  const selectionTarget = selectedElement
-    ? {
-        element: getEditableElement(selectedElement.id),
-        position:
-          selectedElement.type === 'text'
-            ? { x: selectedElement.x, y: selectedElement.y }
-            : undefined,
-        transform: {
-          rotation: selectedElement.transform.rotation,
-          scaleX: selectedElement.transform.scaleX,
-          scaleY: selectedElement.transform.scaleY,
-          x: selectedElement.transform.x,
-          y: selectedElement.transform.y,
-        },
-      }
-    : null
+  const [selectionBounds, setSelectionBounds] = useState<
+    SelectionBoundsByNode[]
+  >([])
+  const selectedElements = getUniqueElements(selectedNodes)
 
   useLayoutEffect(() => {
-    if (!selectionTarget) {
-      setBounds((currentBounds) =>
-        hasSameBounds(currentBounds, null) ? currentBounds : null,
-      )
+    const nextSelection = selectedElements.flatMap((element) => {
+      const editableElement = getEditableElement(element.id)
+      const bounds = getSelectionBounds(editableElement)
 
-      return
-    }
+      return bounds
+        ? [
+            {
+              bounds,
+              nodeId: element.id,
+              outline:
+                element.transform.rotation === 0
+                  ? null
+                  : getSelectionOutline(editableElement, 4),
+            },
+          ]
+        : []
+    })
 
-    const nextBounds = getSelectionBounds(selectionTarget.element)
-
-    setBounds((currentBounds) =>
-      hasSameBounds(currentBounds, nextBounds) ? currentBounds : nextBounds,
+    setSelectionBounds((currentSelection) =>
+      hasSameSelection(currentSelection, nextSelection)
+        ? currentSelection
+        : nextSelection,
     )
-  }, [selectionTarget])
+  }, [getEditableElement, selectedElements])
 
-  if (!bounds) {
+  if (selectionBounds.length === 0) {
     return null
   }
 
-  const constrainedBounds = constrainSelectionBounds(
-    bounds,
-    canvasWidth,
-    canvasHeight,
-  )
+  const strokeWidth = SELECTION_STROKE_WIDTH / zoom
 
-  return (
-    <rect
-      className={styles.overlay}
-      height={constrainedBounds.height}
-      width={constrainedBounds.width}
-      x={constrainedBounds.x}
-      y={constrainedBounds.y}
-    />
-  )
+  return selectionBounds.map(({ bounds, nodeId, outline }) => {
+    const constrainedBounds = constrainSelectionBounds(
+      bounds,
+      canvasWidth,
+      canvasHeight,
+      canvasX,
+      canvasY,
+    )
+
+    return outline ? (
+      <polygon
+        className={styles.overlay}
+        key={nodeId}
+        points={outline.map((point) => `${point.x},${point.y}`).join(' ')}
+        strokeWidth={strokeWidth}
+      />
+    ) : (
+      <rect
+        className={styles.overlay}
+        height={constrainedBounds.height}
+        key={nodeId}
+        strokeWidth={strokeWidth}
+        width={constrainedBounds.width}
+        x={constrainedBounds.x}
+        y={constrainedBounds.y}
+      />
+    )
+  })
 })

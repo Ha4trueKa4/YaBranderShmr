@@ -3,10 +3,12 @@ package com.yandex.avatargenerator.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,11 +17,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -28,6 +35,12 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
 /** Радиус «хвостика» пузыря у края собеседника — точечное значение вне шкалы AppShape. */
 private val TailCorner = 4.dp
+
+/** Минимальная высота картинки в пузыре: ниже не сжимаем, выше растём под пропорции. */
+private val MinImageHeight = 100.dp
+
+/** Доля высоты экрана, за которую картинке расти нельзя. */
+private const val MaxImageHeightFraction = 0.5f
 
 /**
  * Пузырь сообщения чата (см. "Chat Bubbles" в Component Sandbox). Исходящее
@@ -38,6 +51,14 @@ private val TailCorner = 4.dp
  *
  * @param timeLabel готовая подпись времени («11:32»), рисуется справа внизу;
  *  `null` — времени нет (например, у системных подсказок).
+ * @param imageCacheKey стабильный ключ кэша картинки. Нужен, когда [imageUrl] —
+ *  presigned-ссылка: она новая при каждом запросе, и по самому URL Coil грузил
+ *  бы одну и ту же картинку заново на каждом обновлении ленты.
+ * @param textColor цвет текста поверх заливки. По умолчанию — контрастный к ней;
+ *  переопределяют, чтобы подкрасить сообщение (например, ошибку генерации).
+ * @param action слот под текстом: место для действия по сообщению («Повторить»).
+ *  Живёт внутри пузыря, чтобы кнопка была явно привязана к нему, а не висела
+ *  отдельной строкой в ленте.
  */
 @Composable
 fun BrandChatBubble(
@@ -45,7 +66,10 @@ fun BrandChatBubble(
     isOutgoing: Boolean,
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
-    timeLabel: String? = null
+    imageCacheKey: String? = null,
+    timeLabel: String? = null,
+    textColor: Color? = null,
+    action: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val shape: Shape = RoundedCornerShape(
         topStart = AppShape.l,
@@ -54,7 +78,8 @@ fun BrandChatBubble(
         bottomStart = if (isOutgoing) AppShape.l else TailCorner
     )
     val background = if (isOutgoing) AppColors.Accent else AppColors.SurfaceVariant
-    val foreground = if (isOutgoing) AppColors.OnAccent else AppColors.TextPrimary
+    val foreground = textColor
+        ?: if (isOutgoing) AppColors.OnAccent else AppColors.TextPrimary
     val timeColor = if (isOutgoing) AppColors.OnAccent.copy(alpha = 0.7f) else AppColors.TextMuted
 
     Column(
@@ -66,17 +91,29 @@ fun BrandChatBubble(
     ) {
         Text(text = text, style = AppTypography.body.copy(color = foreground))
         if (imageUrl != null) {
+            val screenHeight = LocalWindowInfo.current.containerSize.height
+            val maxImageHeight = with(LocalDensity.current) {
+                (screenHeight * MaxImageHeightFraction).toDp()
+            }.coerceAtLeast(MinImageHeight)
             Spacer(modifier = Modifier.height(AppSpacing.s))
             AsyncImage(
-                model = imageUrl,
+                model = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .memoryCacheKey(imageCacheKey)
+                    .diskCacheKey(imageCacheKey)
+                    .build(),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .heightIn(min = MinImageHeight, max = maxImageHeight)
                     .clip(RoundedCornerShape(AppShape.s))
                     .background(AppColors.SurfaceVariant)
             )
+        }
+        if (action != null) {
+            Spacer(modifier = Modifier.height(AppSpacing.xs))
+            action()
         }
         if (timeLabel != null) {
             Spacer(modifier = Modifier.height(AppSpacing.xxs))
@@ -107,6 +144,12 @@ private fun BrandChatBubblePreview() {
                 isOutgoing = false,
                 imageUrl = "https://placehold.co/248x100",
                 timeLabel = "11:33"
+            )
+            BrandChatBubble(
+                text = "И квадратная аватарка — пузырь растёт под её пропорции:",
+                isOutgoing = false,
+                imageUrl = "https://placehold.co/512x512",
+                timeLabel = "11:34"
             )
         }
     }

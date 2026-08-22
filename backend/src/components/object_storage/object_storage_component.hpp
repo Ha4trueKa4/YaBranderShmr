@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -61,10 +62,14 @@ public:
     virtual void SetAcl(const std::string& key, bool make_public) = 0;
 
     /// @brief Удаляет объект. Удаление несуществующего ключа — no-op.
-    virtual void Delete(const std::string& key) = 0;
+    /// @return true, если объект реально был удалён (200/204); false, если
+    ///         его уже не было (404) — вызов всё равно считается успешным.
+    virtual bool Delete(const std::string& key) = 0;
 
-    /// @brief Удаляет набор объектов (например, все версии проекта при удалении).
-    virtual void DeleteMany(const std::vector<std::string>& keys) = 0;
+    /// @brief Удаляет набор объектов (best-effort). Ошибки по отдельным ключам
+    ///        не прерывают остальные; лишь пропускаются.
+    /// @return Сколько объектов реально удалено.
+    virtual std::size_t DeleteMany(const std::vector<std::string>& keys) = 0;
 
     /// @brief Перечисляет объекты в бакете по префиксу (с пагинацией внутри).
     /// @details Возвращает ключ и время последней модификации каждого объекта.

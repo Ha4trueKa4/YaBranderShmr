@@ -10,6 +10,7 @@ import type {
 import { SvgParseError } from '../errors'
 import type { SvgImportWarning } from '../types'
 import { parseNumberAttribute } from './parseNumber'
+import { parsePaint } from './parsePaint'
 import { parseShapeStyle, parseTextStyle } from './parseStyle'
 import { parseTransform } from './parseTransform'
 
@@ -23,6 +24,7 @@ const commonAttributeNames = new Set([
   'id',
   'opacity',
   'transform',
+  'xmlns',
 ])
 
 const attributeNamesByElement = {
@@ -33,6 +35,7 @@ const attributeNamesByElement = {
     'fill-opacity',
     'r',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -46,16 +49,18 @@ const attributeNamesByElement = {
     'rx',
     'ry',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
     'stroke-width',
   ]),
-  g: new Set<string>(),
+  g: new Set(['fill']),
   line: new Set([
     'fill',
     'fill-opacity',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -70,6 +75,7 @@ const attributeNamesByElement = {
     'fill',
     'fill-opacity',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -82,6 +88,7 @@ const attributeNamesByElement = {
     'rx',
     'ry',
     'stroke',
+    'stroke-dasharray',
     'stroke-linecap',
     'stroke-linejoin',
     'stroke-opacity',
@@ -216,6 +223,14 @@ function parseShape(element: Element): EditorShape {
   }
 }
 
+function parseGroupFill(element: Element): Pick<EditorGroup, 'fill'> {
+  const fill = element.getAttribute('fill')
+
+  return fill === null
+    ? {}
+    : { fill: parsePaint(fill, { type: 'color', value: '#000000' }) }
+}
+
 function parseText(element: Element): EditorText {
   const tspans = Array.from(element.children)
   const style = parseTextStyle(element)
@@ -282,6 +297,10 @@ function getUnsupportedReason(element: Element): string | null {
     return 'Text with unsupported nested SVG elements is not editable'
   }
 
+  if (element.localName === 'text' && !hasLosslessTspanPositions(element)) {
+    return 'Text with individually positioned lines is not editable'
+  }
+
   const supportedAttributes =
     attributeNamesByElement[
       element.localName as keyof typeof attributeNamesByElement
@@ -325,6 +344,37 @@ function hasSupportedTextContent(element: Element): boolean {
   )
 }
 
+function hasLosslessTspanPositions(element: Element): boolean {
+  if (element.localName !== 'text' || element.children.length === 0) {
+    return true
+  }
+
+  const textX = parseNumberAttribute(element, 'x', 0)
+  const tspans = Array.from(element.children)
+  let lineHeight: number | null = null
+
+  return tspans.every((tspan, index) => {
+    const x = tspan.getAttribute('x')
+    const dy = tspan.getAttribute('dy')
+
+    if (x === null || Number(x) !== textX) {
+      return false
+    }
+
+    if (index === 0) {
+      return dy === null || Number(dy) === 0
+    }
+
+    if (dy === null || !Number.isFinite(Number(dy)) || Number(dy) <= 0) {
+      return false
+    }
+
+    lineHeight ??= Number(dy)
+
+    return Number(dy) === lineHeight
+  })
+}
+
 function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
   try {
     const unsupportedReason = getUnsupportedReason(element)
@@ -336,6 +386,7 @@ function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
     if (element.localName === 'g') {
       const group: EditorGroup = {
         ...parseBase(element),
+        ...parseGroupFill(element),
         children: Array.from(element.children).map((child) =>
           parseNode(child, warnings),
         ),

@@ -1,5 +1,5 @@
-import type { EditorNode } from '@entities/editorDocument'
-
+import type { EditorDefinitions, EditorNode } from '@entities/editorDocument'
+import { useTranslation } from 'react-i18next'
 import { getLayerPresentation } from '../layerPresentation'
 import { GroupProperties } from './groupProperties/GroupProperties'
 import styles from './InspectorPanel.module.css'
@@ -7,10 +7,38 @@ import { ShapeProperties } from './shapeProperties/ShapeProperties'
 import { TextProperties } from './textProperties/TextProperties'
 
 interface InspectorPanelProps {
+  definitions?: EditorDefinitions
+  measuredRotationCenter?: { x: number; y: number }
   onShapeFillChange: (nodeId: string, color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onShapeFillOpacityChange: (nodeId: string, opacity: number) => void
+  onGradientStopColorChange: (
+    gradientId: string,
+    stopIndex: number,
+    color: string,
+  ) => void
   onShapeOpacityChange: (nodeId: string, opacity: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
+  onShapeStrokeAdd: (nodeId: string) => void
+  onShapeStrokeColorChange: (nodeId: string, color: string) => void
+  onShapeStrokeRemove: (nodeId: string) => void
+  onShapeStrokeWidthChange: (nodeId: string, strokeWidth: number) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
   onTextAnchorChange: (
     nodeId: string,
     textAnchor: 'end' | 'middle' | 'start',
@@ -25,6 +53,21 @@ interface InspectorPanelProps {
   ) => void
   onTextFontWeightChange: (nodeId: string, fontWeight: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  onTextRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
   selectedNode: EditorNode | null
   showHeader?: boolean
 }
@@ -36,23 +79,35 @@ function InspectorHeader({
   label?: string
   showHeader: boolean
 }) {
+  const { t } = useTranslation()
   if (!showHeader) {
     return null
   }
 
   return (
     <div className={styles.header}>
-      <h2>Inspector</h2>
+      <h2>{t('Inspector')}</h2>
       {label && <span className={styles.typeLabel}>{label}</span>}
     </div>
   )
 }
 
 export function InspectorPanel({
+  definitions,
+  measuredRotationCenter,
   onShapeFillChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onShapeFillOpacityChange,
+  onGradientStopColorChange,
   onShapeOpacityChange,
   onShapePositionChange,
+  onShapeRotationChange,
+  onShapeStrokeAdd,
+  onShapeStrokeColorChange,
+  onShapeStrokeRemove,
+  onShapeStrokeWidthChange,
+  onShapeTransformChange,
   onTextAnchorChange,
   onTextContentChange,
   onTextFillColorChange,
@@ -61,15 +116,18 @@ export function InspectorPanel({
   onTextFontStyleChange,
   onTextFontWeightChange,
   onTextPositionChange,
+  onTextRotationChange,
+  onTextTransformChange,
   selectedNode,
   showHeader = true,
 }: InspectorPanelProps) {
+  const { t } = useTranslation()
   if (!selectedNode) {
     return (
       <section className={styles.panel}>
         <InspectorHeader showHeader={showHeader} />
         <div className={styles.content}>
-          <p>Select a layer to edit its properties.</p>
+          <p>{t('Select a layer to edit its properties.')}</p>
         </div>
       </section>
     )
@@ -79,7 +137,7 @@ export function InspectorPanel({
     return (
       <section className={styles.panel}>
         <InspectorHeader
-          label={getLayerPresentation(selectedNode).label}
+          label={t(getLayerPresentation(selectedNode).label)}
           showHeader={showHeader}
         />
         <div className={styles.content}>
@@ -93,12 +151,14 @@ export function InspectorPanel({
     return (
       <section className={styles.panel}>
         <InspectorHeader
-          label={getLayerPresentation(selectedNode).label}
+          label={t(getLayerPresentation(selectedNode).label)}
           showHeader={showHeader}
         />
         <div className={styles.content}>
           <p>
-            This SVG layer is locked because its features are not editable yet.
+            {t(
+              'This SVG layer has effects that cannot be edited yet. You can still move it.',
+            )}
           </p>
         </div>
       </section>
@@ -109,21 +169,42 @@ export function InspectorPanel({
     return (
       <section className={styles.panel}>
         <InspectorHeader
-          label={getLayerPresentation(selectedNode).label}
+          label={t(getLayerPresentation(selectedNode).label)}
           showHeader={showHeader}
         />
         <div className={styles.content}>
           <ShapeProperties
+            definitions={definitions}
             layer={selectedNode}
+            measuredRotationCenter={measuredRotationCenter}
             onFillChange={(color) => onShapeFillChange(selectedNode.id, color)}
+            onEyeDropperEnd={onEyeDropperEnd}
+            onEyeDropperStart={onEyeDropperStart}
             onFillOpacityChange={(opacity) =>
               onShapeFillOpacityChange(selectedNode.id, opacity)
+            }
+            onGradientStopColorChange={(gradientId, stopIndex, color) =>
+              onGradientStopColorChange(gradientId, stopIndex, color)
             }
             onOpacityChange={(opacity) =>
               onShapeOpacityChange(selectedNode.id, opacity)
             }
             onPositionChange={(x, y) =>
               onShapePositionChange(selectedNode.id, x, y)
+            }
+            onRotationChange={(rotation, rotationCenter) =>
+              onShapeRotationChange(selectedNode.id, rotation, rotationCenter)
+            }
+            onStrokeAdd={() => onShapeStrokeAdd(selectedNode.id)}
+            onStrokeColorChange={(color) =>
+              onShapeStrokeColorChange(selectedNode.id, color)
+            }
+            onStrokeRemove={() => onShapeStrokeRemove(selectedNode.id)}
+            onStrokeWidthChange={(strokeWidth) =>
+              onShapeStrokeWidthChange(selectedNode.id, strokeWidth)
+            }
+            onTransformChange={(transform) =>
+              onShapeTransformChange(selectedNode.id, transform)
             }
           />
         </div>
@@ -134,12 +215,13 @@ export function InspectorPanel({
   return (
     <section className={styles.panel}>
       <InspectorHeader
-        label={getLayerPresentation(selectedNode).label}
+        label={t(getLayerPresentation(selectedNode).label)}
         showHeader={showHeader}
       />
       <div className={styles.content}>
         <TextProperties
           layer={selectedNode}
+          measuredRotationCenter={measuredRotationCenter}
           onAnchorChange={(textAnchor) =>
             onTextAnchorChange(selectedNode.id, textAnchor)
           }
@@ -147,6 +229,8 @@ export function InspectorPanel({
           onFillColorChange={(color) =>
             onTextFillColorChange(selectedNode.id, color)
           }
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
           onFontFamilyChange={(fontFamily) =>
             onTextFontFamilyChange(selectedNode.id, fontFamily)
           }
@@ -161,6 +245,12 @@ export function InspectorPanel({
           }
           onPositionChange={(x, y) =>
             onTextPositionChange(selectedNode.id, x, y)
+          }
+          onRotationChange={(rotation, rotationCenter) =>
+            onTextRotationChange(selectedNode.id, rotation, rotationCenter)
+          }
+          onTransformChange={(transform) =>
+            onTextTransformChange(selectedNode.id, transform)
           }
         />
       </div>

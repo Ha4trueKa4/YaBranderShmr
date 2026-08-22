@@ -1,7 +1,8 @@
 import type { PostProjectsByIdGenerateData } from '@shared/api/types'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery } from '@tanstack/react-query'
 
 import { generateProject } from './generateProject'
+import { getGenerationStatus } from './getGenerationStatus'
 import { getModels } from './getModels'
 
 interface GenerateProjectInput {
@@ -11,6 +12,21 @@ interface GenerateProjectInput {
 }
 
 export const modelsQueryKey = ['models'] as const
+export const generationStatusQueryKey = (projectId: string, jobId: string) =>
+  ['project', projectId, 'generation', jobId] as const
+
+export function generationStatusQueryOptions(
+  projectId: string,
+  jobId: string,
+  signal?: AbortSignal,
+) {
+  return queryOptions({
+    queryKey: generationStatusQueryKey(projectId, jobId),
+    queryFn: () => getGenerationStatus(projectId, jobId, signal),
+    retry: false,
+    staleTime: 0,
+  })
+}
 
 export function useModelsQuery() {
   return useQuery({

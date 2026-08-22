@@ -1,7 +1,6 @@
 package com.yandex.avatargenerator.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,9 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,8 +42,10 @@ import kotlin.math.abs
  * @param authorName имя автора; null — строка автора не показывается (на профиле
  *   владелец уже в шапке, дублировать в каждой карточке не нужно).
  * @param authorAvatarUrl аватар автора; null — инициалы по [authorName] через [BrandAvatar].
- * @param aspectRatio пропорции превью (ширина:высота). Для masonry высоту варьируют
- *   через [masonryAspectRatio], пока бэкенд не отдаёт реальные размеры превью.
+ * @param aspectRatio запасные пропорции превью (ширина:высота) — держат высоту карточки,
+ *   пока картинка грузится. После загрузки превью показывается целиком в своих реальных
+ *   пропорциях (без кропа), так что для masonry-эффекта высота приходит от самой картинки;
+ *   [masonryAspectRatio] нужен лишь как плейсхолдер до загрузки/при её отсутствии.
  * @param onClick клик по карточке (открыть проект).
  * @param onAuthorClick клик по строке автора (открыть профиль автора); null — строка
  *   не кликабельна.
@@ -55,23 +61,35 @@ fun ProjectCard(
     authorAvatarUrl: String? = null,
     aspectRatio: Float = 1.3f,
 ) {
-    val shape = RoundedCornerShape(AppShape.l)
+    // Пропорции превью берём из самой картинки после загрузки (onSuccess), до этого
+    // держим высоту запасным [aspectRatio]. Оставляем AsyncImage, а не
+    // rememberAsyncImagePainter: он сайзит запрос под реальные констрейнты карточки
+    // (ConstraintsSizeResolver). Для SVG-превью это критично — painter без резолвера
+    // декодирует в SizeResolver.ORIGINAL, т.е. в единицы viewBox документа: мыло на
+    // плотных экранах и битмапа размером с документ, которая в бесконечной ленте
+    // вышибает memory cache. computeSizeMultiplier масштабирует обе стороны единым
+    // множителем, поэтому intrinsicSize сохраняет истинные пропорции SVG.
+    var previewRatio by remember(previewUrl) { mutableFloatStateOf(aspectRatio) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(AppColors.Surface)
-            .border(1.dp, AppColors.Border, shape)
+            .brandSurface(RoundedCornerShape(AppShape.l))
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
             model = previewUrl,
             contentDescription = title,
             contentScale = ContentScale.Crop,
+            onSuccess = { state ->
+                val size = state.painter.intrinsicSize
+                if (size.isSpecified && size.height > 0f) {
+                    previewRatio = size.width / size.height
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(aspectRatio)
+                .aspectRatio(previewRatio)
                 .background(AppColors.SurfaceVariant),
         )
 
@@ -100,7 +118,7 @@ fun ProjectCard(
                     BrandAvatar(
                         size = 24.dp,
                         imageUrl = authorAvatarUrl,
-                        initials = authorInitials(authorName),
+                        initials = avatarInitials(authorName),
                     )
                     Text(
                         text = authorName,
@@ -119,16 +137,3 @@ fun ProjectCard(
  * размеры. Детерминировано по [seed] (обычно id проекта), диапазон ~1.0..1.9.
  */
 fun masonryAspectRatio(seed: String): Float = 1.0f + (abs(seed.hashCode()) % 90) / 100f
-
-/**
- * Инициалы автора для плейсхолдера аватара (когда нет avatarUrl): первые буквы
- * 1–2 слов имени — «Alice Cooper» → «AC», «Brandkit» → «B». Пустое/пробельное
- * имя → null, чтобы [BrandAvatar] показал декоративную заглушку, а не пустой круг.
- */
-private fun authorInitials(name: String): String? =
-    name.trim()
-        .split(Regex("\\s+"))
-        .filter { it.isNotEmpty() }
-        .take(2)
-        .joinToString("") { it.first().uppercase() }
-        .takeIf { it.isNotEmpty() }

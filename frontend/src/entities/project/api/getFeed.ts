@@ -4,6 +4,7 @@ import {
   type GetFeedData,
   zGetFeedResponse,
 } from '@shared/api/types'
+import i18n from '@/i18n'
 
 import type { FeedProject } from '../model/types'
 
@@ -58,27 +59,29 @@ function mapFeedItems(feed: FeedResponse): FeedProject[] {
 
 function formatPublishedAt(createdAt: string | undefined) {
   if (!createdAt) {
-    return 'Recently'
+    return i18n.t('Recently')
   }
 
   const createdAtTime = new Date(createdAt).getTime()
   const elapsedTime = Date.now() - createdAtTime
 
   if (Number.isNaN(createdAtTime) || elapsedTime < 0) {
-    return 'Recently'
+    return i18n.t('Recently')
   }
 
   const minutes = Math.floor(elapsedTime / 60_000)
 
   if (minutes < 60) {
-    return minutes < 1 ? 'Just now' : `${minutes}m ago`
+    return minutes < 1
+      ? i18n.t('Just now')
+      : i18n.t('{{count}}m ago', { count: minutes })
   }
 
   const hours = Math.floor(minutes / 60)
 
   if (hours < 24) {
-    return `${hours}h ago`
+    return i18n.t('{{count}}h ago', { count: hours })
   }
 
-  return `${Math.floor(hours / 24)}d ago`
+  return i18n.t('{{count}}d ago', { count: Math.floor(hours / 24) })
 }

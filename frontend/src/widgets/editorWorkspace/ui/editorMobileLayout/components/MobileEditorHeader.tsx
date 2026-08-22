@@ -1,6 +1,7 @@
 import { IconButton, PopupMenu } from '@shared/ui'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from '../EditorMobileLayout.module.css'
 
@@ -11,6 +12,7 @@ interface MobileEditorHeaderProps {
   onBack: () => void
   onCreateCopy: () => void
   onExport: () => void
+  onOpenVersionHistory: () => void
   onSaveVersion: () => void
   projectName: string
 }
@@ -22,10 +24,12 @@ export function MobileEditorHeader({
   onBack,
   onCreateCopy,
   onExport,
+  onOpenVersionHistory,
   onSaveVersion,
   projectName,
 }: MobileEditorHeaderProps) {
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false)
+  const { t } = useTranslation()
 
   return (
     <header className={styles.header}>
@@ -33,7 +37,6 @@ export function MobileEditorHeader({
         <ArrowLeft className={styles.backIcon} />
       </IconButton>
       <div className={styles.title}>
-        <span>Brandkit webview</span>
         <strong>{projectName}</strong>
       </div>
       <div
@@ -53,8 +56,12 @@ export function MobileEditorHeader({
               ...(canEdit
                 ? [
                     {
-                      label: isSavingVersion ? 'Saving…' : 'Save',
+                      label: isSavingVersion ? t('Saving…') : t('Save'),
                       onClick: onSaveVersion,
+                    },
+                    {
+                      label: t('History'),
+                      onClick: onOpenVersionHistory,
                     },
                   ]
                 : [

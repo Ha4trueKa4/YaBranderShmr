@@ -1,4 +1,5 @@
 import { type PublicProfileProject, PublicProjectCard } from '@entities/project'
+import { useTranslation } from 'react-i18next'
 
 import styles from './PublicProjectsSection.module.css'
 
@@ -9,14 +10,17 @@ interface PublicProjectsSectionProps {
 export function PublicProjectsSection({
   projects,
 }: PublicProjectsSectionProps) {
+  const { t } = useTranslation()
   return (
     <section className={styles.projectsSection}>
       <div className={styles.sectionHeader}>
         <div>
-          <h2>Public projects</h2>
-          <p>Only publicly shared work is visible</p>
+          <h2>{t('Public projects')}</h2>
+          <p>{t('Only publicly shared work is visible')}</p>
         </div>
-        <span>{projects.length} public projects</span>
+        <span>
+          {t('{{count}} public projects', { count: projects.length })}
+        </span>
       </div>
       <div className={styles.projectsGrid}>
         {projects.map((project) => (

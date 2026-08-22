@@ -15,7 +15,7 @@ deploy:
     # --- 1. Подготовка ключа и переменных окружения ---
     - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key
     - >
-      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY"
+      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\nYANDEX_OAUTH_CLIENT_ID=%s\nYANDEX_OAUTH_CLIENT_SECRET=%s\nREDIS_PASSWORD=%s\nOPENAI_API_KEY=%s\nGC_ENABLED=%s' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY" "$YANDEX_OAUTH_CLIENT_ID" "$YANDEX_OAUTH_CLIENT_SECRET" "$REDIS_PASSWORD" "$OPENAI_API_KEY" "$GC_ENABLED"
       | base64 -w0 > /tmp/env_b64
     - >
       cat /tmp/env_b64 | ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
@@ -86,6 +86,11 @@ deploy:
     - >
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP "
         docker system prune -af --filter \"until=24h\" || true
+        # Сбрасываем docker config: без этого docker login пытается сохранить
+        # креды через отсутствующий на сервере docker-credential-yc helper,
+        # docker pull не может авторизоваться в registry и тянет старый образ.
+        rm -f ~/.docker/config.json || true
+        mkdir -p ~/.docker
         echo '$YC_SA_JSON' | docker login --username json_key --password-stdin cr.yandex
         docker pull $REGISTRY/$IMAGE:latest
         docker rm -f ya-brander || true
@@ -93,4 +98,32 @@ deploy:
         docker network disconnect ya-brander-net service-postgres 2>/dev/null || true
         docker network connect ya-brander-net service-postgres || true
         docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
+        docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
+          echo "WARNING: service-redis не запущен!"
       "
+
+    # --- 6. Проверка работоспособности бэкенда ---
+    # После запуска контейнера убеждаемся, что он реально поднялся и на нём
+    # зарегистрирована OAuth-ручка. POST /api/v1/auth/yandex с пустым телом
+    # должен вернуть 400 (INVALID_CODE). Если приходит 404 — на сервере
+    # крутится старый образ без OAuth-хендлера, и деплой прерывается.
+    - >
+      ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP '
+        set -e
+        sleep 5
+        STATE=$(docker inspect --format="{{.State.Running}} {{.RestartCount}}" ya-brander 2>/dev/null || true)
+        echo "container state: $STATE"
+        if [ "$STATE" != "true 0" ]; then
+          echo "ERROR: ya-brander container is not running (or restarting)" >&2
+          docker logs --tail 100 ya-brander >&2 || true
+          exit 1
+        fi
+        echo "container OK: running, no restarts"
+        CODE=$(docker run --rm --network ya-brander-net curlimages/curl:8.10.1 -s -o /dev/null -w "%{http_code}" -X POST http://ya-brander:8080/api/v1/auth/yandex -H "Content-Type: application/json" -d "{}" 2>/dev/null || true)
+        echo "POST /api/v1/auth/yandex -> HTTP $CODE"
+        if [ "$CODE" != "400" ]; then
+          echo "ERROR: expected HTTP 400 from /api/v1/auth/yandex (OAuth handler), got $CODE" >&2
+          exit 1
+        fi
+        echo "ya-brander OAuth handler is live"
+      '

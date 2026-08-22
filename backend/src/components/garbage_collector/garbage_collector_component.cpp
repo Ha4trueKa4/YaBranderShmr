@@ -1,8 +1,10 @@
 #include "garbage_collector_component.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
-#include <exception>
 #include <cstring>
+#include <exception>
 
 #include <userver/components/component_context.hpp>
 #include <userver/components/statistics_storage.hpp>
@@ -31,18 +33,27 @@ GarbageCollectorComponent::GarbageCollectorComponent(
       metrics_storage_(context.FindComponent<userver::components::StatisticsStorage>().GetMetricsStorageRef()),
       grace_(config["grace-seconds"].As<std::chrono::seconds>(std::chrono::seconds{3600})),
       max_orphan_ratio_(config["max-orphan-ratio"].As<double>(0.5)) {
-
   // GC активируется с помощью ENV VAR. По дефолту выключен:
   // только на проде ставить GC_ENABLED=true в .env.
   const char* gc_env = std::getenv("GC_ENABLED");
-  const bool enabled =
-      gc_env != nullptr &&
-      (std::strcmp(gc_env, "true") == 0 || std::strcmp(gc_env, "1") == 0);
+  std::string normalized;
+  if (gc_env != nullptr) {
+    normalized.resize(std::strlen(gc_env));
+    std::transform(gc_env, gc_env + normalized.size(), normalized.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+  }
+  const bool enabled = normalized == "true" || normalized == "1";
   if (!enabled) {
-    // по дефолту неактивен.
-    LOG_WARNING() << "garbage-collector is DISABLED (GC_ENABLED not set to "
-                     "true). No sweeps will run. Set GC_ENABLED=true only where "
-                     "the DB owns this bucket.";
+    if (gc_env != nullptr) {
+      LOG_WARNING()
+          << "garbage-collector is DISABLED: GC_ENABLED=\"" << gc_env
+          << "\" is not a recognized truthy value (expected 'true' "
+             "or '1'). If this was meant to enable GC, fix the value.";
+    } else {
+      LOG_WARNING() << "garbage-collector is DISABLED (GC_ENABLED not set). No "
+                       "sweeps will run. Set GC_ENABLED=true only where the DB "
+                       "owns this bucket.";
+    }
     return;
   }
 
@@ -72,7 +83,8 @@ void GarbageCollectorComponent::RunOnce() {
   }
 }
 
-userver::yaml_config::Schema GarbageCollectorComponent::GetStaticConfigSchema() {
+userver::yaml_config::Schema
+GarbageCollectorComponent::GetStaticConfigSchema() {
   return userver::yaml_config::MergeSchemas<
       userver::components::LoggableComponentBase>(R"(
 type: object

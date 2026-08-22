@@ -7,12 +7,14 @@ export function constrainSelectionBounds(
   bounds: SelectionBounds,
   canvasWidth: number,
   canvasHeight: number,
+  canvasX = 0,
+  canvasY = 0,
 ): SelectionBounds {
   const strokeInset = selectionStrokeWidth / 2
-  const minimumX = strokeInset
-  const minimumY = strokeInset
-  const maximumX = canvasWidth - strokeInset
-  const maximumY = canvasHeight - strokeInset
+  const minimumX = canvasX + strokeInset
+  const minimumY = canvasY + strokeInset
+  const maximumX = canvasX + canvasWidth - strokeInset
+  const maximumY = canvasY + canvasHeight - strokeInset
   const left = Math.min(
     Math.max(bounds.x - selectionPadding, minimumX),
     maximumX,

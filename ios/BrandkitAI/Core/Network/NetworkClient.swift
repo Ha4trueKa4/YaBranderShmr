@@ -6,19 +6,32 @@
 //
 
 import Foundation
+import OSLog
 
 nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
     private let baseURL: String
     private let tokenStore: TokenStore
     private let session: URLSession
+    private let longSession: URLSession
+
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.brandkitai",
+        category: "NetworkClient"
+    )
 
     init(baseURL: String, tokenStore: TokenStore = TokenStore(), timeout: TimeInterval = 15) {
         self.baseURL = baseURL
         self.tokenStore = tokenStore
+
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout
         self.session = URLSession(configuration: config)
+
+        let longConfig = URLSessionConfiguration.default
+        longConfig.timeoutIntervalForRequest = 300
+        longConfig.timeoutIntervalForResource = 300
+        self.longSession = URLSession(configuration: longConfig)
     }
     
     static let shared = NetworkClient(baseURL: APIConfig.baseURL)
@@ -81,6 +94,24 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         )
     }
 
+    func request<Response: Decodable & Sendable>(
+        _ method: HTTPMethod,
+        path: String,
+        authorization: AuthorizationRequirement,
+        body: (some Encodable & Sendable)?,
+        timeout: TimeInterval?
+    ) async throws -> Response {
+        let bodyData = try encode(body)
+        let data = try await execute(
+            method: method,
+            path: path,
+            authorization: authorization,
+            body: bodyData,
+            timeout: timeout
+        )
+        return try decode(Response.self, from: data)
+    }
+
     // MARK: - Кодеки
 
     private static let jsonDecoder: JSONDecoder = {
@@ -104,8 +135,46 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         do {
             return try Self.jsonDecoder.decode(type, from: data)
         } catch {
+            logDecodingError(error, responseType: String(describing: type))
             throw NetworkError.decodingError
         }
+    }
+
+    private func logDecodingError(_ error: Error, responseType: String) {
+        let details: String
+
+        switch error {
+        case let DecodingError.keyNotFound(key, context):
+            details = "keyNotFound(\(key.stringValue)): \(context.debugDescription)"
+                + "; path=\(codingPathDescription(context.codingPath))"
+
+        case let DecodingError.typeMismatch(type, context):
+            details = "typeMismatch(\(type)): \(context.debugDescription)"
+                + "; path=\(codingPathDescription(context.codingPath))"
+
+        case let DecodingError.valueNotFound(type, context):
+            details = "valueNotFound(\(type)): \(context.debugDescription)"
+                + "; path=\(codingPathDescription(context.codingPath))"
+
+        case let DecodingError.dataCorrupted(context):
+            details = "dataCorrupted: \(context.debugDescription)"
+                + "; path=\(codingPathDescription(context.codingPath))"
+
+        default:
+            details = String(describing: error)
+        }
+
+        Self.logger.error("Decoding \(responseType, privacy: .public) failed: \(details, privacy: .public)")
+    }
+
+    private func codingPathDescription(_ path: [CodingKey]) -> String {
+        path.enumerated().map { index, key in
+            if let arrayIndex = key.intValue {
+                return "[\(arrayIndex)]"
+            }
+            return index == 0 ? key.stringValue : ".\(key.stringValue)"
+        }
+        .joined()
     }
 
     private func encode(_ body: (some Encodable & Sendable)?) throws -> Data? {
@@ -121,7 +190,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: Data?
+        body: Data?,
+        timeout: TimeInterval? = nil
     ) async throws -> Data {
         let shouldRetry = method == .get
         if !shouldRetry {
@@ -129,7 +199,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
                 method: method,
                 path: path,
                 authorization: authorization,
-                body: body
+                body: body,
+                timeout: timeout
             )
         }
         return try await rawRequestWithRetry(
@@ -144,13 +215,15 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: Data?
+        body: Data?,
+        timeout: TimeInterval? = nil
     ) async throws -> Data {
         guard let url = URL(string: baseURL + path) else {
             throw NetworkError.invalidURL
         }
 
-        var urlRequest = URLRequest(url: url, timeoutInterval: session.configuration.timeoutIntervalForRequest)
+        let requestTimeout = timeout ?? session.configuration.timeoutIntervalForRequest
+        var urlRequest = URLRequest(url: url, timeoutInterval: requestTimeout)
         urlRequest.httpMethod = method.rawValue
         switch authorization {
         case .none:
@@ -173,11 +246,13 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
             urlRequest.httpBody = body
         }
 
-        let (data, response) = try await session.data(for: urlRequest)
+        let (data, response) = try await (timeout != nil ? longSession : session).data(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
+
+        Self.logger.info("\(method.rawValue, privacy: .public) \(path, privacy: .public) -> HTTP \(httpResponse.statusCode)")
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let serverError = try? Self.jsonDecoder.decode(ServerErrorResponse.self, from: data)

@@ -1,0 +1,41 @@
+{
+  "originHash" : "1be8512eb21a2832fdec29ab19aa1f3380b900252ebc4b379e30a14e9b401a34",
+  "pins" : [
+    {
+      "identity" : "swiftui-introspect",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/siteline/SwiftUI-Introspect.git",
+      "state" : {
+        "revision" : "469f9e8becd1b229b9c2056a4bd80dcce3b65a69",
+        "version" : "27.0.0-beta.2"
+      }
+    },
+    {
+      "identity" : "swiftui-refresher",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gh123man/SwiftUI-Refresher.git",
+      "state" : {
+        "revision" : "235468a4f7296ccb8307f400b775aee0b8c5849f"
+      }
+    },
+    {
+      "identity" : "swiftui-renderlock",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gh123man/SwiftUI-RenderLock",
+      "state" : {
+        "revision" : "11ca0d472dad0053cb8b29701ea3f108b9aa2304",
+        "version" : "1.0.2"
+      }
+    },
+    {
+      "identity" : "yandex-login-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/yandexmobile/yandex-login-sdk-ios",
+      "state" : {
+        "revision" : "1e83ec1a36e0f417cfa3cbfbb05d8971cba14070",
+        "version" : "3.1.1"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -1,7 +1,12 @@
 package com.yandex.avatargenerator.feature.create.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.yandex.avatargenerator.ui.theme.AppColorScheme
 import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
 
 /**
  * Цветовые алиасы экрана чатов — только поверх [AppColors], своей палитры у фичи нет
@@ -14,13 +19,31 @@ internal object ChatsColors {
      * поэтому плитка заливается градиентом, выбранным по id чата
      * (см. [com.yandex.avatargenerator.feature.create.ui.components.ChatThumbnail]).
      *
-     * В макете это три произвольных градиента; здесь они пересобраны из токенов
-     * палитры, чтобы превью оставались в фирменных цветах и не разъезжались с
-     * приложением при правке [AppColors].
+     * В макете это три произвольных градиента; здесь они заданы не цветами, а
+     * выборкой токенов из палитры — так превью остаются в фирменных цветах и
+     * следуют за темой, а сам список живёт вне композиции (размер берётся из него,
+     * а не из отдельной константы).
      */
-    val ThumbnailGradients: List<Brush> = listOf(
-        Brush.horizontalGradient(listOf(AppColors.Error, AppColors.Accent)),
-        Brush.horizontalGradient(listOf(AppColors.Success, AppColors.AccentCyan)),
-        Brush.horizontalGradient(listOf(AppColors.Accent, AppColors.AccentCyan)),
+    private val ThumbnailGradientStops: List<(AppColorScheme) -> List<Color>> = listOf(
+        { listOf(it.error, it.accent) },
+        { listOf(it.success, it.accentCyan) },
+        { listOf(it.accent, it.accentCyan) },
     )
+
+    /**
+     * Градиент превью для [chatId]: индекс детерминирован по id, поэтому у одного
+     * и того же чата плитка всегда одного цвета. `Int.mod` (а не `%`) даёт
+     * неотрицательный остаток при отрицательном хеше.
+     *
+     * `remember` по (chatId, палитра) — иначе [Brush] пересобирался бы на каждой
+     * рекомпозиции в прокручиваемом списке чатов.
+     */
+    @Composable
+    fun rememberThumbnailGradient(chatId: String): Brush {
+        val colors = LocalAppColorScheme.current
+        return remember(chatId, colors) {
+            val stops = ThumbnailGradientStops[chatId.hashCode().mod(ThumbnailGradientStops.size)]
+            Brush.horizontalGradient(stops(colors))
+        }
+    }
 }

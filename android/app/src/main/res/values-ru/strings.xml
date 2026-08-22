@@ -1,0 +1,231 @@
+<resources>
+    <!-- Дизайн-система -->
+    <string name="brand_version_restore">Восстановить</string>
+
+    <!-- Вкладки нижней навигации -->
+    <string name="nav_feed">Лента</string>
+    <string name="nav_create">Создать</string>
+    <string name="nav_profile">Профиль</string>
+
+    <!-- Вход и регистрация -->
+    <string name="auth_sign_in">Войти</string>
+    <string name="auth_create_account">Создать аккаунт</string>
+    <string name="auth_field_full_name">Имя</string>
+    <string name="auth_field_email">Email</string>
+    <string name="auth_field_password">Пароль</string>
+    <string name="auth_placeholder_full_name">Иван Иванов</string>
+    <string name="auth_placeholder_email">hello@brandkit.ai</string>
+    <string name="auth_placeholder_password">Введите пароль</string>
+    <string name="auth_forgot_password">Забыли пароль?</string>
+    <string name="auth_no_account">Нет аккаунта?</string>
+    <string name="auth_register">Зарегистрироваться</string>
+    <string name="auth_have_account">Уже есть аккаунт?</string>
+    <string name="auth_signing_in">Вход…</string>
+    <string name="auth_creating_account">Создание аккаунта…</string>
+
+    <!-- Вход и регистрация: ошибки. Сообщения бэкенда пользователю не показываем -->
+    <string name="auth_error_invalid_credentials">Неверный email или пароль</string>
+    <string name="auth_error_email_taken">Этот email уже зарегистрирован</string>
+    <string name="auth_error_nickname_taken">Это имя уже занято</string>
+    <string name="auth_error_invalid_email">Введите корректный email</string>
+    <string name="auth_error_invalid_password">Пароль должен содержать 8–128 символов, буквы и цифры</string>
+    <string name="auth_error_invalid_nickname">Имя должно содержать 3–64 символа</string>
+    <string name="auth_error_no_connection">Нет подключения к интернету</string>
+    <string name="auth_error_server">Сервер недоступен. Попробуйте позже</string>
+    <string name="auth_error_unknown">Что-то пошло не так. Попробуйте ещё раз</string>
+
+    <!-- Онбординг: приветствие -->
+    <string name="onboarding_brand_title">Brandkit AI</string>
+    <string name="onboarding_brand_subtitle">Превращайте слова в фирменный стиль</string>
+
+    <!-- Онбординг: как это работает -->
+    <string name="onboarding_how_it_works_title">Как это работает</string>
+    <string name="onboarding_step_describe_title">Опишите</string>
+    <string name="onboarding_step_describe_subtitle">Напишите, что вам нужно</string>
+    <string name="onboarding_step_generate_title">Генерация</string>
+    <string name="onboarding_step_generate_subtitle">ИИ создаёт векторную графику</string>
+    <string name="onboarding_step_edit_title">Редактируйте</string>
+    <string name="onboarding_step_edit_subtitle">Дорабатывайте в визуальном редакторе</string>
+    <string name="onboarding_step_publish_title">Публикуйте</string>
+    <string name="onboarding_step_publish_subtitle">Делитесь с миром</string>
+
+    <!-- Онбординг: начать -->
+    <string name="onboarding_mockup_brand_name">NEXUS</string>
+    <string name="onboarding_mockup_brand_tagline">BRAND DESIGN</string>
+    <string name="onboarding_cta_title">Начните создавать бесплатно</string>
+    <string name="onboarding_cta_button">Начать</string>
+    <string name="onboarding_sign_in_prompt">Уже есть аккаунт?</string>
+    <string name="onboarding_sign_in_action">Войти</string>
+
+    <!-- Онбординг: доступность -->
+    <string name="onboarding_page_indicator_description">Страница %1$d из %2$d</string>
+
+    <!-- Лента -->
+    <string name="feed_brand_name">Brandkit</string>
+    <string name="feed_brand_name_accent">AI</string>
+    <string name="feed_search_description">Поиск</string>
+
+    <string name="feed_tab_all">Все</string>
+    <string name="feed_tab_subscriptions">Подписки</string>
+
+    <string name="feed_empty_subscriptions_title">Пока нет подписок</string>
+    <string name="feed_empty_subscriptions_subtitle">Подпишитесь на авторов, чтобы видеть их работы здесь</string>
+    <string name="feed_empty_subscriptions_action">Смотреть все проекты</string>
+
+    <string name="feed_empty_projects_title">Пока нет проектов</string>
+    <string name="feed_empty_projects_subtitle">Опубликованные проекты появятся здесь</string>
+
+    <string name="feed_error_title">Не удалось загрузить ленту</string>
+    <string name="feed_error_retry">Повторить</string>
+    <string name="feed_append_error_retry">Не удалось загрузить. Повторить</string>
+
+    <!-- Чаты (таб «Создать») -->
+    <string name="chats_title">Чаты</string>
+    <string name="chats_new_project">Новый проект</string>
+    <string name="chats_open_chat_description">Открыть чат</string>
+
+    <string name="chats_empty_title">Пока нет чатов</string>
+    <string name="chats_empty_subtitle">Создайте новый проект, чтобы сделать первую аватарку</string>
+
+    <string name="chats_error_title">Не удалось загрузить чаты</string>
+    <string name="chats_error_retry">Повторить</string>
+
+    <!-- Создание проекта -->
+    <string name="create_project_title">Новый проект</string>
+    <string name="create_project_back_description">Назад</string>
+    <string name="create_project_name_label">Название проекта</string>
+    <string name="create_project_name_placeholder">Мой бренд</string>
+    <string name="create_project_description_label">Описание бренда и бриф</string>
+    <string name="create_project_description_placeholder">Опишите ценности бренда, целевую аудиторию, предпочтительную цветовую гамму, визуальное настроение…</string>
+    <string name="create_project_hint">ИИ сгенерирует элементы фирменного стиля, палитры и типографику.</string>
+    <string name="create_project_submit">Сгенерировать брендбук</string>
+    <string name="create_project_submitting">Генерация фирменного стиля…</string>
+    <string name="create_project_error">Не удалось сгенерировать фирменный стиль. Попробуйте ещё раз.</string>
+
+    <!-- Профиль: своя вкладка без сохранённого пользователя.
+         Так у всех, кто вошёл до появления хранилища профиля — дозаполнить нечем -->
+    <string name="profile_no_session_title">Войдите снова</string>
+    <string name="profile_no_session_subtitle">Не удалось найти данные аккаунта. Войдите снова, чтобы открыть профиль</string>
+
+    <!-- Экран проекта (чат с ИИ) -->
+    <string name="project_title_placeholder">Проект</string>
+    <string name="project_back_description">Назад</string>
+    <string name="project_history_description">История версий</string>
+    <string name="project_share_description">Поделиться проектом</string>
+    <string name="project_input_placeholder">Опишите, что изменить…</string>
+    <string name="project_send_description">Отправить сообщение</string>
+
+    <!-- Своего текста у ответа ИИ нет: в истории чата лежит только ссылка на версию -->
+    <string name="project_assistant_message">Готово — вот новая версия:</string>
+
+    <string name="project_system_created">Проект успешно создан</string>
+    <string name="project_system_version_saved">Версия %1$s сохранена</string>
+
+    <string name="project_error_title">Не удалось загрузить проект</string>
+    <string name="project_error_retry">Повторить</string>
+
+    <!-- Ожидание и провал генерации: пузыри в ленте на месте будущего ответа ИИ -->
+    <!-- Заглушка на случай, когда сервер прислал ошибку без текста -->
+    <string name="project_generation_failed">Не удалось сгенерировать. Попробуйте ещё раз.</string>
+    <string name="project_generation_retry">Повторить</string>
+    <string name="project_generation_still_running">Генерация ещё идёт — загляните позже</string>
+
+    <!-- Экран публичного проекта -->
+    <string name="public_project_follow">Подписаться</string>
+    <string name="public_project_following">Вы подписаны</string>
+    <string name="public_project_download_png">Скачать PNG</string>
+    <string name="public_project_download_svg">Скачать SVG</string>
+    <string name="public_project_download_saved">%1$s сохранён в «Загрузки»</string>
+    <string name="public_project_download_saved_gallery">%1$s сохранён в галерею</string>
+    <string name="public_project_download_failed">Не удалось сохранить %1$s</string>
+    <string name="public_project_download_empty">Пока нечего выгружать</string>
+    <string name="export_format_png">PNG</string>
+    <string name="export_format_svg">SVG</string>
+    <string name="public_project_related_title">Ещё от этого автора</string>
+    <string name="public_project_error_title">Не удалось загрузить проект</string>
+    <string name="public_project_error_retry">Повторить</string>
+
+    <!-- Подпись публикации. мин/ч не склоняются — обычные string (как в чате). -->
+    <string name="public_project_published_recently">Недавно опубликовано</string>
+    <string name="public_project_published_just_now">Опубликовано только что</string>
+    <string name="public_project_published_minutes">Опубликовано %1$d мин назад</string>
+    <string name="public_project_published_hours">Опубликовано %1$d ч назад</string>
+    <plurals name="public_project_published_days">
+        <item quantity="one">Опубликовано %1$d день назад</item>
+        <item quantity="few">Опубликовано %1$d дня назад</item>
+        <item quantity="many">Опубликовано %1$d дней назад</item>
+        <item quantity="other">Опубликовано %1$d дня назад</item>
+    </plurals>
+
+    <!-- Профиль (свой/чужой) -->
+    <string name="profile_handle">\@%1$s</string>
+    <string name="profile_stat_projects">%1$d проектов</string>
+    <string name="profile_stat_followers">%1$s подписчиков</string>
+    <string name="profile_stat_following">%1$d подписок</string>
+    <string name="profile_stat_separator">·</string>
+    <string name="profile_action_edit">Редактировать профиль</string>
+    <string name="profile_action_following">Вы подписаны</string>
+    <string name="profile_action_follow">Подписаться</string>
+    <string name="profile_projects_section">ПРОЕКТЫ</string>
+    <string name="profile_empty_own_title">Пока нет проектов</string>
+    <string name="profile_empty_own_subtitle">Создайте новый проект, чтобы увидеть свои работы здесь</string>
+    <string name="profile_empty_other_title">Пока нет проектов</string>
+    <string name="profile_empty_other_subtitle">Этот пользователь пока ничего не опубликовал</string>
+    <string name="profile_error_title">Не удалось загрузить профиль</string>
+    <string name="profile_error_retry">Повторить</string>
+
+    <!-- Подписки (подписчики/подписки) -->
+    <string name="subscriptions_title_followers">Подписчики</string>
+    <string name="subscriptions_title_following">Подписки</string>
+    <string name="subscriptions_followers_count">%1$d подписчиков</string>
+    <string name="subscriptions_action_follow">Подписаться</string>
+    <string name="subscriptions_action_unfollow">Отписаться</string>
+    <string name="subscriptions_you">Вы</string>
+    <string name="subscriptions_back_description">Назад</string>
+    <string name="subscriptions_error_title">Не удалось загрузить список</string>
+    <string name="subscriptions_error_retry">Повторить</string>
+    <string name="subscriptions_empty_followers_title">Пока нет подписчиков</string>
+    <string name="subscriptions_empty_followers_subtitle">Когда на профиль подпишутся, они появятся здесь</string>
+    <string name="subscriptions_empty_following_title">Пока нет подписок</string>
+    <string name="subscriptions_empty_following_subtitle">Профили, на которые подписан пользователь, появятся здесь</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_open_description">Настройки</string>
+    <string name="settings_back_description">Назад</string>
+
+    <string name="settings_section_account">АККАУНТ</string>
+    <string name="settings_section_appearance">ОФОРМЛЕНИЕ</string>
+    <string name="settings_section_about">О ПРИЛОЖЕНИИ</string>
+
+    <string name="settings_account_username">Имя пользователя</string>
+    <string name="settings_account_email">Email</string>
+
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_system">Системный</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_about_terms">Условия использования</string>
+    <string name="settings_about_privacy">Политика конфиденциальности</string>
+    <string name="settings_about_version">Версия</string>
+
+    <string name="settings_logout">Выйти</string>
+
+    <!-- Относительное время: подписи строк чата.
+         Сокращения мин/ч не склоняются — поэтому обычные string, а не plurals. -->
+    <string name="chats_time_just_now">только что</string>
+    <string name="chats_time_minutes">%1$d мин назад</string>
+    <string name="chats_time_hours">%1$d ч назад</string>
+    <plurals name="chats_time_days">
+        <item quantity="one">%1$d день назад</item>
+        <item quantity="few">%1$d дня назад</item>
+        <item quantity="many">%1$d дней назад</item>
+        <item quantity="other">%1$d дня назад</item>
+    </plurals>
+</resources>

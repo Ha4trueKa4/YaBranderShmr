@@ -10,12 +10,19 @@ import { getUserSubscriptions } from './getUserSubscriptions'
 import { subscribeToUser } from './subscribeToUser'
 import { unsubscribeFromUser } from './unsubscribeFromUser'
 import { type UpdateProjectMetadataInput, updateProject } from './updateProject'
+import {
+  type UpdateUserProfileInput,
+  updateUserProfile,
+} from './updateUserProfile'
 
 const projectQueryStaleTime = 60_000
 
 export const feedQueryKey = (scope: FeedScope) => ['feed', scope] as const
 export const projectQueryKey = (id: string) => ['project', id] as const
-export const projectSvgQueryKey = (id: string) => ['project-svg', id] as const
+export const projectSvgQueryKey = (id: string, url: string) =>
+  ['project-svg', id, url] as const
+export const projectSvgQueryPrefix = (id: string) =>
+  ['project-svg', id] as const
 export const userProfileQueryKey = (userId: string | undefined) =>
   ['user-profile', userId] as const
 export const userSubscribersQueryKey = (userId: string | undefined) =>
@@ -35,7 +42,7 @@ export function useProjectQuery(id: string) {
 
 export function useProjectSvgQuery(id: string, url: string | undefined) {
   return useQuery({
-    queryKey: projectSvgQueryKey(id),
+    queryKey: projectSvgQueryKey(id, url ?? ''),
     queryFn: () => {
       if (!url) {
         throw new TypeError('Project SVG URL is missing')
@@ -60,6 +67,13 @@ export function useUpdateProjectMetadataMutation() {
   return useMutation({
     mutationKey: ['project', 'update-metadata'],
     mutationFn: (input: UpdateProjectMetadataInput) => updateProject(input),
+  })
+}
+
+export function useUpdateUserProfileMutation() {
+  return useMutation({
+    mutationKey: ['user', 'update-profile'],
+    mutationFn: (input: UpdateUserProfileInput) => updateUserProfile(input),
   })
 }
 

@@ -1,6 +1,7 @@
-import sparkles from '@shared/assets/sparkles.svg'
 import { Button } from '@shared/ui'
+import { Sparkles } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { DEFAULT_GENERATION_MODEL, ModelSelect } from '../modelSelect'
 import styles from './GenerationPrompt.module.css'
@@ -26,6 +27,7 @@ export function GenerationPromptComposer({
   onModelChange,
   onUnauthorizedModelSelect,
 }: GenerationPromptComposerProps) {
+  const { t } = useTranslation()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useLayoutEffect(() => {
@@ -42,7 +44,7 @@ export function GenerationPromptComposer({
   return (
     <div className={styles.field}>
       <div className={styles.composer}>
-        <img alt="" className={styles.icon} src={sparkles} />
+        <Sparkles className={styles.icon} size={18} strokeWidth={2} />
         <textarea
           className={styles.textarea}
           disabled={isGenerating}
@@ -53,7 +55,9 @@ export function GenerationPromptComposer({
               onGenerate()
             }
           }}
-          placeholder="e.g. Modern abstract technology logo with overlapping gradients…"
+          placeholder={t(
+            'e.g. Modern abstract technology logo with overlapping gradients…',
+          )}
           ref={textareaRef}
           value={description}
         />
@@ -71,7 +75,7 @@ export function GenerationPromptComposer({
             onClick={onGenerate}
             type="button"
           >
-            Generate
+            {t('Generate')}
           </Button>
         </div>
       </div>
