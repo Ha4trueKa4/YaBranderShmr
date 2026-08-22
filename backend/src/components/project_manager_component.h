@@ -20,6 +20,7 @@
 #include "LLMClientComponent.hpp"
 #include "version_storage//version_storage_component.hpp"
 #include "prompt_constructor/prompt_constructor_component.h"
+#include "prompt_constructor/prompt_polisher_component.h"
 
 namespace ya_brander::components {
 
@@ -134,6 +135,7 @@ private:
   VersionStorageComponent& version_storage_;
   LLMClientComponent& llm_client_;
   PromptConstructorComponent& prompt_constructor_;
+  PromptPolisherComponent& prompt_polisher_;
 
   userver::engine::Mutex jobs_mutex_;
   std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;

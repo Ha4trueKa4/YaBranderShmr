@@ -113,6 +113,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/get_user_profile.cpp
         src/handlers/users/patch_user_profile.cpp
         src/handlers/users/user_subscriptions_handlers.cpp
+        src/components/prompt_constructor/prompt_polisher_component.cpp
+        src/handlers/test_llm_handler/test_polisher_handler.cpp
         src/utils/errors.hpp
         src/utils/errors.cpp
 )

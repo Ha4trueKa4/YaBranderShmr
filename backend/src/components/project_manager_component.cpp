@@ -41,6 +41,7 @@ ProjectManagerComponent::ProjectManagerComponent(
       version_storage_(context.FindComponent<VersionStorageComponent>()),
       llm_client_(context.FindComponent<LLMClientComponent>()),
       prompt_constructor_(context.FindComponent<PromptConstructorComponent>()),
+	  prompt_polisher_(context.FindComponent<PromptPolisherComponent>()),
       generation_semaphore_(kMaxConcurrentGenerations),
       bts_(context.GetTaskProcessor("bg-task-processor")) {}
 
@@ -201,12 +202,14 @@ std::string ProjectManagerComponent::RunGeneration(const std::string& project_id
         past_message = EscapeXml(past_message);
     }
 
-    std::string safe_prompt = EscapeXml(prompt);
-
     LlmPrompt full_prompt;
     if (current_state.empty() || current_state == kDefaultSvg) {
+		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
+		std::string safe_prompt = EscapeXml(polished_prompt_text);
         full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
     }else {
+		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
+		std::string safe_prompt = EscapeXml(polished_prompt_text);
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
     }
     auto new_data = llm_client_.SendPrompt(full_prompt, 10000, model, 0.1);
