@@ -92,7 +92,8 @@ components_manager:
       task_processor: main-task-processor
 
     llm-client:
-      api-url: $yandex-gpt-url
+      yandex-api-url: $yandex-gpt-url
+      openai-api-url: $openai-responses-url
 
     postgres-db-1:
       dbconnection: $dbconnection

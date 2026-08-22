@@ -1,11 +1,16 @@
 #include "get_models.hpp"
+#include "../../components/llm_models.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <nlohmann/json.hpp>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
 #include <userver/clients/http/request.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
-#include <userver/formats/json/serialize.hpp>
-#include <userver/formats/json/value.hpp>
-#include <userver/formats/json/value_builder.hpp>
-#include <string_view>
-#include <vector>
 
 namespace ya_brander::handlers {
 
@@ -42,55 +47,51 @@ std::string GetModels::HandleRequestThrow(
     return response->body();
   }
 
-  // Парсим оригинальный JSON
-  auto json_body = userver::formats::json::FromString(response->body());
-
-  // Создаем билдер для нового ответа
-  userver::formats::json::ValueBuilder response_builder;
-  if (json_body.HasMember("object")) {
-    response_builder["object"] = json_body["object"];
-  } else {
-    response_builder["object"] = "list";
+  auto models = nlohmann::json::parse(response->body());
+  if (!models.contains("data") || !models["data"].is_array()) {
+    throw std::runtime_error("Invalid models response from Yandex AI Studio");
+  }
+  if (!models.contains("object")) {
+    models["object"] = "list";
   }
 
-  // Список разрешенных моделей
-  const std::vector<std::string_view> allowed_models = {
-    "/deepseek-v4-flash/latest",
-    "/gpt-oss-120b/latest",
-    "/qwen3-235b-a22b-fp8/latest"
+  constexpr std::array<std::string_view, 3> kAllowedModels = {
+      "/deepseek-v4-flash/latest",
+      "/gpt-oss-120b/latest",
+      "/qwen3-235b-a22b-fp8/latest",
   };
-
-  // Билдер для отфильтрованного массива data
-  userver::formats::json::ValueBuilder data_builder(userver::formats::json::Type::kArray);
-
-  // Итерируемся по моделям и фильтруем
-  if (json_body.HasMember("data") && json_body["data"].IsArray()) {
-    for (const auto& item : json_body["data"]) {
-
-      if (!item.HasMember("id") || !item["id"].IsString()) {
-        continue;
-      }
-      std::string id = item["id"].As<std::string>();
-
-      bool keep = false;
-      for (const auto& allowed : allowed_models) {
-        // Проверяем, содержит ли URI модели разрешенную подстроку
-        if (id.find(allowed) != std::string::npos) {
-          keep = true;
-          break;
-        }
-      }
-
-      if (keep) {
-        data_builder.PushBack(item);
-      }
+  auto filtered_models = nlohmann::json::array();
+  for (const auto& model : models["data"]) {
+    if (!model.contains("id") || !model["id"].is_string()) {
+      continue;
+    }
+    const auto& id = model["id"].get_ref<const std::string&>();
+    const bool is_allowed = std::any_of(
+        kAllowedModels.begin(), kAllowedModels.end(),
+        [&id](std::string_view allowed) {
+          return id.find(allowed) != std::string::npos;
+        });
+    if (is_allowed) {
+      filtered_models.push_back(model);
     }
   }
+  models["data"] = std::move(filtered_models);
 
-  response_builder["data"] = data_builder;
+  const auto openai_model_uri = std::string{components::kOpenAIModelUri};
+  const char* openai_key = std::getenv("OPENAI_API_KEY");
+  const bool openai_is_configured =
+      openai_key != nullptr && !std::string_view(openai_key).empty();
+  const bool luna_exists = std::any_of(
+      models["data"].begin(), models["data"].end(),
+      [&openai_model_uri](const auto& model) {
+        return model.value("id", "") == openai_model_uri;
+      });
+  if (openai_is_configured && !luna_exists) {
+    models["data"].push_back({{"id", openai_model_uri},
+                              {"owned_by", "OpenAI"}});
+  }
 
-  // Сериализуем обратно в строку
-  return userver::formats::json::ToString(response_builder.ExtractValue());
+  return models.dump();
 }
 
 userver::yaml_config::Schema GetModels::GetStaticConfigSchema() {
