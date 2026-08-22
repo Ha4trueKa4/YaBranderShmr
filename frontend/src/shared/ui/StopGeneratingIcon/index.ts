@@ -1,0 +1,1 @@
+export { StopGeneratingIcon } from './StopGeneratingIcon'

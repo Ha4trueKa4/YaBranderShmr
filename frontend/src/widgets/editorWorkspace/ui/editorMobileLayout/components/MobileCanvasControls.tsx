@@ -3,23 +3,31 @@ import type { CanvasTool } from '@widgets/editorScene'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import iconRotateLeft from '../../editorToolbar/assets/iconRotateLeft.svg'
+import iconRotateRight from '../../editorToolbar/assets/iconRotateRight.svg'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileCanvasControlsProps {
   activeTool: CanvasTool
+  canRedo: boolean
+  canUndo: boolean
   onToolChange: (tool: CanvasTool) => void
+  onRedo: () => void
+  onUndo: () => void
   onZoomIn: () => void
   onZoomOut: () => void
-  onZoomReset: () => void
   zoom: number
 }
 
 export function MobileCanvasControls({
   activeTool,
+  canRedo,
+  canUndo,
   onToolChange,
+  onRedo,
+  onUndo,
   onZoomIn,
   onZoomOut,
-  onZoomReset,
   zoom,
 }: MobileCanvasControlsProps) {
   const { t } = useTranslation()
@@ -61,8 +69,11 @@ export function MobileCanvasControls({
         </IconButton>
       </Tooltip>
       <span />
-      <IconButton onClick={onZoomReset} title={t('Fit canvas')}>
-        <span className={styles.fitIcon}>⌗</span>
+      <IconButton disabled={!canUndo} onClick={onUndo} title={t('Undo')}>
+        <img alt="" src={iconRotateLeft} />
+      </IconButton>
+      <IconButton disabled={!canRedo} onClick={onRedo} title={t('Redo')}>
+        <img alt="" src={iconRotateRight} />
       </IconButton>
     </div>
   )

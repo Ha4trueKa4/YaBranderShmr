@@ -125,29 +125,25 @@ export function BottomSheet({
           style={{ transform: `translateY(${dragOffset}px)` }}
         >
           <div
-            className={styles.handle}
-            onPointerCancel={handleDragCancel}
-            onPointerDown={handleDragStart}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-          />
-          <header
-            className={styles.header}
+            className={styles.dragArea}
             onPointerCancel={handleDragCancel}
             onPointerDown={handleDragStart}
             onPointerMove={handleDragMove}
             onPointerUp={handleDragEnd}
           >
-            <h2>{title}</h2>
-            <div className={styles.headerActions}>
-              {actions}
-              {showCloseButton && (
-                <IconButton onClick={onClose} size="sm">
-                  <X />
-                </IconButton>
-              )}
-            </div>
-          </header>
+            <div className={styles.handle} />
+            <header className={styles.header}>
+              <h2>{title}</h2>
+              <div className={styles.headerActions}>
+                {actions}
+                {showCloseButton && (
+                  <IconButton onClick={onClose} size="sm">
+                    <X />
+                  </IconButton>
+                )}
+              </div>
+            </header>
+          </div>
           <div
             className={[styles.content, contentClassName]
               .filter(Boolean)
