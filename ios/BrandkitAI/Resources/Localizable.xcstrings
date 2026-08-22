@@ -103,6 +103,36 @@
         }
       }
     },
+    "Couldn't export the file. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось экспортировать файл. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "Download PNG" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скачать PNG"
+          }
+        }
+      }
+    },
+    "Download SVG" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скачать SVG"
+          }
+        }
+      }
+    },
     "Close" : {
       "localizations" : {
         "ru" : {

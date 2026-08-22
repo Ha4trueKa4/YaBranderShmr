@@ -1,28 +1,30 @@
 import SwiftUI
 
 struct ProjectPreviewView: View {
+    private struct ExportedFile: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
+
     @State private var viewModel: ProjectPreviewViewModel
+    @State private var isExporting = false
+    @State private var exportedFile: ExportedFile?
+    @State private var exportFailed = false
 
     var onBack: (() -> Void)?
     var onOpenAuthor: (UUID) -> Void = { _ in }
     var onOpenProject: (UUID) -> Void = { _ in }
-    var onDownloadPNG: () -> Void = {}
-    var onDownloadSVG: () -> Void = {}
 
     init(
         viewModel: ProjectPreviewViewModel,
         onBack: (() -> Void)? = nil,
         onOpenAuthor: @escaping (UUID) -> Void = { _ in },
-        onOpenProject: @escaping (UUID) -> Void = { _ in },
-        onDownloadPNG: @escaping () -> Void = {},
-        onDownloadSVG: @escaping () -> Void = {}
+        onOpenProject: @escaping (UUID) -> Void = { _ in }
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onBack = onBack
         self.onOpenAuthor = onOpenAuthor
         self.onOpenProject = onOpenProject
-        self.onDownloadPNG = onDownloadPNG
-        self.onDownloadSVG = onDownloadSVG
     }
 
     var body: some View {
@@ -37,6 +39,31 @@ struct ProjectPreviewView: View {
         .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .task { await viewModel.load() }
+        .sheet(item: $exportedFile) { file in
+            ShareSheet(items: [file.url])
+        }
+        .alert("Couldn't export the file. Try again.", isPresented: $exportFailed) {
+            Button("Close", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Экспорт
+
+    private func exportSVG() {
+        guard !isExporting else { return }
+        isExporting = true
+
+        Task {
+            defer { isExporting = false }
+            do {
+                let data = try await viewModel.exportSVGData()
+                let url = try SVGExporter.writeSVGFile(data, named: viewModel.title)
+                exportedFile = ExportedFile(url: url)
+            } catch {
+                guard !Task.isCancelled else { return }
+                exportFailed = true
+            }
+        }
     }
 
     private var imagePlaceholder: some View {
@@ -111,11 +138,14 @@ struct ProjectPreviewView: View {
                 .foregroundStyle(.secondary)
                 .padding(.top, 6)
 
+            // TODO: экспорт в PNG — растеризация через WKWebView-снапшот
+            // отдавала пустой кадр; кнопка снова заглушка до нового решения.
             downloadButton(
                 title: "Download PNG",
                 systemImage: "square.and.arrow.down",
                 isPrimary: true,
-                action: onDownloadPNG
+                isBusy: false,
+                action: {}
             )
             .padding(.top, 20)
 
@@ -123,7 +153,8 @@ struct ProjectPreviewView: View {
                 title: "Download SVG",
                 systemImage: "chevron.left.forwardslash.chevron.right",
                 isPrimary: false,
-                action: onDownloadSVG
+                isBusy: isExporting,
+                action: exportSVG
             )
             .padding(.top, 12)
 
@@ -213,28 +244,37 @@ struct ProjectPreviewView: View {
     }
 
     private func downloadButton(
-        title: String,
+        title: LocalizedStringKey,
         systemImage: String,
         isPrimary: Bool,
+        isBusy: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .foregroundStyle(isPrimary ? Color.white : Color.secondary)
-                .background {
-                    RoundedRectangle(cornerRadius: 9)
-                        .fill(isPrimary ? Color.accentColor : Color(.secondarySystemBackground))
+            Group {
+                if isBusy {
+                    ProgressView()
+                        .tint(isPrimary ? Color(.onAccent) : nil)
+                } else {
+                    Label(title, systemImage: systemImage)
                 }
-                .overlay {
-                    if !isPrimary {
-                        RoundedRectangle(cornerRadius: 9).stroke(Color(.separator), lineWidth: 1)
-                    }
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .foregroundStyle(isPrimary ? Color(.onAccent) : Color.secondary)
+            .background {
+                RoundedRectangle(cornerRadius: 9)
+                    .fill(isPrimary ? Color.accentColor : Color(.secondarySystemBackground))
+            }
+            .overlay {
+                if !isPrimary {
+                    RoundedRectangle(cornerRadius: 9).stroke(Color(.separator), lineWidth: 1)
                 }
+            }
         }
         .buttonStyle(.plain)
+        .disabled(isExporting)
     }
 }
 
