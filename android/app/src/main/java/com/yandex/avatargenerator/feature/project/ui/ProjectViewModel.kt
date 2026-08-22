@@ -3,27 +3,61 @@ package com.yandex.avatargenerator.feature.project.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
+import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
+import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
+import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.util.UUID
 
 /**
  * ViewModel экрана проекта: грузит по [projectId] диалог с ИИ через
- * [ChatRepository], держит черновик ввода и отправляет сообщения.
+ * [ChatRepository], держит черновик ввода и отправляет промпты на генерацию.
  *
  * Название и видимость проекта приходят в том же ответе репозитория — своего
  * запроса за проектом ViewModel не делает: репозиторий всё равно ходит за ним,
  * чтобы взять ссылку на последнюю версию, и второй такой же запрос был бы лишним.
+ *
+ * Превью прошлых версий догружаются отдельно через [VersionsRepository]: история
+ * чата отдаёт только `version_id`, а ссылка на картинку у каждой версии своя и
+ * запрашивается по одной (`GET /projects/{id}/versions/{versionId}`) — и только
+ * для тех пузырей, которые дошли до экрана (см. [onPreviewNeeded]).
+ *
+ * **Ожидание генерации живёт в `viewModelScope`.** Ушёл с экрана — опрос умер;
+ * бэкенд доводит генерацию до конца сам и кладёт результат в историю, так что
+ * при возврате экран перечитает ленту и увидит его. Ни `WorkManager`, ни
+ * хранение `job_id` на диске ради этого не заводим.
  */
 internal class ProjectViewModel(
     private val chatRepository: ChatRepository,
+    private val versionsRepository: VersionsRepository,
     private val projectId: String,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProjectUiState>(ProjectUiState.Loading)
     val uiState: StateFlow<ProjectUiState> = _uiState.asStateFlow()
+
+    /**
+     * Уже известные ссылки на превью, versionId → url. Переживают перечитывание
+     * ленты: сервер отдаёт ссылку только для последней версии, и без кэша все
+     * остальные пузыри теряли бы картинку на каждом обновлении.
+     *
+     * Presigned-ссылка живёт час — этого хватает на сеанс работы с экраном.
+     */
+    private val previewUrls = mutableMapOf<String, String>()
+
+    /**
+     * Версии, за ссылкой на которые уже ходили — успешно или нет. Пузырь в
+     * `LazyColumn` пересоздаётся на каждом заходе в зону видимости, и без этого
+     * набора прокрутка ленты вверх-вниз слала бы запрос за запросом.
+     */
+    private val requestedVersions = mutableSetOf<String>()
 
     init {
         load()
@@ -32,48 +66,272 @@ internal class ProjectViewModel(
     /** Повтор после ошибки. */
     fun retry() = load()
 
+    /** Ввод обрезаем по [MaxPromptBytes] — см. комментарий у константы. */
     fun onDraftChange(text: String) {
-        _uiState.update { state ->
-            if (state is ProjectUiState.Content) state.copy(draft = text) else state
+        _uiState.updateContent { it.copy(draft = limitPromptBytes(text)) }
+    }
+
+    /**
+     * Отправляет черновик на генерацию.
+     *
+     * Поле очищается сразу, до ответа сервера: иначе ввод «залипает» с уже
+     * отправленным текстом. Вернуть текст обратно можно ровно в одном случае —
+     * если промпт до сервера не дошёл (см. [dropPending]).
+     */
+    fun send() {
+        val state = _uiState.value
+        if (state !is ProjectUiState.Content || state.isSending) return
+        val text = state.draft.trim()
+        if (text.isEmpty()) return
+
+        _uiState.updateContent { it.copy(draft = "") }
+        generate(text)
+    }
+
+    /**
+     * Повторяет промпт, стоящий над пузырём ошибки [messageId].
+     *
+     * Это **новая задача и новая пара сообщений в истории** — бэкенд ничего не
+     * перезаписывает, так что дубль промпта на сервере неизбежен. Сам пузырь
+     * ошибки не убираем: он лежит в истории на сервере и всё равно вернётся при
+     * следующем перечитывании ленты.
+     */
+    fun retryGeneration(messageId: String) {
+        val state = _uiState.value
+        if (state !is ProjectUiState.Content || state.isSending) return
+        val text = state.messages.promptAbove(messageId) ?: return
+
+        generate(text)
+    }
+
+    /**
+     * Общий путь отправки: оптимистичный пузырь промпта → старт задачи →
+     * скелетон ответа → ожидание результата.
+     *
+     * Промпт кладётся в ленту сразу: генерация идёт минутами, и всё это время
+     * экран не должен выглядеть так, будто нажатие пропало.
+     */
+    private fun generate(text: String) {
+        val prompt = ChatMessage.Outgoing(
+            id = UUID.randomUUID().toString(),
+            text = text,
+            sentAt = Instant.now(),
+        )
+        _uiState.updateContent {
+            it.copy(messages = it.messages + prompt, isSending = true)
+        }
+
+        viewModelScope.launch {
+            chatRepository.startGeneration(projectId, text).fold(
+                onSuccess = { jobId -> awaitGeneration(jobId) },
+                // Единственный случай, когда промпт можно убрать из ленты и
+                // вернуть в поле: до сервера он не дошёл, в историю не попал.
+                onFailure = { dropPending(prompt, text) },
+            )
         }
     }
 
     /**
-     * Отправляет черновик и дописывает результат в конец ленты.
+     * Ждёт результат задачи [jobId], показывая на её месте скелетон ответа.
      *
-     * Поле очищается сразу, до ответа репозитория, — иначе на время задержки
-     * ввод «залипает» с уже отправленным текстом. Если отправка не удалась,
-     * текст возвращается в поле, чтобы не пропасть без следа.
+     * Исход, о котором знает сервер (версия готова либо генерация упала), лежит
+     * в истории чата — по нему лента перечитывается целиком, и после перезахода
+     * экран выглядит так же. Сорвавшийся опрос — другое дело: записи об исходе
+     * на сервере нет, перечитывать нечего, пузырь ошибки рисуем локально. Текст
+     * `NetworkException` в него не кладём — он служебный.
      */
-    fun send() {
-        val state = _uiState.value
-        if (state !is ProjectUiState.Content) return
-        val text = state.draft.trim()
-        if (text.isEmpty()) return
+    private suspend fun awaitGeneration(jobId: String) {
+        val skeleton = ChatMessage.Pending(id = UUID.randomUUID().toString(), jobId = jobId)
+        _uiState.updateContent { it.copy(messages = it.messages + skeleton) }
 
-        _uiState.update { if (it is ProjectUiState.Content) it.copy(draft = "") else it }
+        chatRepository.awaitGeneration(projectId, jobId).fold(
+            onSuccess = { outcome ->
+                when (outcome) {
+                    is GenerationOutcome.Done -> showAnswer(skeleton, jobId)
+                    is GenerationOutcome.Failed -> showFailure(skeleton, jobId, outcome.message)
+                    GenerationOutcome.TimedOut -> showStillRunning(skeleton)
+                }
+            },
+            onFailure = { showFailure(skeleton, jobId = null, message = null) },
+        )
+    }
+
+    /**
+     * Версия готова — показываем её перечитанной лентой.
+     *
+     * Не дождались ответа в истории — ленту не трогаем вовсе, только снимаем
+     * скелетон: перечитанная без ответа, она заменила бы собой и оптимистичный
+     * промпт, и скелетон, и результат генерации пропал бы с экрана совсем.
+     */
+    private suspend fun showAnswer(skeleton: ChatMessage.Pending, jobId: String) {
+        val chat = reloadUntilAnswered(jobId)
+        if (chat != null) applyChat(chat) else dropSkeleton(skeleton)
+    }
+
+    /**
+     * Показывает провал: записью из перечитанной ленты, а если её там нет —
+     * локальным пузырём ошибки. Оптимистичный промпт при этом не трогаем: на
+     * сервере он есть.
+     *
+     * @param jobId задача, ответ которой ищем в ленте; `null` — сорвался сам
+     *  опрос, на сервере записи об исходе нет и искать нечего.
+     */
+    private suspend fun showFailure(
+        skeleton: ChatMessage.Pending,
+        jobId: String?,
+        message: String?,
+    ) {
+        val chat = jobId?.let { reloadUntilAnswered(it) }
+        if (chat != null) {
+            applyChat(chat)
+            return
+        }
+        val failure = ChatMessage.Failed(
+            id = skeleton.id,
+            text = message,
+            sentAt = Instant.now(),
+        )
+        replaceSkeleton(skeleton, failure)
+    }
+
+    /**
+     * Перечитывает ленту, пока в ней не появится ответ на задачу [jobId].
+     *
+     * Бэкенд будит опрос статуса **до** того, как допишет результат в историю
+     * (и сама запись у него best-effort — может не пройти вовсе), так что первая
+     * же перечитанная лента вполне может прийти ещё без ответа. Без этой
+     * проверки она молча затирала бы собой всё, что экран знает о генерации.
+     *
+     * @return лента с ответом; `null` — ответа так и нет либо лента не читается.
+     */
+    private suspend fun reloadUntilAnswered(jobId: String): ProjectChat? {
+        repeat(ReloadAttempts) { attempt ->
+            if (attempt > 0) delay(ReloadRetryDelayMillis)
+            val chat = chatRepository.getChat(projectId).getOrNull()
+            if (chat != null && chat.messages.hasAnswerFor(jobId)) return chat
+        }
+        return null
+    }
+
+    /**
+     * Дедлайн вышел — это не провал: задача могла остаться считаться. Убираем
+     * скелетон и говорим об этом пилюлей, промпт в ленте оставляем.
+     */
+    private fun showStillRunning(skeleton: ChatMessage.Pending) {
+        replaceSkeleton(
+            skeleton,
+            ChatMessage.System.GenerationStillRunning(id = skeleton.id),
+        )
+    }
+
+    /** Скелетон меняется на месте — чтобы сообщение встало туда же, где он стоял. */
+    private fun replaceSkeleton(skeleton: ChatMessage.Pending, replacement: ChatMessage) {
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.map { if (it.id == skeleton.id) replacement else it },
+                isSending = false,
+            )
+        }
+    }
+
+    /**
+     * Убирает оптимистичное сообщение и возвращает текст в поле ввода.
+     *
+     * Новый черновик не перетираем: пользователь мог начать писать следующее
+     * сообщение, пока шла отправка.
+     */
+    private fun dropPending(pending: ChatMessage.Outgoing, text: String) {
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.filterNot { it.id == pending.id },
+                draft = if (content.draft.isEmpty()) text else content.draft,
+                isSending = false,
+            )
+        }
+    }
+
+    /**
+     * Убирает скелетон, оставив ленту как есть: версия создана, и показать
+     * из-за неудачного перезапроса [ProjectUiState.Error] было бы враньём.
+     */
+    private fun dropSkeleton(skeleton: ChatMessage.Pending) {
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.filterNot { it.id == skeleton.id },
+                isSending = false,
+            )
+        }
+    }
+
+    /**
+     * Серверная лента заменяет локальную целиком — оптимистичный промпт и
+     * скелетон уходят вместе с ней.
+     */
+    private fun applyChat(chat: ProjectChat) {
+        rememberPreviews(chat.messages)
+        _uiState.updateContent { content ->
+            content.copy(
+                title = chat.title,
+                isPublic = chat.isPublic,
+                messages = chat.messages.withKnownPreviews(),
+                isSending = false,
+            )
+        }
+    }
+
+    /**
+     * Пузырь версии [versionId] появился на экране — при первом показе идём за
+     * ссылкой на превью.
+     *
+     * История чата отдаёт только `version_id`, а ссылку на картинку сервер
+     * прикладывает лишь к последней версии — у остальных пузырей она пустая, и
+     * без этой догрузки в ленте была бы видна одна последняя картинка.
+     *
+     * Ходим по требованию, а не пачкой при открытии экрана: у долгого проекта
+     * это были бы десятки запросов разом ради картинок, которых пользователь
+     * может и не пролистать. Повторно по той же версии не ходим — ни при
+     * возврате пузыря в зону видимости, ни после ошибки: пузырь просто
+     * останется без картинки, рушить из-за этого экран незачем.
+     */
+    fun onPreviewNeeded(versionId: String) {
+        if (versionId in previewUrls || !requestedVersions.add(versionId)) return
         viewModelScope.launch {
-            // TODO: индикация неотправленного сообщения со статусом и повтором.
-            chatRepository.sendMessage(projectId, text).fold(
-                onSuccess = { message ->
-                    _uiState.update { current ->
-                        if (current is ProjectUiState.Content) {
-                            current.copy(messages = current.messages + message)
-                        } else {
-                            current
-                        }
-                    }
-                },
-                onFailure = {
-                    _uiState.update { current ->
-                        if (current is ProjectUiState.Content && current.draft.isEmpty()) {
-                            current.copy(draft = text)
-                        } else {
-                            current
-                        }
+            versionsRepository.getVersionUrl(projectId, versionId)
+                .onSuccess { url -> applyPreview(versionId, url) }
+        }
+    }
+
+    /** Дорисовывает пришедшую ссылку всем пузырям этой версии. */
+    private fun applyPreview(versionId: String, url: String) {
+        previewUrls[versionId] = url
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.map { message ->
+                    if (message is ChatMessage.Incoming &&
+                        message.versionId == versionId &&
+                        message.previewUrl == null
+                    ) {
+                        message.copy(previewUrl = url)
+                    } else {
+                        message
                     }
                 },
             )
+        }
+    }
+
+    /** Ссылку последней версии сервер присылает сам — кладём её в кэш как свою. */
+    private fun rememberPreviews(messages: List<ChatMessage>) {
+        messages.filterIsInstance<ChatMessage.Incoming>().forEach { message ->
+            message.previewUrl?.let { previewUrls[message.versionId] = it }
+        }
+    }
+
+    private fun List<ChatMessage>.withKnownPreviews(): List<ChatMessage> = map { message ->
+        if (message is ChatMessage.Incoming && message.previewUrl == null) {
+            previewUrls[message.versionId]?.let { message.copy(previewUrl = it) } ?: message
+        } else {
+            message
         }
     }
 
@@ -87,10 +345,11 @@ internal class ProjectViewModel(
         viewModelScope.launch {
             _uiState.value = chatRepository.getChat(projectId).fold(
                 onSuccess = { chat ->
+                    rememberPreviews(chat.messages)
                     ProjectUiState.Content(
                         title = chat.title,
                         isPublic = chat.isPublic,
-                        messages = chat.messages,
+                        messages = chat.messages.withKnownPreviews(),
                     )
                 },
                 onFailure = { ProjectUiState.Error },
@@ -98,3 +357,33 @@ internal class ProjectViewModel(
         }
     }
 }
+
+/** Сколько раз перечитать ленту, дожидаясь ответа сервера на нашу задачу. */
+private const val ReloadAttempts = 3
+
+/** Пауза между перечитываниями: даём бэкенду дописать историю. */
+private const val ReloadRetryDelayMillis = 500L
+
+/** Есть ли в ленте ответ ИИ на задачу [jobId] — удачный или с ошибкой. */
+private fun List<ChatMessage>.hasAnswerFor(jobId: String): Boolean = any { message ->
+    when (message) {
+        is ChatMessage.Incoming -> message.jobId == jobId
+        is ChatMessage.Failed -> message.jobId == jobId
+        else -> false
+    }
+}
+
+/**
+ * Текст ближайшего промпта над сообщением [messageId] — тот, который и надо
+ * повторить. `null` — сообщения в ленте уже нет или промпта над ним не нашлось.
+ */
+private fun List<ChatMessage>.promptAbove(messageId: String): String? {
+    val index = indexOfFirst { it.id == messageId }
+    if (index < 0) return null
+    return take(index).filterIsInstance<ChatMessage.Outgoing>().lastOrNull()?.text
+}
+
+/** Правка состояния, только если экран всё ещё показывает содержимое. */
+private inline fun MutableStateFlow<ProjectUiState>.updateContent(
+    crossinline block: (ProjectUiState.Content) -> ProjectUiState.Content,
+) = update { state -> if (state is ProjectUiState.Content) block(state) else state }

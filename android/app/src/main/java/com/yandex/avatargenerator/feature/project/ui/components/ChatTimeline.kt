@@ -30,10 +30,18 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  *
  * Открывается сразу на последнем сообщении; при появлении нового сообщения
  * прокручивается к нему с анимацией.
+ *
+ * @param onPreviewNeeded вызывается, когда пузырь ответа ИИ без картинки дошёл
+ *  до экрана: ссылку на превью прошлой версии запрашивают по требованию, а не
+ *  пачкой при открытии. Повторные вызовы по одной версии отсекает ViewModel.
+ * @param onRetry «Повторить» на пузыре провалившейся генерации; параметр — id
+ *  этого пузыря, промпт для повтора ViewModel найдёт над ним сама.
  */
 @Composable
 internal fun ChatTimeline(
     messages: List<ChatMessage>,
+    onPreviewNeeded: (String) -> Unit,
+    onRetry: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -68,14 +76,38 @@ internal fun ChatTimeline(
                 }
 
                 // Своего текста у ответа ИИ нет — в истории лежит только версия.
-                is ChatMessage.Incoming -> Row(
+                is ChatMessage.Incoming -> {
+                    if (message.previewUrl == null) {
+                        LaunchedEffect(message.versionId) { onPreviewNeeded(message.versionId) }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                    ) {
+                        BrandChatBubble(
+                            text = stringResource(R.string.project_assistant_message),
+                            isOutgoing = false,
+                            imageUrl = message.previewUrl,
+                            imageCacheKey = message.versionId,
+                            timeLabel = rememberMessageTimeLabel(message.sentAt),
+                        )
+                    }
+                }
+
+                is ChatMessage.Pending -> Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start,
                 ) {
-                    BrandChatBubble(
-                        text = stringResource(R.string.project_assistant_message),
-                        isOutgoing = false,
-                        imageUrl = message.previewUrl,
+                    ChatPendingBubble()
+                }
+
+                is ChatMessage.Failed -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                ) {
+                    ChatFailedBubble(
+                        text = message.text,
+                        onRetry = { onRetry(message.id) },
                         timeLabel = rememberMessageTimeLabel(message.sentAt),
                     )
                 }
@@ -90,6 +122,15 @@ internal fun ChatTimeline(
                 is ChatMessage.System.VersionSaved -> ChatVersionDivider(
                     text = stringResource(R.string.project_system_version_saved, message.version),
                 )
+
+                is ChatMessage.System.GenerationStillRunning -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    ChatSystemTag(
+                        text = stringResource(R.string.project_generation_still_running),
+                    )
+                }
             }
         }
     }
@@ -99,6 +140,10 @@ internal fun ChatTimeline(
 @Composable
 private fun ChatTimelinePreview() {
     AvatarGeneratorTheme {
-        ChatTimeline(messages = MockChatRepository.defaultMessages())
+        ChatTimeline(
+            messages = MockChatRepository.defaultMessages(),
+            onPreviewNeeded = {},
+            onRetry = {},
+        )
     }
 }
