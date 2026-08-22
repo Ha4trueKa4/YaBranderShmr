@@ -18,6 +18,13 @@ export type LoginRequest = {
   password: string
 }
 
+export type YandexAuthRequest = {
+  /**
+   * Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
+   */
+  code: string
+}
+
 export type AuthResponse = {
   access_token: string
   token_type: string
@@ -221,6 +228,47 @@ export type PostAuthLoginResponses = {
 
 export type PostAuthLoginResponse =
   PostAuthLoginResponses[keyof PostAuthLoginResponses]
+
+export type PostAuthYandexData = {
+  body: YandexAuthRequest
+  path?: never
+  query?: never
+  url: '/auth/yandex'
+}
+
+export type PostAuthYandexErrors = {
+  /**
+   * Не передан code, либо Yandex-приложение не запросило скоуп login:email и профиль пришёл без email.
+   *
+   */
+  400: ValidationError
+  /**
+   * Email из профиля Yandex уже принадлежит существующему аккаунту без привязанного provider (например, зарегистрированному по паролю). Автоматическая привязка намеренно не выполняется — иначе аккаунт можно угнать, заранее зарегистрировав чужой email своим паролем. Пользователю нужно войти по паролю и привязать Yandex ID явно (отдельный флоу, пока не реализован).
+   *
+   */
+  409: ValidationError
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+  /**
+   * Yandex OAuth API недоступен, code невалиден/просрочен, либо не удалось получить профиль
+   */
+  502: ValidationError
+}
+
+export type PostAuthYandexError =
+  PostAuthYandexErrors[keyof PostAuthYandexErrors]
+
+export type PostAuthYandexResponses = {
+  /**
+   * Успешный вход (существующий или только что привязанный аккаунт)
+   */
+  200: AuthResponse
+}
+
+export type PostAuthYandexResponse =
+  PostAuthYandexResponses[keyof PostAuthYandexResponses]
 
 export type GetUsersByIdData = {
   body?: never

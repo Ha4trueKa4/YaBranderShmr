@@ -1,14 +1,19 @@
+import { authStore } from '@app/providers/auth'
 import { useFeedInfiniteQuery } from '@entities/project'
 import { getApiErrorMessage } from '@shared/api/api'
 import { cn } from '@shared/lib'
 import { AsyncState, Button, Input } from '@shared/ui'
 import { Search, SlidersHorizontal } from 'lucide-react'
+import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from './Feed.module.css'
 import { type FeedFilters, FeedProjectGrid } from './FeedProjectGrid'
 
-export function Feed() {
+export const Feed = observer(function Feed() {
+  const { t } = useTranslation()
+  const isAuthorized = authStore.isAuthorized
   const [scope, setScope] = useState<FeedFilters['scope']>('discover')
   const [searchQuery, setSearchQuery] = useState('')
   const {
@@ -35,32 +40,34 @@ export function Feed() {
             onClick={() => setScope('discover')}
             type="button"
           >
-            All
+            {t('All')}
           </button>
-          <button
-            className={cn(
-              styles.scopeTab,
-              scope === 'following' && styles.active,
-            )}
-            onClick={() => setScope('following')}
-            type="button"
-          >
-            Following
-          </button>
+          {isAuthorized && (
+            <button
+              className={cn(
+                styles.scopeTab,
+                scope === 'following' && styles.active,
+              )}
+              onClick={() => setScope('following')}
+              type="button"
+            >
+              {t('Following')}
+            </button>
+          )}
         </div>
 
         <Input
           className={styles.search}
           leadingContent={<Search size={16} />}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search projects"
+          placeholder={t('Search projects')}
           type="search"
           value={searchQuery}
         />
 
         <Button className={styles.filtersButton} variant="ghost">
           <SlidersHorizontal size={16} />
-          Filters
+          {t('Filters')}
         </Button>
       </div>
 
@@ -83,11 +90,11 @@ export function Feed() {
               onClick={() => fetchNextPage()}
               variant="secondary"
             >
-              {isFetchNextPageError ? 'Retry loading' : 'Load more'}
+              {isFetchNextPageError ? t('Retry loading') : t('Load more')}
             </Button>
           </div>
         )}
       </AsyncState>
     </section>
   )
-}
+})

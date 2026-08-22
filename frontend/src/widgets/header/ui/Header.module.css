@@ -33,9 +33,30 @@
   padding: 0;
 }
 
-.brand img {
+.brandMark,
+.yandexLogo {
   width: 2rem;
   height: 2rem;
+}
+
+.brandMark {
+  display: block;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary);
+}
+
+.yandexLogo {
+  display: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary);
+}
+
+:global(:root[data-theme="yandex"]) .brandMark {
+  display: none;
+}
+
+:global(:root[data-theme="yandex"]) .yandexLogo {
+  display: block;
 }
 
 .navigation {
@@ -98,6 +119,10 @@
   gap: var(--space-2);
 }
 
+.signInButton {
+  gap: var(--space-2);
+}
+
 .avatar {
   display: inline-flex;
   align-items: center;
@@ -128,7 +153,12 @@
     display: none;
   }
 
-  .actions > :first-child {
+  .signInButton {
+    width: 2.25rem;
+    padding: 0;
+  }
+
+  .signInButton span {
     display: none;
   }
 
@@ -152,15 +182,6 @@
 @media (width < 480px) {
   .navigation {
     gap: var(--space-3);
-  }
-
-  .projectsLabel {
-    font-size: 0;
-  }
-
-  .projectsLabel::after {
-    content: "Projects";
-    font-size: var(--font-size-body);
   }
 }
 

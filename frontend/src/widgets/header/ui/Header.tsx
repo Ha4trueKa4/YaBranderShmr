@@ -3,9 +3,13 @@ import { AppRoute } from '@app/providers/router/routes'
 import brandMark from '@shared/assets/brandmark.svg'
 import { cn, getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
+import { LogIn } from 'lucide-react'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate } from 'react-router-dom'
 
+import yandexLogo from './assets/yandex-en.svg'
+import yandexRuLogo from './assets/yandex-ru.svg'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -15,6 +19,7 @@ interface HeaderProps {
 export const Header = observer(function Header({
   fullWidth = false,
 }: HeaderProps) {
+  const { i18n, t } = useTranslation()
   const navigate = useNavigate()
   const isAuthorized = authStore.isAuthorized
   const session = authStore.getSession
@@ -47,8 +52,13 @@ export const Header = observer(function Header({
           onClick={() => navigate('/', { viewTransition: true })}
           type="button"
         >
-          <img alt="" src={brandMark} />
-          <span>Brandkit AI</span>
+          <img alt="" className={styles.brandMark} src={brandMark} />
+          <img
+            alt=""
+            className={styles.yandexLogo}
+            src={i18n.resolvedLanguage === 'ru' ? yandexRuLogo : yandexLogo}
+          />
+          <span>Ya Brander</span>
         </button>
         <nav className={styles.navigation}>
           <NavLink
@@ -58,7 +68,7 @@ export const Header = observer(function Header({
             to={AppRoute.EditorCreate}
             viewTransition
           >
-            Generate
+            {t('Generate')}
             <span className={styles.generateIcon} />
           </NavLink>
           <NavLink
@@ -68,7 +78,7 @@ export const Header = observer(function Header({
             to={AppRoute.Feed}
             viewTransition
           >
-            Feed
+            {t('Feed')}
           </NavLink>
           {isAuthorized && (
             <NavLink
@@ -81,7 +91,7 @@ export const Header = observer(function Header({
               to={AppRoute.Profile}
               viewTransition
             >
-              <span className={styles.projectsLabel}>My projects</span>
+              <span className={styles.projectsLabel}>{t('My projects')}</span>
             </NavLink>
           )}
         </nav>
@@ -96,11 +106,9 @@ export const Header = observer(function Header({
           </button>
         ) : (
           <div className={styles.actions}>
-            <Button onClick={handleSignInClick} variant="ghost">
-              Sign in
-            </Button>
-            <Button onClick={() => navigate('/auth', { viewTransition: true })}>
-              Get started
+            <Button className={styles.signInButton} onClick={handleSignInClick}>
+              <LogIn size={18} />
+              <span>{t('Sign in')}</span>
             </Button>
           </div>
         )}

@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		F0A1B2C1302E100000BCF3F3 /* SVGView in Frameworks */ = {isa = PBXBuildFile; productRef = F0A1B2C3302E100000BCF3F3 /* SVGView */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		934BA49330271DF100E90FD1 /* BrandkitAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BrandkitAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -40,7 +36,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F0A1B2C1302E100000BCF3F3 /* SVGView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,7 +78,6 @@
 			);
 			name = BrandkitAI;
 			packageProductDependencies = (
-				F0A1B2C3302E100000BCF3F3 /* SVGView */,
 			);
 			productName = BrandkitAI;
 			productReference = 934BA49330271DF100E90FD1 /* BrandkitAI.app */;
@@ -114,7 +108,6 @@
 			mainGroup = 934BA48A30271DF100E90FD1;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F0A1B2C2302E100000BCF3F3 /* XCRemoteSwiftPackageReference "SVGView" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 934BA49430271DF100E90FD1 /* Products */;
@@ -364,25 +357,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		F0A1B2C2302E100000BCF3F3 /* XCRemoteSwiftPackageReference "SVGView" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/exyte/SVGView.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.6;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		F0A1B2C3302E100000BCF3F3 /* SVGView */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F0A1B2C2302E100000BCF3F3 /* XCRemoteSwiftPackageReference "SVGView" */;
-			productName = SVGView;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 934BA48B30271DF100E90FD1 /* Project object */;
 }

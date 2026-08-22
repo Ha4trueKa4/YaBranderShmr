@@ -58,4 +58,42 @@ describe('serializeSvg', () => {
     expect(serialized).toContain('<tspan dy="26" x="50">Second line</tspan>')
     expect(parseSvg(serialized)).toEqual(document)
   })
+
+  it('round-trips a stroke dash array', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <line id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
+      </svg>
+    `)
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain('stroke-dasharray="4 6"')
+    expect(parseSvg(serialized)).toEqual(document)
+  })
+
+  it('round-trips a group fill', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <g id="logo" fill="#123456"><path id="logo-mark" d="M0 0 L20 20" /></g>
+      </svg>
+    `)
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain(
+      '<g data-editor-id="logo" data-name="logo" id="logo" opacity="1" fill="#123456">',
+    )
+    expect(parseSvg(serialized)).toEqual(document)
+  })
+
+  it('preserves the viewBox origin when serializing', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">
+        <text id="title" x="0" y="200">A</text>
+      </svg>
+    `)
+
+    expect(serializeSvg(document)).toContain('viewBox="-250 100 500 300"')
+  })
 })

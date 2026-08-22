@@ -8,7 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Фон окна = AppColors.Background; тёмный, чтобы не было белой вспышки
-         на холодном старте до отрисовки Compose (весь UI приложения тёмный). -->
-    <color name="window_background">#FF0F0F14</color>
+    <!-- = LightAppColorScheme.background; задан до отрисовки Compose, чтобы на
+         холодном старте не было тёмной вспышки. Тёмный — values-night/colors.xml. -->
+    <color name="window_background">#FFFAFAFA</color>
 </resources>

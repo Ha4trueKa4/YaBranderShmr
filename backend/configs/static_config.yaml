@@ -156,7 +156,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-projects-get:
       path: /api/v1/projects/{id}
@@ -172,7 +172,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-projects-delete:
       path: /api/v1/projects/{id}
@@ -180,7 +180,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-projects-generate:
       path: /api/v1/projects/{id}/generate
@@ -188,7 +188,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
       max_requests_in_flight: 150
       max_requests_per_second: 300
 
@@ -198,7 +198,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-projects-versions-get:
       path: /api/v1/projects/{id}/versions/{version_id}
@@ -206,7 +206,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-projects-versions-restore:
       path: /api/v1/projects/{id}/versions/{version_id}/restore
@@ -214,7 +214,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-projects-chat:
       path: /api/v1/projects/{id}/chat
@@ -222,7 +222,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-auth-register:
       path: /api/v1/auth/register
@@ -234,13 +234,18 @@ components_manager:
       method: POST
       task_processor: main-task-processor
 
+    handler-auth-yandex:
+      path: /api/v1/auth/yandex
+      method: POST
+      task_processor: main-task-processor
+
     handler-users-subscribe:
       path: /api/v1/users/{id}/subscribe
       method: POST
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-users-unsubscribe:
       path: /api/v1/users/{id}/subscribe
@@ -248,7 +253,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-feed:
       path: /api/v1/feed
@@ -272,7 +277,7 @@ components_manager:
       task_processor: main-task-processor
       auth:
         types:
-          - jwt
+          - jwt-required
 
     handler-users-subscribers-get:
       path: /api/v1/users/{id}/subscribers

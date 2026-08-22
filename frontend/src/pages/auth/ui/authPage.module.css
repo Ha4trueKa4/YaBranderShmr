@@ -3,6 +3,29 @@
   display: grid;
   grid-template-columns: minmax(26rem, 42.25%) 1fr;
   min-height: 100vh;
+  position: relative;
+}
+
+.backButton {
+  color: var(--color-text-inverse);
+  left: var(--space-4);
+  position: absolute;
+  top: calc(var(--space-4) + env(safe-area-inset-top));
+  z-index: 1;
+}
+
+.backButton:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-surface-elevated) 22%,
+    transparent
+  );
+  color: var(--color-text-inverse);
+}
+
+.backIcon {
+  height: 1.25rem;
+  width: 1.25rem;
 }
 
 .promoPanel {

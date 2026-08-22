@@ -1,7 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Button, FormField, Input, Portal } from '@shared/ui'
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
+import { Button, FormField, IconButton, Input, Portal } from '@shared/ui'
+import { X } from 'lucide-react'
 import { useEffect, useId } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 
 import styles from './ProjectRenameModal.module.css'
@@ -13,11 +16,7 @@ interface ProjectRenameModalProps {
   projectName: string
 }
 
-const projectRenameFormSchema = z.object({
-  projectName: z.string().trim().nonempty('Enter a project name.'),
-})
-
-type ProjectRenameFormValues = z.infer<typeof projectRenameFormSchema>
+type ProjectRenameFormValues = { projectName: string }
 
 export function ProjectRenameModal({
   isOpen,
@@ -25,7 +24,11 @@ export function ProjectRenameModal({
   onSubmit,
   projectName,
 }: ProjectRenameModalProps) {
+  const { t } = useTranslation()
   const projectNameInputId = useId()
+  const projectRenameFormSchema = z.object({
+    projectName: z.string().trim().nonempty(t('Enter a project name.')),
+  })
   const form = useForm<ProjectRenameFormValues>({
     defaultValues: { projectName },
     mode: 'onSubmit',
@@ -38,13 +41,16 @@ export function ProjectRenameModal({
     }
   }, [form, isOpen, projectName])
 
-  if (!isOpen) {
-    return null
-  }
-
   function handleClose() {
     form.reset({ projectName })
     onClose()
+  }
+
+  useLockBodyScroll(isOpen)
+  useEscAction(handleClose, isOpen)
+
+  if (!isOpen) {
+    return null
   }
 
   const submit = form.handleSubmit(async ({ projectName: nextProjectName }) => {
@@ -61,13 +67,20 @@ export function ProjectRenameModal({
         />
         <section className={styles.modal}>
           <div className={styles.header}>
-            <h2 className={styles.title}>Rename project</h2>
+            <h2 className={styles.title}>{t('Rename project')}</h2>
+            <IconButton
+              className={styles.closeButton}
+              onClick={handleClose}
+              size="sm"
+            >
+              <X />
+            </IconButton>
           </div>
           <form className={styles.form} onSubmit={submit}>
             <FormField
               error={form.formState.errors.projectName?.message}
               htmlFor={projectNameInputId}
-              label="Project name"
+              label={t('Project name')}
             >
               <Input
                 {...form.register('projectName')}
@@ -78,9 +91,9 @@ export function ProjectRenameModal({
             </FormField>
             <div className={styles.actions}>
               <Button onClick={handleClose} variant="secondary">
-                Cancel
+                {t('Cancel')}
               </Button>
-              <Button type="submit">Save name</Button>
+              <Button type="submit">{t('Save name')}</Button>
             </div>
           </form>
         </section>

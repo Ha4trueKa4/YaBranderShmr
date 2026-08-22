@@ -2,5 +2,5 @@ import Foundation
 
 enum ChatMessageAttachment: Equatable {
     case none
-    case mockImage
+    case version(id: UUID, url: URL?)
 }

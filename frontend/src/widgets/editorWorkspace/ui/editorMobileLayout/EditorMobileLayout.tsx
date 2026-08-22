@@ -2,6 +2,7 @@ import { BottomSheet, ColorPicker } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { InspectorPanel } from '../inspectorPanel/InspectorPanel'
 import { MobileCanvasControls } from './components/MobileCanvasControls'
@@ -22,10 +23,15 @@ interface EditorMobileLayoutProps
   onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
+  onOpenVersionHistory: () => void
   onSaveVersion: () => void
   onToolChange: (tool: CanvasTool) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onZoomReset: () => void
   projectName: string
   scene: ReactNode
+  zoom: number
 }
 
 function getFillColor(
@@ -54,13 +60,19 @@ export function EditorMobileLayout({
   onDeleteSelection,
   onExport,
   onOpenProperties,
+  onOpenVersionHistory,
   onSaveVersion,
   onToolChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   projectName,
   scene,
   selectedNode,
+  zoom,
   ...inspectorProps
 }: EditorMobileLayoutProps) {
+  const { t } = useTranslation()
   const hasSelection = Boolean(selectedNode)
   const canDeleteSelection = Boolean(selectedNode && !selectedNode.isLocked)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
@@ -87,6 +99,7 @@ export function EditorMobileLayout({
         onBack={onBack}
         onCreateCopy={onCreateCopy}
         onExport={onExport}
+        onOpenVersionHistory={onOpenVersionHistory}
         onSaveVersion={onSaveVersion}
         projectName={projectName}
       />
@@ -107,13 +120,17 @@ export function EditorMobileLayout({
             fillColor={fillColor}
             onOpenColorPicker={() => setIsColorPickerOpen(true)}
             onToolChange={onToolChange}
+            onZoomIn={onZoomIn}
+            onZoomOut={onZoomOut}
+            onZoomReset={onZoomReset}
+            zoom={zoom}
           />
           <button
             className={styles.propertiesTrigger}
             onClick={onOpenProperties}
             type="button"
           >
-            Properties <span>⌃</span>
+            {t('Properties')} <span>⌃</span>
           </button>
           <BottomSheet
             actions={
@@ -122,12 +139,12 @@ export function EditorMobileLayout({
                 onClick={onCloseProperties}
                 type="button"
               >
-                Done
+                {t('Done')}
               </button>
             }
             isOpen={isPropertiesOpen}
             onClose={onCloseProperties}
-            title="Element properties"
+            title={t('Element properties')}
           >
             <InspectorPanel
               {...inspectorProps}
@@ -143,12 +160,12 @@ export function EditorMobileLayout({
                   onClick={() => setIsColorPickerOpen(false)}
                   type="button"
                 >
-                  Done
+                  {t('Done')}
                 </button>
               }
               isOpen={isColorPickerOpen}
               onClose={() => setIsColorPickerOpen(false)}
-              title="Fill color"
+              title={t('Fill color')}
             >
               <div className={styles.colorPickerContent}>
                 <ColorPicker color={fillColor} onChange={handleFillChange} />

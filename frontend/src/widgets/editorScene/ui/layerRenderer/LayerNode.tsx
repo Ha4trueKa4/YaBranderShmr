@@ -6,6 +6,7 @@ import type {
 import { observer } from 'mobx-react-lite'
 import type { PointerEvent as ReactPointerEvent, RefCallback } from 'react'
 
+import { getPaintValue } from './model/getPaintValue'
 import { getTransformValue } from './model/getTransformValue'
 import { ShapeLayer } from './ShapeLayer'
 import { TextLayer } from './TextLayer'
@@ -13,7 +14,7 @@ import { TextLayer } from './TextLayer'
 interface LayerNodeProps {
   canMoveLayers: boolean
   node: EditorNode
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePointerDown: (
     node: EditorShape,
     event: ReactPointerEvent<SVGGElement>,
@@ -43,7 +44,11 @@ export const LayerNode = observer(function LayerNode({
 
   if (node.type === 'group') {
     return (
-      <g opacity={node.opacity} transform={getTransformValue(node.transform)}>
+      <g
+        fill={node.fill ? getPaintValue(node.fill) : undefined}
+        opacity={node.opacity}
+        transform={getTransformValue(node.transform)}
+      >
         {node.children.map((child) => (
           <LayerNode
             key={child.id}
@@ -76,11 +81,11 @@ export const LayerNode = observer(function LayerNode({
         onPointerUp={onShapePointerUp}
         ref={registerEditableElement(node.id)}
         style={{
-          cursor: node.isLocked
-            ? 'not-allowed'
-            : canMoveLayers
-              ? 'grab'
-              : 'pointer',
+          cursor: canMoveLayers
+            ? node.isLocked
+              ? 'not-allowed'
+              : 'default'
+            : 'inherit',
         }}
       >
         <TextLayer node={node} />
@@ -97,11 +102,11 @@ export const LayerNode = observer(function LayerNode({
       onPointerUp={onShapePointerUp}
       ref={registerEditableElement(node.id)}
       style={{
-        cursor: node.isLocked
-          ? 'not-allowed'
-          : canMoveLayers
-            ? 'grab'
-            : 'pointer',
+        cursor: canMoveLayers
+          ? node.isLocked
+            ? 'not-allowed'
+            : 'default'
+          : 'inherit',
       }}
     >
       <ShapeLayer node={node} />

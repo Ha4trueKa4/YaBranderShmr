@@ -28,11 +28,13 @@ function parseTransformValues(value: string): number[] {
 
 export function parseTransform(value: string | null): Transform {
   if (!value) {
-    return identityTransform
+    return { ...identityTransform }
   }
 
   const transform: Transform = { ...identityTransform }
   let parsedEnd = 0
+  const transformOrder = ['translate', 'rotate', 'scale']
+  let previousTransformIndex = -1
 
   for (const match of value.matchAll(transformExpression)) {
     const [expression, name, rawValues] = match
@@ -44,6 +46,14 @@ export function parseTransform(value: string | null): Transform {
     }
 
     parsedEnd = expressionStart + expression.length
+
+    const transformIndex = transformOrder.indexOf(name)
+
+    if (transformIndex === -1 || transformIndex <= previousTransformIndex) {
+      throw new SvgParseError(`Unsupported SVG transform order: ${value}`)
+    }
+
+    previousTransformIndex = transformIndex
 
     if (name === 'translate' && (values.length === 1 || values.length === 2)) {
       transform.x += values[0]

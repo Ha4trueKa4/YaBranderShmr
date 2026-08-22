@@ -9,11 +9,7 @@ userver::formats::json::Value DeleteProjectHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value&,
     userver::server::request::RequestContext& context) const {
-  std::string* user_id = context.GetDataOptional<std::string>("user_id");
-  if (!user_id) {
-    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-    return {};
-  }
+  const auto& user_id = context.GetData<std::string>("user_id");
 
   const auto& id = request.GetPathArg("id");
   auto project = project_manager_.GetProject(id);
@@ -22,7 +18,7 @@ userver::formats::json::Value DeleteProjectHandler::HandleRequestJsonThrow(
     request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
     return {};
   }
-  if (project->author_id != *user_id) {
+  if (project->author_id != user_id) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
     return {};
   }

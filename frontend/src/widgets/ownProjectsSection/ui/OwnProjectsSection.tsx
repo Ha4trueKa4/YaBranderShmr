@@ -1,7 +1,9 @@
 import { OwnProjectCard } from '@entities/project'
+import { VersionHistoryModal } from '@features/editorVersionHistory'
 import type { Project } from '@shared/api/types'
 import { ConfirmationModal } from '@shared/ui'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from './OwnProjectsSection.module.css'
 import { ProjectManagementModal } from './ProjectManagementModal'
@@ -10,6 +12,7 @@ interface OwnProjectsSectionProps {
   isDeletingProjectPending: boolean
   onDeleteProject: (projectId: string) => Promise<void>
   onOpenProject: (projectId: string) => void
+  onProjectVersionRestored: () => Promise<void>
   onUpdateProjectMetadata: (
     projectId: string,
     metadata: { isPublic: boolean; name: string },
@@ -21,11 +24,16 @@ export function OwnProjectsSection({
   isDeletingProjectPending,
   onDeleteProject,
   onOpenProject,
+  onProjectVersionRestored,
   onUpdateProjectMetadata,
   projects,
 }: OwnProjectsSectionProps) {
+  const { t } = useTranslation()
   const [managedProjects, setManagedProjects] = useState(projects)
   const [editedProjectId, setEditedProjectId] = useState<string | null>(null)
+  const [versionHistoryProjectId, setVersionHistoryProjectId] = useState<
+    string | null
+  >(null)
   const [deletedProjectId, setDeletedProjectId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -74,10 +82,12 @@ export function OwnProjectsSection({
     <section className={styles.projectsSection} id="projects">
       <div className={styles.sectionHeader}>
         <div>
-          <h2>All projects</h2>
-          <p>Manage visibility and versions</p>
+          <h2>{t('All projects')}</h2>
+          <p>{t('Manage visibility and versions')}</p>
         </div>
-        <span>{managedProjects.length} projects</span>
+        <span>
+          {t('{{count}} projects', { count: managedProjects.length })}
+        </span>
       </div>
       <div className={styles.projectsGrid}>
         {managedProjects.map((project) => (
@@ -105,6 +115,10 @@ export function OwnProjectsSection({
       {editedProject?.id && (
         <ProjectManagementModal
           onClose={() => setEditedProjectId(null)}
+          onOpenVersionHistory={() => {
+            setEditedProjectId(null)
+            setVersionHistoryProjectId(editedProject.id ?? null)
+          }}
           onSubmit={async ({ isPublic, name }) => {
             const projectId = editedProject.id
 
@@ -119,14 +133,33 @@ export function OwnProjectsSection({
           project={editedProject}
         />
       )}
+      {versionHistoryProjectId && (
+        <VersionHistoryModal
+          hasUnsavedChanges={false}
+          isOpen
+          onBack={() => {
+            setVersionHistoryProjectId(null)
+            setEditedProjectId(versionHistoryProjectId)
+          }}
+          onClose={() => setVersionHistoryProjectId(null)}
+          onRestoreDocument={() => undefined}
+          onVersionRestored={onProjectVersionRestored}
+          projectId={versionHistoryProjectId}
+        />
+      )}
       <ConfirmationModal
-        confirmLabel="Delete project"
-        description={`Delete “${deletedProject?.name ?? 'Untitled project'}”? This action cannot be undone.`}
+        confirmLabel={t('Delete project')}
+        description={t(
+          'Delete “{{projectName}}”? This action cannot be undone.',
+          {
+            projectName: deletedProject?.name ?? t('Untitled project'),
+          },
+        )}
         isConfirming={isDeletingProjectPending}
         isOpen={Boolean(deletedProject)}
         onCancel={() => setDeletedProjectId(null)}
         onConfirm={handleDeleteProject}
-        title="Delete project?"
+        title={t('Delete project?')}
       />
     </section>
   )

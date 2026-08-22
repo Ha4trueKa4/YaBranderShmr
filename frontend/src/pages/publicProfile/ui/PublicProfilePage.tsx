@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '@shared/api/api'
 import { AsyncState, Button, useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  Footer,
   ProfileHeader,
   type ProfileHeaderProfile,
   PublicProjectsSection,
@@ -100,6 +101,7 @@ export const PublicProfilePage = observer(function PublicProfilePage() {
           <PublicProjectsSection projects={projects} />
         </AsyncState>
       </main>
+      <Footer />
     </div>
   )
 })
