@@ -1,5 +1,5 @@
-import { Button } from '@shared/ui'
-import { Sparkles } from 'lucide-react'
+import { Button, StopGeneratingIcon } from '@shared/ui'
+import { ArrowUp, Sparkles } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -11,9 +11,11 @@ const MAX_PROMPT_LENGTH = 1500
 interface GenerationPromptComposerProps {
   description: string
   error?: string
+  isCancelling?: boolean
   isGenerating?: boolean
   model: string
   onDescriptionChange: (description: string) => void
+  onCancel?: () => void
   onGenerate: () => void
   onModelChange: (model: string) => void
   onUnauthorizedModelSelect?: () => void
@@ -22,9 +24,11 @@ interface GenerationPromptComposerProps {
 export function GenerationPromptComposer({
   description,
   error,
+  isCancelling = false,
   isGenerating = false,
   model,
   onDescriptionChange,
+  onCancel,
   onGenerate,
   onModelChange,
   onUnauthorizedModelSelect,
@@ -80,11 +84,16 @@ export function GenerationPromptComposer({
             </div>
             <Button
               className={styles.generateButton}
-              loading={isGenerating}
-              onClick={onGenerate}
+              aria-label={isGenerating ? t('Cancel generation') : t('Generate')}
+              loading={isCancelling}
+              onClick={isGenerating ? onCancel : onGenerate}
               type="button"
             >
-              {t('Generate')}
+              {isGenerating ? (
+                <StopGeneratingIcon aria-hidden="true" />
+              ) : (
+                <ArrowUp aria-hidden="true" size={18} strokeWidth={2.5} />
+              )}
             </Button>
           </div>
         </div>
