@@ -24,6 +24,9 @@ class SubscriptionsViewModel(
     private val repository: SubscriptionRepository,
     private val userId: String,
     private val tab: SubscriptionsTab,
+    // id текущего пользователя: на себя не подписываются, тап по своей кнопке
+    // (защита на случай, если UI её всё же покажет) игнорируем. null — id недоступен.
+    private val currentUserId: String? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -63,6 +66,7 @@ class SubscriptionsViewModel(
      * не прошёл. Пока запрос в полёте, повторные тапы по этой строке игнорируем.
      */
     fun toggleFollow(user: SubscriptionUser) {
+        if (user.id == currentUserId) return
         if (_uiState.value.list !is SubscriptionsListState.Content) return
         if (!followInFlight.add(user.id)) return
 
@@ -70,15 +74,20 @@ class SubscriptionsViewModel(
         updateUser(user.id) { it.withFollowing(following) }
 
         viewModelScope.launch {
-            val result = if (following) {
-                repository.subscribe(user.id)
-            } else {
-                repository.unsubscribe(user.id)
+            try {
+                val result = if (following) {
+                    repository.subscribe(user.id)
+                } else {
+                    repository.unsubscribe(user.id)
+                }
+                if (result.isFailure) {
+                    updateUser(user.id) { it.withFollowing(!following) }
+                }
+            } finally {
+                // finally, а не хвост тела: при отмене корутины (напр. очистка VM)
+                // иначе id завис бы в множестве и заблокировал повторные тапы.
+                followInFlight.remove(user.id)
             }
-            if (result.isFailure) {
-                updateUser(user.id) { it.withFollowing(!following) }
-            }
-            followInFlight.remove(user.id)
         }
     }
 

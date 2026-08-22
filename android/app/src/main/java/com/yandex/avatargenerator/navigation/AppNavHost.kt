@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -225,14 +226,21 @@ fun AppNavHost(
             val tab = SubscriptionsTab.fromSlug(
                 backStackEntry.arguments?.getString(Destination.ARG_SUBSCRIPTIONS_TAB),
             )
+            val currentUserId = rememberCurrentUser()?.id
             SubscriptionsScreen(
                 userId = userId,
                 initialTab = tab,
                 onBack = { navController.popBackStack() },
                 onUserClick = { clickedUserId ->
-                    navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
+                    // Тап по своей строке в списке ведёт на свой профиль (вкладку с
+                    // кнопкой «Редактировать»), а не на чужой профиль с «Подписаться».
+                    if (clickedUserId == currentUserId) {
+                        navController.openOwnProfileTab()
+                    } else {
+                        navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
+                    }
                 },
-                currentUserId = rememberCurrentUser()?.id,
+                currentUserId = currentUserId,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -242,6 +250,19 @@ fun AppNavHost(
 /** Открыть список подписчиков/подписок пользователя [userId] на вкладке [tab]. */
 private fun NavHostController.openSubscriptions(userId: String, tab: SubscriptionsTab) {
     navigate(Destination.Subscriptions.createRoute(userId, tab.slug))
+}
+
+/**
+ * Переключиться на вкладку своего профиля (не копим бэкстек вкладок): стандартный
+ * паттерн bottom-навигации — popUpTo стартового узла с saveState, launchSingleTop,
+ * restoreState. Вызывается, когда в списке подписок тапнули по собственной строке.
+ */
+private fun NavHostController.openOwnProfileTab() {
+    navigate(Destination.Profile.route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 }
 
 /**

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
 import com.yandex.avatargenerator.ui.components.BrandAvatar
+import com.yandex.avatargenerator.ui.components.avatarInitials
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandSecondaryButton
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -66,7 +67,7 @@ fun ProfileHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Cover(avatarUrl = profile.avatarUrl, initials = initials(profile.displayName))
+            Cover(avatarUrl = profile.avatarUrl, initials = avatarInitials(profile.displayName))
             if (isOwnProfile && onOpenSettings != null) {
                 IconButton(
                     onClick = onOpenSettings,
@@ -128,7 +129,7 @@ fun ProfileHeader(
 
 /** Градиентная обложка с [BrandAvatar], наезжающим на её нижний край. */
 @Composable
-private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Modifier) {
+private fun Cover(avatarUrl: String?, initials: String?, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -260,16 +261,6 @@ private fun ProfileActionButton(
             onClick = onClick,
             modifier = modifier,
         )
-    }
-}
-
-/** Инициалы для плейсхолдера аватара: «Sarah Chen» → «SC», «Prince» → «P». */
-private fun initials(displayName: String): String {
-    val parts = displayName.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    return when {
-        parts.isEmpty() -> ""
-        parts.size == 1 -> parts.first().take(1)
-        else -> "${parts.first().first()}${parts.last().first()}"
     }
 }
 

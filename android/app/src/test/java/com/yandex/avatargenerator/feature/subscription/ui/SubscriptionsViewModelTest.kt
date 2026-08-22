@@ -164,4 +164,24 @@ internal class SubscriptionsViewModelTest {
 
         assertEquals(1, repository.subscribeCallCount)
     }
+
+    @Test
+    fun `toggling follow on the current user sends no request`() = runTest(dispatcher) {
+        val self = repository.followers.first()
+        val viewModel = SubscriptionsViewModel(
+            repository,
+            userId = "user-1",
+            tab = SubscriptionsTab.Followers,
+            currentUserId = self.id,
+        )
+        advanceUntilIdle()
+
+        viewModel.toggleFollow(self)
+        advanceUntilIdle()
+
+        assertEquals(0, repository.subscribeCallCount)
+        assertEquals(0, repository.unsubscribeCallCount)
+        val unchanged = viewModel.users().first { it.id == self.id }
+        assertEquals(self.isFollowing, unchanged.isFollowing)
+    }
 }

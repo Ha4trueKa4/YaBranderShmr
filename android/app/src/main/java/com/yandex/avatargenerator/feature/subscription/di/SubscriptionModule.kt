@@ -9,7 +9,7 @@ import org.koin.dsl.module
 
 val subscriptionModule = module {
     single<SubscriptionRepository> { NetworkSubscriptionRepository(get()) }
-    viewModel { (userId: String, initialTab: SubscriptionsTab) ->
-        SubscriptionsViewModel(get(), userId, initialTab)
+    viewModel { (userId: String, initialTab: SubscriptionsTab, currentUserId: String?) ->
+        SubscriptionsViewModel(get(), userId, initialTab, currentUserId)
     }
 }

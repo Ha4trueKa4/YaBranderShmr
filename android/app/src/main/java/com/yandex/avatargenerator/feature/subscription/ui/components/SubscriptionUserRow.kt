@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.subscription.domain.model.SubscriptionUser
 import com.yandex.avatargenerator.ui.components.BrandAvatar
+import com.yandex.avatargenerator.ui.components.avatarInitials
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandSecondaryButton
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -53,7 +54,7 @@ internal fun SubscriptionUserRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
     ) {
-        BrandAvatar(size = 56.dp, imageUrl = user.avatarUrl, initials = initials(user.displayName))
+        BrandAvatar(size = 56.dp, imageUrl = user.avatarUrl, initials = avatarInitials(user.displayName))
 
         Column(
             modifier = Modifier.weight(1f),
@@ -93,15 +94,5 @@ internal fun SubscriptionUserRow(
                 compact = true,
             )
         }
-    }
-}
-
-/** Инициалы для плейсхолдера аватара: «Sarah Chen» → «SC», «Prince» → «P». */
-private fun initials(displayName: String): String {
-    val parts = displayName.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    return when {
-        parts.isEmpty() -> ""
-        parts.size == 1 -> parts.first().take(1)
-        else -> "${parts.first().first()}${parts.last().first()}"
     }
 }

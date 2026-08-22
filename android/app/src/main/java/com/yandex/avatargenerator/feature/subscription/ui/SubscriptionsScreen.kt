@@ -23,7 +23,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.subscription.ui.components.SubscriptionUserRow
-import com.yandex.avatargenerator.feature.subscription.ui.components.SubscriptionsTopBar
+import com.yandex.avatargenerator.ui.components.BrandTopBar
 import com.yandex.avatargenerator.ui.components.BrandEmptyState
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.BrandListItemSkeleton
@@ -55,7 +55,7 @@ fun SubscriptionsScreen(
     onUserClick: (userId: String) -> Unit,
     modifier: Modifier = Modifier,
     currentUserId: String? = null,
-    viewModel: SubscriptionsViewModel = koinViewModel { parametersOf(userId, initialTab) },
+    viewModel: SubscriptionsViewModel = koinViewModel { parametersOf(userId, initialTab, currentUserId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -71,13 +71,14 @@ fun SubscriptionsScreen(
             .fillMaxSize()
             .background(AppColors.Background),
     ) {
-        SubscriptionsTopBar(
+        BrandTopBar(
             title = stringResource(
                 when (state.tab) {
                     SubscriptionsTab.Followers -> R.string.subscriptions_title_followers
                     SubscriptionsTab.Following -> R.string.subscriptions_title_following
                 },
             ),
+            backContentDescription = stringResource(R.string.subscriptions_back_description),
             onBackClick = onBack,
         )
 
