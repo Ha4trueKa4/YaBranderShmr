@@ -2,13 +2,21 @@ import Foundation
 
 nonisolated enum SVGExporter {
     static func writeSVGFile(_ data: Data, named baseName: String) throws -> URL {
+        try write(data, named: baseName, fileExtension: "svg")
+    }
+
+    static func writePNGFile(_ data: Data, named baseName: String) throws -> URL {
+        try write(data, named: baseName, fileExtension: "png")
+    }
+
+    private static func write(_ data: Data, named baseName: String, fileExtension: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("export", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let url = directory
             .appendingPathComponent(sanitized(baseName))
-            .appendingPathExtension("svg")
+            .appendingPathExtension(fileExtension)
         try data.write(to: url, options: .atomic)
         return url
     }

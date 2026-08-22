@@ -6,8 +6,13 @@ struct ProjectPreviewView: View {
         let url: URL
     }
 
+    private enum ExportKind {
+        case png
+        case svg
+    }
+
     @State private var viewModel: ProjectPreviewViewModel
-    @State private var isExporting = false
+    @State private var activeExport: ExportKind?
     @State private var exportedFile: ExportedFile?
     @State private var exportFailed = false
 
@@ -50,15 +55,30 @@ struct ProjectPreviewView: View {
     // MARK: - Экспорт
 
     private func exportSVG() {
-        guard !isExporting else { return }
-        isExporting = true
+        export(.svg) { data in
+            try SVGExporter.writeSVGFile(data, named: viewModel.title)
+        }
+    }
+
+    private func exportPNG() {
+        export(.png) { data in
+            guard let svgText = String(data: data, encoding: .utf8) else {
+                throw SVGRasterizer.RasterizationError.renderingFailed
+            }
+            let pngData = try await SVGRasterizer.pngData(fromSVG: svgText)
+            return try SVGExporter.writePNGFile(pngData, named: viewModel.title)
+        }
+    }
+
+    private func export(_ kind: ExportKind, makeFile: @escaping (Data) async throws -> URL) {
+        guard activeExport == nil else { return }
+        activeExport = kind
 
         Task {
-            defer { isExporting = false }
+            defer { activeExport = nil }
             do {
                 let data = try await viewModel.exportSVGData()
-                let url = try SVGExporter.writeSVGFile(data, named: viewModel.title)
-                exportedFile = ExportedFile(url: url)
+                exportedFile = ExportedFile(url: try await makeFile(data))
             } catch {
                 guard !Task.isCancelled else { return }
                 exportFailed = true
@@ -138,14 +158,12 @@ struct ProjectPreviewView: View {
                 .foregroundStyle(.secondary)
                 .padding(.top, 6)
 
-            // TODO: экспорт в PNG — растеризация через WKWebView-снапшот
-            // отдавала пустой кадр; кнопка снова заглушка до нового решения.
             downloadButton(
                 title: "Download PNG",
                 systemImage: "square.and.arrow.down",
                 isPrimary: true,
-                isBusy: false,
-                action: {}
+                isBusy: activeExport == .png,
+                action: exportPNG
             )
             .padding(.top, 20)
 
@@ -153,7 +171,7 @@ struct ProjectPreviewView: View {
                 title: "Download SVG",
                 systemImage: "chevron.left.forwardslash.chevron.right",
                 isPrimary: false,
-                isBusy: isExporting,
+                isBusy: activeExport == .svg,
                 action: exportSVG
             )
             .padding(.top, 12)
@@ -274,7 +292,7 @@ struct ProjectPreviewView: View {
             }
         }
         .buttonStyle(.plain)
-        .disabled(isExporting)
+        .disabled(activeExport != nil)
     }
 }
 
