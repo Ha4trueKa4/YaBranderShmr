@@ -69,13 +69,15 @@ export function GenerationPromptComposer({
             {description.length}/{MAX_PROMPT_LENGTH}
           </span>
           <div className={styles.actionControls}>
-            <ModelSelect
-              disabled={isGenerating}
-              onChange={onModelChange}
-              onUnauthorizedSelect={onUnauthorizedModelSelect}
-              value={model || DEFAULT_GENERATION_MODEL}
-              variant="compact"
-            />
+            <div className={styles.modelSelect}>
+              <ModelSelect
+                disabled={isGenerating}
+                onChange={onModelChange}
+                onUnauthorizedSelect={onUnauthorizedModelSelect}
+                value={model || DEFAULT_GENERATION_MODEL}
+                variant="compact"
+              />
+            </div>
             <Button
               className={styles.generateButton}
               loading={isGenerating}
