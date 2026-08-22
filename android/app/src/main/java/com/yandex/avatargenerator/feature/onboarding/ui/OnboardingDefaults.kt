@@ -2,15 +2,8 @@ package com.yandex.avatargenerator.feature.onboarding.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RadialGradientShader
-import androidx.compose.ui.graphics.Shader
-import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,12 +11,12 @@ import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
-import kotlin.math.hypot
-import kotlin.math.max
+import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
+import com.yandex.avatargenerator.ui.theme.LightAppColorScheme
 
 /**
- * Размеры, цвета и типографика онбординга — ровно из макета
- * (Figma `VTr3cYTH7uWGPSqBOjH180`, фреймы 3:261 / 3:281 / 3:322).
+ * Размеры, цвета и типографика онбординга — из макета
+ * (Figma `RTTuxBH32XkC0zryIFzuk1`, фреймы 2525:804 / 842 / 891 / 944, все 393×852).
  *
  * Здесь остаётся только специфика макета: то, чему есть токен в дизайн-системе,
  * берётся из [AppSpacing] / [AppShape] / [AppTypography] и не дублируется числом.
@@ -31,17 +24,35 @@ import kotlin.math.max
  * Всё, что несёт цвет, объявлено `@Composable`-свойством — зависит от темы
  * (см. [AppColors]); размеры остаются константами.
  *
- * Макет нарисован под iPhone 393×852; фиксированная высота экрана не переносится —
- * вертикаль распределяется по weight.
+ * Фиксированная высота макета не переносится: вертикаль распределяется по weight,
+ * иначе на экранах 4" hero и тексты не помещаются (см. ONBOARDING_REDESIGN_PLAN.md, п. 5.1).
  */
 internal object OnboardingDefaults {
 
-    // --- общее ---
+    // --- каркас экрана ---
     val ScreenHorizontalPadding = AppSpacing.l
     val BottomBarPadding = AppSpacing.m
 
-    /** Место под индикатор страниц: страницы резервируют его снизу, чтобы контент не налезал. */
-    val BottomContentReserve = AppSpacing.xxxl
+    /** Максимум для hero: 285dp по макету; на низких экранах ужимается по weight. */
+    val HeroSize = 285.dp
+
+    /** Зазор между hero и первой строкой заголовка (макет: 530 − 436.5). */
+    val HeroTitleSpacing = AppSpacing.xxl
+
+    /** Между заголовком и подзаголовком (макет: 615 − 602). */
+    val TitleSubtitleSpacing = AppSpacing.m
+
+    val IndicatorButtonSpacing = AppSpacing.l
+
+    /**
+     * Доля свободной высоты страницы, уходящая в пустоту под подзаголовком.
+     * Остальное забирает иллюстрация, поэтому тексты садятся примерно на 62–72%
+     * высоты экрана, как в макете, и при этом не ломаются на низких экранах.
+     */
+    const val SlideBottomWeight = 0.22f
+
+    /** Соседняя страница пейджера гаснет полностью на ширине одного свайпа. */
+    const val MinPageAlpha = 0f
 
     // --- индикатор страниц ---
     val DotSize = 8.dp
@@ -51,128 +62,87 @@ internal object OnboardingDefaults {
     /** Прозрачность неактивной точки индикатора — цвет ей задаёт вызывающий. */
     const val InactiveDotAlpha = 0.25f
 
-    // --- страница 1: welcome ---
-    val WelcomeHorizontalPadding = AppSpacing.xl
-    val WelcomeContentSpacing = AppSpacing.xl
-    val WelcomeBrandTextSpacing = AppSpacing.s
-    val LogoTileSize = 100.dp
-    val LogoTileRadius = 28.dp
-    val LogoTileBorderWidth = 2.5.dp
-    val LogoGlyphSize = 48.dp
+    // --- слайд 1: плитка лого ---
+    val LogoTileSize = 88.dp
+    val LogoTileRadius = AppShape.l * 1.5f
+    val LogoGlyphSize = 40.dp
+    val LogoBrandSpacing = AppSpacing.l
 
-    // Плитка лого — полупрозрачная подложка цветом текста, поэтому читается в обеих темах.
-    val LogoTileFill: Color
-        @Composable @ReadOnlyComposable get() = AppColors.TextPrimary.copy(alpha = 0.13f)
-    val LogoTileBorder: Color
-        @Composable @ReadOnlyComposable get() = AppColors.TextPrimary.copy(alpha = 0.25f)
+    // --- слайд 2: чат ---
+    val ChatHeaderPadding = AppSpacing.s
+    val ChatContentSpacing = AppSpacing.xs
+    val ChatPreviewHeight = 44.dp
+    val ChatPreviewGlyphSize = 20.dp
+    val ChatInputHeight = 36.dp
+    val ChatSendButtonSize = 28.dp
+    val ChatSendIconSize = 14.dp
 
-    /** Центр свечения по вертикали в долях высоты экрана — из макета (840 / 1704). */
-    private const val WelcomeGlowCenterY = 0.493f
+    // --- слайд 3: версии ---
+    val VersionsPreviewHeight = 116.dp
+    val VersionsPreviewGlyphSize = 36.dp
+    val VersionsSelectionSize = 64.dp
+    val VersionsSelectionStroke = 1.dp
+    val VersionsSwatchSize = 32.dp
 
-    /**
-     * «Доля радиуса → альфа акцента», снято с макета: прозрачный центр,
-     * пик кольца на ~0.37 радиуса, дальше плавное затухание к краям экрана.
-     */
-    private val WelcomeGlowRing = listOf(
-        0f to 0f, 0.06f to 0.02f, 0.13f to 0.10f, 0.19f to 0.24f,
-        0.25f to 0.45f, 0.32f to 0.72f, 0.37f to 0.97f, 0.53f to 0.57f,
-        0.63f to 0.35f, 0.74f to 0.19f, 0.84f to 0.07f, 1f to 0.02f,
-    )
+    // --- слайд 4: сообщество ---
+    val CommunityCardSpacing = AppSpacing.s
+    val CommunityCoverHeight = 64.dp
+    val CommunityCardOffset = AppSpacing.m
+    val CommunityAvatarSize = 32.dp
+    val CommunityExportIconSize = 14.dp
 
-    /**
-     * На тёмном фоне акцент светлее базы и работает как свечение; на светлом он
-     * темнее базы, и в полную силу кольцо читается грязным — там приглушаем.
-     */
-    private const val WelcomeGlowLightIntensity = 0.45f
+    /** Кнопки экспорта внутри мокапа — визуальная бутафория, ниже боевых 48dp. */
+    val CommunityExportButtonHeight = 32.dp
 
     /**
-     * Кольцевое свечение вокруг логотипа (Figma `WI48deZbDftp1OunCXlj5r`, нода 2011:9).
-     * Радиус — расстояние до дальнего угла, поэтому свечение тянется на любой экран.
+     * Кольцевое свечение за иллюстрацией: центр — под hero, а не под центром экрана.
+     * Центр hero в макете: (151.5 + 285/2) / 852 ≈ 0.345 высоты.
      */
-    val WelcomeGlow: Brush
-        @Composable get() {
+    const val GlowCenterY = 0.345f
+    val GlowRadius = 260.dp
+
+    /** На светлой теме то же свечение бьёт по глазам — гасим до едва заметного. */
+    private const val GlowLightIntensity = 0.35f
+
+    /**
+     * Стопы кольца: в самом центре свечение чуть проседает (за ним лежит hero),
+     * пик — на середине радиуса, к краю уходит в прозрачность.
+     *
+     * Отдаём именно стопы, а не готовый [Brush]: центр и радиус известны только
+     * в момент отрисовки, в пикселях (см. `Modifier.onboardingGlow`).
+     */
+    val GlowStops: Array<Pair<Float, Color>>
+        @Composable @ReadOnlyComposable
+        get() {
             val accent = AppColors.Accent
-            val intensity =
-                if (AppColors.Background.luminance() < 0.5f) 1f else WelcomeGlowLightIntensity
-            return remember(accent, intensity) {
-                object : ShaderBrush() {
-                    private val positions = WelcomeGlowRing.map { it.first }
-                    private val colors =
-                        WelcomeGlowRing.map { accent.copy(alpha = it.second * intensity) }
-
-                    override fun createShader(size: Size): Shader {
-                        val center = Offset(size.width / 2f, size.height * WelcomeGlowCenterY)
-                        val radius = hypot(
-                            max(center.x, size.width - center.x),
-                            max(center.y, size.height - center.y),
-                        )
-                        return RadialGradientShader(center, radius, colors, positions)
-                    }
-                }
-            }
+            val k = if (LocalAppColorScheme.current === LightAppColorScheme) GlowLightIntensity else 1f
+            return arrayOf(
+                0.00f to accent.copy(alpha = 0.20f * k),
+                0.35f to accent.copy(alpha = 0.34f * k),
+                0.65f to accent.copy(alpha = 0.14f * k),
+                1.00f to Color.Transparent,
+            )
         }
 
-    val BrandTitleStyle: TextStyle
-        // В макете ExtraBold, но такого начертания Inter в res/font нет — см. AppFont.
-        @Composable @ReadOnlyComposable get() = AppTypography.heading1.copy(
-            fontWeight = FontWeight.Bold,
-            color = AppColors.TextPrimary,
-        )
-    val BrandSubtitleStyle: TextStyle
+    // --- типографика слайда ---
+    val TitleStyle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = AppTypography.heading1.copy(color = AppColors.TextPrimary)
+
+    /** Вторая строка заголовка — тот же кегль, акцентный цвет. */
+    val TitleAccentStyle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = AppTypography.heading1.copy(color = AppColors.Accent)
+
+    val SubtitleStyle: TextStyle
         @Composable @ReadOnlyComposable
         get() = AppTypography.body.copy(color = AppColors.TextSecondary)
 
-    // --- страница 2: how it works ---
-    val PageTitleSpacing = 40.dp
-    val StepsSpacing = 28.dp
-    val StepRowSpacing = AppSpacing.m
-    val StepTextSpacing = AppSpacing.xxs
-    val StepIconTileSize = 48.dp
-    val StepIconTileRadius = 14.dp
-    val StepIconSize = 20.dp
-
-    val StepIconTint: Color
-        @Composable @ReadOnlyComposable get() = AppColors.AccentCyan
-
-    val PageTitleStyle: TextStyle
-        @Composable @ReadOnlyComposable get() = AppTypography.heading2
-    val StepTitleStyle: TextStyle
-        @Composable @ReadOnlyComposable get() = AppTypography.body.copy(fontWeight = FontWeight.Bold)
-
-    /** Подпись шага — [AppTypography.label] тем же кеглем, но обычным начертанием. */
-    val StepSubtitleStyle: TextStyle
+    /** Подпись «VERSION 1.2 SAVED» в мокапе чата. */
+    val MockAccentCaptionStyle: TextStyle
         @Composable @ReadOnlyComposable
-        get() = AppTypography.label.copy(fontWeight = FontWeight.Normal)
-
-    // --- страница 3: get started ---
-    val GetStartedContentSpacing = AppSpacing.xl
-    val IllustrationWidth = 300.dp
-    val IllustrationHeight = 320.dp
-    val IllustrationRadius = 24.dp
-    val IllustrationPadding = AppSpacing.m
-    val IllustrationInnerRadius = AppShape.l
-    val IllustrationInnerSpacing = AppSpacing.m
-    val GlowCircleSize = 100.dp
-    val GlowIconSize = 36.dp
-    val MockupBrandSpacing = 6.dp
-
-    val CtaGroupSpacing = 20.dp
-
-    /**
-     * Cyan в центре → violet по краю. Промежуточные стопы из макета лежат ровно
-     * на линейной интерполяции краёв, которую Compose делает сам.
-     */
-    val GlowBrush: Brush
-        @Composable @ReadOnlyComposable
-        get() = Brush.radialGradient(listOf(AppColors.AccentCyan, AppColors.Accent))
-
-    val MockupBrandNameStyle: TextStyle
-        @Composable @ReadOnlyComposable
-        get() = AppTypography.heading3.copy(fontWeight = FontWeight.Bold)
-
-    /** В макете 11sp — берём ближайший токен [AppTypography.caption] (12sp). */
-    val MockupTaglineStyle: TextStyle
-        @Composable @ReadOnlyComposable get() = AppTypography.caption
-    val CtaTitleStyle: TextStyle
-        @Composable @ReadOnlyComposable get() = PageTitleStyle
+        get() = AppTypography.caption.copy(
+            color = AppColors.Accent,
+            fontWeight = FontWeight.SemiBold,
+        )
 }

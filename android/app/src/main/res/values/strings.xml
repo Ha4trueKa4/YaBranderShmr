@@ -36,30 +36,54 @@
     <string name="auth_error_server">Server is unavailable. Try again later</string>
     <string name="auth_error_unknown">Something went wrong. Try again</string>
 
-    <!-- Onboarding: welcome -->
-    <string name="onboarding_brand_title">Brandkit AI</string>
-    <string name="onboarding_brand_subtitle">Turn words into brand identity</string>
+    <!-- Онбординг: слайды -->
+    <string name="onboarding_brand_title">Ya Brander</string>
 
-    <!-- Onboarding: how it works -->
-    <string name="onboarding_how_it_works_title">How it works</string>
-    <string name="onboarding_step_describe_title">Describe</string>
-    <string name="onboarding_step_describe_subtitle">Write what you need</string>
-    <string name="onboarding_step_generate_title">Generate</string>
-    <string name="onboarding_step_generate_subtitle">AI creates vector graphics</string>
-    <string name="onboarding_step_edit_title">Edit</string>
-    <string name="onboarding_step_edit_subtitle">Refine in the visual editor</string>
-    <string name="onboarding_step_publish_title">Publish</string>
-    <string name="onboarding_step_publish_subtitle">Share with the world</string>
+    <string name="onboarding_generate_title">Turn words into</string>
+    <string name="onboarding_generate_title_accent">brand identity</string>
+    <string name="onboarding_generate_subtitle">Describe your brand in a brief — AI builds logo, palette and typography in vector</string>
 
-    <!-- Onboarding: get started -->
-    <string name="onboarding_mockup_brand_name">NEXUS</string>
-    <string name="onboarding_mockup_brand_tagline">BRAND DESIGN</string>
-    <string name="onboarding_cta_title">Start creating for free</string>
-    <string name="onboarding_cta_button">Get Started</string>
-    <string name="onboarding_sign_in_prompt">Already have an account?</string>
-    <string name="onboarding_sign_in_action">Sign in</string>
+    <string name="onboarding_chat_title">Refine the design</string>
+    <string name="onboarding_chat_title_accent">right in the chat</string>
+    <string name="onboarding_chat_subtitle">Ask for changes in plain words — the assistant updates the design and saves it</string>
 
-    <!-- Onboarding: accessibility -->
+    <string name="onboarding_versions_title">Every change</string>
+    <string name="onboarding_versions_title_accent">under control</string>
+    <string name="onboarding_versions_subtitle">Fine-tune in the built-in editor and roll back to any saved version anytime</string>
+
+    <string name="onboarding_community_title">Share with</string>
+    <string name="onboarding_community_title_accent">the community</string>
+    <string name="onboarding_community_subtitle">Publish to the feed, follow creators and export your kit as PNG or SVG</string>
+
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Get Started</string>
+
+    <!-- Онбординг: бутафория внутри иллюстраций (декоративная, TalkBack её не читает) -->
+    <string name="onboarding_mock_chat_project">My Startup Brand</string>
+    <string name="onboarding_mock_chat_private">Private</string>
+    <string name="onboarding_mock_chat_outgoing">Make the background darker</string>
+    <string name="onboarding_mock_chat_incoming">Done! Darkened the base and added a soft glow.</string>
+    <string name="onboarding_mock_chat_version_saved">VERSION 1.2 SAVED</string>
+    <string name="onboarding_mock_chat_input_hint">Ask brand assistant…</string>
+
+    <string name="onboarding_mock_version_current_title">Version 1.3</string>
+    <string name="onboarding_mock_version_current_time">Today, 11:53</string>
+    <string name="onboarding_mock_version_current_badge">Current</string>
+    <string name="onboarding_mock_version_previous_title">Version 1.2</string>
+    <string name="onboarding_mock_version_previous_time">Yesterday, 18:08</string>
+
+    <string name="onboarding_mock_project_alpha">Project Alpha</string>
+    <string name="onboarding_mock_project_alpha_author">Alice</string>
+    <string name="onboarding_mock_project_beta">Project Beta</string>
+    <string name="onboarding_mock_project_beta_author">Bob</string>
+    <string name="onboarding_mock_creator_name">Sarah Chen</string>
+    <string name="onboarding_mock_creator_initials">SC</string>
+    <string name="onboarding_mock_creator_role">Brand designer</string>
+    <string name="onboarding_mock_follow">Follow</string>
+    <string name="onboarding_mock_export_png">PNG</string>
+    <string name="onboarding_mock_export_svg">SVG</string>
+
+    <!-- Онбординг: доступность -->
     <string name="onboarding_page_indicator_description">Page %1$d of %2$d</string>
 
     <!-- Лента -->

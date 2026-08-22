@@ -1,4 +1,4 @@
-package com.yandex.avatargenerator.feature.onboarding
+package com.yandex.avatargenerator.feature.onboarding.fake
 
 import com.yandex.avatargenerator.feature.onboarding.domain.OnboardingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
