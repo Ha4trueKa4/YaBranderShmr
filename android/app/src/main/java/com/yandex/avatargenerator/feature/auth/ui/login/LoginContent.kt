@@ -1,4 +1,4 @@
-package com.yandex.avatargenerator.feature.auth.ui
+package com.yandex.avatargenerator.feature.auth.ui.login
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,8 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,14 +20,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.yandex.avatargenerator.R
+import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
 import com.yandex.avatargenerator.feature.auth.ui.components.AuthBrandMark
 import com.yandex.avatargenerator.feature.auth.ui.components.AuthFormLayout
 import com.yandex.avatargenerator.feature.auth.ui.components.AuthPasswordVisibilityToggle
+import com.yandex.avatargenerator.feature.auth.ui.text
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTextField
 import com.yandex.avatargenerator.ui.components.BrandTextLink
@@ -37,70 +33,16 @@ import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
-import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Экран входа — Compose-версия макета Figma (node 3:393).
- *
- * Навигация отдана наружу коллбэками:
- * @param onSignedIn вход прошёл успешно — пускаем в приложение. Дёргается по
- *  событию из ViewModel, а не по нажатию кнопки.
- * @param onNavigateToRegister переход на регистрацию.
- * @param onForgotPasswordClick восстановление пароля: ручки в API нет, поэтому
- *  по умолчанию ничего не делает (см. AUTH_PLAN.md, раздел «вне скоупа»).
- *
- * ViewModel берётся из Koin ([koinViewModel]); граф — в
- * `feature/auth/di/AuthModule.kt`.
+ * Вёрстка экрана входа без ViewModel: всё, что рисуется, приходит в [state],
+ * всё, что делает пользователь, уходит одним [onIntent] — так экран рисуется
+ * в `@Preview`, не ходя в сеть.
  */
 @Composable
-internal fun LoginScreen(
-    onSignedIn: () -> Unit,
-    onNavigateToRegister: () -> Unit,
-    modifier: Modifier = Modifier,
-    onForgotPasswordClick: () -> Unit = {},
-    viewModel: LoginViewModel = koinViewModel(),
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // Одноразовые события навигации собираем, только пока экран не ниже STARTED —
-    // иначе ответ, пришедший в фоне, дёрнул бы navigate на остановленном
-    // NavController.
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(viewModel, lifecycleOwner) {
-        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.events.collect { event ->
-                when (event) {
-                    LoginEvent.SignedIn -> onSignedIn()
-                }
-            }
-        }
-    }
-
-    LoginContent(
-        uiState = uiState,
-        onEmailChange = viewModel::onEmailChange,
-        onPasswordChange = viewModel::onPasswordChange,
-        onPasswordVisibilityToggle = viewModel::onPasswordVisibilityToggle,
-        onSubmit = viewModel::onSubmit,
-        onForgotPasswordClick = onForgotPasswordClick,
-        onNavigateToRegister = onNavigateToRegister,
-        modifier = modifier,
-    )
-}
-
-/**
- * Вёрстка экрана без ViewModel: состояние приходит параметром — так экран
- * рисуется в `@Preview`, не ходя в сеть.
- */
-@Composable
-private fun LoginContent(
-    uiState: LoginUiState,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onPasswordVisibilityToggle: () -> Unit,
-    onSubmit: () -> Unit,
-    onForgotPasswordClick: () -> Unit,
-    onNavigateToRegister: () -> Unit,
+internal fun LoginContent(
+    state: LoginState,
+    onIntent: (LoginIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AuthFormLayout(modifier = modifier) {
@@ -120,30 +62,30 @@ private fun LoginContent(
         ) {
             BrandTextField(
                 label = stringResource(R.string.auth_field_email),
-                value = uiState.email,
-                onValueChange = onEmailChange,
+                value = state.email,
+                onValueChange = { onIntent(LoginIntent.OnEmailChange(it)) },
                 placeholder = stringResource(R.string.auth_placeholder_email),
-                errorMessage = uiState.emailError?.text(),
+                errorMessage = state.emailError?.text(),
                 height = 48.dp,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
             BrandTextField(
                 label = stringResource(R.string.auth_field_password),
-                value = uiState.password,
-                onValueChange = onPasswordChange,
+                value = state.password,
+                onValueChange = { onIntent(LoginIntent.OnPasswordChange(it)) },
                 placeholder = stringResource(R.string.auth_placeholder_password),
-                errorMessage = uiState.passwordError?.text(),
+                errorMessage = state.passwordError?.text(),
                 height = 48.dp,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                visualTransformation = if (uiState.isPasswordVisible) {
+                visualTransformation = if (state.isPasswordVisible) {
                     VisualTransformation.None
                 } else {
                     PasswordVisualTransformation()
                 },
                 trailingIcon = {
                     AuthPasswordVisibilityToggle(
-                        visible = uiState.isPasswordVisible,
-                        onToggle = onPasswordVisibilityToggle
+                        visible = state.isPasswordVisible,
+                        onToggle = { onIntent(LoginIntent.OnPasswordVisibilityToggle) }
                     )
                 }
             )
@@ -158,7 +100,7 @@ private fun LoginContent(
         ) {
             // Ошибка не про конкретное поле (неверная пара логин/пароль,
             // сеть) — показываем над кнопкой.
-            uiState.formError?.let { error ->
+            state.formError?.let { error ->
                 Text(
                     text = error.text(),
                     style = AppTypography.label,
@@ -168,12 +110,12 @@ private fun LoginContent(
 
             BrandPrimaryButton(
                 text = stringResource(
-                    if (uiState.isSubmitting) R.string.auth_signing_in else R.string.auth_sign_in,
+                    if (state.isSubmitting) R.string.auth_signing_in else R.string.auth_sign_in,
                 ),
-                onClick = onSubmit,
+                onClick = { onIntent(LoginIntent.OnSubmitClick) },
                 fullWidth = true,
-                enabled = uiState.canSubmit,
-                leadingIcon = if (uiState.isSubmitting) {
+                enabled = state.canSubmit,
+                leadingIcon = if (state.isSubmitting) {
                     {
                         CircularProgressIndicator(
                             // 18.dp / 2.dp — размеры индикатора внутри кнопки, точечные значения вне шкалы.
@@ -193,7 +135,7 @@ private fun LoginContent(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = onForgotPasswordClick
+                        onClick = { onIntent(LoginIntent.OnForgotPasswordClick) }
                     )
                     .padding(AppSpacing.xxs)
             )
@@ -202,7 +144,7 @@ private fun LoginContent(
         BrandTextLink(
             text = stringResource(R.string.auth_no_account),
             actionText = stringResource(R.string.auth_register),
-            onClick = onNavigateToRegister,
+            onClick = { onIntent(LoginIntent.OnRegisterClick) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = AppSpacing.l)
@@ -212,20 +154,15 @@ private fun LoginContent(
 
 @Preview(showBackground = true, heightDp = 844, widthDp = 393)
 @Composable
-private fun LoginScreenPreview() {
+private fun LoginContentPreview() {
     AvatarGeneratorTheme {
         LoginContent(
-            uiState = LoginUiState(
+            state = LoginState(
                 email = "hello@brandkit.ai",
                 password = "secret123",
                 formError = AuthFormError.InvalidCredentials,
             ),
-            onEmailChange = {},
-            onPasswordChange = {},
-            onPasswordVisibilityToggle = {},
-            onSubmit = {},
-            onForgotPasswordClick = {},
-            onNavigateToRegister = {},
+            onIntent = {},
         )
     }
 }
