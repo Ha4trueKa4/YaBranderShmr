@@ -368,6 +368,16 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         // Без ретраев: при падении реальный исход (версия сохранена / job
         // отменён) не меняется — просто не появится записью в chat_history.
         // Громко логируем, чтобы это было видно в мониторинге.
+        //
+        // TaskCancellationBlocker обязателен именно здесь: если outcome ==
+        // kCancelled, значит RequestCancel() уже вызван на ЭТОЙ же корутине, а
+        // отмена в userver не одноразовая — она продолжает действовать на
+        // все последующие точки ожидания той же задачи. Без блокировки
+        // следующий же поход в Postgres (сам этот AppendAssistant*) тут же
+        // прервался бы с "Task was cancelled before trying to get a
+        // connection", и запись в chat_history так и не появлялась бы —
+        // проверено вживую curl'ом, именно так и происходило.
+        userver::engine::TaskCancellationBlocker cancellation_blocker;
         try {
             switch (outcome) {
                 case JobStatus::kDone:
