@@ -22,7 +22,7 @@
 .icon {
   color: var(--color-accent-primary);
   height: 1.125rem;
-  left: var(--space-4);
+  left: var(--space-3);
   position: absolute;
   top: calc(var(--space-2) + 0.1875rem);
   width: 1.125rem;
@@ -76,7 +76,11 @@
 }
 
 .generateButton {
-  width: 6.5rem;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  height: 2.25rem;
+  padding: 0;
+  width: 2.25rem;
 }
 
 .error {
@@ -110,22 +114,14 @@
 @media (width < 400px) {
   .actionControls {
     align-self: stretch;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .textarea {
     padding-left: calc(var(--space-3) + 1.125rem + var(--space-2));
   }
 
-  .actionControls > * {
-    width: 100%;
-  }
-
   .actionControls .modelSelect > * {
-    width: 100%;
-  }
-
-  .generateButton {
     width: 100%;
   }
 }
