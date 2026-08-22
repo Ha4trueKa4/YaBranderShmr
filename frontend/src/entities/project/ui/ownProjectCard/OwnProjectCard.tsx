@@ -1,5 +1,5 @@
 import type { Project } from '@shared/api/types'
-import { Button, IconButton, PopupMenu } from '@shared/ui'
+import { Button, IconButton, PopupMenu, Spinner } from '@shared/ui'
 import { MoreHorizontal } from 'lucide-react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { useState } from 'react'
@@ -9,6 +9,7 @@ import { ProjectPreview } from '../projectPreview'
 import styles from './OwnProjectCard.module.css'
 
 export interface OwnProjectCardProps {
+  isGenerating?: boolean
   onDeleteClick?: () => void
   onEditClick?: () => void
   onOpenClick?: () => void
@@ -16,6 +17,7 @@ export interface OwnProjectCardProps {
 }
 
 export function OwnProjectCard({
+  isGenerating = false,
   onDeleteClick,
   onEditClick,
   onOpenClick,
@@ -51,7 +53,17 @@ export function OwnProjectCard({
       onKeyDown={handleCardKeyDown}
     >
       <div className={styles.previewWrap}>
-        <ProjectPreview imageUrl={project.url ?? null} title={title} />
+        {isGenerating ? (
+          <div
+            aria-label={t('Generating project')}
+            className={styles.generationPreview}
+            role="status"
+          >
+            <Spinner />
+          </div>
+        ) : (
+          <ProjectPreview imageUrl={project.url ?? null} title={title} />
+        )}
         {!isPrivate && <span className={styles.visibility}>{visibility}</span>}
       </div>
       <div className={styles.content}>

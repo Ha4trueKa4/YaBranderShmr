@@ -46,6 +46,7 @@
   "Stroke": "Обводка",
   "Width": "Толщина",
   "Gradient editing supports two-stop linear gradients": "Редактирование градиента поддерживается для линейных градиентов с двумя точками.",
+  "Generating project": "Генерируем проект",
   "Generation is taking too long. Please try again.": "Генерация занимает слишком много времени. Попробуйте ещё раз.",
   "The generated project is unavailable. Please try again.": "Созданный проект недоступен. Попробуйте снова.",
   "There are no changes to save.": "Нет изменений для сохранения.",
