@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -40,8 +41,9 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 private val PillMinHeight = 40.dp
 private val SendButtonSize = 40.dp
 private val SendIconSize = 20.dp
+private val SendProgressStroke = 2.dp
 
-/** Прозрачность неактивной кнопки отправки: пустой черновик отправлять нечего. */
+/** Прозрачность неактивной кнопки: черновик пуст либо генерация ещё идёт. */
 private const val DisabledAlpha = 0.4f
 
 /**
@@ -55,6 +57,9 @@ private const val DisabledAlpha = 0.4f
  * у [com.yandex.avatargenerator.navigation.AppBottomBar]. Поэтому инсет добавлен
  * *внутри* — отступ поверх `background`, а не в переданном `modifier`, иначе
  * заливка до края экрана не дошла бы.
+ *
+ * @param isSending идёт генерация по прошлому промпту — отправка заблокирована,
+ *  на кнопке вместо стрелки крутится индикатор. Печатать при этом можно.
  */
 @Composable
 internal fun ChatInputBar(
@@ -62,6 +67,7 @@ internal fun ChatInputBar(
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isSending: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -81,7 +87,11 @@ internal fun ChatInputBar(
                 onDraftChange = onDraftChange,
                 modifier = Modifier.weight(1f),
             )
-            ChatInputSendButton(enabled = draft.isNotBlank(), onClick = onSendClick)
+            ChatInputSendButton(
+                enabled = draft.isNotBlank() && !isSending,
+                isSending = isSending,
+                onClick = onSendClick,
+            )
         }
 
         Spacer(
@@ -126,23 +136,33 @@ private fun ChatInputDraftField(
 @Composable
 private fun ChatInputSendButton(
     enabled: Boolean,
+    isSending: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val contentAlpha = if (enabled) 1f else DisabledAlpha
     Box(
         modifier = modifier
             .size(SendButtonSize)
             .clip(CircleShape)
-            .background(if (enabled) AppColors.Accent else AppColors.Accent.copy(alpha = DisabledAlpha))
+            .background(AppColors.Accent.copy(alpha = contentAlpha))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = Icons.Filled.ArrowUpward,
-            contentDescription = stringResource(R.string.project_send_description),
-            tint = if (enabled) AppColors.OnAccent else AppColors.OnAccent.copy(alpha = DisabledAlpha),
-            modifier = Modifier.size(SendIconSize),
-        )
+        if (isSending) {
+            CircularProgressIndicator(
+                color = AppColors.OnAccent,
+                strokeWidth = SendProgressStroke,
+                modifier = Modifier.size(SendIconSize),
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.ArrowUpward,
+                contentDescription = stringResource(R.string.project_send_description),
+                tint = AppColors.OnAccent.copy(alpha = contentAlpha),
+                modifier = Modifier.size(SendIconSize),
+            )
+        }
     }
 }
 
@@ -162,6 +182,19 @@ private fun ChatInputBarFilledPreview() {
             draft = "Make the mark rounder and try a cyan accent",
             onDraftChange = {},
             onSendClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun ChatInputBarSendingPreview() {
+    AvatarGeneratorTheme {
+        ChatInputBar(
+            draft = "",
+            onDraftChange = {},
+            onSendClick = {},
+            isSending = true,
         )
     }
 }

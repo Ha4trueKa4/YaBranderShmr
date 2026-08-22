@@ -6,21 +6,13 @@
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include "../../utils/errors.hpp"
+
 namespace ya_brander::handlers {
 
-namespace {
+using utils::MakeError;
 
-userver::formats::json::Value MakeError(std::string_view code,
-                                        std::string_view message,
-                                        std::string_view field = {}) {
-  userver::formats::json::ValueBuilder error;
-  error["code"] = std::string(code);
-  error["message"] = std::string(message);
-  if (!field.empty()) {
-    error["field"] = std::string(field);
-  }
-  return error.ExtractValue();
-}
+namespace {
 
 bool IsValidNickname(const std::string& nickname) {
   return nickname.size() >= 3 && nickname.size() <= 64;
@@ -40,11 +32,7 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
     const userver::server::http::HttpRequest& request,
     const userver::formats::json::Value& request_json,
     userver::server::request::RequestContext& context) const {
-  const auto* auth_user_id = context.GetDataOptional<std::string>("user_id");
-  if (!auth_user_id) {
-    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-    return {};
-  }
+  const auto& auth_user_id = context.GetData<std::string>("user_id");
 
   const auto& target_id = request.GetPathArg("id");
 
@@ -59,7 +47,7 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
     }
 
     const auto canonical_target_id = user_result[0]["id"].As<std::string>();
-    if (canonical_target_id != *auth_user_id) {
+    if (canonical_target_id != auth_user_id) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
       return MakeError("FORBIDDEN", "You can only update your own profile");
     }

@@ -1,4 +1,7 @@
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
+import { X } from 'lucide-react'
 import { Button, type ButtonProps } from '../Button'
+import { IconButton } from '../IconButton'
 import { Portal } from '../Portal'
 import styles from './ConfirmationModal.module.css'
 
@@ -25,6 +28,9 @@ export function ConfirmationModal({
   onConfirm,
   title,
 }: ConfirmationModalProps) {
+  useLockBodyScroll(isOpen)
+  useEscAction(onCancel, isOpen)
+
   if (!isOpen) {
     return null
   }
@@ -34,7 +40,16 @@ export function ConfirmationModal({
       <div className={styles.overlay}>
         <button className={styles.backdrop} onClick={onCancel} type="button" />
         <section className={styles.modal}>
-          <h2 className={styles.title}>{title}</h2>
+          <header className={styles.header}>
+            <h2 className={styles.title}>{title}</h2>
+            <IconButton
+              className={styles.closeButton}
+              onClick={onCancel}
+              size="sm"
+            >
+              <X />
+            </IconButton>
+          </header>
           <p className={styles.description}>{description}</p>
           <div className={styles.actions}>
             <Button onClick={onCancel} variant="secondary">

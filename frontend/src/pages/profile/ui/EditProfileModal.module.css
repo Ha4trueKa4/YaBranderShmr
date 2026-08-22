@@ -32,7 +32,24 @@
   color: var(--color-text-primary);
   font-size: var(--font-size-h2);
   line-height: 1.25;
-  margin: 0 0 var(--space-6);
+  margin: 0;
+}
+
+.header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+
+.closeButton {
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+}
+
+.closeButton svg {
+  height: 1.25rem;
+  width: 1.25rem;
 }
 
 .form {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Бэкенд отдаётся по HTTP без TLS, поэтому cleartext разрешён точечно для его
+  хоста. Всё остальное (картинки Coil и т.п.) обязано ходить по HTTPS.
+  Хост дублирует apiBaseUrl из app/build.gradle.kts — менять надо в обоих местах.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">158.160.155.144</domain>
+    </domain-config>
+</network-security-config>

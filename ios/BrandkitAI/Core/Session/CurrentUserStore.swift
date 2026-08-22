@@ -1,16 +1,13 @@
 import Foundation
+import Observation
 
-/// Менеджер хранения информации об авторизованном пользователе в UserDefaults.
-///
-/// Хранит только id и имя — это не секреты, поэтому UserDefaults, а не Keychain;
-/// токен по-прежнему лежит в `TokenStore`. Если хранилище пусто, а токен есть
-/// (реальный случай — переустановка приложения), id восстанавливается из JWT,
-/// после чего имя дотаскивается из API по этому id.
 @MainActor
+@Observable
 final class CurrentUserStore: CurrentUserService {
     private enum Key {
         static let id = "currentUser.id"
         static let name = "currentUser.name"
+        static let legacyEmail = "currentUser.email"
     }
 
     private(set) var id: UUID? {
@@ -19,6 +16,10 @@ final class CurrentUserStore: CurrentUserService {
 
     private(set) var name: String? {
         didSet { UserDefaults.standard.set(name, forKey: Key.name) }
+    }
+
+    private(set) var email: String? {
+        didSet { KeychainItem.userEmail.value = email }
     }
 
     private let tokenStore: TokenStore
@@ -30,33 +31,51 @@ final class CurrentUserStore: CurrentUserService {
         self.id = UserDefaults.standard.string(forKey: Key.id)
             .flatMap(UUID.init(uuidString:))
         self.name = UserDefaults.standard.string(forKey: Key.name)
+        self.email = KeychainItem.userEmail.value
+            ?? UserDefaults.standard.string(forKey: Key.legacyEmail)
+
+        migrateLegacyEmailIfNeeded()
+    }
+
+    private func migrateLegacyEmailIfNeeded() {
+        guard KeychainItem.userEmail.value == nil, let email else { return }
+        KeychainItem.userEmail.value = email
+        UserDefaults.standard.removeObject(forKey: Key.legacyEmail)
     }
 
     func restore() async {
-        if let id {
-            if name == nil {
-                await refreshName(for: id)
-            }
-            return
-        }
-
         guard let token = tokenStore.accessToken,
-              let userID = JWTDecoder.userID(from: token) else {
+              let tokenUserID = JWTDecoder.userID(from: token) else {
+            clear()
             return
         }
 
-        id = userID
-        await refreshName(for: userID)
+        if let id, id != tokenUserID {
+            name = nil
+            email = nil
+        }
+        id = tokenUserID
+
+        if name == nil {
+            await refreshName(for: tokenUserID)
+        }
     }
 
-    func save(id: UUID, name: String?) {
+    func save(id: UUID, name: String?, email: String?) {
         self.id = id
+        self.name = name
+        self.email = email
+    }
+
+    func update(name: String) {
         self.name = name
     }
 
     func clear() {
         id = nil
         name = nil
+        email = nil
+        UserDefaults.standard.removeObject(forKey: Key.legacyEmail)
     }
 
     private func refreshName(for id: UUID) async {

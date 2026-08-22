@@ -1,7 +1,9 @@
+export { deleteProject } from './api/deleteProject'
 export { getProjectSvg } from './api/getProjectSvg'
 export {
   projectQueryKey,
   projectSvgQueryKey,
+  projectSvgQueryPrefix,
   useDeleteProjectMutation,
   useFeedInfiniteQuery,
   useProjectQuery,
@@ -12,6 +14,7 @@ export {
   useSubscribeToUserMutation,
   useUnsubscribeFromUserMutation,
   useUpdateProjectMetadataMutation,
+  useUpdateUserProfileMutation,
   useUserProfileQuery,
   useUserSubscribersQuery,
   useUserSubscriptionsQuery,

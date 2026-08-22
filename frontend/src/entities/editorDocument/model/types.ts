@@ -19,6 +19,7 @@ export type ShapeStyle = {
   fill: Paint
   fillOpacity: number
   stroke: Paint
+  strokeDasharray?: string
   strokeLineCap?: 'butt' | 'round' | 'square'
   strokeLineJoin?: 'bevel' | 'miter' | 'round'
   strokeOpacity: number
@@ -117,6 +118,7 @@ export type EditorElement = EditorShape | EditorText
 
 export type EditorGroup = EditorElementBase & {
   children: EditorNode[]
+  fill?: Paint
   type: 'group'
 }
 
@@ -158,5 +160,7 @@ export interface EditorDocument {
   definitions?: EditorDefinitions
   width: number
   height: number
+  viewBoxX?: number
+  viewBoxY?: number
   layers: EditorNode[]
 }

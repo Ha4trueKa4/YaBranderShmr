@@ -8,6 +8,7 @@ export {
   feedQueryKey,
   projectQueryKey,
   projectSvgQueryKey,
+  projectSvgQueryPrefix,
   useDeleteProjectMutation,
   useFeedInfiniteQuery,
   useProjectQuery,
@@ -18,6 +19,7 @@ export {
   useSubscribeToUserMutation,
   useUnsubscribeFromUserMutation,
   useUpdateProjectMetadataMutation,
+  useUpdateUserProfileMutation,
   useUserProfileQuery,
   useUserSubscribersQuery,
   useUserSubscriptionsQuery,
@@ -26,3 +28,5 @@ export { subscribeToUser } from './subscribeToUser'
 export { unsubscribeFromUser } from './unsubscribeFromUser'
 export type { UpdateProjectMetadataInput } from './updateProject'
 export { updateProject } from './updateProject'
+export type { UpdateUserProfileInput } from './updateUserProfile'
+export { updateUserProfile } from './updateUserProfile'

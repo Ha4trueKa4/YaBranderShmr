@@ -10,11 +10,7 @@ namespace ya_brander::handlers {
         const userver::server::http::HttpRequest& request,
         const userver::formats::json::Value& /*request_json*/,
         userver::server::request::RequestContext& context) const {
-        std::string* user_id = context.GetDataOptional<std::string>("user_id");
-        if (!user_id) {
-            request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-            return {};
-        }
+        const auto& user_id = context.GetData<std::string>("user_id");
 
         const auto& id = request.GetPathArg("id");
         auto project = project_manager_.GetProject(id);
@@ -24,7 +20,7 @@ namespace ya_brander::handlers {
             return {};
         }
         // Только автор может сделать роллбэк своего проекта.
-        if (project->author_id != *user_id) {
+        if (project->author_id != user_id) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
             return {};
         }

@@ -1,8 +1,6 @@
 .overlay {
   fill: none;
   pointer-events: none;
-  stroke: var(--color-accent-primary);
-  stroke-dasharray: 10 6;
-  stroke-width: 3;
+  stroke: #4096f2;
   vector-effect: non-scaling-stroke;
 }

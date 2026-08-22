@@ -1,24 +1,18 @@
 #include "login_handler.hpp"
 
+#include <optional>
+
 #include <userver/components/component.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 
 #include "password_hasher.hpp"
+#include "../../utils/errors.hpp"
 
 namespace ya_brander::auth {
 
-namespace {
-
-userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message) {
-    userver::formats::json::ValueBuilder builder;
-    builder["code"] = std::string(code);
-    builder["message"] = std::string(message);
-    return builder.ExtractValue();
-}
-
-}  // namespace
+using utils::MakeError;
 
 LoginHandler::LoginHandler(const userver::components::ComponentConfig& config,
                             const userver::components::ComponentContext& context)
@@ -37,7 +31,7 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
 
     if (email.empty() || password.empty()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-        return MakeErrorJson("INVALID_CREDENTIALS", "Invalid email or password");
+        return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     auto result = pg_cluster_->Execute(
@@ -46,17 +40,24 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
 
     if (result.Size() == 0) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-        return MakeErrorJson("INVALID_CREDENTIALS", "Invalid email or password");
+        return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     const auto row = result.Front();
     const auto user_id = row[0].As<std::string>();
     const auto nickname = row[1].As<std::string>();
-    const auto password_hash = row[2].As<std::string>();
+    const auto password_hash = row[2].As<std::optional<std::string>>();
 
-    if (!PasswordHasher::Verify(password, password_hash)) {
+    if (!password_hash.has_value()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
-        return MakeErrorJson("INVALID_CREDENTIALS", "Invalid email or password");
+        return MakeError("NO_PASSWORD_SET",
+                          "This account has no password. Sign in with Yandex ID, "
+                          "or set a password from account settings after signing in.");
+    }
+
+    if (!PasswordHasher::Verify(password, *password_hash)) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     const auto token = jwt_service_.IssueToken(user_id);

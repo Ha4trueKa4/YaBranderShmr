@@ -1,6 +1,7 @@
 import { getApiErrorMessage } from '@shared/api/api'
 import { getAvatarInitials } from '@shared/lib'
 import { AsyncState, Avatar } from '@shared/ui'
+import { Footer } from '@widgets/footer'
 import { Header } from '@widgets/header'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
@@ -9,11 +10,13 @@ import styles from './UserConnections.module.css'
 
 interface UserConnection {
   id?: string
+  is_subscribed?: boolean
   name?: string
 }
 
 interface ResolvedUserConnection {
   id: string
+  isSubscribed: boolean
   name: string
 }
 
@@ -41,7 +44,13 @@ export function UserConnections({
       return []
     }
 
-    return [{ id: connection.id, name: connection.name }]
+    return [
+      {
+        id: connection.id,
+        isSubscribed: connection.is_subscribed ?? false,
+        name: connection.name,
+      },
+    ]
   })
 
   return (
@@ -80,6 +89,7 @@ export function UserConnections({
           )}
         </AsyncState>
       </main>
+      <Footer />
     </div>
   )
 }

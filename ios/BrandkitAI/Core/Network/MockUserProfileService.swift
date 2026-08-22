@@ -13,6 +13,13 @@ nonisolated struct MockUserProfileService: UserProfileService {
         profile
     }
 
+    func subscribe(to userID: UUID) async throws {}
+    func unsubscribe(from userID: UUID) async throws {}
+
+    func updateName(_ name: String, for id: UUID) async throws -> String {
+        name
+    }
+
     private static func makeSample() -> UserProfile {
         UserProfile(
             id: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000") ?? UUID(),

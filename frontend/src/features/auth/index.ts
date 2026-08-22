@@ -1,2 +1,15 @@
-export { useLoginMutation, useRegisterMutation } from './api/authQueries'
-export { getAuthErrorMessage } from './model/getAuthErrorMessage'
+export {
+  useLoginMutation,
+  useRegisterMutation,
+  useYandexLoginMutation,
+} from './api/authQueries'
+export {
+  getAuthErrorMessage,
+  getYandexAuthErrorMessage,
+} from './model/getAuthErrorMessage'
+export {
+  getYandexOAuthCallback,
+  getYandexOAuthReturnPath,
+  startYandexOAuth,
+  validateYandexOAuthState,
+} from './model/yandexOAuth'

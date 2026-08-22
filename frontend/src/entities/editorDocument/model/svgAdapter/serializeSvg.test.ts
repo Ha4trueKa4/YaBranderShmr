@@ -37,6 +37,27 @@ describe('serializeSvg', () => {
     expect(parseSvg(serialized)).toEqual(document)
   })
 
+  it('wraps a moved raw layer in its editor transform', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs><filter id="shadow"><feGaussianBlur stdDeviation="4" /></filter></defs>
+        <rect id="shadowed" x="10" y="10" width="20" height="20" filter="url(#shadow)" />
+      </svg>
+    `)
+    const rawNode = document.layers[0]
+
+    if (rawNode?.type !== 'raw') {
+      throw new Error('Expected a raw node')
+    }
+
+    rawNode.transform.x = 12
+    rawNode.transform.y = -4
+
+    expect(serializeSvg(document)).toContain(
+      '<g transform="translate(12 -4)"><rect',
+    )
+  })
+
   it('serializes multiline text as tspans and imports it as one text layer', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -57,5 +78,43 @@ describe('serializeSvg', () => {
     expect(serialized).toContain('<tspan dy="0" x="50">First line</tspan>')
     expect(serialized).toContain('<tspan dy="26" x="50">Second line</tspan>')
     expect(parseSvg(serialized)).toEqual(document)
+  })
+
+  it('round-trips a stroke dash array', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <line id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
+      </svg>
+    `)
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain('stroke-dasharray="4 6"')
+    expect(parseSvg(serialized)).toEqual(document)
+  })
+
+  it('round-trips a group fill', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <g id="logo" fill="#123456"><path id="logo-mark" d="M0 0 L20 20" /></g>
+      </svg>
+    `)
+
+    const serialized = serializeSvg(document)
+
+    expect(serialized).toContain(
+      '<g data-editor-id="logo" data-name="logo" id="logo" opacity="1" fill="#123456">',
+    )
+    expect(parseSvg(serialized)).toEqual(document)
+  })
+
+  it('preserves the viewBox origin when serializing', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">
+        <text id="title" x="0" y="200">A</text>
+      </svg>
+    `)
+
+    expect(serializeSvg(document)).toContain('viewBox="-250 100 500 300"')
   })
 })

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileSelectionActionsProps {
@@ -15,6 +16,7 @@ export function MobileSelectionActions({
   onDeleteSelection,
   onOpenColorPicker,
 }: MobileSelectionActionsProps) {
+  const { t } = useTranslation()
   return (
     <div className={styles.selectionActions}>
       {hasSelection ? (
@@ -28,10 +30,10 @@ export function MobileSelectionActions({
               className={styles.fillDot}
               style={{ background: fillColor ?? undefined }}
             />
-            Fill
+            {t('Fill')}
           </button>
           <span />
-          <button type="button">Stroke</button>
+          <button type="button">{t('Stroke')}</button>
           <span />
           <button
             className={styles.deleteAction}
@@ -39,11 +41,11 @@ export function MobileSelectionActions({
             onClick={onDeleteSelection}
             type="button"
           >
-            Delete
+            {t('Delete')}
           </button>
         </>
       ) : (
-        <p>Select an element</p>
+        <p>{t('Select an element')}</p>
       )}
     </div>
   )

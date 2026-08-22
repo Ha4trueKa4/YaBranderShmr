@@ -64,7 +64,6 @@ struct FeedListView: View {
                     FeedListCardView(
                         title: item.title,
                         previewURL: item.previewURL,
-                        accountAvatar: Image("image.placeholder"),
                         accountName: item.authorName,
                         onTap: { onOpenProject(item.id) }
                     )
@@ -80,7 +79,7 @@ struct FeedListView: View {
                     .padding(.bottom, 16)
             }
         }
-        .refreshable {
+        .brandRefresher {
             await viewModel.refresh()
         }
     }

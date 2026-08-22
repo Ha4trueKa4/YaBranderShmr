@@ -1,16 +1,89 @@
+import type { Paint } from '@entities/editorDocument'
+import { Button, Input } from '@shared/ui'
+import { useTranslation } from 'react-i18next'
 import styles from '../Properties.module.css'
-import { PropertyField } from './PropertyField'
+import { FillProperty } from './FillProperty'
 
 interface StrokePropertyProps {
-  stroke?: string
+  onAdd: () => void
+  onColorChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
+  onRemove: () => void
+  onWidthChange: (strokeWidth: number) => void
+  stroke: Paint
+  strokeWidth: number
 }
 
-export function StrokeProperty({ stroke }: StrokePropertyProps) {
+function getFiniteNumber(value: string): number | null {
+  const number = Number(value)
+
+  return Number.isFinite(number) ? number : null
+}
+
+export function StrokeProperty({
+  onAdd,
+  onColorChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
+  onRemove,
+  onWidthChange,
+  stroke,
+  strokeWidth,
+}: StrokePropertyProps) {
+  const { t } = useTranslation()
+  const color = stroke.type === 'color' ? stroke.value : '#000000'
+  const hasStroke = stroke.type !== 'none' && strokeWidth > 0
+
+  function handleWidthChange(value: string) {
+    if (value.trim() === '') {
+      return
+    }
+
+    const width = getFiniteNumber(value)
+
+    if (width !== null) {
+      onWidthChange(width)
+    }
+  }
+
+  if (!hasStroke) {
+    return (
+      <div className={styles.field}>
+        <span>{t('Stroke')}</span>
+        <Button onClick={onAdd} size="sm" variant="secondary">
+          {t('Add outline')}
+        </Button>
+      </div>
+    )
+  }
+
   return (
-    <PropertyField
-      label="Stroke"
-      labelClassName={styles.sectionTitle}
-      value={stroke ?? 'None'}
-    />
+    <>
+      <FillProperty
+        fill={color}
+        onFillChange={onColorChange}
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
+        title={t('Stroke')}
+      />
+      <div className={styles.fieldGrid}>
+        <div className={styles.field}>
+          <span>{t('Width')}</span>
+          <Input
+            min="0"
+            onChange={(event) => handleWidthChange(event.target.value)}
+            type="number"
+            value={strokeWidth}
+          />
+        </div>
+        <div className={styles.field}>
+          <span>{t('Outline')}</span>
+          <Button onClick={onRemove} size="sm" variant="secondary">
+            {t('Remove')}
+          </Button>
+        </div>
+      </div>
+    </>
   )
 }

@@ -17,6 +17,7 @@ struct SVGWebView: UIViewRepresentable {
         webView.scrollView.isScrollEnabled = false
         webView.isUserInteractionEnabled = false
         webView.navigationDelegate = context.coordinator
+        context.coordinator.loadedSVG = nil
         return webView
     }
 

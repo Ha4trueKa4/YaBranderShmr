@@ -1,6 +1,7 @@
 import { getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import styles from './ProfileHeader.module.css'
 
@@ -27,6 +28,8 @@ export function ProfileHeader({
   onProjectsClick,
   profile,
 }: ProfileHeaderProps) {
+  const { t } = useTranslation()
+
   return (
     <section className={styles.profile}>
       <div className={styles.cover} />
@@ -36,8 +39,8 @@ export function ProfileHeader({
           initials={getAvatarInitials(profile.name)}
         />
         <div className={styles.identity}>
-          <h1>{profile.name}</h1>
-          <p className={styles.username}>@{profile.username}</p>
+          <h1 className={styles.username}>@{profile.name}</h1>
+          {/*<p className={styles.username}>@{profile.username}</p>*/}
           {/* <p className={styles.bio}>{profile.bio}</p> */}
         </div>
         <div className={styles.actions}>
@@ -48,7 +51,7 @@ export function ProfileHeader({
               onClick={onProjectsClick}
               variant={onFollowersClick ? 'ghost' : 'ghost'}
             >
-              {profile.projectsCount} projects
+              {t('{{count}} projects', { count: profile.projectsCount })}
             </Button>
             <Button
               className={styles.statButton}
@@ -56,7 +59,7 @@ export function ProfileHeader({
               onClick={onFollowersClick}
               variant={onFollowersClick ? 'ghost' : 'ghost'}
             >
-              {profile.followersCount} followers
+              {t('{{count}} followers', { count: profile.followersCount })}
             </Button>
             <Button
               className={styles.statButton}
@@ -64,7 +67,7 @@ export function ProfileHeader({
               onClick={onFollowingClick}
               variant={onFollowersClick ? 'ghost' : 'ghost'}
             >
-              {profile.followingCount} following
+              {t('{{count}} following', { count: profile.followingCount })}
             </Button>
           </dl>
           {actions && <div className={styles.profileActions}>{actions}</div>}
