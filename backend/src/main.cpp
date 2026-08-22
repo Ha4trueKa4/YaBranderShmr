@@ -25,6 +25,7 @@
 #include "handlers/projects/generation/append_generation.hpp"
 #include "handlers/projects/versions/append_versions.hpp"
 
+
 #include "./handlers/users/append_users.hpp"
 #include "components/object_storage/s3_object_storage_component.hpp"
 #include "components/subscription_storage/subscription_storage_component.h"
@@ -36,6 +37,7 @@
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "handlers/test_vector_search/test_vector_search_handler.hpp"
 #include "components/garbage_collector/garbage_collector_component.hpp"
+
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();

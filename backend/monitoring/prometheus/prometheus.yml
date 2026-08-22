@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'ya_brander'
+    metrics_path: /service/monitor
+    params:
+      format: ['prometheus']
+    static_configs:
+      - targets: ['ya_brander-container:8085']

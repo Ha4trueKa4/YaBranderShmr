@@ -6,11 +6,17 @@ receivers:
       http:   # HTTP, default port 4318      # is unreachable from other containers on the docker network.
         endpoint: 0.0.0.0:4318
 
-  prometheus: # Scrapes userver's own /metrics (request rates, latencies, etc.) — ya_brander doesn't
+  prometheus: # Scrapes userver's own stats (request rates, latencies, etc.) — ya_brander doesn't
     config:   # push metrics itself, so we pull them here and forward into the metrics pipeline below.
       scrape_configs:
         - job_name: ya-brander
           scrape_interval: 30s
+          # handler-server-monitor sets no default format (shared with the local Grafana/Prometheus
+          # stack in monitoring/prometheus/prometheus.yml, which scrapes the same path+param), so it
+          # must be requested explicitly here too — see backend/configs/static_config.yaml.
+          metrics_path: /service/monitor
+          params:
+            format: [ 'prometheus' ]
           static_configs:
             - targets: [ '${env:YA_BRANDER_HOST}:8085' ]
 

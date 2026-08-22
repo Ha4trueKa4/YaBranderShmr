@@ -4,6 +4,10 @@ components_manager:
     main-task-processor: # Make a task processor for CPU-bound couroutine tasks.
       worker_threads: $worker-threads         # Process tasks in 4 threads.
 
+    monitor-task-processor: # для мониторинга
+      worker_threads: 2
+      thread_name: mon-worker
+
     fs-task-processor: # Make a separate task processor for filesystem bound tasks.
       worker_threads: $worker-fs-threads
 
@@ -22,10 +26,9 @@ components_manager:
       listener: # configuring the main listening socket...
         port: $server-port            # ...to listen on this port and...
         task_processor: main-task-processor    # ...process incoming requests on this task processor.
-      listener-monitor: # internal-only port for /metrics — never published to the host or internet,
+      listener-monitor: # internal-only diagnostics socket — never published to the host or internet,
         port: $monitor-port           # only reachable by other containers on the same docker network
-        task_processor: main-task-processor    # (e.g. the otel-collector scraping it for Monium).
-
+        task_processor: monitor-task-processor    # (local Grafana/Prometheus, and the otel-collector for Monium).
     cors-middleware:
       allowed-origins:
         - http://localhost:5173
@@ -82,11 +85,14 @@ components_manager:
       throttling_enabled: false
       url_trailing_slash: strict-match
 
-    handler-server-monitor: # Exposes userver's own metrics (request rates, latencies, etc.)
-      path: /metrics         # in Prometheus format, scraped by the otel-collector below and
-      method: GET            # forwarded to Monium's metrics pipeline. Served only on
-      task_processor: main-task-processor  # listener-monitor, not the public listener.
-      format: prometheus
+    # Exposes userver's own metrics (request rates, latencies, etc.) on the internal
+    # listener-monitor socket. No default 'format' is set, so every caller must pass
+    # ?format=... explicitly — see monitoring/prometheus/prometheus.yml (local Grafana)
+    # and otel/otel-collector.yaml (Monium), which both request format=prometheus.
+    handler-server-monitor:
+      path: /service/monitor
+      method: GET
+      task_processor: main-task-processor
 
     handler-check:
       path: /check
