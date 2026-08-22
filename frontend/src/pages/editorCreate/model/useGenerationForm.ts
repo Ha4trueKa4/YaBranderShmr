@@ -16,7 +16,8 @@ export function useGenerationForm({ onSubmit }: UseGenerationFormOptions) {
     description: z
       .string()
       .trim()
-      .min(1, t('Describe the identity you want to generate.')),
+      .min(1, t('Describe the identity you want to generate.'))
+      .max(1500, t('Prompt must not exceed 1500 characters.')),
     model: z.string(),
   })
   const form = useForm<GenerationFormValues>({

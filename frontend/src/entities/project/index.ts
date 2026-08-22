@@ -1,3 +1,4 @@
+export { deleteProject } from './api/deleteProject'
 export { getProjectSvg } from './api/getProjectSvg'
 export {
   projectQueryKey,

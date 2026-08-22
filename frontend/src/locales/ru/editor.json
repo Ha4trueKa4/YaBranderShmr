@@ -11,6 +11,7 @@
   "Create customized vectors, logos, and high-fidelity marks instantly.": "Мгновенно создавайте векторные изображения, логотипы и детализированные знаки.",
   "Creating your identity…": "Создаём ваш образ…",
   "Describe the identity you want to generate.": "Опишите образ, который хотите создать.",
+  "Prompt must not exceed 1500 characters.": "Запрос не должен превышать 1500 символов.",
   "Element properties": "Свойства элемента",
   "Ellipse": "Эллипс",
   "Export image": "Экспорт изображения",
