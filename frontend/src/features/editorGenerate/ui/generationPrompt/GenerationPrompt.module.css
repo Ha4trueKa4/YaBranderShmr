@@ -117,6 +117,10 @@
     grid-template-columns: 1fr;
   }
 
+  .textarea {
+    padding-left: var(--space-3);
+  }
+
   .actionControls > * {
     width: 100%;
   }
