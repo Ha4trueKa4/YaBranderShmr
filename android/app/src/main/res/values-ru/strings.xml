@@ -135,6 +135,12 @@
     <string name="public_project_following">Вы подписаны</string>
     <string name="public_project_download_png">Скачать PNG</string>
     <string name="public_project_download_svg">Скачать SVG</string>
+    <string name="public_project_download_saved">%1$s сохранён в «Загрузки»</string>
+    <string name="public_project_download_saved_gallery">%1$s сохранён в галерею</string>
+    <string name="public_project_download_failed">Не удалось сохранить %1$s</string>
+    <string name="public_project_download_empty">Пока нечего выгружать</string>
+    <string name="export_format_png">PNG</string>
+    <string name="export_format_svg">SVG</string>
     <string name="public_project_related_title">Ещё от этого автора</string>
     <string name="public_project_error_title">Не удалось загрузить проект</string>
     <string name="public_project_error_retry">Повторить</string>
