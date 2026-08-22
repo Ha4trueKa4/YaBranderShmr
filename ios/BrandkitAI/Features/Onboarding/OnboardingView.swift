@@ -77,7 +77,6 @@ struct OnboardingView: View {
                 return
             }
         }
-        .preferredColorScheme(.dark)
     }
     
     var logoPage: some View {
@@ -113,6 +112,7 @@ struct OnboardingView: View {
                 }
             }
         }
+        .colorScheme(.dark)
         .padding(.top, 16)
     }
     
@@ -227,9 +227,9 @@ private struct OnboardingGradientBackground: View {
             Color(.background)
             RadialGradient(
                 stops: [
-                    .init(color: .clear, location: 0),
+                    .init(color: .endGradient, location: 0),
                     .init(color: .startGradient, location: gradientStopLocation),
-                    .init(color: .clear, location: 1),
+                    .init(color: .endGradient, location: 1),
                 ],
                 center: .center,
                 startRadius: 0,
