@@ -3,12 +3,15 @@
 #include <userver/clients/http/component_core.hpp>
 #include <userver/clients/http/middlewares/pipeline_component.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
+#include <userver/otlp/logs/component.hpp>
 #include <userver/server/handlers/ping.hpp>
+#include <userver/server/handlers/server_monitor.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/server/middlewares/cors.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
-#include <userver/server/handlers/server_monitor.hpp>
+#include <userver/ugrpc/client/client_factory_component.hpp>
+#include <userver/ugrpc/client/component_list.hpp>
 #include <userver/utils/daemon_run.hpp>
 #include "./components/auth_checker.hpp"
 #include "./handlers/auth/login_handler.hpp"
@@ -42,6 +45,7 @@ int main(int argc, char* argv[]) {
     auto component_list =
         userver::components::MinimalServerComponentList()
             .Append<userver::server::handlers::Ping>()
+            .Append<userver::server::handlers::ServerMonitor>()
             .Append<userver::components::TestsuiteSupport>()
             .Append<userver::components::HttpClient>()
             .Append<userver::components::HttpClientCore>()
@@ -57,6 +61,10 @@ int main(int argc, char* argv[]) {
             .Append<userver::components::Postgres>("postgres-db-1")
             .Append<userver::clients::dns::Component>()
             .Append<userver::server::middlewares::CorsFactory>()
+            // --- Monium telemetry (OTLP логи + трейсы) ---
+            .Append<userver::ugrpc::client::ClientFactoryComponent>()
+            .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
+            .Append<userver::otlp::LoggerComponent>()
             .Append<ya_brander::handlers::TestVectorSearchHandler>()
             .Append<ya_brander::TestPolisherHandler>()
             .Append<ya_brander::handlers::GetFeedHandler>()
@@ -65,8 +73,7 @@ int main(int argc, char* argv[]) {
             .Append<ya_brander::components::VersionStorageComponentImpl>()
             .Append<ya_brander::components::PromptPolisherComponent>()
 			.Append<ya_brander::components::SubscriptionStorageComponent>()
-            .Append<ya_brander::components::GarbageCollectorComponent>()
-            .Append<userver::server::handlers::ServerMonitor>();
+            .Append<ya_brander::components::GarbageCollectorComponent>();
 
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);

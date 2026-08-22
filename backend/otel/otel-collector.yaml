@@ -1,0 +1,53 @@
+receivers:
+  otlp:       # Receives OTLP from ya_brander's otlp-logger (no TLS, no auth — internal network only)
+    protocols:
+      grpc:   # gRPC, default port 4317
+        endpoint: 0.0.0.0:4317   # explicit: newer collector versions default to 127.0.0.1, which
+      http:   # HTTP, default port 4318      # is unreachable from other containers on the docker network.
+        endpoint: 0.0.0.0:4318
+
+  prometheus: # Scrapes userver's own stats (request rates, latencies, etc.) — ya_brander doesn't
+    config:   # push metrics itself, so we pull them here and forward into the metrics pipeline below.
+      scrape_configs:
+        - job_name: ya-brander
+          scrape_interval: 30s
+          # handler-server-monitor sets no default format (shared with the local Grafana/Prometheus
+          # stack in monitoring/prometheus/prometheus.yml, which scrapes the same path+param), so it
+          # must be requested explicitly here too — see backend/configs/static_config.yaml.
+          metrics_path: /service/monitor
+          params:
+            format: [ 'prometheus' ]
+          static_configs:
+            - targets: [ '${env:YA_BRANDER_HOST}:8085' ]
+
+processors:
+  cumulative_to_delta:
+  batch:
+
+extensions:
+  health_check:  # Exposes GET /health on 13133 once all pipelines are up — used by the
+    endpoint: 0.0.0.0:13133  # deploy script / compose to gate ya-brander's startup on collector readiness.
+
+exporters:    # Forwarding to Monium
+  otlp_grpc/monium:
+    compression: zstd
+    endpoint: ingest.monium.yandex.cloud:443
+    headers:
+      Authorization: "Api-Key ${env:MONIUM_API_KEY}"
+      x-monium-project: "${env:MONIUM_PROJECT}"
+
+service:
+  extensions: [ health_check ]
+  pipelines:
+    metrics:
+      receivers: [ otlp, prometheus ]
+      processors: [ batch, cumulative_to_delta ]
+      exporters: [ otlp_grpc/monium ]
+    traces:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp_grpc/monium ]
+    logs:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp_grpc/monium ]

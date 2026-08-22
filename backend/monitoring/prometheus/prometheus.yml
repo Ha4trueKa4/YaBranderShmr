@@ -8,4 +8,4 @@ scrape_configs:
     params:
       format: ['prometheus']
     static_configs:
-      - targets: ['ya_brander-container:1188']
+      - targets: ['ya_brander-container:8085']
