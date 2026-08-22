@@ -15,6 +15,7 @@ namespace {
 // SaveVersion) — защита bg-task-processor и внешних зависимостей (LLM API,
 // S3) от всплеска параллельных запросов.
 constexpr std::size_t kMaxConcurrentGenerations = 8;
+constexpr std::size_t kMaxGenerationOutputTokens = 20000;
 
 std::string EscapeXml(const std::string& input) {
     std::string output;
@@ -212,7 +213,8 @@ std::string ProjectManagerComponent::RunGeneration(const std::string& project_id
 		std::string safe_prompt = EscapeXml(polished_prompt_text);
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
     }
-    auto new_data = llm_client_.SendPrompt(full_prompt, 10000, model, 0.1);
+    auto new_data = llm_client_.SendPrompt(
+        full_prompt, kMaxGenerationOutputTokens, model, 0.1);
     return version_storage_.SaveVersion(project_id, new_data);
 }
 
