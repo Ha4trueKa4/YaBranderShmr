@@ -89,6 +89,8 @@ workflows:
               S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
               S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
               GC_ENABLED: ${{ secrets.GC_ENABLED }}
+              REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+              OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   deploy-frontend-dev:
     tasks:
