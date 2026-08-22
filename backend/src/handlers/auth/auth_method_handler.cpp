@@ -8,7 +8,10 @@
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::auth {
 
@@ -26,9 +29,11 @@ userver::formats::json::Value AuthMethodHandler::HandleRequestJsonThrow(
     userver::server::request::RequestContext& context) const {
     const auto& user_id = context.GetData<std::string>("user_id");
 
-    const auto result = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT password_hash, provider FROM users WHERE id = $1::uuid", user_id);
+    const auto result = utils::ExecuteSelectWithRetry("select-auth-method", [&] {
+        return pg_cluster_->Execute(
+            userver::storages::postgres::ClusterHostType::kSlave,
+            sql::kSelectAuthMethod, user_id);
+    });
 
     if (result.IsEmpty()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);

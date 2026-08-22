@@ -222,8 +222,8 @@ std::size_t VersionStorageComponentImpl::CollectGarbage(
   // Транзакционный advisory-lock не даёт двум инстансам запускать GC вместе.
   auto lock_txn =
       pg_cluster_->Begin(pg::ClusterHostType::kMaster, pg::Transaction::RW);
-  const auto lock_res = lock_txn.Execute(
-      "SELECT pg_try_advisory_xact_lock($1::bigint)", kGcAdvisoryLockKey);
+  const auto lock_res =
+      lock_txn.Execute(sql::kTryLockGarbageCollection, kGcAdvisoryLockKey);
   if (!lock_res[0][0].As<bool>()) {
     LOG_WARNING()
         << "CollectGarbage: another instance is already running GC, skipping.";
@@ -241,13 +241,8 @@ std::size_t VersionStorageComponentImpl::CollectGarbage(
   {
     const auto res = utils::ExecuteSelectWithRetry(
         "select-referenced-version-keys", [&] {
-          return pg_cluster_->Execute(
-              pg::ClusterHostType::kSlave,
-              "SELECT s3_file_key AS k FROM project_versions "
-              "WHERE s3_file_key IS NOT NULL "
-              "UNION "
-              "SELECT last_version_key AS k FROM projects WHERE "
-              "last_version_key IS NOT NULL");
+          return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                      sql::kSelectReferencedVersionKeys);
         });
     referenced.reserve(res.Size());
     for (const auto& row : res) {

@@ -193,9 +193,7 @@ void ProjectManagerComponent::AppendAssistantError(const std::string& project_id
 void ProjectManagerComponent::AppendAssistantCancelled(const std::string& project_id, const std::string& job_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'status', 'cancelled', 'job_id', $2::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantCancelled,
         project_id, job_id);
 }
 
