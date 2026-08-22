@@ -135,6 +135,7 @@ void ProjectManagerComponent::UpdateProject(
 
 namespace {
 constexpr std::size_t kHistoryPromptLimit = 10;
+constexpr std::size_t kMaxReferenceProjects = 2;
 }  // namespace
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
@@ -251,7 +252,28 @@ userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std:
     return result.ExtractValue();
 }
 
-std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
+    const std::string& caller_id,
+    const std::vector<std::string>& reference_project_ids) {
+    std::vector<std::string> result;
+    for (const auto& ref_id : reference_project_ids) {
+        if (result.size() >= kMaxReferenceProjects) break;
+
+        auto ref_project = GetProject(ref_id);
+        if (!ref_project) continue;  // не существует
+        if (!ref_project->is_public && ref_project->author_id != caller_id) continue;  // нет доступа
+
+        std::string svg = version_storage_.GetLatestVersionData(ref_id);
+        if (svg.empty() || svg == kDefaultSvg) continue;  // у референса нет реального контента
+
+        result.push_back(std::move(svg));
+    }
+    return result;
+}
+
+std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt,
+                                                    const std::string& model, const std::string& caller_id,
+                                                    const std::vector<std::string>& reference_project_ids) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
 
     std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
@@ -263,7 +285,8 @@ std::string ProjectManagerComponent::RunGeneration(const std::string& project_id
     if (current_state.empty() || current_state == kDefaultSvg) {
 		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
 		std::string safe_prompt = EscapeXml(polished_prompt_text);
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
+        auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history, reference_svgs);
     }else {
 		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
 		std::string safe_prompt = EscapeXml(polished_prompt_text);
@@ -304,7 +327,9 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
     }
 }
 
-std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt,
+                                                     const std::string& model, const std::string& caller_id,
+                                                     const std::vector<std::string>& reference_project_ids) {
     std::string job_id = userver::utils::generators::GenerateUuid();
     auto entry = std::make_shared<JobEntry>();
     entry->project_id = project_id;
@@ -337,7 +362,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         throw;
     }
 
-    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, job_id, entry] {
+    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
         // Токен для внешней отмены (CancelGeneration) регистрируем сразу же,
         // в самом начале корутины — до захвата семафора, чтобы отмена
         // работала, даже пока job ещё стоит в очереди на генерацию.
@@ -349,7 +374,8 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
             }
         }
 
-        // Статус job'а зависит только от того, чем закончилась сама
+
+		// Статус job'а зависит только от того, чем закончилась сама
         // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
         // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
         // статус уже определён и разослан ожидающим в WaitForGeneration: её
@@ -360,7 +386,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         std::string error_message;
         try {
             std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model);
+            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
             outcome = JobStatus::kDone;
         } catch (const std::exception& e) {
             bool was_cancelled;

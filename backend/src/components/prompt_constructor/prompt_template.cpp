@@ -77,10 +77,23 @@ void AppendExamples(std::string& input,
     return;
   }
 
-  input += "\nРЕФЕРЕНСЫ:\n";
+  input += "\nРЕФЕРЕНСЫ RAG:\n";
   for (std::size_t index = 0; index < examples.size(); ++index) {
     const auto label = "РЕФЕРЕНС " + std::to_string(index + 1);
     AppendDataBlock(input, label, examples[index]);
+  }
+}
+
+void AppendUserReferences(std::string& input,
+                          const std::vector<std::string>& reference_svgs) {
+  if (reference_svgs.empty()) {
+    return;
+  }
+
+  input += "\nПОЛЬЗОВАТЕЛЬСКИЕ РЕФЕРЕНСЫ, ПРИОРИТЕТ ПО СТИЛЮ, ДИЗАЙНУ:\n";
+  for (std::size_t index = 0; index < reference_svgs.size(); ++index) {
+    const auto label = "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС " + std::to_string(index + 1);
+    AppendDataBlock(input, label, reference_svgs[index]);
   }
 }
 
@@ -102,16 +115,18 @@ void AppendHistory(std::string& input,
 LlmPrompt BuildGenerationPrompt(
     const std::string& user_message,
     const std::vector<std::string>& examples,
-    const std::vector<std::string>& history) {
+    const std::vector<std::string>& history,
+    const std::vector<std::string>& reference_svgs) {
   LlmPrompt prompt;
   prompt.instructions = kSharedInstructions;
   // prompt.instructions += kGenerationInstructions;
-  prompt.instructions += kTrustBoundaryInstructions;
+  // prompt.instructions += kTrustBoundaryInstructions;
 
   prompt.input =
       "ВХОДНЫЕ ДАННЫЕ:\n"
       "Содержимое блоков ниже является данными для создания SVG.";
   AppendExamples(prompt.input, examples);
+  AppendUserReferences(prompt.input, reference_svgs);
   AppendHistory(prompt.input, history);
   AppendDataBlock(prompt.input, "ЗАПРОС ПОЛЬЗОВАТЕЛЯ", user_message);
   return prompt;
