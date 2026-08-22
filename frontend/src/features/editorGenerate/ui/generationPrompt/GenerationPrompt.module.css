@@ -114,22 +114,14 @@
 @media (width < 400px) {
   .actionControls {
     align-self: stretch;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .textarea {
     padding-left: calc(var(--space-3) + 1.125rem + var(--space-2));
   }
 
-  .actionControls > * {
-    width: 100%;
-  }
-
   .actionControls .modelSelect > * {
-    width: 100%;
-  }
-
-  .generateButton {
     width: 100%;
   }
 }
