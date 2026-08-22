@@ -50,6 +50,7 @@ internal fun ProjectScreen(
         onRetry = viewModel::retry,
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::send,
+        onPreviewNeeded = viewModel::onPreviewNeeded,
         modifier = modifier,
     )
 }
@@ -70,6 +71,7 @@ private fun ProjectContent(
     onRetry: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onPreviewNeeded: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -109,6 +111,7 @@ private fun ProjectContent(
             is ProjectUiState.Content -> {
                 ChatTimeline(
                     messages = uiState.messages,
+                    onPreviewNeeded = onPreviewNeeded,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -155,6 +158,7 @@ private fun ProjectScreenContentPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
         )
     }
 }
@@ -174,6 +178,7 @@ private fun ProjectScreenEmptyChatPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
         )
     }
 }
@@ -188,6 +193,7 @@ private fun ProjectScreenLoadingPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
         )
     }
 }
@@ -202,6 +208,7 @@ private fun ProjectScreenErrorPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
         )
     }
 }

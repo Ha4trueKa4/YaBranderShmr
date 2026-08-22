@@ -30,10 +30,15 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  *
  * Открывается сразу на последнем сообщении; при появлении нового сообщения
  * прокручивается к нему с анимацией.
+ *
+ * @param onPreviewNeeded вызывается, когда пузырь ответа ИИ без картинки дошёл
+ *  до экрана: ссылку на превью прошлой версии запрашивают по требованию, а не
+ *  пачкой при открытии. Повторные вызовы по одной версии отсекает ViewModel.
  */
 @Composable
 internal fun ChatTimeline(
     messages: List<ChatMessage>,
+    onPreviewNeeded: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -68,17 +73,22 @@ internal fun ChatTimeline(
                 }
 
                 // Своего текста у ответа ИИ нет — в истории лежит только версия.
-                is ChatMessage.Incoming -> Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                ) {
-                    BrandChatBubble(
-                        text = stringResource(R.string.project_assistant_message),
-                        isOutgoing = false,
-                        imageUrl = message.previewUrl,
-                        imageCacheKey = message.versionId,
-                        timeLabel = rememberMessageTimeLabel(message.sentAt),
-                    )
+                is ChatMessage.Incoming -> {
+                    if (message.previewUrl == null) {
+                        LaunchedEffect(message.versionId) { onPreviewNeeded(message.versionId) }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                    ) {
+                        BrandChatBubble(
+                            text = stringResource(R.string.project_assistant_message),
+                            isOutgoing = false,
+                            imageUrl = message.previewUrl,
+                            imageCacheKey = message.versionId,
+                            timeLabel = rememberMessageTimeLabel(message.sentAt),
+                        )
+                    }
                 }
 
                 is ChatMessage.System.ProjectCreated -> Row(
@@ -100,6 +110,6 @@ internal fun ChatTimeline(
 @Composable
 private fun ChatTimelinePreview() {
     AvatarGeneratorTheme {
-        ChatTimeline(messages = MockChatRepository.defaultMessages())
+        ChatTimeline(messages = MockChatRepository.defaultMessages(), onPreviewNeeded = {})
     }
 }

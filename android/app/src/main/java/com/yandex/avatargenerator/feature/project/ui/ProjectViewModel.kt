@@ -8,7 +8,6 @@ import com.yandex.avatargenerator.feature.project.domain.ChatRepository
 import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +27,8 @@ import java.util.UUID
  *
  * Превью прошлых версий догружаются отдельно через [VersionsRepository]: история
  * чата отдаёт только `version_id`, а ссылка на картинку у каждой версии своя и
- * запрашивается по одной (`GET /projects/{id}/versions/{versionId}`).
+ * запрашивается по одной (`GET /projects/{id}/versions/{versionId}`) — и только
+ * для тех пузырей, которые дошли до экрана (см. [onPreviewNeeded]).
  */
 internal class ProjectViewModel(
     private val chatRepository: ChatRepository,
@@ -48,7 +48,12 @@ internal class ProjectViewModel(
      */
     private val previewUrls = mutableMapOf<String, String>()
 
-    private var previewJob: Job? = null
+    /**
+     * Версии, за ссылкой на которые уже ходили — успешно или нет. Пузырь в
+     * `LazyColumn` пересоздаётся на каждом заходе в зону видимости, и без этого
+     * набора прокрутка ленты вверх-вниз слала бы запрос за запросом.
+     */
+    private val requestedVersions = mutableSetOf<String>()
 
     init {
         load()
@@ -186,37 +191,27 @@ internal class ProjectViewModel(
                 isSending = false,
             )
         }
-        loadMissingPreviews()
     }
 
     /**
-     * Догружает превью версий, которых нет в [previewUrls].
+     * Пузырь версии [versionId] появился на экране — при первом показе идём за
+     * ссылкой на превью.
      *
      * История чата отдаёт только `version_id`, а ссылку на картинку сервер
      * прикладывает лишь к последней версии — у остальных пузырей она пустая, и
      * без этой догрузки в ленте была бы видна одна последняя картинка.
      *
-     * Грузим фоном и параллельно, дорисовывая каждый пузырь по мере ответа:
-     * лента открывается сразу, а не ждёт все запросы. Ошибку версии глотаем —
-     * пузырь просто останется без картинки, рушить из-за этого экран незачем.
+     * Ходим по требованию, а не пачкой при открытии экрана: у долгого проекта
+     * это были бы десятки запросов разом ради картинок, которых пользователь
+     * может и не пролистать. Повторно по той же версии не ходим — ни при
+     * возврате пузыря в зону видимости, ни после ошибки: пузырь просто
+     * останется без картинки, рушить из-за этого экран незачем.
      */
-    private fun loadMissingPreviews() {
-        val content = _uiState.value as? ProjectUiState.Content ?: return
-        val missing = content.messages
-            .filterIsInstance<ChatMessage.Incoming>()
-            .filter { it.previewUrl == null }
-            .map { it.versionId }
-            .distinct()
-        if (missing.isEmpty()) return
-
-        previewJob?.cancel()
-        previewJob = viewModelScope.launch {
-            missing.forEach { versionId ->
-                launch {
-                    versionsRepository.getVersionUrl(projectId, versionId)
-                        .onSuccess { url -> applyPreview(versionId, url) }
-                }
-            }
+    fun onPreviewNeeded(versionId: String) {
+        if (versionId in previewUrls || !requestedVersions.add(versionId)) return
+        viewModelScope.launch {
+            versionsRepository.getVersionUrl(projectId, versionId)
+                .onSuccess { url -> applyPreview(versionId, url) }
         }
     }
 
@@ -273,7 +268,6 @@ internal class ProjectViewModel(
                 },
                 onFailure = { ProjectUiState.Error },
             )
-            loadMissingPreviews()
         }
     }
 }

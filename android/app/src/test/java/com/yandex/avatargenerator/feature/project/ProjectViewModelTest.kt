@@ -393,30 +393,76 @@ internal class ProjectViewModelTest {
     }
 
     @Test
-    fun `превью прошлых версий догружаются, а не только последней`() = runTest(dispatcher) {
-        // Сервер отдаёт ссылку лишь к последней версии — остальные пузыри без
-        // догрузки остались бы без картинки.
+    fun `превью прошлой версии догружается, когда её пузырь дошёл до экрана`() =
+        runTest(dispatcher) {
+            // Сервер отдаёт ссылку лишь к последней версии — остальные пузыри без
+            // догрузки остались бы без картинки.
+            chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
+            versionsRepository.urls["v-1"] = OLD_URL
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.onPreviewNeeded("v-1")
+            advanceUntilIdle()
+
+            val previews = contentOf(viewModel).messages
+                .filterIsInstance<ChatMessage.Incoming>()
+                .associate { it.versionId to it.previewUrl }
+            assertEquals(mapOf("v-1" to OLD_URL, "v-2" to LATEST_URL), previews)
+        }
+
+    @Test
+    fun `без показа пузыря за ссылкой не ходим`() = runTest(dispatcher) {
+        // Открытие экрана не должно стоить запроса на каждую версию в истории.
+        chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
+        versionsRepository.urls["v-1"] = OLD_URL
+
+        viewModel()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), versionsRepository.requestedVersionIds)
+    }
+
+    @Test
+    fun `повторный показ пузыря не шлёт второй запрос`() = runTest(dispatcher) {
+        // Пузырь в LazyColumn пересоздаётся на каждом заходе в зону видимости.
         chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
         versionsRepository.urls["v-1"] = OLD_URL
         val viewModel = viewModel()
-
         advanceUntilIdle()
 
-        val previews = contentOf(viewModel).messages
-            .filterIsInstance<ChatMessage.Incoming>()
-            .associate { it.versionId to it.previewUrl }
-        assertEquals(mapOf("v-1" to OLD_URL, "v-2" to LATEST_URL), previews)
-        // За готовой ссылкой последней версии второй раз не ходим.
+        viewModel.onPreviewNeeded("v-1")
+        advanceUntilIdle()
+        viewModel.onPreviewNeeded("v-1")
+        advanceUntilIdle()
+
         assertEquals(listOf("v-1"), versionsRepository.requestedVersionIds)
     }
 
     @Test
-    fun `упавшая догрузка превью не ломает ленту`() = runTest(dispatcher) {
+    fun `за готовой ссылкой последней версии второй раз не ходим`() = runTest(dispatcher) {
+        // Ссылку к v-2 сервер прислал сам вместе с историей.
+        chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onPreviewNeeded("v-2")
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), versionsRepository.requestedVersionIds)
+    }
+
+    @Test
+    fun `упавшая догрузка превью не ломает ленту и не повторяется`() = runTest(dispatcher) {
         // Ссылки для v-1 у репозитория нет — пузырь останется без картинки, но
         // экран должен жить дальше.
         chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
         val viewModel = viewModel()
+        advanceUntilIdle()
 
+        viewModel.onPreviewNeeded("v-1")
+        advanceUntilIdle()
+        viewModel.onPreviewNeeded("v-1")
         advanceUntilIdle()
 
         val content = contentOf(viewModel)
@@ -427,6 +473,7 @@ internal class ProjectViewModelTest {
                 .first { it.versionId == "v-1" }
                 .previewUrl,
         )
+        assertEquals(listOf("v-1"), versionsRepository.requestedVersionIds)
     }
 
     @Test
@@ -436,6 +483,8 @@ internal class ProjectViewModelTest {
         chatRepository.chatResult = Result.success(chat.copy(messages = twoAnswers))
         versionsRepository.urls["v-1"] = OLD_URL
         val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onPreviewNeeded("v-1")
         advanceUntilIdle()
 
         viewModel.onDraftChange("Make it rounder")
