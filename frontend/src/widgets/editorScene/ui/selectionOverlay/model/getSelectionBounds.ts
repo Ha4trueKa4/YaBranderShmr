@@ -85,11 +85,17 @@ export function getSelectionOutline(
 
   return [
     new DOMPoint(boundingBox.x - padding, boundingBox.y - padding),
-    new DOMPoint(boundingBox.x + boundingBox.width + padding, boundingBox.y - padding),
+    new DOMPoint(
+      boundingBox.x + boundingBox.width + padding,
+      boundingBox.y - padding,
+    ),
     new DOMPoint(
       boundingBox.x + boundingBox.width + padding,
       boundingBox.y + boundingBox.height + padding,
     ),
-    new DOMPoint(boundingBox.x - padding, boundingBox.y + boundingBox.height + padding),
+    new DOMPoint(
+      boundingBox.x - padding,
+      boundingBox.y + boundingBox.height + padding,
+    ),
   ].map((point) => toSvgPoint(point, elementMatrix, svgMatrixInverse))
 }

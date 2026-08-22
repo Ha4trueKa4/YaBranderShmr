@@ -29,13 +29,16 @@ interface InspectorPanelProps {
   onShapeStrokeColorChange: (nodeId: string, color: string) => void
   onShapeStrokeRemove: (nodeId: string) => void
   onShapeStrokeWidthChange: (nodeId: string, strokeWidth: number) => void
-  onShapeTransformChange: (nodeId: string, transform: {
-    rotationCenter?: { x: number; y: number }
-    scaleX: number
-    scaleY: number
-    x: number
-    y: number
-  }) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
   onTextAnchorChange: (
     nodeId: string,
     textAnchor: 'end' | 'middle' | 'start',
@@ -55,13 +58,16 @@ interface InspectorPanelProps {
     rotation: number,
     rotationCenter: { x: number; y: number },
   ) => void
-  onTextTransformChange: (nodeId: string, transform: {
-    rotationCenter?: { x: number; y: number }
-    scaleX: number
-    scaleY: number
-    x: number
-    y: number
-  }) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
   selectedNode: EditorNode | null
   showHeader?: boolean
 }

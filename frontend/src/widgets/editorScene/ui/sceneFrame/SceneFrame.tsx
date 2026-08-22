@@ -145,10 +145,7 @@ export function SceneFrame({
     [],
   )
   useLayoutEffect(() => {
-    if (
-      selectedNode?.type !== 'shape' &&
-      selectedNode?.type !== 'text'
-    ) {
+    if (selectedNode?.type !== 'shape' && selectedNode?.type !== 'text') {
       onMeasuredRotationCenterChange(null)
 
       return

@@ -19,8 +19,7 @@ export function Range({
   const rangeValue = Math.min(Math.max(value, Number(min)), Number(max))
   const progress =
     ((rangeValue - Number(min)) / (Number(max) - Number(min))) * 100
-  const centerProgress =
-    ((0 - Number(min)) / (Number(max) - Number(min))) * 100
+  const centerProgress = ((0 - Number(min)) / (Number(max) - Number(min))) * 100
   const trackBackground = centered
     ? progress <= centerProgress
       ? `linear-gradient(to right, var(--color-border) 0 ${progress}%, var(--color-accent-primary) ${progress}% ${centerProgress}%, var(--color-border) ${centerProgress}% 100%)`
