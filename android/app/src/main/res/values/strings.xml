@@ -131,6 +131,12 @@
     <string name="public_project_following">Following</string>
     <string name="public_project_download_png">Download PNG</string>
     <string name="public_project_download_svg">Download SVG</string>
+    <string name="public_project_download_saved">%1$s saved to Downloads</string>
+    <string name="public_project_download_saved_gallery">%1$s saved to gallery</string>
+    <string name="public_project_download_failed">Couldn\'t save %1$s</string>
+    <string name="public_project_download_empty">Nothing to export yet</string>
+    <string name="export_format_png">PNG</string>
+    <string name="export_format_svg">SVG</string>
     <string name="public_project_related_title">More from this creator</string>
     <string name="public_project_error_title">Couldn\'t load project</string>
     <string name="public_project_error_retry">Retry</string>

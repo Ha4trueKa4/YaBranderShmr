@@ -1,5 +1,7 @@
 package com.yandex.avatargenerator.feature.project.ui
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +25,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.project.data.MockPublicProjectRepository
+import com.yandex.avatargenerator.feature.project.domain.model.ExportFormat
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProject
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectAuthor
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectRelatedItem
@@ -103,6 +108,14 @@ internal fun PublicProjectScreen(
     viewModel: PublicProjectViewModel = koinViewModel { parametersOf(projectId) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Тост с результатом выгрузки. Событие одноразовое (Channel во ViewModel).
+    LaunchedEffect(viewModel) {
+        viewModel.exportEvents.collect { event ->
+            Toast.makeText(context, event.message(context), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     when (val state = uiState) {
         PublicProjectUiState.Loading -> PublicProjectCenteredBox(modifier) {
@@ -121,14 +134,37 @@ internal fun PublicProjectScreen(
             project = state.project,
             onAuthorClick = { onAuthorClick(state.project.author.id) },
             onFollowClick = viewModel::toggleFollow,
-            // TODO: экспорт PNG/SVG — пробросить в редактор/бэкенд, когда появится.
-            onDownloadPngClick = { },
-            onDownloadSvgClick = { },
+            onDownloadPngClick = { viewModel.export(ExportFormat.PNG) },
+            onDownloadSvgClick = { viewModel.export(ExportFormat.SVG) },
             onRelatedClick = onRelatedClick,
             modifier = modifier,
         )
     }
 }
+
+/** Текст тоста по результату выгрузки. Имя формата — из ресурсов, без литералов. */
+private fun ExportEvent.message(context: Context): String = when (this) {
+    is ExportEvent.Success -> {
+        // PNG уходит в галерею, SVG — в «Загрузки»; сообщение подсказывает, где искать.
+        val template = when (format) {
+            ExportFormat.PNG -> R.string.public_project_download_saved_gallery
+            ExportFormat.SVG -> R.string.public_project_download_saved
+        }
+        context.getString(template, context.getString(format.labelRes))
+    }
+
+    is ExportEvent.Failure ->
+        context.getString(R.string.public_project_download_failed, context.getString(format.labelRes))
+
+    ExportEvent.NothingToExport ->
+        context.getString(R.string.public_project_download_empty)
+}
+
+private val ExportFormat.labelRes: Int
+    get() = when (this) {
+        ExportFormat.PNG -> R.string.export_format_png
+        ExportFormat.SVG -> R.string.export_format_svg
+    }
 
 /**
  * Вёрстка экрана без ViewModel: проект приходит параметром. Так экран рисуется в
