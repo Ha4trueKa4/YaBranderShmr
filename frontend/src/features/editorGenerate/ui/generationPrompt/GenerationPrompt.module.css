@@ -56,10 +56,21 @@
 .actions {
   align-items: center;
   display: flex;
-  gap: var(--space-2);
-  justify-content: flex-end;
+  justify-content: space-between;
   min-width: 0;
   padding: var(--space-2) var(--space-3);
+}
+
+.characterCounter {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.actionControls {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .generateButton {
@@ -74,14 +85,14 @@
 }
 
 @media (width < 720px) {
-  .actions {
+  .actionControls {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
 @media (width < 400px) {
-  .actions {
+  .actionControls {
     grid-template-columns: 1fr;
   }
 
