@@ -19,7 +19,7 @@ namespace {
 
 /// @brief Счетик Prometheus: общее кол-во собранных S3 объектов с помощью GC.
 const userver::utils::statistics::MetricTag<userver::utils::statistics::RateCounter>
-    kGcOrphansReclaimedMetric{"gc.orphans_reclaimed_total"};
+    kGcOrphansReclaimedMetric{"gc_orphans_reclaimed_total"};
 
 }  // namespace
 
