@@ -90,7 +90,7 @@
   min-height: 1.125rem;
 }
 
-@media (width < 720px) {
+@media (width < 480px) {
   .actions {
     align-items: stretch;
     flex-direction: column;
