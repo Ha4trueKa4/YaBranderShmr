@@ -50,25 +50,27 @@ export const LayerNode = observer(function LayerNode({
 
   if (node.type === 'group') {
     return (
-      <g
-        fill={node.fill ? getPaintValue(node.fill) : undefined}
-        opacity={node.opacity}
-        transform={getTransformValue(node.transform)}
-      >
-        {node.children.map((child) => (
-          <LayerNode
-            key={child.id}
-            canMoveLayers={canMoveLayers}
-            node={child}
-            onSelectNode={onSelectNode}
-            onRawPointerDown={onRawPointerDown}
-            onShapePointerDown={onShapePointerDown}
-            onShapePointerMove={onShapePointerMove}
-            onShapePointerUp={onShapePointerUp}
-            onTextPointerDown={onTextPointerDown}
-            registerEditableElement={registerEditableElement}
-          />
-        ))}
+      <g ref={registerEditableElement(node.id)}>
+        <g
+          fill={node.fill ? getPaintValue(node.fill) : undefined}
+          opacity={node.opacity}
+          transform={getTransformValue(node.transform)}
+        >
+          {node.children.map((child) => (
+            <LayerNode
+              key={child.id}
+              canMoveLayers={canMoveLayers}
+              node={child}
+              onSelectNode={onSelectNode}
+              onRawPointerDown={onRawPointerDown}
+              onShapePointerDown={onShapePointerDown}
+              onShapePointerMove={onShapePointerMove}
+              onShapePointerUp={onShapePointerUp}
+              onTextPointerDown={onTextPointerDown}
+              registerEditableElement={registerEditableElement}
+            />
+          ))}
+        </g>
       </g>
     )
   }
@@ -83,10 +85,11 @@ export const LayerNode = observer(function LayerNode({
         onPointerUp={onShapePointerUp}
         ref={registerEditableElement(node.id)}
         style={{ cursor: canMoveLayers ? 'default' : 'inherit' }}
-        transform={getTransformValue(node.transform)}
       >
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: raw SVG is sanitized before import. */}
-        <g dangerouslySetInnerHTML={{ __html: node.rawSvg }} />
+        <g transform={getTransformValue(node.transform)}>
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: raw SVG is sanitized before import. */}
+          <g dangerouslySetInnerHTML={{ __html: node.rawSvg }} />
+        </g>
       </g>
     )
   }
