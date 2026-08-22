@@ -42,6 +42,12 @@ sealed class Destination(val route: String) {
     /** Свой профиль (вкладка). Зона команды «лента/профиль». */
     data object Profile : Destination("profile")
 
+    /**
+     * Настройки (тема, язык, аккаунт, разлогин). Открываются из шапки своего
+     * профиля; не вкладка, но нижнюю панель показывает (см. `BottomBarDetailRoutes`).
+     */
+    data object Settings : Destination("settings")
+
     /** Экран проекта (WebView-редактор + чат). Аргумент — id проекта. */
     data object Project : Destination("project/{$ARG_PROJECT_ID}") {
         fun createRoute(projectId: String): String = "project/${Uri.encode(projectId)}"

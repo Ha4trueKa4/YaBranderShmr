@@ -135,6 +135,43 @@ fun BrandSecondaryButton(
     }
 }
 
+/**
+ * Деструктивная (outline) кнопка — «Выйти» и подобные опасные действия: красный
+ * бордер и текст [AppColors.Error] с едва заметной красной заливкой.
+ *
+ * @param leadingIcon значок перед текстом; цвет наследуется от `contentColor`.
+ */
+@Composable
+fun BrandDestructiveButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    fullWidth: Boolean = false,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
+            .height(BrandButtonDefaults.Height),
+        shape = RoundedCornerShape(AppShape.l),
+        border = BorderStroke(1.5.dp, AppColors.Error),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = AppColors.Error.copy(alpha = 0.08f),
+            contentColor = AppColors.Error
+        ),
+        contentPadding = PaddingValues(horizontal = AppSpacing.l)
+    ) {
+        if (leadingIcon != null) {
+            leadingIcon()
+            Spacer(modifier = Modifier.width(AppSpacing.xs))
+        }
+        Text(text = text, color = AppColors.Error, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
 @Composable
 private fun BrandButtonsPreview() {
