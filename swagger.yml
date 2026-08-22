@@ -425,7 +425,81 @@ paths:
           description: Некорректный формат ID
         '404':
           description: Пользователь не найден
-
+  /users/{id}/subscribers/{subscriber_id}:
+    delete:
+      summary: Удалить подписчика из своего аккаунта
+      description: >
+        Позволяет авторизованному пользователю удалить конкретного подписчика
+        из списка своих подписчиков. Только владелец профиля может удалять
+        своих подписчиков — это эндпоинт для модерации аудитории.
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: >
+            Идентификатор владельца профиля. Сравнивается с UUID из JWT без
+            учёта регистра.
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: subscriber_id
+          in: path
+          required: true
+          description: Идентификатор пользователя, которого необходимо удалить из подписчиков
+          schema:
+            type: string
+            example: "987fcdeb-51a2-43d1-b789-123456789abc"
+      responses:
+        '200':
+          description: Подписчик успешно удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscriber removed successfully"
+        '400':
+          description: Некорректный формат ID пользователя или подписчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_UUID"
+                message: "Invalid user ID format"
+                field: "id"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: >
+            Попытка удалить подписчика из чужого профиля. Только владелец
+            аккаунта может управлять своими подписчиками.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Permission denied"
+        '404':
+          description: >
+            Подписка между указанными пользователями не существует. Сюда также
+            относится случай, когда subscriber_id не принадлежит существующему
+            пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscription not found"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/{id}/subscriptions:
     get:
       summary: Получить список всех подписок пользователя
