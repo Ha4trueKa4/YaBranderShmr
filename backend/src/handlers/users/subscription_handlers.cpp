@@ -76,4 +76,38 @@ userver::formats::json::Value UnsubscribeHandler::HandleRequestJsonThrow(
   return MakeMessage("Unsubscribed successfully");
 }
 
+DeleteSubscriberHandler::DeleteSubscriberHandler(
+    const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : HttpHandlerJsonBase(config, context),
+      pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1").GetCluster()) {}
+
+userver::formats::json::Value DeleteSubscriberHandler::HandleRequestJsonThrow(
+    const userver::server::http::HttpRequest& request,
+    const userver::formats::json::Value&,
+    userver::server::request::RequestContext& context) const {
+  const auto& auth_user_id = context.GetData<std::string>("user_id");
+
+  const auto& target_user_id = request.GetPathArg("id");              // пользователь, у которого удаляем подписчика
+  const auto& subscriber_id = request.GetPathArg("subscriber_id");    // кого удаляем из подписчиков
+
+  if (auth_user_id != target_user_id) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+    return MakeMessage("Permission denied");
+  }
+
+  // Удаляем подписку
+  try {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "DELETE FROM subscriptions WHERE subscriber_id = $1::uuid AND target_user_id = $2::uuid",
+        subscriber_id, target_user_id);
+  } catch (const userver::storages::postgres::ForeignKeyViolation&) {
+    request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
+    return MakeMessage("User not found");
+  }
+
+  return MakeMessage("Subscriber removed successfully");
+}
+
 }  // namespace ya_brander::handlers

@@ -293,6 +293,14 @@ components_manager:
         types:
           - jwt
 
+    handler-users-subscribers-delete:
+      path: /api/v1/users/{id}/subscribers/{subscriber_id}
+      method: DELETE
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
+
     handler-users-subscriptions-get:
       path: /api/v1/users/{id}/subscriptions
       method: GET
