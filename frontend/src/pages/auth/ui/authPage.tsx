@@ -16,8 +16,6 @@ import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
-import heroCanvas from '../assets/heroCanvas.svg'
-import heroLogoShape from '../assets/heroLogoShape.svg'
 import styles from './authPage.module.css'
 
 type AuthForm = 'login' | 'register'
@@ -98,7 +96,7 @@ export function AuthPage() {
         <ArrowLeft className={styles.backIcon} />
       </IconButton>
       <aside className={styles.promoPanel}>
-        <p className={styles.brandName}>{t('Brandkit AI')}</p>
+        <p className={styles.brandName}>{t('Ya Brander')}</p>
         <div className={styles.promoContent}>
           <h1 className={styles.promoTitle}>
             {t('Your next brand')}
@@ -112,8 +110,8 @@ export function AuthPage() {
           </p>
         </div>
         <div className={styles.brandPreview}>
-          <img alt="" className={styles.previewCanvas} src={heroCanvas} />
-          <img alt="" className={styles.previewMark} src={heroLogoShape} />
+          <div className={styles.previewCanvas} />
+          <div className={styles.previewMark} />
         </div>
       </aside>
       <section className={styles.formPanel}>
