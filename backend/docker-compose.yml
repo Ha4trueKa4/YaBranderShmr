@@ -125,6 +125,8 @@ services:
         condition: service_completed_successfully
       migrate-vector:
         condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
     networks:
       - postgres
       - default
