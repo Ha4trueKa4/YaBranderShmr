@@ -15,6 +15,7 @@
   --color-success: #22c55e;
   --color-error: #ef4444;
   --color-border: #27272a;
+  --color-card-border: var(--color-border);
   --color-focus: #06b6d4;
   --color-auth-panel: var(--color-surface);
   --color-auth-field: var(--color-surface-elevated);
@@ -154,6 +155,7 @@
   --color-success: #3f6b4f;
   --color-error: #a84335;
   --color-border: #b9895d;
+  --color-card-border: transparent;
   --color-focus: #7b4b22;
   --color-auth-panel: #fffaf3;
   --color-auth-field: #e8d1b6;
