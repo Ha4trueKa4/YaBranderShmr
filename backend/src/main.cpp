@@ -8,6 +8,7 @@
 #include <userver/server/middlewares/cors.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
+#include <userver/server/handlers/server_monitor.hpp>
 #include <userver/utils/daemon_run.hpp>
 #include "./components/auth_checker.hpp"
 #include "./handlers/auth/login_handler.hpp"
@@ -21,6 +22,7 @@
 #include "handlers/projects/generation/append_generation.hpp"
 #include "handlers/projects/versions/append_versions.hpp"
 
+
 #include "./handlers/users/append_users.hpp"
 #include "components/object_storage/s3_object_storage_component.hpp"
 #include "components/subscription_storage/subscription_storage_component.h"
@@ -32,6 +34,7 @@
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "handlers/test_vector_search/test_vector_search_handler.hpp"
 #include "components/garbage_collector/garbage_collector_component.hpp"
+
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
@@ -62,7 +65,8 @@ int main(int argc, char* argv[]) {
             .Append<ya_brander::components::VersionStorageComponentImpl>()
             .Append<ya_brander::components::PromptPolisherComponent>()
 			.Append<ya_brander::components::SubscriptionStorageComponent>()
-            .Append<ya_brander::components::GarbageCollectorComponent>();
+            .Append<ya_brander::components::GarbageCollectorComponent>()
+            .Append<userver::server::handlers::ServerMonitor>();
 
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);
