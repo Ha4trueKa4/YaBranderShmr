@@ -637,6 +637,11 @@ export const TransformHandles = observer(function TransformHandles({
           width={CORNER_HANDLE_SIZE}
           x={position.x}
           y={position.y}
+          transform={
+            selectedElement.transform.rotation === 0
+              ? undefined
+              : `rotate(${selectedElement.transform.rotation} ${position.x + CORNER_HANDLE_SIZE / 2} ${position.y + CORNER_HANDLE_SIZE / 2})`
+          }
         />
       ))}
       <g

@@ -3,6 +3,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefCallback,
   useCallback,
+  useLayoutEffect,
   useRef,
 } from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
@@ -13,6 +14,7 @@ import { useCanvasWheel } from '../../model/useCanvasWheel'
 import { useLayerDrag } from '../../model/useLayerDrag'
 import type { ViewportOffset } from '../../model/viewportOffset'
 import { LayerRenderer } from '../layerRenderer/LayerRenderer'
+import { getSelectionBounds } from '../selectionOverlay/model/getSelectionBounds'
 import { SelectionOverlay } from '../selectionOverlay/SelectionOverlay'
 import { TransformHandles } from '../transformHandles/TransformHandles'
 import styles from './SceneFrame.module.css'
@@ -26,6 +28,9 @@ interface SceneFrameProps {
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onMeasuredRotationCenterChange: (
+    center: { nodeId: string; x: number; y: number } | null,
+  ) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onShapeTransformChange: (
@@ -77,6 +82,7 @@ export function SceneFrame({
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onGroupPositionChange,
+  onMeasuredRotationCenterChange,
   onSelectNode,
   onShapePositionChange,
   onShapeTransformChange,
@@ -133,6 +139,28 @@ export function SceneFrame({
       },
     [],
   )
+  useLayoutEffect(() => {
+    if (
+      selectedNode?.type !== 'shape' &&
+      selectedNode?.type !== 'text'
+    ) {
+      onMeasuredRotationCenterChange(null)
+
+      return
+    }
+
+    const bounds = getSelectionBounds(getEditableElement(selectedNode.id))
+
+    if (!bounds) {
+      return
+    }
+
+    onMeasuredRotationCenterChange({
+      nodeId: selectedNode.id,
+      x: bounds.x + bounds.width / 2 - selectedNode.transform.x,
+      y: bounds.y + bounds.height / 2 - selectedNode.transform.y,
+    })
+  }, [getEditableElement, onMeasuredRotationCenterChange, selectedNode])
   const constrainOffset = useCallback(
     (offset: ViewportOffset, nextZoom = zoom) => {
       const frame = frameReference.current

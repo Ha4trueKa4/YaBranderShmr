@@ -48,6 +48,6 @@
   stroke: var(--color-accent-primary);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 1.4;
   vector-effect: non-scaling-stroke;
 }

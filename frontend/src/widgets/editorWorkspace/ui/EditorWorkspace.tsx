@@ -61,6 +61,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
+  const [measuredRotationCenter, setMeasuredRotationCenter] = useState<{
+    nodeId: string
+    x: number
+    y: number
+  } | null>(null)
   const {
     createCopy,
     hasUnsavedChanges,
@@ -157,6 +162,19 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     editorStore.selectNode(nodeId, isMultiSelect)
   }
 
+  const handleMeasuredRotationCenterChange = useCallback(
+    (nextCenter: { nodeId: string; x: number; y: number } | null) => {
+      setMeasuredRotationCenter((currentCenter) =>
+        currentCenter?.nodeId === nextCenter?.nodeId &&
+        currentCenter?.x === nextCenter?.x &&
+        currentCenter?.y === nextCenter?.y
+          ? currentCenter
+          : nextCenter,
+      )
+    },
+    [],
+  )
+
   const handleDeleteSelection = useCallback(() => {
     if (!editorStore.deleteSelectedNode()) {
       return false
@@ -193,15 +211,22 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   const inspectorProps = {
     definitions: editorStore.document.definitions,
+    measuredRotationCenter:
+      measuredRotationCenter &&
+      measuredRotationCenter.nodeId === editorStore.selectedNode?.id
+        ? { x: measuredRotationCenter.x, y: measuredRotationCenter.y }
+        : undefined,
     onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
     onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
     onShapeOpacityChange: editorStore.svgNodeEditing.setShapeOpacity,
     onShapePositionChange: editorStore.svgNodeEditing.setShapePosition,
+    onShapeRotationChange: editorStore.svgNodeEditing.setShapeRotation,
     onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
     onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
     onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
     onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
+    onShapeTransformChange: editorStore.svgNodeEditing.setShapeTransform,
     onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
     onTextContentChange: editorStore.svgNodeEditing.setTextContent,
     onTextFillColorChange: editorStore.svgNodeEditing.setTextFillColor,
@@ -210,6 +235,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
     onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
     onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
+    onTextRotationChange: editorStore.svgNodeEditing.setTextRotation,
+    onTextTransformChange: editorStore.svgNodeEditing.setTextTransform,
     selectedNode: editorStore.selectedNode,
   }
   const scene = (
@@ -222,6 +249,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onDocumentChangeEnd={editorStore.commitHistoryTransaction}
       onDocumentChangeStart={editorStore.beginHistoryTransaction}
       onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
+      onMeasuredRotationCenterChange={handleMeasuredRotationCenterChange}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
       onShapeRotationChange={editorStore.svgNodeEditing.setShapeRotation}

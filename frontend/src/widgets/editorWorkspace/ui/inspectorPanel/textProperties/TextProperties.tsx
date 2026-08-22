@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
+import { TransformProperties } from '../components/TransformProperties'
 import styles from '../Properties.module.css'
 
 const fontFamilies = [
@@ -19,6 +20,7 @@ const fontFamilies = [
 
 interface TextPropertiesProps {
   layer: EditorText
+  measuredRotationCenter?: { x: number; y: number }
   onAnchorChange: (textAnchor: 'end' | 'middle' | 'start') => void
   onContentChange: (text: string) => void
   onFillColorChange: (color: string) => void
@@ -27,6 +29,17 @@ interface TextPropertiesProps {
   onFontStyleChange: (fontStyle: 'italic' | 'normal') => void
   onFontWeightChange: (fontWeight: number) => void
   onPositionChange: (x: number, y: number) => void
+  onRotationChange: (
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
+  onTransformChange: (transform: {
+    rotationCenter?: { x: number; y: number }
+    scaleX: number
+    scaleY: number
+    x: number
+    y: number
+  }) => void
 }
 
 function getFiniteNumber(value: string): number | null {
@@ -37,6 +50,7 @@ function getFiniteNumber(value: string): number | null {
 
 export const TextProperties = observer(function TextProperties({
   layer,
+  measuredRotationCenter,
   onAnchorChange,
   onContentChange,
   onFillColorChange,
@@ -45,6 +59,8 @@ export const TextProperties = observer(function TextProperties({
   onFontStyleChange,
   onFontWeightChange,
   onPositionChange,
+  onRotationChange,
+  onTransformChange,
 }: TextPropertiesProps) {
   const { t } = useTranslation()
   const fill =
@@ -100,6 +116,12 @@ export const TextProperties = observer(function TextProperties({
           />
         </div>
       </div>
+      <TransformProperties
+        layer={layer}
+        measuredRotationCenter={measuredRotationCenter}
+        onRotationChange={onRotationChange}
+        onTransformChange={onTransformChange}
+      />
       <FillProperty
         fill={fill}
         onFillChange={onFillColorChange}
