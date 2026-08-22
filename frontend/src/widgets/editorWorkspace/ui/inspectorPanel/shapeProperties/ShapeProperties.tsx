@@ -13,6 +13,8 @@ interface ShapePropertiesProps {
   definitions?: EditorDefinitions
   layer: EditorShape
   onFillChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onFillOpacityChange: (opacity: number) => void
   onGradientStopColorChange: (
     gradientId: string,
@@ -31,6 +33,8 @@ export const ShapeProperties = observer(function ShapeProperties({
   definitions,
   layer,
   onFillChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onFillOpacityChange,
   onGradientStopColorChange,
   onPositionChange,
@@ -72,6 +76,8 @@ export const ShapeProperties = observer(function ShapeProperties({
           onStopColorChange={(stopIndex, color) =>
             onGradientStopColorChange(gradient.id, stopIndex, color)
           }
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
         />
       ) : fill.type === 'gradient' ? (
         <PropertyField
@@ -83,6 +89,8 @@ export const ShapeProperties = observer(function ShapeProperties({
         <FillProperty
           fill={fill.type === 'color' ? fill.value : '#000000'}
           onFillChange={onFillChange}
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
           onOpacityChange={onFillOpacityChange}
           opacity={layer.style.fillOpacity}
         />
@@ -90,6 +98,8 @@ export const ShapeProperties = observer(function ShapeProperties({
       <StrokeProperty
         onAdd={onStrokeAdd}
         onColorChange={onStrokeColorChange}
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
         onRemove={onStrokeRemove}
         onWidthChange={onStrokeWidthChange}
         stroke={layer.style.stroke}
