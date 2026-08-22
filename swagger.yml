@@ -425,7 +425,86 @@ paths:
           description: Некорректный формат ID
         '404':
           description: Пользователь не найден
-
+  /users/{id}/subscribers/{subscriber_id}:
+    delete:
+      summary: Удалить подписчика из своего аккаунта
+      description: >
+        Позволяет авторизованному пользователю удалить конкретного подписчика
+        из списка своих подписчиков. Только владелец профиля может удалять
+        своих подписчиков — это эндпоинт для модерации аудитории.
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор пользователя (владельца профиля), у которого удаляется подписчик
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: subscriber_id
+          in: path
+          required: true
+          description: Идентификатор пользователя, которого необходимо удалить из подписчиков
+          schema:
+            type: string
+            example: "987fcdeb-51a2-43d1-b789-123456789abc"
+      responses:
+        '200':
+          description: Подписчик успешно удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscriber removed successfully"
+        '400':
+          description: Некорректный формат ID пользователя или подписчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_UUID"
+                message: "Некорректный формат ID пользователя"
+                field: "id"
+        '401':
+          description: Отсутствует или некорректен JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+              example:
+                code: "INVALID_CREDENTIALS"
+                message: "Invalid token"
+        '403':
+          description: >
+            Попытка удалить подписчика из чужого профиля. Только владелец
+            аккаунта может управлять своими подписчиками.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Permission denied"
+        '404':
+          description: >
+            Пользователь (владелец профиля) или подписчик не найден в системе.
+            Также возвращается, если подписка между указанными пользователями
+            не существует.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "User not found"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/{id}/subscriptions:
     get:
       summary: Получить список всех подписок пользователя
