@@ -38,10 +38,10 @@
   max-height: 12rem;
   min-height: 1.5rem;
   outline: 0;
-  padding: var(--space-2) var(--space-4) 0;
+  padding: var(--space-2) var(--space-4) 0
+    calc(var(--space-4) + 1.125rem + var(--space-2));
   resize: none;
   scrollbar-width: none;
-  text-indent: calc(1.125rem + var(--space-2));
   width: 100%;
 }
 
@@ -118,7 +118,7 @@
   }
 
   .textarea {
-    padding-left: var(--space-3);
+    padding-left: calc(var(--space-3) + 1.125rem + var(--space-2));
   }
 
   .actionControls > * {
