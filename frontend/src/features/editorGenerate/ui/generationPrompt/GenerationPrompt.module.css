@@ -38,10 +38,10 @@
   max-height: 12rem;
   min-height: 1.5rem;
   outline: 0;
-  padding: var(--space-2) var(--space-4) 0
-    calc(var(--space-4) + 1.125rem + var(--space-2));
+  padding: var(--space-2) var(--space-4) 0;
   resize: none;
   scrollbar-width: none;
+  text-indent: calc(1.125rem + var(--space-2));
   width: 100%;
 }
 
@@ -87,6 +87,16 @@
 }
 
 @media (width < 720px) {
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .characterCounter {
+    align-self: flex-start;
+  }
+
   .actionControls {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -95,7 +105,16 @@
 
 @media (width < 400px) {
   .actionControls {
+    align-self: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .actionControls > * {
+    width: 100%;
+  }
+
+  .actionControls .modelSelect > * {
+    width: 100%;
   }
 
   .generateButton {
