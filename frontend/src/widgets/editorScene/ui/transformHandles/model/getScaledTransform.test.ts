@@ -23,4 +23,28 @@ describe('getScaledTransform', () => {
       getScaledTransform(bounds, 'east', transform, { x: 160, y: 999 }),
     ).toEqual({ scaleX: 1.5, scaleY: 1, x: -5, y: 0 })
   })
+
+  it('scales from the center when Shift is held on a side handle', () => {
+    expect(
+      getScaledTransform(
+        bounds,
+        'east',
+        transform,
+        { x: 160, y: 999 },
+        { scaleFromCenter: true },
+      ),
+    ).toEqual({ scaleX: 2, scaleY: 1, x: -60, y: 0 })
+  })
+
+  it('keeps proportions when Shift is held on a corner handle', () => {
+    expect(
+      getScaledTransform(
+        bounds,
+        'southEast',
+        transform,
+        { x: 210, y: 70 },
+        { preserveAspectRatio: true, scaleFromCenter: true },
+      ),
+    ).toEqual({ scaleX: 3, scaleY: 3, x: -120, y: -90 })
+  })
 })

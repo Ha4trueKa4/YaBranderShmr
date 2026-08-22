@@ -150,6 +150,15 @@ function getCornerCenter(bounds: SelectionBounds, handle: ScaleHandle) {
   }
 }
 
+function isCornerHandle(handle: ScaleHandle) {
+  return (
+    handle === 'northEast' ||
+    handle === 'northWest' ||
+    handle === 'southEast' ||
+    handle === 'southWest'
+  )
+}
+
 function getHandlePosition(center: PointerPosition, size: number) {
   return { x: center.x - size / 2, y: center.y - size / 2 }
 }
@@ -383,12 +392,22 @@ export const TransformHandles = observer(function TransformHandles({
             scaleState.handle,
             scaleState.initialTransform,
             scalingPointer,
+            {
+              preserveAspectRatio:
+                event.shiftKey && isCornerHandle(scaleState.handle),
+              scaleFromCenter: event.shiftKey,
+            },
           )
         : getRotatedScaledTransform(
             scaleState.bounds,
             scaleState.handle,
             scaleState.initialTransform,
             scalingPointer,
+            {
+              preserveAspectRatio:
+                event.shiftKey && isCornerHandle(scaleState.handle),
+              scaleFromCenter: event.shiftKey,
+            },
           )
 
     if (scaleState.elementType === 'shape') {

@@ -1,7 +1,11 @@
 import type { Transform } from '@entities/editorDocument'
 
 import type { SelectionBounds } from '../../selectionOverlay/model/getSelectionBounds'
-import { getScaledTransform, type ScaleHandle } from './getScaledTransform'
+import {
+  getScaledTransform,
+  type ScaleHandle,
+  type ScalingOptions,
+} from './getScaledTransform'
 
 type Point = { x: number; y: number }
 
@@ -45,12 +49,14 @@ export function getRotatedScaledTransform(
   handle: ScaleHandle,
   initialTransform: Transform,
   pointer: Point,
+  options: ScalingOptions = {},
 ): Pick<Transform, 'rotationCenter' | 'scaleX' | 'scaleY' | 'x' | 'y'> {
   const scaledTransform = getScaledTransform(
     bounds,
     handle,
     initialTransform,
     pointer,
+    options,
   )
   const rotationCenter = initialTransform.rotationCenter ?? {
     x: bounds.x + bounds.width / 2 - initialTransform.x,
@@ -59,14 +65,18 @@ export function getRotatedScaledTransform(
   const scaleRatioX = scaledTransform.scaleX / initialTransform.scaleX
   const scaleRatioY = scaledTransform.scaleY / initialTransform.scaleY
   const anchor = {
-    x: scalesHorizontal(handle)
-      ? (isWestHandle(handle) ? bounds.x + bounds.width : bounds.x) -
-        initialTransform.x
-      : rotationCenter.x,
-    y: scalesVertical(handle)
-      ? (isNorthHandle(handle) ? bounds.y + bounds.height : bounds.y) -
-        initialTransform.y
-      : rotationCenter.y,
+    x: options.scaleFromCenter
+      ? rotationCenter.x
+      : scalesHorizontal(handle)
+        ? (isWestHandle(handle) ? bounds.x + bounds.width : bounds.x) -
+          initialTransform.x
+        : rotationCenter.x,
+    y: options.scaleFromCenter
+      ? rotationCenter.y
+      : scalesVertical(handle)
+        ? (isNorthHandle(handle) ? bounds.y + bounds.height : bounds.y) -
+          initialTransform.y
+        : rotationCenter.y,
   }
   const nextRotationCenter = {
     x: rotationCenter.x * scaleRatioX,
