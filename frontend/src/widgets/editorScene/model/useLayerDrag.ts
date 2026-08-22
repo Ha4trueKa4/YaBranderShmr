@@ -33,13 +33,14 @@ type PointerPosition = { x: number; y: number }
 type DragTarget = {
   elementType: 'group' | 'raw' | 'shape' | 'text'
   nodeId: string
+  screenToLocalMatrix: DOMMatrix
   startPosition: PointerPosition
+  startPointerPosition: PointerPosition
 }
 type DragState = {
   hitNodeId: string
   pointerId: number
   startClientPosition: PointerPosition
-  startPointerPosition: PointerPosition
   targets: DragTarget[]
 }
 
@@ -58,19 +59,13 @@ function roundCoordinate(value: number) {
   return Math.round(value * 100) / 100
 }
 
-function getSvgPointerPosition(
-  svg: SVGSVGElement,
+function getLocalPointerPosition(
+  screenToLocalMatrix: DOMMatrix,
   clientX: number,
   clientY: number,
-): PointerPosition | null {
-  const screenMatrix = svg.getScreenCTM()
-
-  if (!screenMatrix) {
-    return null
-  }
-
+): PointerPosition {
   const point = new DOMPoint(clientX, clientY).matrixTransform(
-    screenMatrix.inverse(),
+    screenToLocalMatrix,
   )
 
   return { x: point.x, y: point.y }
@@ -93,19 +88,42 @@ function hasLockedDescendant(node: EditorGroup): boolean {
 
 function toDragTarget(
   node: EditorShape | EditorText | EditorGroup | EditorRawNode,
-): DragTarget {
+  element: SVGGElement,
+  clientX: number,
+  clientY: number,
+): DragTarget | null {
+  const screenMatrix = element.getScreenCTM()
+
+  if (!screenMatrix) {
+    return null
+  }
+
+  const screenToLocalMatrix = screenMatrix.inverse()
+
   if (node.type === 'text') {
     return {
       elementType: 'text',
       nodeId: node.id,
+      screenToLocalMatrix,
       startPosition: { x: node.x, y: node.y },
+      startPointerPosition: getLocalPointerPosition(
+        screenToLocalMatrix,
+        clientX,
+        clientY,
+      ),
     }
   }
 
   return {
     elementType: node.type,
     nodeId: node.id,
+    screenToLocalMatrix,
     startPosition: { x: node.transform.x, y: node.transform.y },
+    startPointerPosition: getLocalPointerPosition(
+      screenToLocalMatrix,
+      clientX,
+      clientY,
+    ),
   }
 }
 
@@ -236,12 +254,6 @@ export function useLayerDrag({
         return
       }
 
-      const svg = svgReference.current
-
-      if (!svg) {
-        return
-      }
-
       const preferredNode =
         (selectedNode?.type === 'shape' ||
           selectedNode?.type === 'text' ||
@@ -300,13 +312,16 @@ export function useLayerDrag({
         onSelectNode(preferredNode.id, false)
       }
 
-      const pointerPosition = getSvgPointerPosition(
-        svg,
-        event.clientX,
-        event.clientY,
-      )
+      const targets = dragTargets.flatMap((target) => {
+        const element = getEditableElement(target.id)
+        const dragTarget = element
+          ? toDragTarget(target, element, event.clientX, event.clientY)
+          : null
 
-      if (!pointerPosition) {
+        return dragTarget ? [dragTarget] : []
+      })
+
+      if (targets.length !== dragTargets.length) {
         return
       }
 
@@ -316,8 +331,7 @@ export function useLayerDrag({
         hitNodeId: node.id,
         pointerId: event.pointerId,
         startClientPosition: { x: event.clientX, y: event.clientY },
-        startPointerPosition: pointerPosition,
-        targets: dragTargets.map(toDragTarget),
+        targets,
       }
       onDocumentChangeStart()
     },
@@ -357,27 +371,20 @@ export function useLayerDrag({
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<SVGGElement>) => {
       const dragState = dragStateReference.current
-      const svg = svgReference.current
-
-      if (!dragState || dragState.pointerId !== event.pointerId || !svg) {
-        return
-      }
-
-      const pointerPosition = getSvgPointerPosition(
-        svg,
-        event.clientX,
-        event.clientY,
-      )
-
-      if (!pointerPosition) {
+      if (!dragState || dragState.pointerId !== event.pointerId) {
         return
       }
 
       event.preventDefault()
-      const offsetX = pointerPosition.x - dragState.startPointerPosition.x
-      const offsetY = pointerPosition.y - dragState.startPointerPosition.y
 
       for (const target of dragState.targets) {
+        const pointerPosition = getLocalPointerPosition(
+          target.screenToLocalMatrix,
+          event.clientX,
+          event.clientY,
+        )
+        const offsetX = pointerPosition.x - target.startPointerPosition.x
+        const offsetY = pointerPosition.y - target.startPointerPosition.y
         const x = roundCoordinate(target.startPosition.x + offsetX)
         const y = roundCoordinate(target.startPosition.y + offsetY)
 
