@@ -31,7 +31,9 @@ public:
 
   void DeleteProject(const std::string& id);
 
-  std::string GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model);
+  std::string GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model,
+                         const std::string& caller_id,
+                         const std::vector<std::string>& reference_project_ids = {});
 
   std::vector<models::Version> ListVersions(const std::string& project_id);
 
@@ -65,6 +67,18 @@ private:
   ///        на версию-ответ) в конец project.chat_history.
   void AppendChatExchange(const std::string& project_id, const std::string& user_message,
                           const std::string& version_id);
+
+  /// @brief Резолвит id референс-проектов (не более 2, лишние игнорируются
+  ///        вызывающим на уровне хендлера) в содержимое их последних SVG для
+  ///        промпта первичной генерации.
+  /// @details Молча пропускает (не бросает исключений) id, которые: не
+  ///          существуют; существуют, но приватны и не принадлежат caller_id;
+  ///          чья последняя версия пуста или равна kDefaultSvg (сюда же
+  ///          попадает самоссылка на генерируемый проект — в ветке первичной
+  ///          генерации его собственный current_state и так пуст/дефолтен).
+  std::vector<std::string> ResolveReferenceSvgs(
+      const std::string& caller_id,
+      const std::vector<std::string>& reference_project_ids);
 
   userver::storages::postgres::ClusterPtr pg_cluster_;
   VersionStorageComponent& version_storage_;

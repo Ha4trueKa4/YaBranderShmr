@@ -123,6 +123,7 @@ void ProjectManagerComponent::UpdateProject(
 
 namespace {
 constexpr std::size_t kHistoryPromptLimit = 10;
+constexpr std::size_t kMaxReferenceProjects = 2;
 }  // namespace
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
@@ -167,7 +168,28 @@ userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std:
     return FetchChatHistoryJson(project_id);
 }
 
-std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
+    const std::string& caller_id,
+    const std::vector<std::string>& reference_project_ids) {
+    std::vector<std::string> result;
+    for (const auto& ref_id : reference_project_ids) {
+        if (result.size() >= kMaxReferenceProjects) break;
+
+        auto ref_project = GetProject(ref_id);
+        if (!ref_project) continue;  // не существует
+        if (!ref_project->is_public && ref_project->author_id != caller_id) continue;  // нет доступа
+
+        std::string svg = version_storage_.GetLatestVersionData(ref_id);
+        if (svg.empty() || svg == kDefaultSvg) continue;  // у референса нет реального контента
+
+        result.push_back(std::move(svg));
+    }
+    return result;
+}
+
+std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, const std::string& prompt,
+                                                const std::string& model, const std::string& caller_id,
+                                                const std::vector<std::string>& reference_project_ids) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
 
     std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
@@ -179,7 +201,8 @@ std::string ProjectManagerComponent::GenerateAI(const std::string& project_id, c
 
     LlmPrompt full_prompt;
     if (current_state.empty() || current_state == kDefaultSvg) {
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
+        auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history, reference_svgs);
     }else {
         full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
     }

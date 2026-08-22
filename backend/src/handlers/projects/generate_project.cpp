@@ -8,6 +8,7 @@ namespace ya_brander::handlers {
 
 namespace {
 constexpr std::size_t kMaxPromptLength = 1500;
+constexpr std::size_t kMaxReferences = 2;
 }
 
 GenerateProjectHandler::GenerateProjectHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
@@ -52,9 +53,20 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
     return err.ExtractValue();
   }
 
+  std::vector<std::string> references;
+  if (body.HasMember("references")) {
+    references = body["references"].As<std::vector<std::string>>();
+    if (references.size() > kMaxReferences) {
+      request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+      userver::formats::json::ValueBuilder err;
+      err["message"] = "references supports at most 2 project ids";
+      return err.ExtractValue();
+    }
+  }
+
   userver::formats::json::ValueBuilder res;
   try {
-      std::string new_url = project_manager_.GenerateAI(id, prompt, model);
+      std::string new_url = project_manager_.GenerateAI(id, prompt, model, *user_id, references);
 
     if (!new_url.empty()) {
       res["url"] = new_url;

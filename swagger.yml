@@ -600,7 +600,9 @@ paths:
         проекту (без ответов модели) — как контекст, не как повторное задание.
         При успешной генерации пара "запрос пользователя + ссылка на созданную
         версию" добавляется в историю чата проекта, доступную через
-        GET /projects/{id}/chat.
+        GET /projects/{id}/chat. Поле references учитывается только при
+        первичной генерации (у проекта ещё нет версий) — при редактировании
+        существующего проекта оно молча игнорируется.
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -625,6 +627,18 @@ paths:
                 model:
                   type: string
                   example: "deepseek-v4-flash/latest"
+                references:
+                  type: array
+                  maxItems: 2
+                  items:
+                    type: string
+                  description: >
+                    Опционально: id (до 2) других проектов, чьи последние SVG
+                    используются как референсы стиля/содержимого. Учитывается
+                    только при первичной генерации (у целевого проекта ещё нет
+                    реальной версии); при редактировании существующего проекта
+                    поле игнорируется без ошибки. Недоступные (несуществующие,
+                    приватные чужие) или пустые референсы молча пропускаются.
       responses:
         '200':
           description: Сгенерированный SVG-код проекта
@@ -638,13 +652,18 @@ paths:
                     description: "S3 ссылка на объект проекта (отсутствует, если проект пуст)"
                     example: "https://s3.yandexcloud.net/bucket/project_version.svg"
         '400':
-          description: Не передан prompt
+          description: Не передан prompt, либо references содержит больше 2 id
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
-              example:
-                message: "Prompt cannot be empty"
+              examples:
+                empty_prompt:
+                  value:
+                    message: "Prompt cannot be empty"
+                too_many_references:
+                  value:
+                    message: "references supports at most 2 project ids"
         '401':
           description: Не авторизован
         '403':
