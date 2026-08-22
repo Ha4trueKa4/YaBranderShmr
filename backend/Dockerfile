@@ -13,6 +13,7 @@ COPY requirements.txt ./
 
 # Исходники копируем ПОСЛЕДНИМИ — они меняются чаще всего.
 COPY src ./src
+COPY sql ./sql
 
 # Собираем Release-версию бинарника ya_brander
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
