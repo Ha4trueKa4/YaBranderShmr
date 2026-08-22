@@ -127,7 +127,7 @@ struct ProfileView: View {
             )
             .mask {
                 LinearGradient(
-                    colors: [Color(.black).opacity(viewModel.isLoading ? 0 : max(0, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
+                    colors: [Color(.black).opacity(viewModel.isLoading ? 0.3 : max(0.3, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
                     startPoint: .top,
                     endPoint: .bottom
                 )

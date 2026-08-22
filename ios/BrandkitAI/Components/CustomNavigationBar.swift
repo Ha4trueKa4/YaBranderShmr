@@ -32,8 +32,6 @@ private struct CustomNavigationBarModifier: ViewModifier {
                     backItem(action: onBack)
                 }
             }
-            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
-            .toolbarBackground(Color.background, for: .navigationBar)
             .toolbarColorScheme(colorScheme, for: .navigationBar)
     }
 
