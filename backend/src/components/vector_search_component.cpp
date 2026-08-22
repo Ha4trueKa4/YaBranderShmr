@@ -14,6 +14,8 @@
 
 #include <ya_brander/sql_queries.hpp>
 
+#include "../utils/postgres_retry.hpp"
+
 namespace ya_brander::components {
 
 VectorSearchComponent::VectorSearchComponent(
@@ -89,9 +91,13 @@ std::vector<double> VectorSearchComponent::GetEmbedding(const std::string& text)
 std::vector<std::string> VectorSearchComponent::SearchInDb(
     const std::string& vec_str, int limit, double max_distance) const {
     try {
-        auto result = pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kMaster,
-            sql::kFindSimilarVectorExamples, vec_str, limit, max_distance);
+        auto result = utils::ExecuteSelectWithRetry(
+            "find-similar-vector-examples", [&] {
+              return pg_cluster_->Execute(
+                  userver::storages::postgres::ClusterHostType::kMaster,
+                  sql::kFindSimilarVectorExamples, vec_str, limit,
+                  max_distance);
+            });
 
         std::vector<std::string> svgs;
         svgs.reserve(result.Size());
@@ -99,6 +105,8 @@ std::vector<std::string> VectorSearchComponent::SearchInDb(
             svgs.push_back(row["svg_data"].As<std::string>());
         }
         return svgs;
+    } catch (const utils::DatabaseUnavailableError&) {
+        throw;
     } catch (const std::exception& e) {
         return {};
     }

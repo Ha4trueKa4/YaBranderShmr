@@ -130,6 +130,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/utils/errors.hpp
         src/utils/errors.cpp
         src/components/garbage_collector/garbage_collector_component.cpp
+        src/utils/postgres_retry.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

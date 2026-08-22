@@ -9,6 +9,7 @@
 #include <ya_brander/sql_queries.hpp>
 
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::handlers {
 
@@ -39,9 +40,12 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
   const auto& target_id = request.GetPathArg("id");
 
   try {
-    const auto user_result = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kMaster,
-        sql::kSelectUserId, target_id);
+    const auto user_result = utils::ExecuteSelectWithRetry(
+        "select-user-id", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kMaster,
+              sql::kSelectUserId, target_id);
+        });
 
     if (user_result.IsEmpty()) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);

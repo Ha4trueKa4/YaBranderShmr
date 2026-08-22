@@ -11,6 +11,7 @@
 
 #include "password_hasher.hpp"
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::auth {
 
@@ -36,9 +37,12 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
         return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
-    auto result = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        sql::kSelectUserCredentialsByEmail, email);
+    auto result = utils::ExecuteSelectWithRetry(
+        "select-user-credentials-by-email", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectUserCredentialsByEmail, email);
+        });
 
     if (result.Size() == 0) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);

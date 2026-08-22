@@ -8,6 +8,8 @@
 
 #include <ya_brander/sql_queries.hpp>
 
+#include "../../utils/postgres_retry.hpp"
+
 namespace ya_brander::handlers {
 
 namespace {
@@ -65,14 +67,19 @@ userver::formats::json::Value GetFeedHandler::HandleRequestJsonThrow(
     }
   }
 
-  const auto res = (scope == "following")
-      ? pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            sql::kSelectFollowingFeed, cursor_created_at, cursor_id, limit + 1,
-            *user_id)
-      : pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            sql::kSelectDiscoverFeed, cursor_created_at, cursor_id, limit + 1);
+  const auto res = utils::ExecuteSelectWithRetry(
+      scope == "following" ? "select-following-feed" : "select-discover-feed",
+      [&] {
+        return scope == "following"
+                   ? pg_cluster_->Execute(
+                         userver::storages::postgres::ClusterHostType::kSlave,
+                         sql::kSelectFollowingFeed, cursor_created_at, cursor_id,
+                         limit + 1, *user_id)
+                   : pg_cluster_->Execute(
+                         userver::storages::postgres::ClusterHostType::kSlave,
+                         sql::kSelectDiscoverFeed, cursor_created_at, cursor_id,
+                         limit + 1);
+      });
 
   const bool has_more = res.Size() > static_cast<std::size_t>(limit);
   const std::size_t items_count = has_more ? static_cast<std::size_t>(limit) : res.Size();

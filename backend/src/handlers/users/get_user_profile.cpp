@@ -12,6 +12,8 @@
 
 #include <ya_brander/sql_queries.hpp>
 
+#include "../../utils/postgres_retry.hpp"
+
 namespace ya_brander::handlers {
 
 GetUserProfileHandler::GetUserProfileHandler(
@@ -33,11 +35,12 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
   std::string auth_user_id = auth_user_id_ptr ? *auth_user_id_ptr : "";
 
   try {
-    auto user_res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        sql::kSelectUserProfile,
-        target_id
-    );
+    auto user_res = utils::ExecuteSelectWithRetry(
+        "select-user-profile", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectUserProfile, target_id);
+        });
 
     if (user_res.IsEmpty()) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -63,17 +66,17 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
       is_subscribed = subscription_storage_.IsSubscribed(auth_user_id, target_id);
     }
 
-    auto proj_res = is_self
-        ? pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            sql::kSelectAllUserProjects,
-            target_id
-        )
-        : pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            sql::kSelectPublicUserProjects,
-            target_id
-        );
+    auto proj_res = utils::ExecuteSelectWithRetry(
+        is_self ? "select-all-user-projects" : "select-public-user-projects",
+        [&] {
+          return is_self
+                     ? pg_cluster_->Execute(
+                           userver::storages::postgres::ClusterHostType::kSlave,
+                           sql::kSelectAllUserProjects, target_id)
+                     : pg_cluster_->Execute(
+                           userver::storages::postgres::ClusterHostType::kSlave,
+                           sql::kSelectPublicUserProjects, target_id);
+        });
 
     std::vector<std::string> keys_public;
     std::vector<std::string> keys_private;
@@ -142,6 +145,8 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
     err["code"] = "INVALID_UUID";
     err["message"] = "Некорректный формат ID пользователя";
     return err.ExtractValue();
+  } catch (const utils::DatabaseUnavailableError&) {
+    throw;
   } catch (const std::exception& e) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
     userver::formats::json::ValueBuilder err;

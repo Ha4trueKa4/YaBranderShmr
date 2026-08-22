@@ -9,6 +9,8 @@
 
 #include <ya_brander/sql_queries.hpp>
 
+#include "../utils/postgres_retry.hpp"
+
 namespace ya_brander::components {
 
 const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -68,11 +70,11 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        sql::kSelectProject,
-        id
-    );
+    auto res = utils::ExecuteSelectWithRetry("select-project", [&] {
+      return pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kSlave,
+          sql::kSelectProject, id);
+    });
 
     if (res.IsEmpty()) return std::nullopt;
 
@@ -138,10 +140,12 @@ constexpr std::size_t kHistoryPromptLimit = 10;
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
     const std::string& project_id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        sql::kSelectProjectChatHistory,
-        project_id);
+    auto res = utils::ExecuteSelectWithRetry(
+        "select-project-chat-history", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectProjectChatHistory, project_id);
+        });
     if (res.IsEmpty()) return userver::formats::json::MakeArray();
     return res[0]["chat_history"].As<userver::formats::json::Value>();
 }

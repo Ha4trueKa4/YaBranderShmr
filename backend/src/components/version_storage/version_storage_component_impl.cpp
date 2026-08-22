@@ -10,6 +10,7 @@
 
 #include <ya_brander/sql_queries.hpp>
 
+#include "../../utils/postgres_retry.hpp"
 #include "../svg_validator.hpp"
 
 namespace ya_brander::components {
@@ -93,27 +94,35 @@ std::string VersionStorageComponentImpl::SaveVersion(
 
 std::string VersionStorageComponentImpl::GetVersion(
     const std::string& project_id, const std::string& version_id) {
-  auto res = pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                                  sql::kSelectProjectVersionKey, version_id,
-                                  project_id);
+  auto res = utils::ExecuteSelectWithRetry("select-project-version-key", [&] {
+    return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                sql::kSelectProjectVersionKey, version_id,
+                                project_id);
+  });
   if (res.IsEmpty() || res[0]["s3_file_key"].IsNull()) return "";
   return storage_.Get(res[0]["s3_file_key"].As<std::string>());
 }
 
 std::string VersionStorageComponentImpl::GetLatestVersionData(
     const std::string& project_id) {
-  auto res = pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                                  sql::kSelectProjectLatestVersionKey,
-                                  project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-latest-version-key", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                    sql::kSelectProjectLatestVersionKey,
+                                    project_id);
+      });
   if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) return "";
   return storage_.Get(res[0]["last_version_key"].As<std::string>());
 }
 
 std::string VersionStorageComponentImpl::GetLatestVersionUrl(
     const std::string& project_id) {
-  auto res = pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                                  sql::kSelectProjectLatestVersionState,
-                                  project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-latest-version-state", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                    sql::kSelectProjectLatestVersionState,
+                                    project_id);
+      });
   if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) return "";
   const bool is_public = !res[0]["is_private"].As<bool>();
   return storage_.GetUrl(res[0]["last_version_key"].As<std::string>(),
@@ -122,9 +131,11 @@ std::string VersionStorageComponentImpl::GetLatestVersionUrl(
 
 std::string VersionStorageComponentImpl::GetVersionUrl(
     const std::string& project_id, const std::string& version_id) {
-  auto res = pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                                  sql::kSelectProjectVersionKey, version_id,
-                                  project_id);
+  auto res = utils::ExecuteSelectWithRetry("select-project-version-key", [&] {
+    return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                sql::kSelectProjectVersionKey, version_id,
+                                project_id);
+  });
   if (res.IsEmpty() || res[0]["s3_file_key"].IsNull()) return "";
   return storage_.GetUrl(res[0]["s3_file_key"].As<std::string>(),
                          /*is_public=*/false);
@@ -143,8 +154,10 @@ VersionStorageComponentImpl::GetManyUrls(const std::vector<std::string>& keys,
 
 std::vector<models::Version> VersionStorageComponentImpl::ListVersions(
     const std::string& project_id) {
-  const auto res = pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                                        sql::kListProjectVersions, project_id);
+  const auto res = utils::ExecuteSelectWithRetry("list-project-versions", [&] {
+    return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                sql::kListProjectVersions, project_id);
+  });
 
   std::vector<models::Version> versions;
   versions.reserve(res.Size());
@@ -171,17 +184,23 @@ std::string VersionStorageComponentImpl::RestoreVersion(
 
 void VersionStorageComponentImpl::SetLatestAcl(const std::string& project_id,
                                                bool make_public) {
-  auto res = pg_cluster_->Execute(pg::ClusterHostType::kMaster,
-                                  sql::kSelectProjectLatestVersionKey,
-                                  project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-latest-version-key", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kMaster,
+                                    sql::kSelectProjectLatestVersionKey,
+                                    project_id);
+      });
   if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) return;
   storage_.SetAcl(res[0]["last_version_key"].As<std::string>(), make_public);
 }
 
 void VersionStorageComponentImpl::DeleteAllVersions(
     const std::string& project_id) {
-  auto res = pg_cluster_->Execute(pg::ClusterHostType::kMaster,
-                                  sql::kSelectProjectVersionKeys, project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-version-keys", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kMaster,
+                                    sql::kSelectProjectVersionKeys, project_id);
+      });
 
   std::vector<std::string> keys;
   keys.reserve(res.Size());
@@ -220,13 +239,16 @@ std::size_t VersionStorageComponentImpl::CollectGarbage(
 
   std::unordered_set<std::string> referenced;
   {
-    const auto res =
-        pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                             "SELECT s3_file_key AS k FROM project_versions "
-                             "WHERE s3_file_key IS NOT NULL "
-                             "UNION "
-                             "SELECT last_version_key AS k FROM projects WHERE "
-                             "last_version_key IS NOT NULL");
+    const auto res = utils::ExecuteSelectWithRetry(
+        "select-referenced-version-keys", [&] {
+          return pg_cluster_->Execute(
+              pg::ClusterHostType::kSlave,
+              "SELECT s3_file_key AS k FROM project_versions "
+              "WHERE s3_file_key IS NOT NULL "
+              "UNION "
+              "SELECT last_version_key AS k FROM projects WHERE "
+              "last_version_key IS NOT NULL");
+        });
     referenced.reserve(res.Size());
     for (const auto& row : res) {
       referenced.insert(row["k"].As<std::string>());
