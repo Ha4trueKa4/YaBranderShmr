@@ -1,6 +1,5 @@
 package com.yandex.avatargenerator.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,9 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImagePainter
-import coil3.compose.rememberAsyncImagePainter
+import coil3.compose.AsyncImage
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -61,13 +61,15 @@ fun ProjectCard(
     authorAvatarUrl: String? = null,
     aspectRatio: Float = 1.3f,
 ) {
-    val painter = rememberAsyncImagePainter(model = previewUrl)
-    val state by painter.state.collectAsStateWithLifecycle()
-    val previewRatio = (state as? AsyncImagePainter.State.Success)
-        ?.painter?.intrinsicSize
-        ?.takeIf { it.isSpecified && it.height > 0f }
-        ?.let { it.width / it.height }
-        ?: aspectRatio
+    // Пропорции превью берём из самой картинки после загрузки (onSuccess), до этого
+    // держим высоту запасным [aspectRatio]. Оставляем AsyncImage, а не
+    // rememberAsyncImagePainter: он сайзит запрос под реальные констрейнты карточки
+    // (ConstraintsSizeResolver). Для SVG-превью это критично — painter без резолвера
+    // декодирует в SizeResolver.ORIGINAL, т.е. в единицы viewBox документа: мыло на
+    // плотных экранах и битмапа размером с документ, которая в бесконечной ленте
+    // вышибает memory cache. computeSizeMultiplier масштабирует обе стороны единым
+    // множителем, поэтому intrinsicSize сохраняет истинные пропорции SVG.
+    var previewRatio by remember(previewUrl) { mutableFloatStateOf(aspectRatio) }
 
     Column(
         modifier = modifier
@@ -75,10 +77,16 @@ fun ProjectCard(
             .brandSurface(RoundedCornerShape(AppShape.l))
             .clickable(onClick = onClick),
     ) {
-        Image(
-            painter = painter,
+        AsyncImage(
+            model = previewUrl,
             contentDescription = title,
             contentScale = ContentScale.Crop,
+            onSuccess = { state ->
+                val size = state.painter.intrinsicSize
+                if (size.isSpecified && size.height > 0f) {
+                    previewRatio = size.width / size.height
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(previewRatio)
