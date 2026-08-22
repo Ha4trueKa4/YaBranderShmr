@@ -4,6 +4,10 @@
   background: var(--color-surface);
 }
 
+:global(:root[data-theme="sephia"]) .header {
+  border-bottom: 0;
+}
+
 .content {
   position: relative;
   display: flex;
