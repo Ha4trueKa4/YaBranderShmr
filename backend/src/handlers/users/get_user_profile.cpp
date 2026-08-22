@@ -52,7 +52,9 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
     auto subscribers_count = subscription_storage_.GetSubscribersCount(target_id);
     auto subscriptions_count = subscription_storage_.GetSubscriptionsCount(target_id);
 
-    bool is_self = (auth_user_id == target_id);
+    // Compare with the canonical UUID returned by PostgreSQL rather than the
+    // raw path argument, which may contain upper-case hexadecimal characters.
+    bool is_self = (auth_user_id == user_id_str);
 
     std::optional<bool> is_subscribed = std::nullopt;
     if (!is_self && !auth_user_id.empty()) {

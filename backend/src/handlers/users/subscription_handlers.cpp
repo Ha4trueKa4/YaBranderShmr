@@ -1,5 +1,9 @@
 #include "subscription_handlers.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <string_view>
+
 #include <userver/components/component.hpp>
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -10,6 +14,18 @@
 namespace ya_brander::handlers {
 
 using utils::MakeMessage;
+
+namespace {
+
+bool AreSameUuid(std::string_view lhs, std::string_view rhs) {
+  return lhs.size() == rhs.size() &&
+         std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                    [](unsigned char left, unsigned char right) {
+                      return std::tolower(left) == std::tolower(right);
+                    });
+}
+
+}  // namespace
 
 SubscribeHandler::SubscribeHandler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
     : HttpHandlerJsonBase(config, context),
@@ -22,7 +38,7 @@ userver::formats::json::Value SubscribeHandler::HandleRequestJsonThrow(
   const auto& user_id = context.GetData<std::string>("user_id");
 
   const auto& target_id = request.GetPathArg("id");
-  if (target_id == user_id) {
+  if (AreSameUuid(target_id, user_id)) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
     return MakeMessage("Cannot subscribe to yourself");
   }
