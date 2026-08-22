@@ -1,4 +1,8 @@
-import type { EditorNode, EditorShape } from '@entities/editorDocument'
+import type {
+  EditorElement,
+  EditorNode,
+  Transform,
+} from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
 import {
   type PointerEvent as ReactPointerEvent,
@@ -34,13 +38,15 @@ type ScaleState = {
   center: PointerPosition
   handleBounds: SelectionBounds
   handle: ScaleHandle
-  initialTransform: EditorShape['transform']
+  elementType: 'shape' | 'text'
+  initialTransform: Transform
   nodeId: string
   pointerId: number
   rotation: number
 }
 type RotateState = {
   center: PointerPosition
+  elementType: 'shape' | 'text'
   initialRotation: number
   rotationCenter: PointerPosition
   nodeId: string
@@ -60,11 +66,23 @@ interface TransformHandlesProps {
   onShapeTransformChange: (
     nodeId: string,
     transform: Pick<
-      EditorShape['transform'],
+      Transform,
       'rotationCenter' | 'scaleX' | 'scaleY' | 'x' | 'y'
     >,
   ) => void
   onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: PointerPosition,
+  ) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: Pick<
+      Transform,
+      'rotationCenter' | 'scaleX' | 'scaleY' | 'x' | 'y'
+    >,
+  ) => void
+  onTextRotationChange: (
     nodeId: string,
     rotation: number,
     rotationCenter: PointerPosition,
@@ -198,20 +216,21 @@ function getBoundsFromPoints(points: SelectionPoint[]): SelectionBounds {
   }
 }
 
-function getShapeRenderSignature(shape: EditorShape | null) {
-  if (!shape) {
+function getElementRenderSignature(element: EditorElement | null) {
+  if (!element) {
     return ''
   }
 
   return [
-    shape.id,
-    shape.transform.rotation,
-    shape.transform.scaleX,
-    shape.transform.scaleY,
-    shape.transform.x,
-    shape.transform.y,
-    JSON.stringify(shape.geometry),
-    shape.style.strokeWidth,
+    element.id,
+    element.transform.rotation,
+    element.transform.scaleX,
+    element.transform.scaleY,
+    element.transform.x,
+    element.transform.y,
+    element.type === 'shape'
+      ? JSON.stringify(element.geometry)
+      : `${element.x},${element.y}:${element.text}:${element.style.fontSize}`,
   ].join(':')
 }
 
@@ -226,6 +245,8 @@ export const TransformHandles = observer(function TransformHandles({
   onDocumentChangeStart,
   onShapeTransformChange,
   onShapeRotationChange,
+  onTextTransformChange,
+  onTextRotationChange,
   selectedNode,
   selectedNodes,
   svgReference,
@@ -234,23 +255,26 @@ export const TransformHandles = observer(function TransformHandles({
   const [outline, setOutline] = useState<SelectionPoint[] | null>(null)
   const scaleStateReference = useRef<ScaleState | null>(null)
   const rotateStateReference = useRef<RotateState | null>(null)
-  const selectedShape =
-    selectedNodes.length === 1 && selectedNode?.type === 'shape'
+  const selectedElement =
+    selectedNodes.length === 1 &&
+    (selectedNode?.type === 'shape' || selectedNode?.type === 'text')
       ? selectedNode
       : null
-  const shapeRenderSignature = getShapeRenderSignature(selectedShape)
+  const elementRenderSignature = getElementRenderSignature(selectedElement)
   const canTransform =
-    activeTool === 'select' && selectedShape !== null && !selectedShape.isLocked
+    activeTool === 'select' &&
+    selectedElement !== null &&
+    !selectedElement.isLocked
   const canScale = canTransform
 
   useLayoutEffect(() => {
-    const nextBounds = shapeRenderSignature
-      ? getSelectionBounds(getEditableElement(selectedShape?.id ?? ''))
+    const nextBounds = elementRenderSignature
+      ? getSelectionBounds(getEditableElement(selectedElement?.id ?? ''))
       : null
     const nextOutline =
-      selectedShape?.transform.rotation === 0
+      selectedElement?.transform.rotation === 0
         ? null
-        : getSelectionOutline(getEditableElement(selectedShape?.id ?? ''), 4)
+        : getSelectionOutline(getEditableElement(selectedElement?.id ?? ''), 4)
 
     setBounds((currentBounds) =>
       hasSameBounds(currentBounds, nextBounds) ? currentBounds : nextBounds,
@@ -260,7 +284,7 @@ export const TransformHandles = observer(function TransformHandles({
         ? currentOutline
         : nextOutline,
     )
-  }, [getEditableElement, selectedShape, shapeRenderSignature])
+  }, [elementRenderSignature, getEditableElement, selectedElement])
 
   function startScaling(
     handle: ScaleHandle,
@@ -268,38 +292,44 @@ export const TransformHandles = observer(function TransformHandles({
   ) {
     const svg = svgReference.current
 
-    if (!canScale || !selectedShape || !bounds || !svg || event.button !== 0) {
+    if (
+      !canScale ||
+      !selectedElement ||
+      !bounds ||
+      !svg ||
+      event.button !== 0
+    ) {
       return
     }
 
-    const rotationCenter = selectedShape.transform.rotationCenter ?? {
-      x: bounds.x + bounds.width / 2 - selectedShape.transform.x,
-      y: bounds.y + bounds.height / 2 - selectedShape.transform.y,
+    const rotationCenter = selectedElement.transform.rotationCenter ?? {
+      x: bounds.x + bounds.width / 2 - selectedElement.transform.x,
+      y: bounds.y + bounds.height / 2 - selectedElement.transform.y,
     }
     const center = {
-      x: selectedShape.transform.x + rotationCenter.x,
-      y: selectedShape.transform.y + rotationCenter.y,
+      x: selectedElement.transform.x + rotationCenter.x,
+      y: selectedElement.transform.y + rotationCenter.y,
     }
-    const editableElement = getEditableElement(selectedShape.id)
+    const editableElement = getEditableElement(selectedElement.id)
     const unrotatedOutline =
-      selectedShape.transform.rotation === 0
+      selectedElement.transform.rotation === 0
         ? null
         : getSelectionOutline(editableElement)
     const unrotatedHandleOutline =
-      selectedShape.transform.rotation === 0
+      selectedElement.transform.rotation === 0
         ? null
         : getSelectionOutline(editableElement, 4)
     const scalingBounds = unrotatedOutline
       ? getBoundsFromPoints(
           unrotatedOutline.map((point) =>
-            rotatePoint(point, center, -selectedShape.transform.rotation),
+            rotatePoint(point, center, -selectedElement.transform.rotation),
           ),
         )
       : bounds
     const scalingHandleBounds = unrotatedHandleOutline
       ? getBoundsFromPoints(
           unrotatedHandleOutline.map((point) =>
-            rotatePoint(point, center, -selectedShape.transform.rotation),
+            rotatePoint(point, center, -selectedElement.transform.rotation),
           ),
         )
       : handleBounds
@@ -310,12 +340,13 @@ export const TransformHandles = observer(function TransformHandles({
     scaleStateReference.current = {
       bounds: scalingBounds,
       center,
+      elementType: selectedElement.type,
       handleBounds: scalingHandleBounds,
       handle,
-      initialTransform: { ...selectedShape.transform },
-      nodeId: selectedShape.id,
+      initialTransform: { ...selectedElement.transform },
+      nodeId: selectedElement.id,
       pointerId: event.pointerId,
-      rotation: selectedShape.transform.rotation,
+      rotation: selectedElement.transform.rotation,
     }
     onDocumentChangeStart()
   }
@@ -360,7 +391,11 @@ export const TransformHandles = observer(function TransformHandles({
             scalingPointer,
           )
 
-    onShapeTransformChange(scaleState.nodeId, nextTransform)
+    if (scaleState.elementType === 'shape') {
+      onShapeTransformChange(scaleState.nodeId, nextTransform)
+    } else {
+      onTextTransformChange(scaleState.nodeId, nextTransform)
+    }
   }
 
   function stopScaling(event: ReactPointerEvent<SVGElement>) {
@@ -383,7 +418,7 @@ export const TransformHandles = observer(function TransformHandles({
 
     if (
       !canTransform ||
-      !selectedShape ||
+      !selectedElement ||
       !bounds ||
       !svg ||
       event.button !== 0
@@ -397,14 +432,14 @@ export const TransformHandles = observer(function TransformHandles({
       return
     }
 
-    const center = selectedShape.transform.rotationCenter
+    const center = selectedElement.transform.rotationCenter
       ? {
           x:
-            selectedShape.transform.x +
-            selectedShape.transform.rotationCenter.x,
+            selectedElement.transform.x +
+            selectedElement.transform.rotationCenter.x,
           y:
-            selectedShape.transform.y +
-            selectedShape.transform.rotationCenter.y,
+            selectedElement.transform.y +
+            selectedElement.transform.rotationCenter.y,
         }
       : {
           x: bounds.x + bounds.width / 2,
@@ -416,12 +451,13 @@ export const TransformHandles = observer(function TransformHandles({
     event.currentTarget.setPointerCapture(event.pointerId)
     rotateStateReference.current = {
       center,
-      initialRotation: selectedShape.transform.rotation,
-      nodeId: selectedShape.id,
+      elementType: selectedElement.type,
+      initialRotation: selectedElement.transform.rotation,
+      nodeId: selectedElement.id,
       pointerId: event.pointerId,
       rotationCenter: {
-        x: center.x - selectedShape.transform.x,
-        y: center.y - selectedShape.transform.y,
+        x: center.x - selectedElement.transform.x,
+        y: center.y - selectedElement.transform.y,
       },
       startPointerAngle: getPointerAngle(center, pointer),
     }
@@ -443,15 +479,25 @@ export const TransformHandles = observer(function TransformHandles({
     }
 
     event.preventDefault()
-    onShapeRotationChange(
-      rotateState.nodeId,
-      getRotation(
-        rotateState.initialRotation,
-        rotateState.startPointerAngle,
-        getPointerAngle(rotateState.center, pointer),
-      ),
-      rotateState.rotationCenter,
+    const rotation = getRotation(
+      rotateState.initialRotation,
+      rotateState.startPointerAngle,
+      getPointerAngle(rotateState.center, pointer),
     )
+
+    if (rotateState.elementType === 'shape') {
+      onShapeRotationChange(
+        rotateState.nodeId,
+        rotation,
+        rotateState.rotationCenter,
+      )
+    } else {
+      onTextRotationChange(
+        rotateState.nodeId,
+        rotation,
+        rotateState.rotationCenter,
+      )
+    }
   }
 
   function stopRotating(event: ReactPointerEvent<SVGCircleElement>) {
@@ -469,7 +515,7 @@ export const TransformHandles = observer(function TransformHandles({
     onDocumentChangeEnd()
   }
 
-  if (!canTransform || !bounds || !selectedShape) {
+  if (!canTransform || !bounds || !selectedElement) {
     return null
   }
 
@@ -524,8 +570,8 @@ export const TransformHandles = observer(function TransformHandles({
   }
 
   return (
-    <g data-editor-node-id={selectedShape.id}>
-      {canScale && selectedShape.transform.rotation === 0 && (
+    <g data-editor-node-id={selectedElement.id}>
+      {canScale && selectedElement.transform.rotation === 0 && (
         <>
           <rect
             className={`${styles.sideHitArea} ${styles.north}`}
@@ -566,7 +612,7 @@ export const TransformHandles = observer(function TransformHandles({
         </>
       )}
       {canScale &&
-        selectedShape.transform.rotation !== 0 &&
+        selectedElement.transform.rotation !== 0 &&
         rotatedSideHandles.map(({ end, handle, start }) => (
           <line
             className={`${styles.rotatedSideHitArea} ${styles[handle]}`}

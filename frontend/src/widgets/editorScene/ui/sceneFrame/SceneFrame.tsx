@@ -44,6 +44,21 @@ interface SceneFrameProps {
     rotationCenter: { x: number; y: number },
   ) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
+  onTextRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
   renderVersion: number
@@ -67,6 +82,8 @@ export function SceneFrame({
   onShapeTransformChange,
   onShapeRotationChange,
   onTextPositionChange,
+  onTextTransformChange,
+  onTextRotationChange,
   onViewportOffsetChange,
   onZoomChange,
   renderVersion,
@@ -233,6 +250,8 @@ export function SceneFrame({
                   onDocumentChangeStart={onDocumentChangeStart}
                   onShapeTransformChange={onShapeTransformChange}
                   onShapeRotationChange={onShapeRotationChange}
+                  onTextRotationChange={onTextRotationChange}
+                  onTextTransformChange={onTextTransformChange}
                   selectedNode={selectedNode}
                   selectedNodes={selectedNodes}
                   svgReference={svgReference}
