@@ -111,8 +111,38 @@ services:
       migrate-vector:
         condition: service_completed_successfully
     networks:
-      - postgres
+      postgres:
+      default:
+        aliases:
+          - ya_brander-container
+
+  prometheus:
+    container_name: service-prometheus
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - 9090:9090
+    networks:
       - default
+
+  grafana:
+    container_name: service-grafana
+    image: grafana/grafana:11.2.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - 3000:3000
+    networks:
+      - default
+    depends_on:
+      - prometheus
 
 networks:
     postgres:
@@ -122,3 +152,4 @@ networks:
 volumes:
   pgdata:
   pgvector_data:
+  grafana_data:
