@@ -1,4 +1,5 @@
 import type { GradientDefinition } from '@entities/editorDocument'
+import { useTranslation } from 'react-i18next'
 
 import styles from '../Properties.module.css'
 import { FillProperty } from './FillProperty'
@@ -12,8 +13,11 @@ export function GradientProperty({
   gradient,
   onStopColorChange,
 }: GradientPropertyProps) {
+  const { t } = useTranslation()
   const title =
-    gradient.type === 'linearGradient' ? 'Linear gradient' : 'Radial gradient'
+    gradient.type === 'linearGradient'
+      ? t('Linear gradient')
+      : t('Radial gradient')
 
   return (
     <>
@@ -23,7 +27,10 @@ export function GradientProperty({
           fill={stop.color}
           key={stop.offset}
           onFillChange={(color) => onStopColorChange(index, color)}
-          title={`Color ${index + 1} · ${stop.offset}`}
+          title={t('Color stop {{index}} · {{offset}}', {
+            index: index + 1,
+            offset: stop.offset,
+          })}
         />
       ))}
     </>

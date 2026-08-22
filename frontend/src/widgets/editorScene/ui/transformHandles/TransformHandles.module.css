@@ -6,7 +6,6 @@
 .rotatedSideHitArea {
   pointer-events: stroke;
   stroke: transparent;
-  stroke-width: 16;
   vector-effect: non-scaling-stroke;
 }
 
@@ -24,8 +23,7 @@
 .rotationHandle circle {
   fill: var(--color-surface-elevated);
   pointer-events: all;
-  stroke: var(--color-accent-primary);
-  stroke-width: 2;
+  stroke: #4096f2;
   vector-effect: non-scaling-stroke;
 }
 
@@ -45,9 +43,8 @@
 .rotationHandle path {
   fill: none;
   pointer-events: none;
-  stroke: var(--color-accent-primary);
+  stroke: #4096f2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.4;
   vector-effect: non-scaling-stroke;
 }

@@ -104,6 +104,7 @@ export function TransformProperties({
           <strong>{Math.round(layer.transform.rotation)}°</strong>
         </span>
         <Range
+          centered
           max={180}
           min={-180}
           onChange={(event) =>

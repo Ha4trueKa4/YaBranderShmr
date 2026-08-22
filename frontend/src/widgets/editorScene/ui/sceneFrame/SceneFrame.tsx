@@ -266,6 +266,7 @@ export function SceneFrame({
                   canvasY={document.viewBoxY ?? 0}
                   getEditableElement={getEditableElement}
                   selectedNodes={selectedNodes}
+                  zoom={zoom}
                 />
                 <TransformHandles
                   activeTool={activeTool}
@@ -283,6 +284,7 @@ export function SceneFrame({
                   selectedNode={selectedNode}
                   selectedNodes={selectedNodes}
                   svgReference={svgReference}
+                  zoom={zoom}
                 />
               </>
             )}

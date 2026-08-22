@@ -17,6 +17,8 @@ type SelectionBoundsByNode = {
   outline: SelectionPoint[] | null
 }
 
+const SELECTION_STROKE_WIDTH = 1
+
 function hasSameBounds(
   firstBounds: SelectionBounds,
   secondBounds: SelectionBounds,
@@ -117,6 +119,7 @@ interface SelectionOverlayProps {
   canvasY: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   selectedNodes: EditorNode[]
+  zoom: number
 }
 
 export const SelectionOverlay = observer(function SelectionOverlay({
@@ -126,6 +129,7 @@ export const SelectionOverlay = observer(function SelectionOverlay({
   canvasY,
   getEditableElement,
   selectedNodes,
+  zoom,
 }: SelectionOverlayProps) {
   const [selectionBounds, setSelectionBounds] = useState<
     SelectionBoundsByNode[]
@@ -162,6 +166,8 @@ export const SelectionOverlay = observer(function SelectionOverlay({
     return null
   }
 
+  const strokeWidth = SELECTION_STROKE_WIDTH / zoom
+
   return selectionBounds.map(({ bounds, nodeId, outline }) => {
     const constrainedBounds = constrainSelectionBounds(
       bounds,
@@ -176,12 +182,14 @@ export const SelectionOverlay = observer(function SelectionOverlay({
         className={styles.overlay}
         key={nodeId}
         points={outline.map((point) => `${point.x},${point.y}`).join(' ')}
+        strokeWidth={strokeWidth}
       />
     ) : (
       <rect
         className={styles.overlay}
         height={constrainedBounds.height}
         key={nodeId}
+        strokeWidth={strokeWidth}
         width={constrainedBounds.width}
         x={constrainedBounds.x}
         y={constrainedBounds.y}

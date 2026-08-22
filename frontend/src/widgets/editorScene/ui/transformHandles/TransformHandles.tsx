@@ -90,6 +90,7 @@ interface TransformHandlesProps {
   selectedNode: EditorNode | null
   selectedNodes: EditorNode[]
   svgReference: RefObject<SVGSVGElement | null>
+  zoom: number
 }
 
 function getSvgPointerPosition(
@@ -259,6 +260,7 @@ export const TransformHandles = observer(function TransformHandles({
   selectedNode,
   selectedNodes,
   svgReference,
+  zoom,
 }: TransformHandlesProps) {
   const [bounds, setBounds] = useState<SelectionBounds | null>(null)
   const [outline, setOutline] = useState<SelectionPoint[] | null>(null)
@@ -545,21 +547,24 @@ export const TransformHandles = observer(function TransformHandles({
     canvasX,
     canvasY,
   )
+  const cornerHandleSize = CORNER_HANDLE_SIZE / zoom
+  const rotationHandleSize = ROTATION_HANDLE_SIZE / zoom
+  const sideHitAreaSize = SIDE_HIT_AREA_SIZE / zoom
   const northWest = getHandlePosition(
     outline?.[0] ?? getCornerCenter(handleBounds, 'northWest'),
-    CORNER_HANDLE_SIZE,
+    cornerHandleSize,
   )
   const northEast = getHandlePosition(
     outline?.[1] ?? getCornerCenter(handleBounds, 'northEast'),
-    ROTATION_HANDLE_SIZE,
+    rotationHandleSize,
   )
   const southWest = getHandlePosition(
     outline?.[3] ?? getCornerCenter(handleBounds, 'southWest'),
-    CORNER_HANDLE_SIZE,
+    cornerHandleSize,
   )
   const southEast = getHandlePosition(
     outline?.[2] ?? getCornerCenter(handleBounds, 'southEast'),
-    CORNER_HANDLE_SIZE,
+    cornerHandleSize,
   )
   const scaleCorners: Array<{
     handle: 'northWest' | 'southEast' | 'southWest'
@@ -581,7 +586,7 @@ export const TransformHandles = observer(function TransformHandles({
         { end: outline[0], handle: 'west', start: outline[3] },
       ]
     : []
-  const sideOffset = SIDE_HIT_AREA_SIZE / 2
+  const sideOffset = sideHitAreaSize / 2
   const sideHandlers = {
     onPointerCancel: stopScaling,
     onPointerMove: handlePointerMove,
@@ -594,39 +599,39 @@ export const TransformHandles = observer(function TransformHandles({
         <>
           <rect
             className={`${styles.sideHitArea} ${styles.north}`}
-            height={SIDE_HIT_AREA_SIZE}
+            height={sideHitAreaSize}
             onPointerDown={(event) => startScaling('north', event)}
             {...sideHandlers}
-            width={Math.max(handleBounds.width - CORNER_HANDLE_SIZE, 0)}
-            x={handleBounds.x + CORNER_HANDLE_SIZE / 2}
+            width={Math.max(handleBounds.width - cornerHandleSize, 0)}
+            x={handleBounds.x + cornerHandleSize / 2}
             y={handleBounds.y - sideOffset}
           />
           <rect
             className={`${styles.sideHitArea} ${styles.east}`}
-            height={Math.max(handleBounds.height - CORNER_HANDLE_SIZE, 0)}
+            height={Math.max(handleBounds.height - cornerHandleSize, 0)}
             onPointerDown={(event) => startScaling('east', event)}
             {...sideHandlers}
-            width={SIDE_HIT_AREA_SIZE}
+            width={sideHitAreaSize}
             x={handleBounds.x + handleBounds.width - sideOffset}
-            y={handleBounds.y + CORNER_HANDLE_SIZE / 2}
+            y={handleBounds.y + cornerHandleSize / 2}
           />
           <rect
             className={`${styles.sideHitArea} ${styles.south}`}
-            height={SIDE_HIT_AREA_SIZE}
+            height={sideHitAreaSize}
             onPointerDown={(event) => startScaling('south', event)}
             {...sideHandlers}
-            width={Math.max(handleBounds.width - CORNER_HANDLE_SIZE, 0)}
-            x={handleBounds.x + CORNER_HANDLE_SIZE / 2}
+            width={Math.max(handleBounds.width - cornerHandleSize, 0)}
+            x={handleBounds.x + cornerHandleSize / 2}
             y={handleBounds.y + handleBounds.height - sideOffset}
           />
           <rect
             className={`${styles.sideHitArea} ${styles.west}`}
-            height={Math.max(handleBounds.height - CORNER_HANDLE_SIZE, 0)}
+            height={Math.max(handleBounds.height - cornerHandleSize, 0)}
             onPointerDown={(event) => startScaling('west', event)}
             {...sideHandlers}
-            width={SIDE_HIT_AREA_SIZE}
+            width={sideHitAreaSize}
             x={handleBounds.x - sideOffset}
-            y={handleBounds.y + CORNER_HANDLE_SIZE / 2}
+            y={handleBounds.y + cornerHandleSize / 2}
           />
         </>
       )}
@@ -640,6 +645,7 @@ export const TransformHandles = observer(function TransformHandles({
             onPointerDown={(event) => startScaling(handle, event)}
             onPointerMove={handlePointerMove}
             onPointerUp={stopScaling}
+            strokeWidth={sideHitAreaSize}
             x1={start.x}
             x2={end.x}
             y1={start.y}
@@ -649,17 +655,18 @@ export const TransformHandles = observer(function TransformHandles({
       {scaleCorners.map(({ handle, position }) => (
         <rect
           className={`${styles.cornerHandle} ${styles[handle]}`}
-          height={CORNER_HANDLE_SIZE}
+          height={cornerHandleSize}
           key={handle}
           onPointerDown={(event) => startScaling(handle, event)}
           {...sideHandlers}
-          width={CORNER_HANDLE_SIZE}
+          strokeWidth={2 / zoom}
+          width={cornerHandleSize}
           x={position.x}
           y={position.y}
           transform={
             selectedElement.transform.rotation === 0
               ? undefined
-              : `rotate(${selectedElement.transform.rotation} ${position.x + CORNER_HANDLE_SIZE / 2} ${position.y + CORNER_HANDLE_SIZE / 2})`
+              : `rotate(${selectedElement.transform.rotation} ${position.x + cornerHandleSize / 2} ${position.y + cornerHandleSize / 2})`
           }
         />
       ))}
@@ -668,17 +675,20 @@ export const TransformHandles = observer(function TransformHandles({
         transform={`translate(${northEast.x} ${northEast.y})`}
       >
         <circle
-          cx={ROTATION_HANDLE_SIZE / 2}
-          cy={ROTATION_HANDLE_SIZE / 2}
+          cx={rotationHandleSize / 2}
+          cy={rotationHandleSize / 2}
           onPointerCancel={stopRotating}
           onPointerDown={startRotating}
           onPointerMove={handleRotatePointerMove}
           onPointerUp={stopRotating}
-          r={ROTATION_HANDLE_SIZE / 2 - 1}
+          r={rotationHandleSize / 2 - 1 / zoom}
+          strokeWidth={2 / zoom}
         />
-        <g transform="translate(2 0.48) scale(0.92)">
-          <path d="M7.7 4A3.4 3.4 0 1 0 8.5 8" />
-          <path d="M7.7 2v2.5H5.2" />
+        <g
+          transform={`scale(${rotationHandleSize / ROTATION_HANDLE_SIZE}) translate(2 0.48) scale(0.92)`}
+        >
+          <path d="M7.7 4A3.4 3.4 0 1 0 8.5 8" strokeWidth={1.4 / zoom} />
+          <path d="M7.7 2v2.5H5.2" strokeWidth={1.4 / zoom} />
         </g>
       </g>
     </g>
