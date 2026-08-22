@@ -187,12 +187,13 @@ export class EditorStore {
 
     if (
       selectedNodes.length === 0 ||
-      selectedNodes.some((node) => node.isLocked) ||
+      selectedNodes.some((node) => node.isLocked && node.type !== 'raw') ||
       selectedNodes.some(
         (node) =>
           node.type !== 'shape' &&
           node.type !== 'group' &&
-          node.type !== 'text',
+          node.type !== 'text' &&
+          node.type !== 'raw',
       ) ||
       !Number.isFinite(offsetX) ||
       !Number.isFinite(offsetY)
@@ -202,7 +203,11 @@ export class EditorStore {
 
     return this.applyDocumentChange(() => {
       for (const selectedNode of selectedNodes) {
-        if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
+        if (
+          selectedNode.type === 'shape' ||
+          selectedNode.type === 'group' ||
+          selectedNode.type === 'raw'
+        ) {
           selectedNode.transform.x += offsetX
           selectedNode.transform.y += offsetY
         } else if (selectedNode.type === 'text') {

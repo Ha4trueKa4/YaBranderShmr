@@ -18,7 +18,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
   gap: var(--space-6);
-  padding: var(--space-3) var(--space-8) var(--space-6) 11.5rem;
+  padding: var(--space-3) var(--space-8) var(--space-6) 10.5rem;
 }
 
 .avatar {
@@ -46,7 +46,10 @@
   line-height: 1.2;
 }
 
-.username,
+.username {
+  color: var(--color-text-primary);
+}
+
 .bio {
   color: var(--color-text-muted);
 }

@@ -117,7 +117,7 @@ export function InspectorPanel({
         <div className={styles.content}>
           <p>
             {t(
-              'This SVG layer is locked because its features are not editable yet.',
+              'This SVG layer has effects that cannot be edited yet. You can still move it.',
             )}
           </p>
         </div>

@@ -332,7 +332,7 @@ describe('EditorStore selection', () => {
     expect(store.moveSelectedNode(1, 1)).toBe(false)
   })
 
-  it('does not report a move for a selected raw node', () => {
+  it('moves a selected raw node by the given offset', () => {
     const documentWithRawNode = structuredClone(document)
     documentWithRawNode.layers.push({
       id: 'unsupported',
@@ -346,7 +346,11 @@ describe('EditorStore selection', () => {
     })
     const store = new EditorStore(documentWithRawNode, 'unsupported')
 
-    expect(store.moveSelectedNode(1, 1)).toBe(false)
+    expect(store.moveSelectedNode(1, 1)).toBe(true)
+    expect(store.selectedNode).toMatchObject({
+      transform: { x: 1, y: 1 },
+      type: 'raw',
+    })
   })
 
   it('adds, updates and removes a shape outline', () => {

@@ -37,6 +37,27 @@ describe('serializeSvg', () => {
     expect(parseSvg(serialized)).toEqual(document)
   })
 
+  it('wraps a moved raw layer in its editor transform', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs><filter id="shadow"><feGaussianBlur stdDeviation="4" /></filter></defs>
+        <rect id="shadowed" x="10" y="10" width="20" height="20" filter="url(#shadow)" />
+      </svg>
+    `)
+    const rawNode = document.layers[0]
+
+    if (rawNode?.type !== 'raw') {
+      throw new Error('Expected a raw node')
+    }
+
+    rawNode.transform.x = 12
+    rawNode.transform.y = -4
+
+    expect(serializeSvg(document)).toContain(
+      '<g transform="translate(12 -4)"><rect',
+    )
+  })
+
   it('serializes multiline text as tspans and imports it as one text layer', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
