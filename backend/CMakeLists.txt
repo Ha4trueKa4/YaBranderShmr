@@ -65,6 +65,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/login_handler.cpp
         src/handlers/auth/password_hasher.hpp
         src/handlers/auth/password_hasher.cpp
+        src/handlers/auth/yandex_oauth_handler.hpp
+        src/handlers/auth/yandex_oauth_handler.cpp
         src/components/auth_checker.hpp
         src/components/auth_checker.cpp
         src/components/project_manager_component.cpp
@@ -85,11 +87,14 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/patch_project.cpp
         src/handlers/projects/svg_validation_error_response.hpp
         src/handlers/projects/delete_project.cpp
-        src/handlers/projects/generate_project.cpp
         src/handlers/projects/get_project_chat.cpp
+        src/handlers/projects/generation/generate_project.cpp
+        src/handlers/projects/generation/generate_status.cpp
+        src/handlers/projects/generation/append_generation.cpp
         src/handlers/projects/versions/get_version.cpp
         src/handlers/projects/versions/restore_version.cpp
         src/handlers/projects/versions/list_versions.cpp
+        src/handlers/projects/versions/append_versions.cpp
         src/components/version_storage/version_storage_component_impl.cpp
         src/handlers/users/append_users.hpp
         src/handlers/users/append_users.cpp
@@ -109,6 +114,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/user_subscriptions_handlers.cpp
         src/components/prompt_constructor/prompt_polisher_component.cpp
         src/handlers/test_llm_handler/test_polisher_handler.cpp
+        src/utils/errors.hpp
+        src/utils/errors.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

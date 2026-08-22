@@ -1,50 +1,68 @@
-import type { EditorShape, Paint } from '@entities/editorDocument'
+import type { EditorDefinitions, EditorShape } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
+import { GradientProperty } from '../components/GradientProperty'
+import { PropertyField } from '../components/PropertyField'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
 import { StrokeProperty } from '../components/StrokeProperty'
 import styles from '../Properties.module.css'
 
 interface ShapePropertiesProps {
+  definitions?: EditorDefinitions
   layer: EditorShape
   onFillChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onFillOpacityChange: (opacity: number) => void
+  onGradientStopColorChange: (
+    gradientId: string,
+    stopIndex: number,
+    color: string,
+  ) => void
   onOpacityChange: (opacity: number) => void
   onPositionChange: (x: number, y: number) => void
-}
-
-function paintToLabel(paint: Paint) {
-  if (paint.type === 'color') {
-    return paint.value
-  }
-
-  if (paint.type === 'gradient') {
-    return `Gradient: ${paint.gradientId}`
-  }
-
-  return 'None'
+  onStrokeAdd: () => void
+  onStrokeColorChange: (color: string) => void
+  onStrokeRemove: () => void
+  onStrokeWidthChange: (strokeWidth: number) => void
 }
 
 export const ShapeProperties = observer(function ShapeProperties({
+  definitions,
   layer,
   onFillChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onFillOpacityChange,
+  onGradientStopColorChange,
   onPositionChange,
+  onStrokeAdd,
+  onStrokeColorChange,
+  onStrokeRemove,
+  onStrokeWidthChange,
 }: ShapePropertiesProps) {
+  const fill = layer.style.fill
+  const gradient =
+    fill.type === 'gradient'
+      ? definitions?.gradients.find((item) => item.id === fill.gradientId)
+      : undefined
+  const isEditableGradient = Boolean(gradient && gradient.stops.length > 0)
+  const { t } = useTranslation()
   return (
     <div className={styles.properties}>
-      <p className={styles.sectionTitle}>Shape</p>
+      <p className={styles.sectionTitle}>{t('Shape')}</p>
       <div className={styles.fieldGrid}>
         <div className={styles.field}>
-          <span>X</span>
+          <span>{t('X')}</span>
           <ScrubbableNumberInput
             onValueChange={(x) => onPositionChange(x, layer.transform.y)}
             value={layer.transform.x}
           />
         </div>
         <div className={styles.field}>
-          <span>Y</span>
+          <span>{t('Y')}</span>
           <ScrubbableNumberInput
             axis="vertical"
             onValueChange={(y) => onPositionChange(layer.transform.x, y)}
@@ -52,15 +70,47 @@ export const ShapeProperties = observer(function ShapeProperties({
           />
         </div>
       </div>
-      <FillProperty
-        fill={
-          layer.style.fill.type === 'color' ? layer.style.fill.value : '#000000'
-        }
-        onFillChange={onFillChange}
-        onOpacityChange={onFillOpacityChange}
-        opacity={layer.style.fillOpacity}
+      {isEditableGradient && gradient ? (
+        <GradientProperty
+          gradient={gradient}
+          onStopColorChange={(stopIndex, color) =>
+            onGradientStopColorChange(gradient.id, stopIndex, color)
+          }
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
+        />
+      ) : fill.type === 'gradient' ? (
+        <PropertyField
+          label={t('Fill')}
+          labelClassName={styles.sectionTitle}
+          value={t('Gradient has no editable color stops')}
+        />
+      ) : fill.type === 'none' ? (
+        <PropertyField
+          label={t('Fill')}
+          labelClassName={styles.sectionTitle}
+          value={t('No fill')}
+        />
+      ) : (
+        <FillProperty
+          fill={fill.value}
+          onFillChange={onFillChange}
+          onEyeDropperEnd={onEyeDropperEnd}
+          onEyeDropperStart={onEyeDropperStart}
+          onOpacityChange={onFillOpacityChange}
+          opacity={layer.style.fillOpacity}
+        />
+      )}
+      <StrokeProperty
+        onAdd={onStrokeAdd}
+        onColorChange={onStrokeColorChange}
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
+        onRemove={onStrokeRemove}
+        onWidthChange={onStrokeWidthChange}
+        stroke={layer.style.stroke}
+        strokeWidth={layer.style.strokeWidth}
       />
-      <StrokeProperty stroke={paintToLabel(layer.style.stroke)} />
     </div>
   )
 })

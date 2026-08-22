@@ -1,6 +1,7 @@
 import type { EditorText } from '@entities/editorDocument'
 import { Input } from '@shared/ui'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
@@ -21,6 +22,8 @@ interface TextPropertiesProps {
   onAnchorChange: (textAnchor: 'end' | 'middle' | 'start') => void
   onContentChange: (text: string) => void
   onFillColorChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onFontFamilyChange: (fontFamily: string) => void
   onFontSizeChange: (fontSize: number) => void
   onFontStyleChange: (fontStyle: 'italic' | 'normal') => void
@@ -39,12 +42,15 @@ export const TextProperties = observer(function TextProperties({
   onAnchorChange,
   onContentChange,
   onFillColorChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onFontFamilyChange,
   onFontSizeChange,
   onFontStyleChange,
   onFontWeightChange,
   onPositionChange,
 }: TextPropertiesProps) {
+  const { t } = useTranslation()
   const fill =
     layer.style.fill.type === 'color' ? layer.style.fill.value : '#000000'
 
@@ -71,9 +77,9 @@ export const TextProperties = observer(function TextProperties({
 
   return (
     <div className={styles.properties}>
-      <p className={styles.sectionTitle}>Text</p>
+      <p className={styles.sectionTitle}>{t('Text')}</p>
       <div className={styles.field}>
-        <span>Content</span>
+        <span>{t('Content')}</span>
         <textarea
           className={styles.textarea}
           maxLength={1000}
@@ -83,14 +89,14 @@ export const TextProperties = observer(function TextProperties({
       </div>
       <div className={styles.fieldGrid}>
         <div className={styles.field}>
-          <span>X</span>
+          <span>{t('X')}</span>
           <ScrubbableNumberInput
             onValueChange={(value) => handlePositionChange('x', String(value))}
             value={layer.x}
           />
         </div>
         <div className={styles.field}>
-          <span>Y</span>
+          <span>{t('Y')}</span>
           <ScrubbableNumberInput
             axis="vertical"
             onValueChange={(value) => handlePositionChange('y', String(value))}
@@ -101,10 +107,12 @@ export const TextProperties = observer(function TextProperties({
       <FillProperty
         fill={fill}
         onFillChange={onFillColorChange}
-        title="Color"
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
+        title={t('Color')}
       />
       <label className={styles.field}>
-        Font family
+        {t('Font family')}
         <select
           className={styles.select}
           onChange={(event) => onFontFamilyChange(event.target.value)}
@@ -119,7 +127,7 @@ export const TextProperties = observer(function TextProperties({
       </label>
       <div className={styles.fieldGrid}>
         <div className={styles.field}>
-          <span>Font size</span>
+          <span>{t('Font size')}</span>
           <Input
             min="1"
             onChange={(event) => handleFontSizeChange(event.target.value)}
@@ -128,22 +136,22 @@ export const TextProperties = observer(function TextProperties({
           />
         </div>
         <label className={styles.field}>
-          Weight
+          {t('Weight')}
           <select
             className={styles.select}
             onChange={(event) => onFontWeightChange(Number(event.target.value))}
             value={layer.style.fontWeight ?? 400}
           >
-            <option value="400">Regular</option>
-            <option value="500">Medium</option>
-            <option value="600">Semibold</option>
-            <option value="700">Bold</option>
+            <option value="400">{t('Regular')}</option>
+            <option value="500">{t('Medium')}</option>
+            <option value="600">{t('Semibold')}</option>
+            <option value="700">{t('Bold')}</option>
           </select>
         </label>
       </div>
       <div className={styles.fieldGrid}>
         <label className={styles.field}>
-          Style
+          {t('Style')}
           <select
             className={styles.select}
             onChange={(event) =>
@@ -151,12 +159,12 @@ export const TextProperties = observer(function TextProperties({
             }
             value={layer.style.fontStyle ?? 'normal'}
           >
-            <option value="normal">Normal</option>
-            <option value="italic">Italic</option>
+            <option value="normal">{t('Normal')}</option>
+            <option value="italic">{t('Italic')}</option>
           </select>
         </label>
         <label className={styles.field}>
-          Align
+          {t('Align')}
           <select
             className={styles.select}
             onChange={(event) =>
@@ -164,9 +172,9 @@ export const TextProperties = observer(function TextProperties({
             }
             value={layer.style.textAnchor ?? 'start'}
           >
-            <option value="start">Left</option>
-            <option value="middle">Center</option>
-            <option value="end">Right</option>
+            <option value="start">{t('Left')}</option>
+            <option value="middle">{t('Center')}</option>
+            <option value="end">{t('Right')}</option>
           </select>
         </label>
       </div>

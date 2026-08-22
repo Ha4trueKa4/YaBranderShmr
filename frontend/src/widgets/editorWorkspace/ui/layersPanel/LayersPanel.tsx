@@ -1,5 +1,6 @@
 import type { EditorNode } from '@entities/editorDocument'
 import { observer } from 'mobx-react-lite'
+import { useTranslation } from 'react-i18next'
 
 import plus from './assets/plus.svg'
 import styles from './LayersPanel.module.css'
@@ -8,10 +9,10 @@ import { LayerTreeItem } from './LayerTreeItem'
 interface LayersPanelProps {
   expandedGroupIds: ReadonlySet<string>
   nodes: EditorNode[]
-  onSelectNode: (nodeId: string) => void
+  onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onToggleGroup: (groupId: string) => void
   onToggleVisibility: (nodeId: string) => void
-  selectedNodeId: string | null
+  selectedNodeIds: ReadonlySet<string>
 }
 
 export const LayersPanel = observer(function LayersPanel({
@@ -20,12 +21,13 @@ export const LayersPanel = observer(function LayersPanel({
   onSelectNode,
   onToggleGroup,
   onToggleVisibility,
-  selectedNodeId,
+  selectedNodeIds,
 }: LayersPanelProps) {
+  const { t } = useTranslation()
   return (
     <section className={styles.panel}>
       <div className={styles.header}>
-        <h2>Layers</h2>
+        <h2>{t('Layers')}</h2>
         {/* TODO: открыть feature добавления нового слоя. */}
         <button className={styles.addButton} type="button">
           <img alt="" src={plus} />
@@ -41,7 +43,7 @@ export const LayersPanel = observer(function LayersPanel({
             onSelectNode={onSelectNode}
             onToggleGroup={onToggleGroup}
             onToggleVisibility={onToggleVisibility}
-            selectedNodeId={selectedNodeId}
+            selectedNodeIds={selectedNodeIds}
           />
         ))}
       </div>

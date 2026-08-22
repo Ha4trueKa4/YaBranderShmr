@@ -8,7 +8,6 @@ struct FeedListCardView: View {
     let previewURL: URL?
     let coverColors: [Color]?
     let coverHeight: CGFloat?
-    let accountAvatar: Image?
     let accountName: String?
     let onTap: () -> Void
 
@@ -17,7 +16,6 @@ struct FeedListCardView: View {
         previewURL: URL? = nil,
         coverColors: [Color]? = nil,
         coverHeight: CGFloat? = nil,
-        accountAvatar: Image? = nil,
         accountName: String? = nil,
         onTap: @escaping () -> Void
     ) {
@@ -25,7 +23,6 @@ struct FeedListCardView: View {
         self.previewURL = previewURL
         self.coverColors = coverColors
         self.coverHeight = coverHeight
-        self.accountAvatar = accountAvatar
         self.accountName = accountName
         self.onTap = onTap
     }
@@ -47,25 +44,18 @@ struct FeedListCardView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
-                if accountAvatar != nil || accountName != nil {
+                if let accountName {
                     HStack(spacing: 8) {
-                        if let accountAvatar {
-                            accountAvatar
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 24, height: 24)
-                                .clipShape(Circle())
-                        }
+                        AvatarView(initials: accountName.initials, size: 24)
 
-                        if let accountName {
-                            Text(accountName)
-                                .font(Self.authorFont)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
+                        Text(accountName)
+                            .font(Self.authorFont)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
         }
         .background(Color(.secondarySystemBackground))
@@ -95,7 +85,6 @@ struct FeedListCardView: View {
         FeedListCardView(
             title: "Project Alpha",
             previewURL: nil,
-            accountAvatar: Image("image.placeholder"),
             accountName: "Alice",
             onTap: {}
         )
@@ -103,5 +92,4 @@ struct FeedListCardView: View {
         FeedListCardSkeleton()
     }
     .padding(16)
-    .preferredColorScheme(.dark)
 }

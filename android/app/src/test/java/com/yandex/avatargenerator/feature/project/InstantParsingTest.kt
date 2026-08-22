@@ -60,6 +60,21 @@ class InstantParsingTest {
     }
 
     @Test
+    fun `микросекунды из Postgres разбираются`() {
+        // История чата сериализуется не хендлером, а самой базой:
+        // jsonb_build_object('created_at', NOW()) даёт микросекунды, причём
+        // хвостовые нули Postgres обрезает — отсюда две формы дробной части.
+        assertEquals(
+            Instant.parse("2026-08-16T09:12:33.123456Z"),
+            "2026-08-16T09:12:33.123456+00:00".toInstantOrNull(),
+        )
+        assertEquals(
+            Instant.parse("2026-08-16T09:12:40.500Z"),
+            "2026-08-16T09:12:40.5+00:00".toInstantOrNull(),
+        )
+    }
+
+    @Test
     fun `кривой формат даёт null, а не исключение`() {
         assertNull("вчера".toInstantOrNull())
         assertNull("".toInstantOrNull())

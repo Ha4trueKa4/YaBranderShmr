@@ -1,12 +1,20 @@
 #pragma once
+#include <chrono>
+#include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <userver/components/component_context.hpp>
 #include <userver/components/loggable_component_base.hpp>
+#include <userver/concurrent/background_task_storage.hpp>
+#include <userver/engine/condition_variable.hpp>
+#include <userver/engine/mutex.hpp>
+#include <userver/engine/semaphore.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/formats/json/value.hpp>
 
+#include "../models/generation_job.hpp"
 #include "../models/project.hpp"
 #include "dependencies_stubs.h"
 #include "LLMClientComponent.hpp"
@@ -32,7 +40,26 @@ public:
 
   void DeleteProject(const std::string& id);
 
-  std::string GenerateAI(const std::string& project_id, const std::string& prompt, const std::string& model);
+  /// @brief Запускает фоновую генерацию: сразу сохраняет сообщение
+  ///        пользователя в chat_history и возвращает job_id, не дожидаясь
+  ///        ответа LLM. Сама генерация выполняется в фоновой корутине на
+  ///        bg-task-processor (отдельно от main-task-processor, который
+  ///        обслуживает HTTP-запросы, включая long-poll GET .../generate/{job_id}).
+  ///        version_storage_/llm_client_/prompt_constructor_ безопасны для
+  ///        конкурентных вызовов из разных корутин: ни один из них не хранит
+  ///        изменяемое состояние между вызовами (методы, читающие/пишущие
+  ///        данные, либо const, либо работают только через
+  ///        userver::storages::postgres::ClusterPtr / userver::clients::http::Client,
+  ///        которые сами по себе конкурентно-безопасны).
+  /// @throws std::exception если не удалось создать job (например, недоступна
+  ///         БД при записи сообщения пользователя) — в этом случае job_id
+  ///         никому не отдаётся и в jobs_ ничего не остаётся.
+  std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
+
+  /// @brief Ждёт завершения job'а генерации не дольше timeout (long polling).
+  /// @returns std::nullopt, если job с таким id не найден для этого проекта.
+  std::optional<models::GenerationJob> WaitForGeneration(const std::string& project_id, const std::string& job_id,
+                                                          std::chrono::milliseconds timeout);
 
   std::vector<models::Version> ListVersions(const std::string& project_id);
 
@@ -53,6 +80,22 @@ public:
   userver::formats::json::Value GetChatHistory(const std::string& project_id);
 
 private:
+  enum class JobStatus { kPending, kDone, kError };
+
+  /// @brief Состояние одной фоновой задачи генерации. Хранится в jobs_ по
+  ///        shared_ptr, чтобы фоновая корутина и WaitForGeneration могли
+  ///        безопасно обращаться к нему независимо от того, жив ли ещё
+  ///        соответствующий элемент карты jobs_.
+  struct JobEntry {
+    std::string project_id;
+    std::chrono::steady_clock::time_point created_at = std::chrono::steady_clock::now();
+    userver::engine::Mutex mutex;
+    userver::engine::ConditionVariable cv;
+    JobStatus status = JobStatus::kPending;
+    std::string result_version_id;
+    std::string error_message;
+  };
+
   /// @brief Сырой project.chat_history одним запросом (jsonb напрямую, без
   ///        ::text каста и повторного парсинга) — общий код для
   ///        GetChatHistory и GetRecentUserPrompts.
@@ -62,16 +105,50 @@ private:
   ///        модели), от старых к новым — контекст для промпта LLM.
   std::vector<std::string> GetRecentUserPrompts(const std::string& project_id, std::size_t limit);
 
-  /// @brief Атомарно добавляет пару сообщений (запрос пользователя + ссылку
-  ///        на версию-ответ) в конец project.chat_history.
-  void AppendChatExchange(const std::string& project_id, const std::string& user_message,
-                          const std::string& version_id);
+  /// @brief Добавляет сообщение пользователя в конец project.chat_history.
+  ///        Вызывается сразу при старте job'а, до обращения к LLM.
+  void AppendUserMessage(const std::string& project_id, const std::string& job_id, const std::string& user_message);
+
+  /// @brief Добавляет успешный ответ ассистента (ссылку на версию) в конец
+  ///        project.chat_history.
+  void AppendAssistantSuccess(const std::string& project_id, const std::string& job_id,
+                               const std::string& version_id);
+
+  /// @brief Добавляет запись об ошибке генерации в конец project.chat_history.
+  void AppendAssistantError(const std::string& project_id, const std::string& job_id,
+                             const std::string& error_message);
+
+  /// @brief Собственно генерация (построение промпта, вызов LLM, сохранение
+  ///        версии), выполняется в фоновой корутине из StartGeneration.
+  ///        @returns id сохранённой версии.
+  std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
+
+  /// @brief Удаляет из jobs_ завершённые job'ы старше kJobRetention, а
+  ///        зависшие в kPending (задача так и не запустилась/не завершилась,
+  ///        например из-за перегрузки task processor'а) — старше
+  ///        kStuckPendingRetention. Без второго условия такой job остался бы
+  ///        в jobs_ навсегда, так как обычное условие смотрит только на
+  ///        завершённые статусы. Вызывается под jobs_mutex_.
+  void PruneOldJobsLocked();
 
   userver::storages::postgres::ClusterPtr pg_cluster_;
   VersionStorageComponent& version_storage_;
   LLMClientComponent& llm_client_;
   PromptConstructorComponent& prompt_constructor_;
-  PromptPolisherComponent& prompt_polisher_;
+
+  userver::engine::Mutex jobs_mutex_;
+  std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
+
+  // Ограничивает число одновременно выполняющихся генераций (SendPrompt к
+  // LLM + SaveVersion), чтобы всплеск запросов не перегрузил bg-task-processor
+  // и внешние зависимости (LLM API, S3). Захватывается только на время самой
+  // генерации в фоновой корутине, не на всё время жизни job'а.
+  userver::engine::Semaphore generation_semaphore_;
+
+  // Должен быть объявлен последним: при разрушении компонента фоновые задачи
+  // должны быть отменены/дожданы раньше, чем уничтожатся поля выше, которые
+  // эти задачи используют (pg_cluster_, jobs_ и т.д.).
+  userver::concurrent::BackgroundTaskStorage bts_;
 };
 
 } // namespace ya_brander::components

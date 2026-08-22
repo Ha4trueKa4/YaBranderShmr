@@ -15,6 +15,9 @@ nonisolated enum APIEndpoint {
     case projects
     case project(id: UUID)
     case generate(projectID: UUID)
+    case projectChat(projectID: UUID)
+    case projectVersions(projectID: UUID)
+    case projectVersion(projectID: UUID, versionID: UUID)
 
     // Feed
     case feed(scope: FeedScope, cursor: String?, limit: Int)
@@ -28,29 +31,42 @@ nonisolated enum APIEndpoint {
             "/auth/login"
 
         case .userProfile(let id):
-            "/users/\(id.uuidString)"
+            "/users/\(Self.pathID(id))"
 
         case .subscribe(let userID):
-            "/users/\(userID.uuidString)/subscribe"
+            "/users/\(Self.pathID(userID))/subscribe"
 
         case .subscribers(let userID):
-            "/users/\(userID.uuidString)/subscribers"
+            "/users/\(Self.pathID(userID))/subscribers"
 
         case .subscriptions(let userID):
-            "/users/\(userID.uuidString)/subscriptions"
+            "/users/\(Self.pathID(userID))/subscriptions"
 
         case .projects:
             "/projects"
 
         case .project(let id):
-            "/projects/\(id.uuidString)"
+            "/projects/\(Self.pathID(id))"
 
         case .generate(let projectID):
-            "/projects/\(projectID.uuidString)/generate"
+            "/projects/\(Self.pathID(projectID))/generate"
+
+        case .projectChat(let projectID):
+            "/projects/\(Self.pathID(projectID))/chat"
+
+        case .projectVersions(let projectID):
+            "/projects/\(Self.pathID(projectID))/versions"
+
+        case .projectVersion(let projectID, let versionID):
+            "/projects/\(Self.pathID(projectID))/versions/\(Self.pathID(versionID))"
 
         case .feed(let scope, let cursor, let limit):
             Self.feedPath(scope: scope, cursor: cursor, limit: limit)
         }
+    }
+
+    private static func pathID(_ id: UUID) -> String {
+        id.uuidString.lowercased()
     }
 
     private static func feedPath(scope: FeedScope, cursor: String?, limit: Int) -> String {
@@ -82,5 +98,17 @@ extension NetworkClientProtocol {
         body: (some Encodable & Sendable)? = Optional<String>.none
     ) async throws {
         try await request(method, path: endpoint.path, authorization: authorization, body: body)
+    }
+}
+
+extension NetworkClient {
+    func request<Response: Decodable & Sendable>(
+        _ method: HTTPMethod,
+        _ endpoint: APIEndpoint,
+        authorization: AuthorizationRequirement,
+        body: (some Encodable & Sendable)?,
+        timeout: TimeInterval?
+    ) async throws -> Response {
+        try await request(method, path: endpoint.path, authorization: authorization, body: body, timeout: timeout)
     }
 }

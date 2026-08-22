@@ -28,8 +28,7 @@
   left: 0;
 }
 
-.hex,
-.colorName {
+.hex {
   margin: 0;
 }
 
@@ -39,7 +38,6 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.colorName,
 .opacityHeader {
   color: var(--color-text-muted);
   font-size: var(--font-size-caption);

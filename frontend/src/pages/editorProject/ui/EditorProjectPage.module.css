@@ -11,15 +11,7 @@
 }
 
 @media (width < 640px) {
-  .page {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-    overscroll-behavior: auto;
-  }
-
   .loadingState {
-    height: auto;
-    min-height: 100dvh;
+    height: 100%;
   }
 }

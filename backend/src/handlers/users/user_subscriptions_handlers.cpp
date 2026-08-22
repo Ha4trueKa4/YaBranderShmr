@@ -3,22 +3,18 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include "../../utils/errors.hpp"
+
 namespace ya_brander::handlers {
 
 namespace {
 
 userver::formats::json::Value MakeInvalidUuidError() {
-  userver::formats::json::ValueBuilder err;
-  err["code"] = "INVALID_UUID";
-  err["message"] = "Некорректный формат ID пользователя";
-  return err.ExtractValue();
+  return utils::MakeError("INVALID_UUID", "Некорректный формат ID пользователя");
 }
 
 userver::formats::json::Value MakeUserNotFoundError() {
-  userver::formats::json::ValueBuilder err;
-  err["code"] = "USER_NOT_FOUND";
-  err["message"] = "Пользователь не найден";
-  return err.ExtractValue();
+  return utils::MakeError("USER_NOT_FOUND", "Пользователь не найден");
 }
 
 }  // namespace

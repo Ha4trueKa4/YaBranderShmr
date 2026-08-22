@@ -65,6 +65,57 @@ describe('parseSvg', () => {
     })
   })
 
+  it('preserves a non-zero viewBox origin', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 100 500 300">
+        <text id="title" x="0" y="200">A</text>
+      </svg>
+    `)
+
+    expect(document).toMatchObject({
+      height: 300,
+      viewBoxX: -250,
+      viewBoxY: 100,
+      width: 500,
+    })
+  })
+
+  it('keeps transforms independent when source nodes have no transform', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <rect id="first" width="10" height="10" />
+        <rect id="second" width="10" height="10" />
+      </svg>
+    `)
+    const [first, second] = document.layers
+
+    if (first?.type !== 'shape' || second?.type !== 'shape') {
+      throw new Error('Expected two editable shapes')
+    }
+
+    first.transform.x = 10
+
+    expect(second.transform.x).toBe(0)
+  })
+
+  it('locks transforms that cannot be represented without changing their order', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <rect id="scaled" width="10" height="10" transform="scale(2) translate(100 0)" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'scaled', isLocked: true, type: 'raw' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'scaled',
+      elementName: 'rect',
+      reason: 'Unsupported SVG transform order: scale(2) translate(100 0)',
+    })
+  })
+
   it('generates type-based names for editable layers without an id', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
@@ -201,6 +252,24 @@ describe('parseSvg', () => {
     })
   })
 
+  it('locks text with individually positioned tspans', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <text id="title" x="20" y="40"><tspan x="20" dy="0">Hello</tspan><tspan x="100" dy="24">world</tspan></text>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      { id: 'title', isLocked: true, type: 'raw' },
+    ])
+    expect(result.warnings).toContainEqual({
+      code: 'locked-raw-node',
+      editorId: 'title',
+      elementName: 'text',
+      reason: 'Text with individually positioned lines is not editable',
+    })
+  })
+
   it('parses a path with its stroke properties', () => {
     const document = parseSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -230,6 +299,23 @@ describe('parseSvg', () => {
         type: 'shape',
       },
     ])
+  })
+
+  it('keeps an explicitly specified path fill instead of using the SVG black default', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <path id="pelican-neck" d="M290 240 Q320 200 330 170" fill="#ffffff" stroke="#ffffff" stroke-width="20" />
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      id: 'pelican-neck',
+      style: {
+        fill: { type: 'color', value: '#ffffff' },
+        stroke: { type: 'color', value: '#ffffff' },
+      },
+      type: 'shape',
+    })
   })
 
   it('keeps a contract editor group and its path editable', () => {
@@ -330,6 +416,52 @@ describe('parseSvg', () => {
       },
       type: 'shape',
     })
+  })
+
+  it('parses a dashed line as an editable shape', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+        <line xmlns="http://www.w3.org/2000/svg" id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        id: 'dashed-line',
+        isLocked: false,
+        style: { strokeDasharray: '4 6' },
+        type: 'shape',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'dashed-line' }),
+    )
+  })
+
+  it('keeps an inherited group fill on editable children', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="logo-gradient"><stop offset="0%" stop-color="#fff" /></linearGradient>
+        </defs>
+        <g id="logo" fill="url(#logo-gradient)">
+          <path id="logo-mark" d="M0 0 L20 20" />
+        </g>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        children: [{ id: 'logo-mark', isLocked: false, type: 'shape' }],
+        fill: { gradientId: 'logo-gradient', type: 'gradient' },
+        id: 'logo',
+        isLocked: false,
+        type: 'group',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'logo' }),
+    )
   })
 
   it('locks unsupported elements without discarding editable siblings', () => {

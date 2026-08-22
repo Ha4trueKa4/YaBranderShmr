@@ -10,12 +10,14 @@ import { Button, useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { UserConnections } from '@widgets'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 
 export function UserSubscriptionsPage() {
   const { userId = '' } = useParams()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { t } = useTranslation()
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
   const isOwnSubscriptions = authStore.getSession?.user.id === userId
   const {
@@ -52,7 +54,7 @@ export function UserSubscriptionsPage() {
   return (
     <UserConnections
       connections={subscriptions}
-      emptyMessage="You are not following anyone yet."
+      emptyMessage={t('You are not following anyone yet.')}
       error={error}
       isError={isError}
       isPending={isPending}
@@ -67,12 +69,12 @@ export function UserSubscriptionsPage() {
                 size="md"
                 variant="outline"
               >
-                Unfollow
+                {t('Unfollow')}
               </Button>
             )
           : undefined
       }
-      title="Your Following"
+      title={t('Your Following')}
     />
   )
 }

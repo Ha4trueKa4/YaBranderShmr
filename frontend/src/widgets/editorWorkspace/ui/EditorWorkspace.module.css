@@ -6,9 +6,6 @@
 
 @media (width < 640px) {
   .workspace {
-    min-height: 100dvh;
-    height: auto;
-    overflow: visible;
     background: var(--color-surface);
   }
 }

@@ -3,7 +3,7 @@
   grid-template-rows: minmax(0, 1fr) auto;
   gap: var(--space-6);
   width: min(100% - 3rem, 68rem);
-  min-height: calc(100vh - 4rem);
+  min-height: 0;
   margin: 0 auto;
   padding: 5rem 0;
 }
@@ -11,14 +11,14 @@
 .preview {
   display: grid;
   place-items: center;
-  min-height: 28rem;
+  min-height: 0;
   border: 2px dashed var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
 
 .previewCompact {
-  min-height: 24rem;
+  min-height: 0;
 }
 
 .copy,
@@ -64,14 +64,9 @@
   .state {
     grid-template-rows: minmax(0, 1fr) auto;
     width: min(100% - 2rem, 68rem);
-    min-height: calc(100dvh - 4rem);
+    min-height: 0;
     gap: var(--space-4);
     padding: var(--space-4) 0 var(--space-6);
-  }
-
-  .preview,
-  .previewCompact {
-    min-height: 22rem;
   }
 
   .copy,
@@ -88,12 +83,5 @@
   .copy h1,
   .copyWidthLimited h1 {
     font-size: var(--font-size-h3);
-  }
-}
-
-@media (width < 400px) {
-  .preview,
-  .previewCompact {
-    min-height: 19rem;
   }
 }

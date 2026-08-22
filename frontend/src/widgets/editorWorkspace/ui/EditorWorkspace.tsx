@@ -1,14 +1,21 @@
 import { AppRoute } from '@app/providers/router/routes'
 import { type EditorDocument, EditorStore } from '@entities/editorDocument'
+import { exportEditorDocument } from '@features/editorExport'
+import { VersionHistoryModal } from '@features/editorVersionHistory'
 import {
   ConfirmUnsavedChangeModal,
   type ImageExportFileType,
   ImageExportModal,
   useToast,
 } from '@shared/ui'
-import { type CanvasTool, EditorScene } from '@widgets/editorScene'
+import {
+  type CanvasTool,
+  EditorScene,
+  type ViewportOffset,
+} from '@widgets/editorScene'
 import { observer } from 'mobx-react-lite'
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { useEditorKeyboardShortcuts } from '../model/useEditorKeyboardShortcuts'
 import { useEditorProjectActions } from '../model/useEditorProjectActions'
@@ -28,6 +35,11 @@ interface EditorWorkspaceProps {
   projectName: string
 }
 
+const MAX_ZOOM = 2
+const MIN_ZOOM = 0.5
+const ZOOM_STEP = 0.25
+const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
+
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
@@ -37,15 +49,24 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const isMobileLayout = useIsMobileLayout()
   const navigate = useNavigate()
   const toast = useToast()
-  const [editorStore] = useState(() => new EditorStore(document))
+  const { t } = useTranslation()
+  const [editorStore, setEditorStore] = useState(
+    () => new EditorStore(document),
+  )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
   const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [zoom, setZoom] = useState(1)
+  const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
+  const [isImageExporting, setIsImageExporting] = useState(false)
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
   const {
     createCopy,
+    hasUnsavedChanges,
     isCreatingCopy,
     isSavingVersion,
+    markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,
@@ -58,26 +79,106 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   })
   const navigationBlocker = useBlocker(shouldBlockNavigation)
 
-  function handleToolbarAction() {
-    // TODO: подключить действия после реализации editorStore.
+  const handleUndo = useCallback(() => {
+    const wasUndone = editorStore.undo()
+
+    if (wasUndone) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    return wasUndone
+  }, [editorStore])
+
+  const handleRedo = useCallback(() => {
+    const wasRedone = editorStore.redo()
+
+    if (wasRedone) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    return wasRedone
+  }, [editorStore])
+
+  function handleZoomIn() {
+    setZoom((currentZoom) => Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM))
+  }
+
+  function handleZoomOut() {
+    setZoom((currentZoom) => Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM))
+  }
+
+  function constrainZoom(nextZoom: number) {
+    return Math.min(Math.max(nextZoom, MIN_ZOOM), MAX_ZOOM)
+  }
+
+  function handleZoomChange(nextZoom: number) {
+    const constrainedZoom = constrainZoom(nextZoom)
+
+    setZoom(constrainedZoom)
+
+    return constrainedZoom
   }
 
   function handleExport() {
     setIsImageExportModalOpen(true)
   }
 
-  function handleImageExport(fileType: ImageExportFileType) {
-    setIsImageExportModalOpen(false)
-    toast.info(`${fileType.toUpperCase()} export is not available yet.`)
+  function handleOpenMobileProperties() {
+    editorStore.beginHistoryTransaction()
+    setIsMobileInspectorOpen(true)
+  }
+
+  function handleOpenMobileColorPicker() {
+    editorStore.beginHistoryTransaction()
+  }
+
+  function handleDoneMobileProperties() {
+    editorStore.commitHistoryTransaction()
+    setIsMobileInspectorOpen(false)
+  }
+
+  function handleCancelMobileProperties() {
+    const wasCancelled = editorStore.cancelHistoryTransaction()
+
+    if (wasCancelled) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    setIsMobileInspectorOpen(false)
+  }
+
+  function handleRestoreDocument(restoredDocument: EditorDocument) {
+    setEditorStore(new EditorStore(restoredDocument))
+    markDocumentAsSaved(restoredDocument)
+    setSceneRenderVersion((version) => version + 1)
+    setIsMobileInspectorOpen(false)
+  }
+
+  async function handleImageExport(fileType: ImageExportFileType) {
+    setIsImageExporting(true)
+
+    try {
+      await exportEditorDocument({
+        document: editorStore.document,
+        fileName: projectName,
+        format: fileType,
+      })
+      setIsImageExportModalOpen(false)
+      toast.info(t('Image exported.'))
+    } catch {
+      toast.error(t('Unable to export image. Please try again.'))
+    } finally {
+      setIsImageExporting(false)
+    }
   }
 
   function handleToggleVisibility(nodeId: string) {
-    editorStore.toggleNodeVisibility(nodeId)
+    editorStore.svgNodeEditing.toggleNodeVisibility(nodeId)
     setSceneRenderVersion((version) => version + 1)
   }
 
-  function handleSceneSelectNode(nodeId: string) {
-    editorStore.setSelectedNode(nodeId)
+  function handleSceneSelectNode(nodeId: string, isMultiSelect: boolean) {
+    editorStore.selectNode(nodeId, isMultiSelect)
   }
 
   const handleDeleteSelection = useCallback(() => {
@@ -94,7 +195,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   useEditorKeyboardShortcuts({
     canEdit,
     onDeleteSelectedNode: handleDeleteSelection,
+    onMoveEnd: editorStore.commitHistoryTransaction,
+    onMoveStart: editorStore.beginHistoryTransaction,
     onMoveSelectedNode: editorStore.moveSelectedNode,
+    onRedo: handleRedo,
+    onSaveVersion: saveVersion,
+    onUndo: handleUndo,
   })
 
   function handleCancelExit() {
@@ -110,30 +216,47 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   }
 
   const inspectorProps = {
-    onShapeFillChange: editorStore.setShapeFillColor,
-    onShapeFillOpacityChange: editorStore.setShapeFillOpacity,
-    onShapeOpacityChange: editorStore.setShapeOpacity,
-    onShapePositionChange: editorStore.setShapePosition,
-    onTextAnchorChange: editorStore.setTextAnchor,
-    onTextContentChange: editorStore.setTextContent,
-    onTextFillColorChange: editorStore.setTextFillColor,
-    onTextFontFamilyChange: editorStore.setTextFontFamily,
-    onTextFontSizeChange: editorStore.setTextFontSize,
-    onTextFontStyleChange: editorStore.setTextFontStyle,
-    onTextFontWeightChange: editorStore.setTextFontWeight,
-    onTextPositionChange: editorStore.setTextPosition,
+    definitions: editorStore.document.definitions,
+    onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
+    onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
+    onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
+    onShapeOpacityChange: editorStore.svgNodeEditing.setShapeOpacity,
+    onShapePositionChange: editorStore.svgNodeEditing.setShapePosition,
+    onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
+    onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
+    onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
+    onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
+    onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
+    onTextContentChange: editorStore.svgNodeEditing.setTextContent,
+    onTextFillColorChange: editorStore.svgNodeEditing.setTextFillColor,
+    onTextFontFamilyChange: editorStore.svgNodeEditing.setTextFontFamily,
+    onTextFontSizeChange: editorStore.svgNodeEditing.setTextFontSize,
+    onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
+    onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
+    onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
     selectedNode: editorStore.selectedNode,
   }
   const scene = (
     <EditorScene
       activeTool={activeTool}
+      constrainZoom={constrainZoom}
       document={editorStore.document}
       isReadOnly={!canEdit}
+      onClearSelection={() => editorStore.setSelectedNode(null)}
+      onDocumentChangeEnd={editorStore.commitHistoryTransaction}
+      onDocumentChangeStart={editorStore.beginHistoryTransaction}
+      onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
+      onRawPositionChange={editorStore.svgNodeEditing.setRawPosition}
       onSelectNode={handleSceneSelectNode}
-      onShapePositionChange={editorStore.setShapePosition}
-      onTextPositionChange={editorStore.setTextPosition}
+      onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
+      onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}
+      onViewportOffsetChange={setViewportOffset}
+      onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
       selectedNode={editorStore.selectedNode}
+      selectedNodes={editorStore.selectedNodes}
+      viewportOffset={viewportOffset}
+      zoom={zoom}
     />
   )
 
@@ -148,15 +271,24 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
-          onCloseProperties={() => setIsMobileInspectorOpen(false)}
+          onCancelColorPicker={handleCancelMobileProperties}
+          onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
-          onOpenProperties={() => setIsMobileInspectorOpen(true)}
+          onDoneColorPicker={handleDoneMobileProperties}
+          onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenProperties={handleOpenMobileProperties}
+          onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onSaveVersion={saveVersion}
+          onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
+          zoom={zoom}
         />
       ) : (
         <EditorDesktopLayout
@@ -166,33 +298,43 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             <LayersPanel
               expandedGroupIds={editorStore.expandedGroupIds}
               nodes={editorStore.document.layers}
-              onSelectNode={editorStore.setSelectedNode}
+              onSelectNode={editorStore.selectNode}
               onToggleGroup={editorStore.toggleGroup}
               onToggleVisibility={handleToggleVisibility}
-              selectedNodeId={editorStore.selectedNodeId}
+              selectedNodeIds={editorStore.selectedNodeIds}
             />
           }
           scene={scene}
-          status={<EditorStatusBar />}
+          status={
+            <EditorStatusBar
+              selectedNode={editorStore.selectedNode}
+              zoom={zoom}
+            />
+          }
           toolbar={
             <EditorToolbar
               activeTool={activeTool}
               canEdit={canEdit}
+              canRedo={editorStore.canRedo}
+              canUndo={editorStore.canUndo}
               isCreatingProjectCopy={isCreatingCopy}
               isSavingVersion={isSavingVersion}
+              onBack={() => navigate(-1)}
               onCreateCopy={createCopy}
               onEditProjectName={renameProject}
               onExport={handleExport}
               onOpenProfile={() =>
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
+              onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
               onToolChange={setActiveTool}
-              onRedo={handleToolbarAction}
+              onRedo={handleRedo}
               onSaveVersion={saveVersion}
-              onUndo={handleToolbarAction}
-              onZoomIn={handleToolbarAction}
-              onZoomOut={handleToolbarAction}
+              onUndo={handleUndo}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
               projectName={projectName}
+              zoom={zoom}
             />
           }
         />
@@ -203,10 +345,20 @@ export const EditorWorkspace = observer(function EditorWorkspace({
         onConfirm={handleConfirmExit}
       />
       <ImageExportModal
+        isExporting={isImageExporting}
         isOpen={isImageExportModalOpen}
         onClose={() => setIsImageExportModalOpen(false)}
         onExport={handleImageExport}
       />
+      {canEdit && (
+        <VersionHistoryModal
+          hasUnsavedChanges={hasUnsavedChanges}
+          isOpen={isVersionHistoryOpen}
+          onClose={() => setIsVersionHistoryOpen(false)}
+          onRestoreDocument={handleRestoreDocument}
+          projectId={projectId}
+        />
+      )}
     </section>
   )
 })
