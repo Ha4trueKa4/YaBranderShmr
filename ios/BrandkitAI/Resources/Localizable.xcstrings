@@ -113,22 +113,22 @@
         }
       }
     },
-    "Download PNG" : {
+    "Export PNG" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Скачать PNG"
+            "value" : "Экспорт PNG"
           }
         }
       }
     },
-    "Download SVG" : {
+    "Export SVG" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Скачать SVG"
+            "value" : "Экспорт SVG"
           }
         }
       }

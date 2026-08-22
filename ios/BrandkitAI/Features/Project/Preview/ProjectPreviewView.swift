@@ -159,8 +159,8 @@ struct ProjectPreviewView: View {
                 .padding(.top, 6)
 
             downloadButton(
-                title: "Download PNG",
-                systemImage: "square.and.arrow.down",
+                title: "Export PNG",
+                systemImage: "photo",
                 isPrimary: true,
                 isBusy: activeExport == .png,
                 action: exportPNG
@@ -168,7 +168,7 @@ struct ProjectPreviewView: View {
             .padding(.top, 20)
 
             downloadButton(
-                title: "Download SVG",
+                title: "Export SVG",
                 systemImage: "chevron.left.forwardslash.chevron.right",
                 isPrimary: false,
                 isBusy: activeExport == .svg,
