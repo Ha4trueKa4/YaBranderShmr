@@ -118,7 +118,7 @@ fun ProjectCard(
                     BrandAvatar(
                         size = 24.dp,
                         imageUrl = authorAvatarUrl,
-                        initials = authorInitials(authorName),
+                        initials = avatarInitials(authorName),
                     )
                     Text(
                         text = authorName,
@@ -137,16 +137,3 @@ fun ProjectCard(
  * размеры. Детерминировано по [seed] (обычно id проекта), диапазон ~1.0..1.9.
  */
 fun masonryAspectRatio(seed: String): Float = 1.0f + (abs(seed.hashCode()) % 90) / 100f
-
-/**
- * Инициалы автора для плейсхолдера аватара (когда нет avatarUrl): первые буквы
- * 1–2 слов имени — «Alice Cooper» → «AC», «Brandkit» → «B». Пустое/пробельное
- * имя → null, чтобы [BrandAvatar] показал декоративную заглушку, а не пустой круг.
- */
-private fun authorInitials(name: String): String? =
-    name.trim()
-        .split(Regex("\\s+"))
-        .filter { it.isNotEmpty() }
-        .take(2)
-        .joinToString("") { it.first().uppercase() }
-        .takeIf { it.isNotEmpty() }

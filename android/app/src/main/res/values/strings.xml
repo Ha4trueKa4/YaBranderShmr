@@ -159,7 +159,10 @@
 
     <!-- Профиль (свой/чужой) -->
     <string name="profile_handle">\@%1$s</string>
-    <string name="profile_stats">%1$d Projects · %2$s Followers · %3$d Following</string>
+    <string name="profile_stat_projects">%1$d Projects</string>
+    <string name="profile_stat_followers">%1$s Followers</string>
+    <string name="profile_stat_following">%1$d Following</string>
+    <string name="profile_stat_separator">·</string>
     <string name="profile_action_edit">Edit Profile</string>
     <string name="profile_action_following">Following</string>
     <string name="profile_action_follow">Follow</string>
@@ -170,6 +173,21 @@
     <string name="profile_empty_other_subtitle">This user hasn\'t published anything yet</string>
     <string name="profile_error_title">Couldn\'t load profile</string>
     <string name="profile_error_retry">Retry</string>
+
+    <!-- Подписки (подписчики/подписки) -->
+    <string name="subscriptions_title_followers">Followers</string>
+    <string name="subscriptions_title_following">Following</string>
+    <string name="subscriptions_followers_count">%1$d followers</string>
+    <string name="subscriptions_action_follow">Follow</string>
+    <string name="subscriptions_action_unfollow">Unfollow</string>
+    <string name="subscriptions_you">You</string>
+    <string name="subscriptions_back_description">Back</string>
+    <string name="subscriptions_error_title">Couldn\'t load the list</string>
+    <string name="subscriptions_error_retry">Retry</string>
+    <string name="subscriptions_empty_followers_title">No followers yet</string>
+    <string name="subscriptions_empty_followers_subtitle">When someone follows this profile, they\'ll show up here</string>
+    <string name="subscriptions_empty_following_title">Not following anyone yet</string>
+    <string name="subscriptions_empty_following_subtitle">Profiles this user follows will appear here</string>
 
     <!-- Настройки -->
     <string name="settings_title">Settings</string>

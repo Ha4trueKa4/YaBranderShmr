@@ -25,6 +25,8 @@ internal data class AppColorScheme(
     val error: Color,
     val shimmerBase: Color,
     val shimmerHighlight: Color,
+    /** Тёмная ли это тема — для редких мест, где цвет зависит не от токена, а от самой темы. */
+    val isDark: Boolean,
 )
 
 /**
@@ -49,6 +51,7 @@ internal val DarkAppColorScheme = AppColorScheme(
     error = Color(0xFFEF4444),
     shimmerBase = Color(0xFF27272A),
     shimmerHighlight = Color(0xFF3F3F46),
+    isDark = true,
 )
 
 /**
@@ -75,6 +78,7 @@ internal val LightAppColorScheme = AppColorScheme(
     error = Color(0xFFDC2626),
     shimmerBase = Color(0xFFE4E4E7),
     shimmerHighlight = Color(0xFFF4F4F5),
+    isDark = false,
 )
 
 internal val LocalAppColorScheme = staticCompositionLocalOf { DarkAppColorScheme }
@@ -126,6 +130,10 @@ internal object AppColors {
     /** Диагональный градиент Accent → AccentCyan — аватары, превью-плашки проектов. */
     val AccentGradient: Brush
         @Composable @ReadOnlyComposable get() = Brush.linearGradient(listOf(Accent, AccentCyan))
+
+    /** Активна ли тёмная тема (учитывает ручное переключение). */
+    val IsDark: Boolean
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.isDark
 
     // Плейсхолдеры скелетона загрузки (shimmer).
     val ShimmerBase: Color
