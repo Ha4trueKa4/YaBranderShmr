@@ -77,7 +77,7 @@ void AppendExamples(std::string& input,
     return;
   }
 
-  input += "\nРЕФЕРЕНСЫ:\n";
+  input += "\nРЕФЕРЕНСЫ RAG:\n";
   for (std::size_t index = 0; index < examples.size(); ++index) {
     const auto label = "РЕФЕРЕНС " + std::to_string(index + 1);
     AppendDataBlock(input, label, examples[index]);
@@ -90,7 +90,7 @@ void AppendUserReferences(std::string& input,
     return;
   }
 
-  input += "\nПОЛЬЗОВАТЕЛЬСКИЕ РЕФЕРЕНСЫ (SVG других проектов пользователя):\n";
+  input += "\nПОЛЬЗОВАТЕЛЬСКИЕ РЕФЕРЕНСЫ, ПРИОРИТЕТ ПО СТИЛЮ, ДИЗАЙНУ:\n";
   for (std::size_t index = 0; index < reference_svgs.size(); ++index) {
     const auto label = "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС " + std::to_string(index + 1);
     AppendDataBlock(input, label, reference_svgs[index]);
@@ -120,7 +120,7 @@ LlmPrompt BuildGenerationPrompt(
   LlmPrompt prompt;
   prompt.instructions = kSharedInstructions;
   // prompt.instructions += kGenerationInstructions;
-  prompt.instructions += kTrustBoundaryInstructions;
+  // prompt.instructions += kTrustBoundaryInstructions;
 
   prompt.input =
       "ВХОДНЫЕ ДАННЫЕ:\n"
