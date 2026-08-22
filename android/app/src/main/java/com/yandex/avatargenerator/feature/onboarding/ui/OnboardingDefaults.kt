@@ -98,11 +98,11 @@ internal object OnboardingDefaults {
      * Кольцевое свечение за иллюстрацией: центр — под hero, а не под центром экрана.
      * Центр hero в макете: (151.5 + 285/2) / 852 ≈ 0.345 высоты.
      */
-    const val GlowCenterY = 0.345f
-    val GlowRadius = 260.dp
+    const val GlowCenterY = 0.285f
+    val GlowRadius = 500.dp
 
     /** На светлой теме то же свечение бьёт по глазам — гасим до едва заметного. */
-    private const val GlowLightIntensity = 0.35f
+    private const val GlowLightIntensity = 0.85f
 
     /**
      * Стопы кольца: в самом центре свечение чуть проседает (за ним лежит hero),
