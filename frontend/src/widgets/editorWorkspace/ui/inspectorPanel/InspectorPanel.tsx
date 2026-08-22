@@ -1,4 +1,5 @@
 import type { EditorDefinitions, EditorNode } from '@entities/editorDocument'
+import { Button } from '@shared/ui'
 import { useTranslation } from 'react-i18next'
 import { getLayerPresentation } from '../layerPresentation'
 import { GroupProperties } from './groupProperties/GroupProperties'
@@ -18,6 +19,7 @@ interface InspectorPanelProps {
     stopIndex: number,
     color: string,
   ) => void
+  onDeleteSelectedNode: () => boolean
   onShapeOpacityChange: (nodeId: string, opacity: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onShapeRotationChange: (
@@ -28,6 +30,7 @@ interface InspectorPanelProps {
   onShapeStrokeAdd: (nodeId: string) => void
   onShapeStrokeColorChange: (nodeId: string, color: string) => void
   onShapeStrokeRemove: (nodeId: string) => void
+  onShapeStrokeOpacityChange: (nodeId: string, opacity: number) => void
   onShapeStrokeWidthChange: (nodeId: string, strokeWidth: number) => void
   onShapeTransformChange: (
     nodeId: string,
@@ -52,6 +55,7 @@ interface InspectorPanelProps {
     fontStyle: 'italic' | 'normal',
   ) => void
   onTextFontWeightChange: (nodeId: string, fontWeight: number) => void
+  onTextOpacityChange: (nodeId: string, opacity: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onTextRotationChange: (
     nodeId: string,
@@ -100,12 +104,14 @@ export function InspectorPanel({
   onEyeDropperStart,
   onShapeFillOpacityChange,
   onGradientStopColorChange,
+  onDeleteSelectedNode,
   onShapeOpacityChange,
   onShapePositionChange,
   onShapeRotationChange,
   onShapeStrokeAdd,
   onShapeStrokeColorChange,
   onShapeStrokeRemove,
+  onShapeStrokeOpacityChange,
   onShapeStrokeWidthChange,
   onShapeTransformChange,
   onTextAnchorChange,
@@ -115,6 +121,7 @@ export function InspectorPanel({
   onTextFontSizeChange,
   onTextFontStyleChange,
   onTextFontWeightChange,
+  onTextOpacityChange,
   onTextPositionChange,
   onTextRotationChange,
   onTextTransformChange,
@@ -200,6 +207,9 @@ export function InspectorPanel({
               onShapeStrokeColorChange(selectedNode.id, color)
             }
             onStrokeRemove={() => onShapeStrokeRemove(selectedNode.id)}
+            onStrokeOpacityChange={(opacity) =>
+              onShapeStrokeOpacityChange(selectedNode.id, opacity)
+            }
             onStrokeWidthChange={(strokeWidth) =>
               onShapeStrokeWidthChange(selectedNode.id, strokeWidth)
             }
@@ -207,6 +217,15 @@ export function InspectorPanel({
               onShapeTransformChange(selectedNode.id, transform)
             }
           />
+          <Button
+            className={styles.deleteButton}
+            disabled={selectedNode.isLocked}
+            fullWidth
+            onClick={onDeleteSelectedNode}
+            variant="danger"
+          >
+            {t('Delete')}
+          </Button>
         </div>
       </section>
     )
@@ -246,6 +265,9 @@ export function InspectorPanel({
           onPositionChange={(x, y) =>
             onTextPositionChange(selectedNode.id, x, y)
           }
+          onOpacityChange={(opacity) =>
+            onTextOpacityChange(selectedNode.id, opacity)
+          }
           onRotationChange={(rotation, rotationCenter) =>
             onTextRotationChange(selectedNode.id, rotation, rotationCenter)
           }
@@ -253,6 +275,15 @@ export function InspectorPanel({
             onTextTransformChange(selectedNode.id, transform)
           }
         />
+        <Button
+          className={styles.deleteButton}
+          disabled={selectedNode.isLocked}
+          fullWidth
+          onClick={onDeleteSelectedNode}
+          variant="danger"
+        >
+          {t('Delete')}
+        </Button>
       </div>
     </section>
   )

@@ -1,8 +1,9 @@
-import { ColorPicker, ColorSwatch, Range } from '@shared/ui'
+import { ColorPicker, ColorSwatch } from '@shared/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import styles from './FillProperty.module.css'
+import { OpacityProperty } from './OpacityProperty'
 
 interface FillPropertyProps {
   fill: string
@@ -11,6 +12,7 @@ interface FillPropertyProps {
   onEyeDropperStart?: () => void
   onOpacityChange?: (opacity: number) => void
   opacity?: number
+  opacityLabel?: string
   title?: string
 }
 
@@ -21,13 +23,13 @@ export function FillProperty({
   onEyeDropperStart,
   onOpacityChange,
   opacity = 1,
+  opacityLabel,
   title,
 }: FillPropertyProps) {
   const { t } = useTranslation()
   const [draftFill, setDraftFill] = useState(fill)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const colorControlRef = useRef<HTMLDivElement>(null)
-  const opacityPercent = Math.round(opacity * 100)
 
   useEffect(() => {
     if (!isColorPickerOpen) {
@@ -67,10 +69,6 @@ export function FillProperty({
     onFillChange(color)
   }
 
-  function handleOpacityChange(opacityPercent: number) {
-    onOpacityChange?.(opacityPercent / 100)
-  }
-
   return (
     <section className={styles.property}>
       <p className={styles.title}>{t(title ?? 'Fill')}</p>
@@ -96,20 +94,11 @@ export function FillProperty({
         </div>
       </div>
       {onOpacityChange && (
-        <>
-          <div className={styles.opacityHeader}>
-            <span>{t('Opacity')}</span>
-            <strong>{opacityPercent}%</strong>
-          </div>
-          <Range
-            max="100"
-            min="0"
-            onChange={(event) =>
-              handleOpacityChange(Number(event.target.value))
-            }
-            value={opacityPercent}
-          />
-        </>
+        <OpacityProperty
+          label={opacityLabel ?? 'Fill opacity'}
+          onOpacityChange={onOpacityChange}
+          opacity={opacity}
+        />
       )}
     </section>
   )

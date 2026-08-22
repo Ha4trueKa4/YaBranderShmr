@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
 import { GradientProperty } from '../components/GradientProperty'
+import { OpacityProperty } from '../components/OpacityProperty'
 import { PropertyField } from '../components/PropertyField'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
 import { StrokeProperty } from '../components/StrokeProperty'
@@ -32,6 +33,7 @@ interface ShapePropertiesProps {
   onStrokeAdd: () => void
   onStrokeColorChange: (color: string) => void
   onStrokeRemove: () => void
+  onStrokeOpacityChange: (opacity: number) => void
   onStrokeWidthChange: (strokeWidth: number) => void
   onTransformChange: (transform: {
     rotationCenter?: { x: number; y: number }
@@ -52,10 +54,12 @@ export const ShapeProperties = observer(function ShapeProperties({
   onFillOpacityChange,
   onGradientStopColorChange,
   onPositionChange,
+  onOpacityChange,
   onRotationChange,
   onStrokeAdd,
   onStrokeColorChange,
   onStrokeRemove,
+  onStrokeOpacityChange,
   onStrokeWidthChange,
   onTransformChange,
 }: ShapePropertiesProps) {
@@ -91,6 +95,10 @@ export const ShapeProperties = observer(function ShapeProperties({
         measuredRotationCenter={measuredRotationCenter}
         onRotationChange={onRotationChange}
         onTransformChange={onTransformChange}
+      />
+      <OpacityProperty
+        onOpacityChange={onOpacityChange}
+        opacity={layer.opacity}
       />
       {isEditableGradient && gradient ? (
         <GradientProperty
@@ -129,8 +137,10 @@ export const ShapeProperties = observer(function ShapeProperties({
         onEyeDropperEnd={onEyeDropperEnd}
         onEyeDropperStart={onEyeDropperStart}
         onRemove={onStrokeRemove}
+        onOpacityChange={onStrokeOpacityChange}
         onWidthChange={onStrokeWidthChange}
         stroke={layer.style.stroke}
+        strokeOpacity={layer.style.strokeOpacity}
         strokeWidth={layer.style.strokeWidth}
       />
     </div>
