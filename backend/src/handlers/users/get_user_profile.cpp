@@ -10,6 +10,8 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 namespace ya_brander::handlers {
 
 GetUserProfileHandler::GetUserProfileHandler(
@@ -33,7 +35,7 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
   try {
     auto user_res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, login FROM users WHERE id = $1::uuid",
+        sql::kSelectUserProfile,
         target_id
     );
 
@@ -64,14 +66,12 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
     auto proj_res = is_self
         ? pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
-            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at, last_version_key "
-            "FROM projects WHERE author_id = $1::uuid ORDER BY created_at DESC",
+            sql::kSelectAllUserProjects,
             target_id
         )
         : pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
-            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at, last_version_key "
-            "FROM projects WHERE author_id = $1::uuid AND is_private = FALSE ORDER BY created_at DESC",
+            sql::kSelectPublicUserProjects,
             target_id
         );
 

@@ -7,6 +7,8 @@
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "password_hasher.hpp"
 #include "../../utils/errors.hpp"
 
@@ -36,7 +38,7 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
 
     auto result = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, login, password_hash FROM users WHERE email = $1", email);
+        sql::kSelectUserCredentialsByEmail, email);
 
     if (result.Size() == 0) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);

@@ -6,6 +6,8 @@
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
 
 namespace ya_brander::handlers {
@@ -39,7 +41,7 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
   try {
     const auto user_result = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "SELECT id::text FROM users WHERE id = $1::uuid", target_id);
+        sql::kSelectUserId, target_id);
 
     if (user_result.IsEmpty()) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -61,8 +63,7 @@ userver::formats::json::Value PatchUserProfileHandler::HandleRequestJsonThrow(
 
     const auto updated = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE users SET login = $1 WHERE id = $2::uuid "
-        "RETURNING id::text, login",
+        sql::kUpdateUserNickname,
         nickname, canonical_target_id);
 
     userver::formats::json::ValueBuilder response;

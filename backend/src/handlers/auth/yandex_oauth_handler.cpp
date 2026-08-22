@@ -17,6 +17,8 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
 
 namespace ya_brander::auth {
@@ -193,7 +195,7 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
     {
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
+            sql::kSelectYandexUser,
             profile.provider_id);
         if (result.Size() > 0) {
             const auto row = result.Front();
@@ -207,7 +209,7 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
     {
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "SELECT 1 FROM users WHERE email = $1 AND provider_id IS NULL",
+            sql::kSelectPasswordUserByEmail,
             profile.email);
         if (result.Size() > 0) {
             throw EmailOwnedByAnotherAccountError{};
@@ -221,9 +223,7 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
         try {
             auto result = pg_cluster_->Execute(
                 userver::storages::postgres::ClusterHostType::kMaster,
-                "INSERT INTO users(login, email, password_hash, provider, provider_id) "
-                "VALUES($1, $2, NULL, 'yandex', $3) "
-                "RETURNING id::text, login, email",
+                sql::kRegisterYandexUser,
                 login, profile.email, profile.provider_id);
             const auto row = result.Front();
             return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
@@ -236,7 +236,7 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
             if (constraint == kProviderIdentityIndex) {
                 auto result = pg_cluster_->Execute(
                     userver::storages::postgres::ClusterHostType::kMaster,
-                    "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
+                    sql::kSelectYandexUser,
                     profile.provider_id);
                 const auto row = result.Front();
                 return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};

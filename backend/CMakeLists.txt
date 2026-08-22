@@ -52,6 +52,13 @@ endif ()
 
 userver_setup_environment()
 
+userver_add_sql_library(${PROJECT_NAME}_sql
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sql/queries
+        OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/sql
+        NAMESPACE ya_brander
+        SQL_FILES *.sql
+)
+
 
 # Common sources
 add_library(${PROJECT_NAME}_objs OBJECT
@@ -127,6 +134,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
+        ${PROJECT_NAME}_sql
         nlohmann_json::nlohmann_json
         jwt-cpp
         pugixml
