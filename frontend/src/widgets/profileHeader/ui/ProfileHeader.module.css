@@ -6,15 +6,7 @@
 
 .cover {
   height: 10rem;
-  background: linear-gradient(
-    to right,
-    var(--color-accent-primary) 0 34%,
-    var(--color-surface-elevated) 34% 100%
-  );
-}
-
-:global(:root[data-theme="yandex"]) .cover {
-  background: var(--gradient-yandex-soft);
+  background: var(--gradient-profile-cover);
 }
 
 .content {
