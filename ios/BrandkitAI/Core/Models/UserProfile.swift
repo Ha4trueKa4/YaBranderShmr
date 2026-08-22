@@ -9,3 +9,10 @@ nonisolated struct UserProfile: Sendable, Equatable {
     let isSubscribed: Bool?
     let projects: [UserProject]
 }
+
+/// Краткая карточка пользователя в списке подписчиков или подписок.
+nonisolated struct ProfileConnection: Sendable, Equatable, Identifiable {
+    let id: UUID
+    let name: String
+    var isSubscribed: Bool?
+}

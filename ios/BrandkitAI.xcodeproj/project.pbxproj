@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B4A7D00333C9A00100F0B001 /* Refresher in Frameworks */ = {isa = PBXBuildFile; productRef = B4A7D00233C9A00100F0B001 /* Refresher */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		934BA49330271DF100E90FD1 /* BrandkitAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BrandkitAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4A7D00333C9A00100F0B001 /* Refresher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = BrandkitAI;
 			packageProductDependencies = (
+				B4A7D00233C9A00100F0B001 /* Refresher */,
 			);
 			productName = BrandkitAI;
 			productReference = 934BA49330271DF100E90FD1 /* BrandkitAI.app */;
@@ -108,6 +114,7 @@
 			mainGroup = 934BA48A30271DF100E90FD1;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 934BA49430271DF100E90FD1 /* Products */;
@@ -138,6 +145,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gh123man/SwiftUI-Refresher.git";
+			requirement = {
+				kind = revision;
+				revision = 235468a4f7296ccb8307f400b775aee0b8c5849f;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B4A7D00233C9A00100F0B001 /* Refresher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */;
+			productName = Refresher;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		934BA49C30271DF300E90FD1 /* Debug */ = {

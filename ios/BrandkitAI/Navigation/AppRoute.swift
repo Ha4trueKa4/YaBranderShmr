@@ -1,5 +1,17 @@
 import Foundation
 
+enum ProfileConnectionsKind: Hashable {
+    case followers
+    case following
+
+    var title: String {
+        switch self {
+        case .followers: "Followers"
+        case .following: "Following"
+        }
+    }
+}
+
 // Карта главного флоу: экраны, открываемые поверх корня раздела.
 enum AppRoute: Hashable {
     case projectCreate
@@ -10,4 +22,5 @@ enum AppRoute: Hashable {
     case versionHistory(projectID: UUID)
     case publicProject(projectID: UUID)
     case profile(userID: UUID)
+    case profileConnections(userID: UUID, kind: ProfileConnectionsKind)
 }

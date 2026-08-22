@@ -92,7 +92,19 @@ struct AppRouteView: View {
                 onBack: { router.pop() },
                 onOpenProject: { projectID, _, _ in
                     router.push(.publicProject(projectID: projectID))
+                },
+                onOpenConnections: { userID, kind in
+                    router.push(.profileConnections(userID: userID, kind: kind))
                 }
+            )
+
+        case .profileConnections(let userID, let kind):
+            ProfileConnectionsView(
+                session: session,
+                userID: userID,
+                kind: kind,
+                onBack: { router.pop() },
+                onOpenProfile: { router.push(.profile(userID: $0)) }
             )
         }
     }
