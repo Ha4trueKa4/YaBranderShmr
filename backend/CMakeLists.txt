@@ -87,11 +87,14 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/patch_project.cpp
         src/handlers/projects/svg_validation_error_response.hpp
         src/handlers/projects/delete_project.cpp
-        src/handlers/projects/generate_project.cpp
         src/handlers/projects/get_project_chat.cpp
+        src/handlers/projects/generation/generate_project.cpp
+        src/handlers/projects/generation/generate_status.cpp
+        src/handlers/projects/generation/append_generation.cpp
         src/handlers/projects/versions/get_version.cpp
         src/handlers/projects/versions/restore_version.cpp
         src/handlers/projects/versions/list_versions.cpp
+        src/handlers/projects/versions/append_versions.cpp
         src/components/version_storage/version_storage_component_impl.cpp
         src/handlers/users/append_users.hpp
         src/handlers/users/append_users.cpp
@@ -109,6 +112,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/get_user_profile.cpp
         src/handlers/users/patch_user_profile.cpp
         src/handlers/users/user_subscriptions_handlers.cpp
+        src/utils/errors.hpp
+        src/utils/errors.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

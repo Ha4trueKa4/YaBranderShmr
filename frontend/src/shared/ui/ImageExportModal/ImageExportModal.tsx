@@ -1,7 +1,10 @@
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
+import { X } from 'lucide-react'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../Button'
+import { IconButton } from '../IconButton'
 import { Portal } from '../Portal'
 import styles from './ImageExportModal.module.css'
 
@@ -42,6 +45,9 @@ export function ImageExportModal({
   const [fileType, setFileType] = useState<ImageExportFileType>('png')
   const titleId = useId()
 
+  useLockBodyScroll(isOpen)
+  useEscAction(onClose, isOpen && !isExporting)
+
   if (!isOpen) {
     return null
   }
@@ -62,7 +68,17 @@ export function ImageExportModal({
           className={styles.modal}
           role="dialog"
         >
-          <h2 id={titleId}>{t('Export image')}</h2>
+          <header className={styles.header}>
+            <h2 id={titleId}>{t('Export image')}</h2>
+            <IconButton
+              className={styles.closeButton}
+              disabled={isExporting}
+              onClick={onClose}
+              size="sm"
+            >
+              <X />
+            </IconButton>
+          </header>
           <p className={styles.description}>
             {t('Choose a file type for export.')}
           </p>

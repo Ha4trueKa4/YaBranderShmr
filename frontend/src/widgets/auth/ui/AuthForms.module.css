@@ -54,6 +54,15 @@
   margin-top: 2.25rem;
 }
 
+.yandexButton {
+  margin-top: var(--space-3);
+}
+
+.yandexIcon {
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
 .legalNotice {
   font-size: var(--font-size-caption);
   margin-top: 3.25rem;

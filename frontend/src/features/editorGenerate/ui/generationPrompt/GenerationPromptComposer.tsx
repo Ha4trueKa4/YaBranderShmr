@@ -1,5 +1,5 @@
-import sparkles from '@shared/assets/sparkles.svg'
 import { Button } from '@shared/ui'
+import { Sparkles } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -44,7 +44,7 @@ export function GenerationPromptComposer({
   return (
     <div className={styles.field}>
       <div className={styles.composer}>
-        <img alt="" className={styles.icon} src={sparkles} />
+        <Sparkles className={styles.icon} size={18} strokeWidth={2} />
         <textarea
           className={styles.textarea}
           disabled={isGenerating}

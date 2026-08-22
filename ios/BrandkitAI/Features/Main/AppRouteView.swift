@@ -28,21 +28,36 @@ struct AppRouteView: View {
                 projectID: projectID,
                 title: title,
                 onBack: { router.pop() },
-                onOpenImage: { versionID in
+                onOpenImage: { versionID, createdAt in
                     router.push(.chatImage(
                         projectID: projectID,
                         title: title,
-                        versionID: versionID
+                        versionID: versionID,
+                        createdAt: createdAt
                     ))
                 }
             )
 
-        case .chatImage(let projectID, let title, let versionID):
-            ChatImagePreviewView(
-                viewModel: ChatImagePreviewViewModel(
+        case .chatImage(let projectID, let title, let versionID, let createdAt):
+            ProjectPreviewView(
+                viewModel: ProjectPreviewViewModel(
                     projectID: projectID,
-                    title: title,
-                    versionID: versionID
+                    mode: .version(versionID: versionID, createdAt: createdAt),
+                    currentUserService: session.currentUserService,
+                    userProfileService: session.userProfileService,
+                    title: title
+                ),
+                onBack: { router.pop() }
+            )
+
+        case .projectImage(let projectID, let title, let imageURL):
+            ProjectPreviewView(
+                viewModel: ProjectPreviewViewModel(
+                    projectID: projectID,
+                    mode: .owned(imageURL: imageURL),
+                    currentUserService: session.currentUserService,
+                    userProfileService: session.userProfileService,
+                    title: title
                 ),
                 onBack: { router.pop() }
             )
@@ -57,10 +72,15 @@ struct AppRouteView: View {
             ProjectVersionHistoryView(onBack: { router.pop() })
 
         case .publicProject(let projectID):
-            PublicProjectView(
-                projectID: projectID,
+            ProjectPreviewView(
+                viewModel: ProjectPreviewViewModel(
+                    projectID: projectID,
+                    mode: .publicProject,
+                    currentUserService: session.currentUserService,
+                    userProfileService: session.userProfileService
+                ),
                 onBack: { router.pop() },
-                onOpenAuthor: { router.push(.profile(userID: UUID())) },
+                onOpenAuthor: { authorID in router.push(.profile(userID: authorID)) },
                 onOpenProject: { router.push(.publicProject(projectID: $0)) }
             )
 
@@ -70,7 +90,9 @@ struct AppRouteView: View {
                 isCurrentUser: false,
                 userID: userID,
                 onBack: { router.pop() },
-                onOpenProject: { router.push(.projectEditor(projectID: UUID())) }
+                onOpenProject: { projectID, _, _ in
+                    router.push(.publicProject(projectID: projectID))
+                }
             )
         }
     }

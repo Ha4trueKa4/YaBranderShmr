@@ -1,7 +1,6 @@
 package com.yandex.avatargenerator.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -41,12 +39,9 @@ fun BrandCard(
     thumbnailUrl: String? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(AppShape.l)
     Column(
         modifier = modifier
-            .clip(shape)
-            .background(AppColors.Surface)
-            .border(1.dp, AppColors.Border, shape)
+            .brandSurface(RoundedCornerShape(AppShape.l))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
         if (thumbnailUrl != null) {
@@ -85,13 +80,7 @@ fun BrandCard(
 /** Плейсхолдер [BrandCard] на время загрузки — те же пропорции, без данных. */
 @Composable
 fun BrandCardSkeleton(modifier: Modifier = Modifier, brush: Brush = rememberBrandShimmerBrush()) {
-    val shape = RoundedCornerShape(AppShape.l)
-    Column(
-        modifier = modifier
-            .clip(shape)
-            .background(AppColors.Surface)
-            .border(1.dp, AppColors.Border, shape)
-    ) {
+    Column(modifier = modifier.brandSurface(RoundedCornerShape(AppShape.l))) {
         BrandSkeletonBox(
             modifier = Modifier
                 .fillMaxWidth()

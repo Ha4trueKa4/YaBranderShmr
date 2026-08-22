@@ -127,10 +127,11 @@ private fun rememberStartDestination(
 private val TopLevelRoutes: Set<String> =
     TopLevelDestination.entries.mapTo(HashSet()) { it.destination.route }
 
-/** Витрины (не вкладки), на которых нижняя панель всё равно показывается: публичный проект и чужой профиль. */
+/** Экраны-детали (не вкладки), на которых нижняя панель всё равно показывается: публичный проект, чужой профиль, настройки. */
 private val BottomBarDetailRoutes: Set<String> = setOf(
     Destination.PublicProject.route,
     Destination.UserProfile.route,
+    Destination.Settings.route,
 )
 
 /**

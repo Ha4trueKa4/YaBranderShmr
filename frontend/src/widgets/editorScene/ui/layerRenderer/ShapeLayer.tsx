@@ -16,6 +16,7 @@ export const ShapeLayer = observer(function ShapeLayer({
     fillOpacity: node.style.fillOpacity,
     opacity: node.opacity,
     stroke: getPaintValue(node.style.stroke),
+    strokeDasharray: node.style.strokeDasharray,
     strokeLinecap: node.style.strokeLineCap,
     strokeLinejoin: node.style.strokeLineJoin,
     strokeOpacity: node.style.strokeOpacity,

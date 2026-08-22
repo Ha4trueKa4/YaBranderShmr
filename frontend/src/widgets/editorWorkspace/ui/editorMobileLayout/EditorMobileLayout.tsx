@@ -18,12 +18,17 @@ interface EditorMobileLayoutProps
   isSavingVersion: boolean
   isPropertiesOpen: boolean
   onBack: () => void
-  onCloseProperties: () => void
+  onCancelColorPicker: () => void
+  onCancelProperties: () => void
   onCreateCopy: () => void
   onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
+  onOpenVersionHistory: () => void
+  onOpenColorPicker: () => void
+  onDoneColorPicker: () => void
   onSaveVersion: () => void
+  onDoneProperties: () => void
   onToolChange: (tool: CanvasTool) => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -54,12 +59,17 @@ export function EditorMobileLayout({
   isSavingVersion,
   isPropertiesOpen,
   onBack,
-  onCloseProperties,
+  onCancelColorPicker,
+  onCancelProperties,
   onCreateCopy,
   onDeleteSelection,
   onExport,
   onOpenProperties,
+  onOpenVersionHistory,
+  onOpenColorPicker,
+  onDoneColorPicker,
   onSaveVersion,
+  onDoneProperties,
   onToolChange,
   onZoomIn,
   onZoomOut,
@@ -74,6 +84,7 @@ export function EditorMobileLayout({
   const hasSelection = Boolean(selectedNode)
   const canDeleteSelection = Boolean(selectedNode && !selectedNode.isLocked)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
+  const [isPropertiesSheetHidden, setIsPropertiesSheetHidden] = useState(false)
   const fillColor = getFillColor(selectedNode)
 
   function handleFillChange(color: string) {
@@ -88,6 +99,39 @@ export function EditorMobileLayout({
     }
   }
 
+  function handleOpenColorPicker() {
+    onOpenColorPicker()
+    setIsColorPickerOpen(true)
+  }
+
+  function handleDoneColorPicker() {
+    onDoneColorPicker()
+    setIsColorPickerOpen(false)
+  }
+
+  function handleCancelColorPicker() {
+    onCancelColorPicker()
+    setIsColorPickerOpen(false)
+  }
+
+  function handleEyeDropperStart() {
+    setIsColorPickerOpen(false)
+    setIsPropertiesSheetHidden(true)
+  }
+
+  function handleEyeDropperEnd() {
+    setIsColorPickerOpen(true)
+    setIsPropertiesSheetHidden(false)
+  }
+
+  function handlePropertiesEyeDropperStart() {
+    setIsPropertiesSheetHidden(true)
+  }
+
+  function handlePropertiesEyeDropperEnd() {
+    setIsPropertiesSheetHidden(false)
+  }
+
   return (
     <div className={styles.layout}>
       <MobileEditorHeader
@@ -97,6 +141,7 @@ export function EditorMobileLayout({
         onBack={onBack}
         onCreateCopy={onCreateCopy}
         onExport={onExport}
+        onOpenVersionHistory={onOpenVersionHistory}
         onSaveVersion={onSaveVersion}
         projectName={projectName}
       />
@@ -107,15 +152,13 @@ export function EditorMobileLayout({
           fillColor={fillColor}
           hasSelection={hasSelection}
           onDeleteSelection={onDeleteSelection}
-          onOpenColorPicker={() => setIsColorPickerOpen(true)}
+          onOpenColorPicker={handleOpenColorPicker}
         />
       )}
       {canEdit && (
         <>
           <MobileCanvasControls
             activeTool={activeTool}
-            fillColor={fillColor}
-            onOpenColorPicker={() => setIsColorPickerOpen(true)}
             onToolChange={onToolChange}
             onZoomIn={onZoomIn}
             onZoomOut={onZoomOut}
@@ -131,20 +174,32 @@ export function EditorMobileLayout({
           </button>
           <BottomSheet
             actions={
-              <button
-                className={styles.doneButton}
-                onClick={onCloseProperties}
-                type="button"
-              >
-                {t('Done')}
-              </button>
+              <>
+                <button
+                  className={styles.cancelButton}
+                  onClick={onCancelProperties}
+                  type="button"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  className={styles.doneButton}
+                  onClick={onDoneProperties}
+                  type="button"
+                >
+                  {t('Done')}
+                </button>
+              </>
             }
-            isOpen={isPropertiesOpen}
-            onClose={onCloseProperties}
+            isOpen={isPropertiesOpen && !isPropertiesSheetHidden}
+            onClose={onCancelProperties}
+            showCloseButton={false}
             title={t('Element properties')}
           >
             <InspectorPanel
               {...inspectorProps}
+              onEyeDropperEnd={handlePropertiesEyeDropperEnd}
+              onEyeDropperStart={handlePropertiesEyeDropperStart}
               selectedNode={selectedNode}
               showHeader={false}
             />
@@ -152,20 +207,35 @@ export function EditorMobileLayout({
           {fillColor && (
             <BottomSheet
               actions={
-                <button
-                  className={styles.doneButton}
-                  onClick={() => setIsColorPickerOpen(false)}
-                  type="button"
-                >
-                  {t('Done')}
-                </button>
+                <>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={handleCancelColorPicker}
+                    type="button"
+                  >
+                    {t('Cancel')}
+                  </button>
+                  <button
+                    className={styles.doneButton}
+                    onClick={handleDoneColorPicker}
+                    type="button"
+                  >
+                    {t('Done')}
+                  </button>
+                </>
               }
               isOpen={isColorPickerOpen}
-              onClose={() => setIsColorPickerOpen(false)}
+              onClose={handleCancelColorPicker}
+              showCloseButton={false}
               title={t('Fill color')}
             >
               <div className={styles.colorPickerContent}>
-                <ColorPicker color={fillColor} onChange={handleFillChange} />
+                <ColorPicker
+                  color={fillColor}
+                  onChange={handleFillChange}
+                  onEyeDropperEnd={handleEyeDropperEnd}
+                  onEyeDropperStart={handleEyeDropperStart}
+                />
               </div>
             </BottomSheet>
           )}

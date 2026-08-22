@@ -45,9 +45,10 @@ namespace {
 }
 
 AuthCheckerJwt::AuthCheckerJwt(
-    std::shared_ptr<jwt::verifier<jwt::default_clock, jwt::traits::kazuho_picojson>> verifier
+    std::shared_ptr<jwt::verifier<jwt::default_clock, jwt::traits::kazuho_picojson>> verifier,
+    bool require_auth
 )
-    : verifier_(std::move(verifier)) {}
+    : verifier_(std::move(verifier)), require_auth_(require_auth) {}
 
 AuthCheckerJwt::AuthCheckResult AuthCheckerJwt::CheckAuth(
     const userver::server::http::HttpRequest& request,
@@ -55,6 +56,14 @@ AuthCheckerJwt::AuthCheckResult AuthCheckerJwt::CheckAuth(
 ) const {
     const auto& auth_value = request.GetHeader(userver::http::headers::kAuthorization);
     if (auth_value.empty()) {
+        if (require_auth_) {
+            return AuthCheckResult{
+                AuthCheckResult::Status::kTokenNotFound,
+                {},
+                "Authorization header is required",
+                userver::server::handlers::HandlerErrorCode::kUnauthorized
+            };
+        }
         return {};
     }
 
@@ -81,10 +90,9 @@ AuthCheckerJwt::AuthCheckResult AuthCheckerJwt::CheckAuth(
     return {};
 }
 
-// Фабрика
-CheckerFactory::CheckerFactory(const userver::components::ComponentContext& /*context*/) {
+JwtCheckerFactoryBase::JwtCheckerFactoryBase(const userver::components::ComponentContext& /*context*/) {
     const char* jwt_secret = std::getenv("JWT_SECRET_KEY");
-    
+
     if (!jwt_secret || std::strlen(jwt_secret) == 0) {
         throw std::runtime_error("JWT_SECRET_KEY environment variable is not set!");
     }
@@ -98,7 +106,13 @@ CheckerFactory::CheckerFactory(const userver::components::ComponentContext& /*co
 userver::server::handlers::auth::AuthCheckerBasePtr CheckerFactory::MakeAuthChecker(
     const userver::server::handlers::auth::HandlerAuthConfig& /*auth_config*/
 ) const {
-    return std::make_shared<AuthCheckerJwt>(verifier_);
+    return std::make_shared<AuthCheckerJwt>(verifier_, /*require_auth=*/false);
+}
+
+userver::server::handlers::auth::AuthCheckerBasePtr CheckerFactoryRequired::MakeAuthChecker(
+    const userver::server::handlers::auth::HandlerAuthConfig& /*auth_config*/
+) const {
+    return std::make_shared<AuthCheckerJwt>(verifier_, /*require_auth=*/true);
 }
 
 }  // namespace ya_brander::auth

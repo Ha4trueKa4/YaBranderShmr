@@ -18,6 +18,13 @@ export type LoginRequest = {
   password: string
 }
 
+export type YandexAuthRequest = {
+  /**
+   * Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
+   */
+  code: string
+}
+
 export type AuthResponse = {
   access_token: string
   token_type: string
@@ -129,7 +136,7 @@ export type VersionInfo = {
 }
 
 /**
- * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — идентификатор созданной версии (version_id) вместо самого SVG или ссылки на него.
+ * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — либо идентификатор созданной версии (version_id), либо, если генерация упала, текст ошибки (error) — вместо самого SVG или ссылки на него. Сообщение пользователя и ответ ассистента одного обмена связаны общим job_id (идентификатором фоновой задачи генерации из POST .../generate); пользовательское сообщение появляется в истории сразу при старте задачи, ответ ассистента — только после её завершения.
  *
  */
 export type ChatMessage = {
@@ -139,10 +146,33 @@ export type ChatMessage = {
    */
   text?: string
   /**
-   * Только для role=assistant — id созданной версии проекта
+   * Только для role=assistant при успешной генерации — id созданной версии проекта
    */
   version_id?: string
+  /**
+   * Только для role=assistant при неудачной генерации — текст ошибки
+   */
+  error?: string
+  /**
+   * Идентификатор фоновой задачи генерации, к которой относится сообщение.
+   */
+  job_id?: string
   created_at: string
+}
+
+/**
+ * Текущее состояние фоновой задачи генерации.
+ */
+export type GenerationStatus = {
+  status: 'pending' | 'done' | 'error'
+  /**
+   * Только при status=done — presigned-ссылка на сгенерированный SVG-объект
+   */
+  url?: string
+  /**
+   * Только при status=error — текст ошибки
+   */
+  message?: string
 }
 
 /**
@@ -221,6 +251,47 @@ export type PostAuthLoginResponses = {
 
 export type PostAuthLoginResponse =
   PostAuthLoginResponses[keyof PostAuthLoginResponses]
+
+export type PostAuthYandexData = {
+  body: YandexAuthRequest
+  path?: never
+  query?: never
+  url: '/auth/yandex'
+}
+
+export type PostAuthYandexErrors = {
+  /**
+   * Не передан code, либо Yandex-приложение не запросило скоуп login:email и профиль пришёл без email.
+   *
+   */
+  400: ValidationError
+  /**
+   * Email из профиля Yandex уже принадлежит существующему аккаунту без привязанного provider (например, зарегистрированному по паролю). Автоматическая привязка намеренно не выполняется — иначе аккаунт можно угнать, заранее зарегистрировав чужой email своим паролем. Пользователю нужно войти по паролю и привязать Yandex ID явно (отдельный флоу, пока не реализован).
+   *
+   */
+  409: ValidationError
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+  /**
+   * Yandex OAuth API недоступен, code невалиден/просрочен, либо не удалось получить профиль
+   */
+  502: ValidationError
+}
+
+export type PostAuthYandexError =
+  PostAuthYandexErrors[keyof PostAuthYandexErrors]
+
+export type PostAuthYandexResponses = {
+  /**
+   * Успешный вход (существующий или только что привязанный аккаунт)
+   */
+  200: AuthResponse
+}
+
+export type PostAuthYandexResponse =
+  PostAuthYandexResponses[keyof PostAuthYandexResponses]
 
 export type GetUsersByIdData = {
   body?: never
@@ -643,7 +714,7 @@ export type PostProjectsByIdGenerateData = {
 
 export type PostProjectsByIdGenerateErrors = {
   /**
-   * Не передан prompt
+   * Не передан prompt, либо prompt длиннее 1500 символов
    */
   400: MessageResponse
   /**
@@ -654,6 +725,10 @@ export type PostProjectsByIdGenerateErrors = {
    * Нет прав на генерацию в чужом проекте
    */
   403: unknown
+  /**
+   * Проект не найден
+   */
+  404: unknown
 }
 
 export type PostProjectsByIdGenerateError =
@@ -661,18 +736,57 @@ export type PostProjectsByIdGenerateError =
 
 export type PostProjectsByIdGenerateResponses = {
   /**
-   * Сгенерированный SVG-код проекта
+   * Генерация запущена в фоне. Дальнейший статус — через GET /projects/{id}/generate/{job_id}.
+   *
    */
-  200: {
+  202: {
     /**
-     * S3 ссылка на объект проекта (отсутствует, если проект пуст)
+     * Идентификатор фоновой задачи генерации.
      */
-    url?: string
+    job_id?: string
   }
 }
 
 export type PostProjectsByIdGenerateResponse =
   PostProjectsByIdGenerateResponses[keyof PostProjectsByIdGenerateResponses]
+
+export type GetProjectsByIdGenerateByJobIdData = {
+  body?: never
+  path: {
+    id: string
+    /**
+     * Идентификатор задачи, полученный из ответа POST .../generate
+     */
+    job_id: string
+  }
+  query?: never
+  url: '/projects/{id}/generate/{job_id}'
+}
+
+export type GetProjectsByIdGenerateByJobIdErrors = {
+  /**
+   * Не авторизован
+   */
+  401: unknown
+  /**
+   * Нет прав на просмотр генерации в чужом проекте
+   */
+  403: unknown
+  /**
+   * Проект не найден, либо job_id не существует / не принадлежит этому проекту
+   */
+  404: unknown
+}
+
+export type GetProjectsByIdGenerateByJobIdResponses = {
+  /**
+   * Текущий статус задачи генерации
+   */
+  200: GenerationStatus
+}
+
+export type GetProjectsByIdGenerateByJobIdResponse =
+  GetProjectsByIdGenerateByJobIdResponses[keyof GetProjectsByIdGenerateByJobIdResponses]
 
 export type GetProjectsByIdVersionsData = {
   body?: never
@@ -835,6 +949,48 @@ export type GetProjectsByIdChatResponses = {
 
 export type GetProjectsByIdChatResponse =
   GetProjectsByIdChatResponses[keyof GetProjectsByIdChatResponses]
+
+export type GetModelsData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/models'
+}
+
+export type GetModelsResponses = {
+  /**
+   * Успешный запрос. Возвращает объект со списком моделей.
+   */
+  200: {
+    /**
+     * Тип корневого объекта.
+     */
+    object: string
+    /**
+     * Массив доступных моделей.
+     */
+    data: Array<{
+      /**
+       * Уникальный идентификатор (URI) модели.
+       */
+      id: string
+      /**
+       * Тип сущности элемента массива.
+       */
+      object: string
+      /**
+       * Владелец или разработчик модели (Yandex, DeepSeek, OpenAI, Alibaba).
+       */
+      owned_by: string
+      /**
+       * Временная метка создания модели (Unix timestamp).
+       */
+      created: number
+    }>
+  }
+}
+
+export type GetModelsResponse = GetModelsResponses[keyof GetModelsResponses]
 
 export type GetFeedData = {
   body?: never

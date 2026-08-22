@@ -2,6 +2,7 @@ export { getProjectSvg } from './api/getProjectSvg'
 export {
   projectQueryKey,
   projectSvgQueryKey,
+  projectSvgQueryPrefix,
   useDeleteProjectMutation,
   useFeedInfiniteQuery,
   useProjectQuery,

@@ -6,6 +6,9 @@ import {
 } from '@entities/project'
 import {
   DEFAULT_GENERATION_MODEL,
+  GenerationPollingTimeoutError,
+  generationProcessStore,
+  pollGenerationStatus,
   useGenerateProjectMutation,
 } from '@features/editorGenerate'
 import {
@@ -19,7 +22,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Footer } from '@widgets/footer'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -33,9 +36,6 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const toast = useToast()
   const { t } = useTranslation()
   const isAuthorized = authStore.isAuthorized
-  const [description, setDescription] = useState('')
-  const [model, setModel] = useState(DEFAULT_GENERATION_MODEL)
-  const [isGenerationInProgress, setGenerationInProgress] = useState(false)
   const { isPending: isCreatingProjectPending, mutateAsync: createProject } =
     useCreateProjectMutation()
   const {
@@ -44,15 +44,14 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   } = useGenerateProjectMutation()
 
   const isGenerationPending =
+    generationProcessStore.isInProgress ||
     isCreatingProjectPending ||
-    isGeneratingProjectPending ||
-    isGenerationInProgress
+    isGeneratingProjectPending
+  const generationDraft = generationProcessStore.draft
 
   const startGeneration = useCallback(
     async (draft: ProjectDraft) => {
-      setDescription(draft.description)
-      setModel(draft.model)
-      setGenerationInProgress(true)
+      generationProcessStore.begin(draft)
       pendingGenerationStore.save(draft)
 
       try {
@@ -63,11 +62,36 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
-        const generatedProject = await generateProject({
+        const generation = await generateProject({
           model: draft.model,
           projectId: project.id,
           prompt: draft.description,
         })
+        const jobId = generation.job_id
+
+        if (!jobId) {
+          toast.error(
+            t('The generated project is unavailable. Please try again.'),
+          )
+          return
+        }
+
+        generationProcessStore.trackJob(project.id, jobId)
+
+        const generatedProject = await pollGenerationStatus(
+          queryClient,
+          project.id,
+          jobId,
+        )
+
+        if (generatedProject.status === 'error') {
+          toast.error(
+            generatedProject.message ??
+              t('The generated project is unavailable. Please try again.'),
+          )
+          return
+        }
+
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
@@ -81,8 +105,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           ...project,
           url: generatedProjectUrl,
         })
-        await queryClient.fetchQuery({
-          queryKey: projectSvgQueryKey(project.id),
+        void queryClient.prefetchQuery({
+          queryKey: projectSvgQueryKey(project.id, generatedProjectUrl),
           queryFn: () => getProjectSvg(generatedProjectUrl),
         })
         pendingGenerationStore.take()
@@ -92,9 +116,13 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           pendingGenerationStore.take()
         }
 
-        toast.error(getApiErrorMessage(error))
+        toast.error(
+          error instanceof GenerationPollingTimeoutError
+            ? t('Generation is taking too long. Please try again.')
+            : getApiErrorMessage(error),
+        )
       } finally {
-        setGenerationInProgress(false)
+        generationProcessStore.reset()
       }
     },
     [createProject, generateProject, navigate, queryClient, t, toast],
@@ -119,7 +147,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthorized is updated by MobX observer.
   useEffect(() => {
-    if (!isAuthorized) {
+    if (!isAuthorized || generationProcessStore.isInProgress) {
       return
     }
 
@@ -135,7 +163,10 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       <Header />
       <main className={styles.content}>
         {isGenerationPending ? (
-          <EditorGeneratingState description={description} model={model} />
+          <EditorGeneratingState
+            description={generationDraft?.description ?? ''}
+            model={generationDraft?.model ?? DEFAULT_GENERATION_MODEL}
+          />
         ) : (
           <EditorEmptyState
             onGenerate={handleGenerate}

@@ -1,4 +1,6 @@
+import { IconButton } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
+import { ArrowLeft } from 'lucide-react'
 import { CanvasControls } from './components/CanvasControls'
 import { ProjectActions } from './components/ProjectActions'
 import { ProjectTitle } from './components/ProjectTitle'
@@ -6,13 +8,17 @@ import styles from './EditorToolbar.module.css'
 
 export interface EditorToolbarProps {
   canEdit: boolean
+  canRedo: boolean
+  canUndo: boolean
   activeTool: CanvasTool
   isCreatingProjectCopy: boolean
   isSavingVersion: boolean
+  onBack: () => void
   onCreateCopy: () => void
   onEditProjectName: (projectName: string) => Promise<void>
   onExport: () => void
   onOpenProfile: () => void
+  onOpenVersionHistory: () => void
   onToolChange: (tool: CanvasTool) => void
   onRedo: () => void
   onSaveVersion: () => void
@@ -25,13 +31,17 @@ export interface EditorToolbarProps {
 
 export function EditorToolbar({
   canEdit,
+  canRedo,
+  canUndo,
   activeTool,
   isCreatingProjectCopy,
   isSavingVersion,
+  onBack,
   onCreateCopy,
   onEditProjectName,
   onExport,
   onOpenProfile,
+  onOpenVersionHistory,
   onToolChange,
   onRedo,
   onSaveVersion,
@@ -43,6 +53,13 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
   return (
     <header className={styles.toolbar}>
+      <IconButton
+        aria-label="Back"
+        className={styles.backButton}
+        onClick={onBack}
+      >
+        <ArrowLeft className={styles.backIcon} />
+      </IconButton>
       <ProjectTitle
         canEdit={canEdit}
         onSubmit={onEditProjectName}
@@ -51,6 +68,8 @@ export function EditorToolbar({
       {canEdit && (
         <CanvasControls
           activeTool={activeTool}
+          canRedo={canRedo}
+          canUndo={canUndo}
           onToolChange={onToolChange}
           onRedo={onRedo}
           onUndo={onUndo}
@@ -66,6 +85,7 @@ export function EditorToolbar({
         onCreateCopy={onCreateCopy}
         onExport={onExport}
         onOpenProfile={onOpenProfile}
+        onOpenVersionHistory={onOpenVersionHistory}
         onSaveVersion={onSaveVersion}
       />
     </header>

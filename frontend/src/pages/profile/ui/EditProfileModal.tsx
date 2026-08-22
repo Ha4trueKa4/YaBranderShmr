@@ -1,5 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Button, FormField, Input, Portal } from '@shared/ui'
+import { useEscAction, useLockBodyScroll } from '@shared/lib'
+import { Button, FormField, IconButton, Input, Portal } from '@shared/ui'
+import { X } from 'lucide-react'
 import { useEffect, useId } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +16,7 @@ interface EditProfileModalProps {
   isOpen: boolean
   name: string
   onClose: () => void
+  onEditPassword: () => void
   onSubmit: (name: string) => Promise<void>
 }
 
@@ -22,10 +25,12 @@ export function EditProfileModal({
   isOpen,
   name,
   onClose,
+  onEditPassword,
   onSubmit,
 }: EditProfileModalProps) {
   const { t } = useTranslation()
   const nameInputId = useId()
+  const passwordButtonId = useId()
   const editProfileFormSchema = z.object({
     name: z
       .string()
@@ -45,6 +50,9 @@ export function EditProfileModal({
     }
   }, [form, isOpen, name])
 
+  useLockBodyScroll(isOpen)
+  useEscAction(onClose, isOpen)
+
   if (!isOpen) {
     return null
   }
@@ -54,7 +62,16 @@ export function EditProfileModal({
       <div className={styles.overlay}>
         <button className={styles.backdrop} onClick={onClose} type="button" />
         <section className={styles.modal}>
-          <h2 className={styles.title}>{t('Edit profile')}</h2>
+          <header className={styles.header}>
+            <h2 className={styles.title}>{t('Edit profile')}</h2>
+            <IconButton
+              className={styles.closeButton}
+              onClick={onClose}
+              size="sm"
+            >
+              <X />
+            </IconButton>
+          </header>
           <form
             className={styles.form}
             onSubmit={form.handleSubmit(async ({ name: nextName }) => {
@@ -72,6 +89,15 @@ export function EditProfileModal({
                 id={nameInputId}
                 invalid={Boolean(form.formState.errors.name)}
               />
+            </FormField>
+            <FormField htmlFor={passwordButtonId} label={t('Password')}>
+              <Button
+                id={passwordButtonId}
+                onClick={onEditPassword}
+                variant="outline"
+              >
+                {t('Change password')}
+              </Button>
             </FormField>
             <div className={styles.actions}>
               <Button

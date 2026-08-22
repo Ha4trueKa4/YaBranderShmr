@@ -301,6 +301,23 @@ describe('parseSvg', () => {
     ])
   })
 
+  it('keeps an explicitly specified path fill instead of using the SVG black default', () => {
+    const document = parseSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <path id="pelican-neck" d="M290 240 Q320 200 330 170" fill="#ffffff" stroke="#ffffff" stroke-width="20" />
+      </svg>
+    `)
+
+    expect(document.layers[0]).toMatchObject({
+      id: 'pelican-neck',
+      style: {
+        fill: { type: 'color', value: '#ffffff' },
+        stroke: { type: 'color', value: '#ffffff' },
+      },
+      type: 'shape',
+    })
+  })
+
   it('keeps a contract editor group and its path editable', () => {
     const result = importSvg(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -399,6 +416,52 @@ describe('parseSvg', () => {
       },
       type: 'shape',
     })
+  })
+
+  it('parses a dashed line as an editable shape', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+        <line xmlns="http://www.w3.org/2000/svg" id="dashed-line" x1="0" y1="0" x2="100" y2="0" stroke="#000" stroke-dasharray="4 6" />
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        id: 'dashed-line',
+        isLocked: false,
+        style: { strokeDasharray: '4 6' },
+        type: 'shape',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'dashed-line' }),
+    )
+  })
+
+  it('keeps an inherited group fill on editable children', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="logo-gradient"><stop offset="0%" stop-color="#fff" /></linearGradient>
+        </defs>
+        <g id="logo" fill="url(#logo-gradient)">
+          <path id="logo-mark" d="M0 0 L20 20" />
+        </g>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        children: [{ id: 'logo-mark', isLocked: false, type: 'shape' }],
+        fill: { gradientId: 'logo-gradient', type: 'gradient' },
+        id: 'logo',
+        isLocked: false,
+        type: 'group',
+      },
+    ])
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ editorId: 'logo' }),
+    )
   })
 
   it('locks unsupported elements without discarding editable siblings', () => {

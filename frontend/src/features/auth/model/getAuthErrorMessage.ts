@@ -17,3 +17,22 @@ export function getAuthErrorMessage(error: unknown): string {
 
   return getApiErrorMessage(error)
 }
+
+export function getYandexAuthErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 400:
+        return i18n.t('Unable to complete Yandex ID sign-in. Please try again.')
+      case 409:
+        return i18n.t(
+          'This email is already registered. Sign in with your password.',
+        )
+      case 502:
+        return i18n.t('Yandex ID is temporarily unavailable. Please try again.')
+      default:
+        return getApiErrorMessage(error)
+    }
+  }
+
+  return getApiErrorMessage(error)
+}

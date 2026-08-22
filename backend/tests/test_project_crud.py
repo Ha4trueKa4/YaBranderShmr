@@ -244,7 +244,7 @@ async def test_delete_project_forbidden(
 async def test_generate_ai_success(
         service_client, project_a, auth_header_a
 ):
-    """Успешная генерация ИИ владельцем -> 200"""
+    """Успешная генерация ИИ владельцем -> 202 + job_id, дальше poll до done"""
     project_id = project_a["id"]
     prompt = {"prompt": "Добавь логотип с изображением кружки"}
 
@@ -254,10 +254,23 @@ async def test_generate_ai_success(
         headers=auth_header_a,
     )
 
-    assert response.status == 200
-    data = response.json()
+    assert response.status == 202
+    job_id = response.json()["job_id"]
 
-    assert "url" in data
+    status = "pending"
+    data = {}
+    for _ in range(10):
+        poll = await service_client.get(
+            f"/api/v1/projects/{project_id}/generate/{job_id}",
+            headers=auth_header_a,
+        )
+        assert poll.status == 200
+        data = poll.json()
+        status = data["status"]
+        if status != "pending":
+            break
+
+    assert status == "done"
     assert isinstance(data["url"], str)
 
 

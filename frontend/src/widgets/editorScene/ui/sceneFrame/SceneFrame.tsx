@@ -23,7 +23,10 @@ interface SceneFrameProps {
   document: EditorDocument
   isReadOnly: boolean
   onClearSelection: () => void
+  onDocumentChangeEnd: () => void
+  onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -42,7 +45,10 @@ export function SceneFrame({
   document,
   isReadOnly,
   onClearSelection,
+  onDocumentChangeEnd,
+  onDocumentChangeStart,
   onGroupPositionChange,
+  onRawPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -65,14 +71,19 @@ export function SceneFrame({
   const {
     onPointerMove,
     onPointerUp,
+    onRawPointerDown,
     onShapePointerDown,
     onTextPointerDown,
     svgReference,
   } = useLayerDrag({
     activeTool,
+    document: document.layers,
     getEditableElement,
     isReadOnly,
+    onDocumentChangeEnd,
+    onDocumentChangeStart,
     onGroupPositionChange,
+    onRawPositionChange,
     onSelectNode,
     onShapePositionChange,
     onTextPositionChange,
@@ -182,6 +193,7 @@ export function SceneFrame({
               canMoveLayers={activeTool === 'select'}
               document={document}
               onSelectNode={onSelectNode}
+              onRawPointerDown={onRawPointerDown}
               onShapePointerDown={onShapePointerDown}
               onShapePointerMove={onPointerMove}
               onShapePointerUp={onPointerUp}

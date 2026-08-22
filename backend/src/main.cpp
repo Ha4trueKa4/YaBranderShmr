@@ -16,6 +16,8 @@
 #include "handlers/check/check.hpp"
 #include "handlers/get_models/get_models.hpp"
 #include "handlers/projects/append_projects.h"
+#include "handlers/projects/generation/append_generation.hpp"
+#include "handlers/projects/versions/append_versions.hpp"
 
 #include "./handlers/users/append_users.hpp"
 #include "components/object_storage/s3_object_storage_component.hpp"
@@ -28,6 +30,7 @@
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
+    userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactoryRequired>();
     auto component_list =
         userver::components::MinimalServerComponentList()
             .Append<userver::server::handlers::Ping>()
@@ -56,6 +59,8 @@ int main(int argc, char* argv[]) {
     ya_brander::handlers::AppendGetModels(component_list);
     // ya_brander::AppendAuth(component_list);
     ya_brander::AppendProjects(component_list);
+    ya_brander::handlers::AppendProjectVersions(component_list);
+    ya_brander::handlers::AppendProjectGeneration(component_list);
     ya_brander::AppendUsers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

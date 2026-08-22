@@ -24,6 +24,14 @@ nonisolated final class RemoteUserProfileService: UserProfileService {
             }
         )
     }
+
+    func subscribe(to userID: UUID) async throws {
+        try await networkClient.request(.post, .subscribe(userID: userID), authorization: .required)
+    }
+
+    func unsubscribe(from userID: UUID) async throws {
+        try await networkClient.request(.delete, .subscribe(userID: userID), authorization: .required)
+    }
 }
 
 private nonisolated struct UserProfileDTO: Decodable, Sendable {

@@ -18,11 +18,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +43,6 @@ import com.yandex.avatargenerator.feature.project.data.MockPublicProjectReposito
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProject
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectAuthor
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectRelatedItem
-import com.yandex.avatargenerator.feature.project.ui.components.PublicProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.util.publishedLabel
 import com.yandex.avatargenerator.ui.components.BrandAvatar
 import com.yandex.avatargenerator.ui.components.BrandErrorState
@@ -52,16 +53,33 @@ import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
+import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-private val HeroGradient = Brush.horizontalGradient(
-    listOf(AppColors.Accent, AppColors.AccentCyan, AppColors.AccentPink),
-)
+// Декоративный градиент hero-баннера по макету (violet → cyan → pink, слева направо):
+// виден, пока грузится превью проекта или если превью нет. Розовый — точечное
+// значение баннера, вне палитры AppColors. AppColors — @Composable-геттеры (зависят
+// от темы), поэтому градиент собирается функцией, а не top-level val;
+// remember по палитре — чтобы Brush не пересобирался на каждой рекомпозиции.
+@Composable
+private fun heroGradient(): Brush {
+    val colors = LocalAppColorScheme.current
+    return remember(colors) {
+        Brush.horizontalGradient(
+            listOf(colors.accent, colors.accentCyan, Color(0xFFEC4899)),
+        )
+    }
+}
 
-private val PreviewGradient = Brush.horizontalGradient(
-    listOf(AppColors.Accent, AppColors.AccentCyan),
-)
+// Заглушка превью карточек «More from this creator» — на токенах палитры.
+@Composable
+private fun previewGradient(): Brush {
+    val colors = LocalAppColorScheme.current
+    return remember(colors) {
+        Brush.horizontalGradient(listOf(colors.accent, colors.accentCyan))
+    }
+}
 
 private val HeroHeight = 300.dp
 private val RelatedPreviewHeight = 100.dp
@@ -87,7 +105,9 @@ internal fun PublicProjectScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        PublicProjectUiState.Loading -> PublicProjectSkeleton(modifier)
+        PublicProjectUiState.Loading -> PublicProjectCenteredBox(modifier) {
+            CircularProgressIndicator(color = AppColors.Accent)
+        }
 
         PublicProjectUiState.Error -> PublicProjectCenteredBox(modifier) {
             BrandErrorState(
@@ -201,7 +221,7 @@ private fun PublicProjectHero(
         modifier = modifier
             .fillMaxWidth()
             .height(HeroHeight)
-            .background(HeroGradient),
+            .background(heroGradient()),
         contentAlignment = Alignment.BottomStart,
     ) {
         if (previewUrl != null) {
@@ -212,23 +232,22 @@ private fun PublicProjectHero(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        // Метка есть не всегда: сетевой контракт её не отдаёт (см. PublicProjectMappers).
-        if (badge.isNotBlank()) {
-            val badgeShape = RoundedCornerShape(AppShape.full)
-            Text(
-                text = badge,
-                style = AppTypography.caption.copy(
-                    color = AppColors.TextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                modifier = Modifier
-                    .padding(AppSpacing.l)
-                    .clip(badgeShape)
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .border(1.dp, Color.White.copy(alpha = 0.1f), badgeShape)
-                    .padding(horizontal = AppSpacing.s, vertical = 6.dp),
-            )
-        }
+        // «Стекло» имитируем полупрозрачной подложкой и тонким светлым бордером —
+        // backdrop-blur из макета в Compose портативно не воспроизвести.
+        val badgeShape = RoundedCornerShape(AppShape.full)
+        Text(
+            text = badge,
+            style = AppTypography.caption.copy(
+                color = AppColors.TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            modifier = Modifier
+                .padding(AppSpacing.l)
+                .clip(badgeShape)
+                .background(Color.Black.copy(alpha = 0.4f))
+                .border(1.dp, Color.White.copy(alpha = 0.1f), badgeShape)
+                .padding(horizontal = AppSpacing.s, vertical = 6.dp),
+        )
     }
 }
 
@@ -260,15 +279,12 @@ private fun PublicProjectAuthorRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                // Роль в сетевом контракте отсутствует — пустую строку не рисуем.
-                if (author.role.isNotBlank()) {
-                    Text(
-                        text = author.role,
-                        style = AppTypography.caption,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(
+                    text = author.role,
+                    style = AppTypography.caption,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         PublicProjectFollowButton(isFollowing = author.isFollowing, onClick = onFollowClick)
@@ -357,6 +373,8 @@ private fun PublicProjectRelated(
             text = stringResource(R.string.public_project_related_title),
             style = AppTypography.label.copy(fontWeight = FontWeight.Bold),
         )
+        // Раскладываем по два в ряд. Списка сюда приходит немного (подборка),
+        // поэтому обычные Row внутри Column, без LazyGrid — экран и так скроллится.
         items.chunked(2).forEach { rowItems ->
             Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.s)) {
                 rowItems.forEach { item ->
@@ -366,6 +384,7 @@ private fun PublicProjectRelated(
                         modifier = Modifier.weight(1f),
                     )
                 }
+                // Нечётный хвост: пустая ячейка держит ширину карточки в ряду.
                 if (rowItems.size == 1) Box(modifier = Modifier.weight(1f))
             }
         }
@@ -391,7 +410,7 @@ private fun PublicProjectRelatedCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(RelatedPreviewHeight)
-                .background(PreviewGradient),
+                .background(previewGradient()),
         ) {
             if (item.previewUrl != null) {
                 AsyncImage(
@@ -429,6 +448,8 @@ private fun PublicProjectRelatedCard(
         }
     }
 }
+
+// --- Preview -----------------------------------------------------------------
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14, heightDp = 960)
 @Composable

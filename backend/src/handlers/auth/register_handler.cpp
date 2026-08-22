@@ -10,8 +10,11 @@
 #include <userver/storages/postgres/exceptions.hpp>
 
 #include "password_hasher.hpp"
+#include "../../utils/errors.hpp"
 
 namespace ya_brander::auth {
+
+using utils::MakeError;
 
 namespace {
 
@@ -36,16 +39,6 @@ bool IsValidNickname(const std::string& nickname) {
     return nickname.size() >= 3 && nickname.size() <= 64;
 }
 
-userver::formats::json::Value MakeErrorJson(std::string_view code, std::string_view message, std::string_view field = "") {
-    userver::formats::json::ValueBuilder builder;
-    builder["code"] = std::string(code);
-    builder["message"] = std::string(message);
-    if (!field.empty()) {
-        builder["field"] = std::string(field);
-    }
-    return builder.ExtractValue();
-}
-
 }  // namespace
 
 RegisterHandler::RegisterHandler(const userver::components::ComponentConfig& config,
@@ -65,15 +58,15 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
 
     if (!IsValidEmail(email)) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeErrorJson("INVALID_EMAIL", "Email is invalid", "email");
+        return MakeError("INVALID_EMAIL", "Email is invalid", "email");
     }
     if (!IsValidPassword(password)) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeErrorJson("INVALID_PASSWORD", "Password must be 8-128 chars and contain letters and digits", "password");
+        return MakeError("INVALID_PASSWORD", "Password must be 8-128 chars and contain letters and digits", "password");
     }
     if (!IsValidNickname(nickname)) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
-        return MakeErrorJson("INVALID_NICKNAME", "Nickname must be 3-64 chars", "nickname");
+        return MakeError("INVALID_NICKNAME", "Nickname must be 3-64 chars", "nickname");
     }
 
     const auto password_hash = PasswordHasher::Hash(password);
@@ -101,9 +94,9 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
         request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
         const auto constraint = ex.GetConstraint();
         if (constraint.find("login") != std::string::npos) {
-            return MakeErrorJson("NICKNAME_EXISTS", "Nickname is already taken", "nickname");
+            return MakeError("NICKNAME_EXISTS", "Nickname is already taken", "nickname");
         }
-        return MakeErrorJson("EMAIL_EXISTS", "Email is already registered", "email");
+        return MakeError("EMAIL_EXISTS", "Email is already registered", "email");
     }
 }
 

@@ -7,6 +7,8 @@ import { FillProperty } from './FillProperty'
 interface StrokePropertyProps {
   onAdd: () => void
   onColorChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onRemove: () => void
   onWidthChange: (strokeWidth: number) => void
   stroke: Paint
@@ -22,6 +24,8 @@ function getFiniteNumber(value: string): number | null {
 export function StrokeProperty({
   onAdd,
   onColorChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onRemove,
   onWidthChange,
   stroke,
@@ -59,6 +63,8 @@ export function StrokeProperty({
       <FillProperty
         fill={color}
         onFillChange={onColorChange}
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
         title={t('Stroke')}
       />
       <div className={styles.fieldGrid}>

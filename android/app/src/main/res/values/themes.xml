@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Тёмная тема окна: приложение полностью тёмное. Прозрачные системные
+    <!-- Тёмный вариант — values-night/themes.xml: платформенную DayNight-тему не
+         берём, она есть только с API 29, а minSdk у нас 26. Прозрачные системные
          бары настраиваются в MainActivity через enableEdgeToEdge. -->
-    <style name="Theme.AvatarGenerator" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.AvatarGenerator" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
 </resources>

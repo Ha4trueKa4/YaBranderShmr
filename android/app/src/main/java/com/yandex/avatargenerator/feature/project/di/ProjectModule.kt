@@ -1,6 +1,6 @@
 package com.yandex.avatargenerator.feature.project.di
 
-import com.yandex.avatargenerator.feature.project.data.MockChatRepository
+import com.yandex.avatargenerator.feature.project.data.ChatRepositoryImpl
 import com.yandex.avatargenerator.feature.project.data.NetworkPublicProjectRepository
 import com.yandex.avatargenerator.feature.project.data.ProjectRepositoryImpl
 import com.yandex.avatargenerator.feature.project.data.VersionsRepositoryImpl
@@ -14,10 +14,16 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val projectModule = module {
-    single<ChatRepository> { MockChatRepository() }
+    single<ChatRepository> {
+        ChatRepositoryImpl(
+            client = get(),
+            projectRepository = get(),
+            versionsRepository = get(),
+        )
+    }
     single<ProjectRepository> { ProjectRepositoryImpl(client = get()) }
     single<PublicProjectRepository> { NetworkPublicProjectRepository(get()) }
     single<VersionsRepository> { VersionsRepositoryImpl(client = get()) }
-    viewModel { (projectId: String) -> ProjectViewModel(get(), get(), projectId) }
+    viewModel { (projectId: String) -> ProjectViewModel(get(), projectId) }
     viewModel { (projectId: String) -> PublicProjectViewModel(get(), get(), projectId) }
 }

@@ -22,6 +22,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { generatePath, useNavigate } from 'react-router-dom'
 
+import { ChangePasswordModal } from './ChangePasswordModal'
 import { EditProfileModal } from './EditProfileModal'
 import styles from './profilePage.module.css'
 
@@ -32,6 +33,8 @@ export function ProfilePage() {
   const { t } = useTranslation()
   const session = authStore.getSession
   const [isEditProfileModalOpen, setEditProfileModalOpen] = useState(false)
+  const [isChangePasswordModalOpen, setChangePasswordModalOpen] =
+    useState(false)
   const [profileName, setProfileName] = useState(
     () => session?.user.nickname ?? '',
   )
@@ -150,6 +153,12 @@ export function ProfilePage() {
     }
   }
 
+  async function handleProjectVersionRestored() {
+    await queryClient.invalidateQueries({
+      queryKey: userProfileQueryKey(userId),
+    })
+  }
+
   return (
     <div className={styles.page}>
       <Header />
@@ -183,6 +192,7 @@ export function ProfilePage() {
             isDeletingProjectPending={isDeletingProjectPending}
             onDeleteProject={handleDeleteProject}
             onOpenProject={handleOpenProject}
+            onProjectVersionRestored={handleProjectVersionRestored}
             onUpdateProjectMetadata={handleUpdateProjectMetadata}
             projects={projects}
           />
@@ -193,7 +203,19 @@ export function ProfilePage() {
         isOpen={isEditProfileModalOpen}
         name={profileName}
         onClose={() => setEditProfileModalOpen(false)}
+        onEditPassword={() => {
+          setEditProfileModalOpen(false)
+          setChangePasswordModalOpen(true)
+        }}
         onSubmit={handleEditProfile}
+      />
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onBack={() => {
+          setChangePasswordModalOpen(false)
+          setEditProfileModalOpen(true)
+        }}
+        onClose={() => setChangePasswordModalOpen(false)}
       />
       <Footer />
     </div>
