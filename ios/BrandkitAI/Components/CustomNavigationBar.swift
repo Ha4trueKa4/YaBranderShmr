@@ -2,12 +2,13 @@ import SwiftUI
 
 struct NavigationBackButton: View {
     let action: () -> Void
+    var foregroundColor: Color = .primary
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "arrow.left")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(foregroundColor)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Back")

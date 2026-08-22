@@ -8,6 +8,7 @@ struct ProfileView: View {
     var onBack: (() -> Void)?
     var onEditProfile: () -> Void
     var onOpenProject: (UUID, String, URL?) -> Void
+    var onOpenConnections: (UUID, ProfileConnectionsKind) -> Void
 
     init(
         session: SessionStore,
@@ -15,13 +16,15 @@ struct ProfileView: View {
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
-        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in }
+        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in },
+        onOpenConnections: @escaping (UUID, ProfileConnectionsKind) -> Void = { _, _ in }
     ) {
         self.session = session
         self.isCurrentUser = isCurrentUser
         self.onBack = onBack
         self.onEditProfile = onEditProfile
         self.onOpenProject = onOpenProject
+        self.onOpenConnections = onOpenConnections
         _viewModel = State(initialValue: ProfileViewModel(
             currentUserService: session.currentUserService,
             userProfileService: session.userProfileService,
@@ -32,19 +35,24 @@ struct ProfileView: View {
     @ViewBuilder
     var body: some View {
         if let onBack {
-            profileContent
-                .customNavigationBar(title: "", onBack: onBack)
-                .toolbarBackground(Color.background, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+            GeometryReader { proxy in
+                profileContent(topInset: proxy.safeAreaInsets.top, onBack: onBack)
+                    .ignoresSafeArea(edges: .top)
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden()
         } else {
-            profileContent
+            profileContent()
         }
     }
 
-    private var profileContent: some View {
+    private func profileContent(
+        topInset: CGFloat = 0,
+        onBack: (() -> Void)? = nil
+    ) -> some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                profileHeader
+                profileHeader(topInset: topInset, onBack: onBack)
                 
                 projectsSection
             }
@@ -54,9 +62,12 @@ struct ProfileView: View {
         .refreshable { await viewModel.load() }
     }
 
-    private var profileHeader: some View {
+    private func profileHeader(
+        topInset: CGFloat,
+        onBack: (() -> Void)?
+    ) -> some View {
         VStack(spacing: 0) {
-            cover
+            cover(topInset: topInset, onBack: onBack)
             
             VStack(spacing: 12) {
                 avatar
@@ -103,8 +114,11 @@ struct ProfileView: View {
         .overlay(alignment: .bottom) { separator }
     }
 
-    private var cover: some View {
-        let baseHeight = CGFloat(100)
+    private func cover(
+        topInset: CGFloat,
+        onBack: (() -> Void)?
+    ) -> some View {
+        let baseHeight = CGFloat(100) + topInset
         
         return GeometryReader { proxy in
             LinearGradient(
@@ -126,6 +140,14 @@ struct ProfileView: View {
                     signOutButton
                         .padding(.top, 48)
                         .padding(.trailing, 12)
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if let onBack {
+                    NavigationBackButton(action: onBack, foregroundColor: Color(.onAccent))
+                        .frame(width: 44, height: 44)
+                        .padding(.top, topInset + 4)
+                        .padding(.leading, 8)
                 }
             }
             .offset(y: -max(0, onBack == nil ? proxy.frame(in: .global).origin.y : proxy.frame(in: .scrollView).origin.y))
@@ -163,11 +185,38 @@ struct ProfileView: View {
         HStack(spacing: 8) {
             stat(value: viewModel.projectsCount, title: "Projects")
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followersCount, title: "Followers", animated: true)
+            connectionStat(
+                value: viewModel.followersCount,
+                title: "Followers",
+                kind: .followers,
+                animated: true
+            )
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followingCount, title: "Following")
+            connectionStat(
+                value: viewModel.followingCount,
+                title: "Following",
+                kind: .following
+            )
         }
         .font(.system(size: 13))
+    }
+
+    private func connectionStat(
+        value: Int,
+        title: String,
+        kind: ProfileConnectionsKind,
+        animated: Bool = false
+    ) -> some View {
+        Button {
+            guard let profileID = viewModel.profileID else { return }
+            onOpenConnections(profileID, kind)
+        } label: {
+            stat(value: value, title: title, animated: animated)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.profileID == nil)
+        .accessibilityHint("Opens \(title.lowercased()) list")
     }
 
     private func stat(value: Int, title: String, animated: Bool = false) -> some View {
