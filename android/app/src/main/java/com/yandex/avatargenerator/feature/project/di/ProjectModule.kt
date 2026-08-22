@@ -28,6 +28,6 @@ val projectModule = module {
     single<PublicProjectRepository> { NetworkPublicProjectRepository(get()) }
     single<VersionsRepository> { VersionsRepositoryImpl(client = get()) }
     single<ProjectExporter> { AndroidProjectExporter(androidContext(), get()) }
-    viewModel { (projectId: String) -> ProjectViewModel(get(), get(), projectId) }
+    viewModel { (projectId: String) -> ProjectViewModel(get(), get(), get(), projectId) }
     viewModel { (projectId: String) -> PublicProjectViewModel(get(), get(), get(), projectId) }
 }
