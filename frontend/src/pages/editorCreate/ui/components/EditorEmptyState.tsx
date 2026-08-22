@@ -7,6 +7,8 @@ import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 import styles from './EditorEmptyState.module.css'
 
 interface EditorEmptyStateProps {
+  initialDescription?: string
+  initialModel?: string
   onGenerate: (draft: {
     description: string
     model: string
@@ -16,11 +18,17 @@ interface EditorEmptyStateProps {
 }
 
 export function EditorEmptyState({
+  initialDescription,
+  initialModel,
   onGenerate,
   onUnauthorizedModelSelect,
 }: EditorEmptyStateProps) {
   const { t } = useTranslation()
   const { form, submit } = useGenerationForm({
+    initialValues: {
+      description: initialDescription,
+      model: initialModel,
+    },
     onSubmit: ({ description, model }) =>
       onGenerate({ description, model, name: t('Untitled project') }),
   })
