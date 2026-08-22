@@ -50,16 +50,15 @@ struct ProfileView: View {
         topInset: CGFloat = 0,
         onBack: (() -> Void)? = nil
     ) -> some View {
-        ScrollView {
+        ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 0) {
                 profileHeader(topInset: topInset, onBack: onBack)
                 
                 projectsSection
             }
         }
-        .scrollIndicators(.hidden)
+        .brandRefresher { await viewModel.load() }
         .task { await viewModel.load() }
-        .refreshable { await viewModel.load() }
     }
 
     private func profileHeader(
@@ -145,7 +144,6 @@ struct ProfileView: View {
             .overlay(alignment: .topLeading) {
                 if let onBack {
                     NavigationBackButton(action: onBack, foregroundColor: Color(.onAccent))
-                        .frame(width: 44, height: 44)
                         .padding(.top, topInset + 4)
                         .padding(.leading, 8)
                 }

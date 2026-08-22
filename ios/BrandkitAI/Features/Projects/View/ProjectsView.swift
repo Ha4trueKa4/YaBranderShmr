@@ -73,7 +73,7 @@ struct ProjectsView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .contentMargins(.top, 6, for: .scrollContent)
-                .refreshable {
+                .brandListRefresher {
                     await viewModel.refresh()
                 }
             }

@@ -7,8 +7,10 @@ struct NavigationBackButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "arrow.left")
-                .font(.body.weight(.semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(foregroundColor)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Back")

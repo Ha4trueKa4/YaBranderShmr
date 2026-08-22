@@ -31,7 +31,6 @@ struct ProfileConnectionsView: View {
             .toolbarBackground(Color(.background), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .task { await viewModel.load() }
-            .refreshable { await viewModel.load() }
     }
 
     @ViewBuilder
@@ -52,7 +51,7 @@ struct ProfileConnectionsView: View {
                 description: Text(emptyDescription)
             )
         } else {
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.users) { user in
                         connectionRow(user)
@@ -60,7 +59,7 @@ struct ProfileConnectionsView: View {
                 }
                 .padding(16)
             }
-            .scrollIndicators(.hidden)
+            .brandRefresher { await viewModel.load() }
         }
     }
 
