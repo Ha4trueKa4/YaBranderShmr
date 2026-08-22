@@ -19,6 +19,37 @@ tags:
     description: Лента публичных проектов
 
 paths:
+  /models:
+    get:
+      summary: Получение доступных моделей генерации
+      description: >
+        Возвращает модели Yandex AI Studio и поддерживаемые модели OpenAI.
+        Идентификатор из ответа передаётся без изменений в поле model запроса
+        генерации после удаления префикса gpt://{provider}/.
+      tags: [ Projects ]
+      responses:
+        '200':
+          description: Список доступных моделей
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [ id, owned_by ]
+                      properties:
+                        id:
+                          type: string
+                        owned_by:
+                          type: string
+              example:
+                data:
+                  - id: "gpt://openai/gpt-5.6-luna"
+                    owned_by: "OpenAI"
   /auth/register:
     post:
       summary: Регистрация нового пользователя
@@ -394,7 +425,81 @@ paths:
           description: Некорректный формат ID
         '404':
           description: Пользователь не найден
-
+  /users/{id}/subscribers/{subscriber_id}:
+    delete:
+      summary: Удалить подписчика из своего аккаунта
+      description: >
+        Позволяет авторизованному пользователю удалить конкретного подписчика
+        из списка своих подписчиков. Только владелец профиля может удалять
+        своих подписчиков — это эндпоинт для модерации аудитории.
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: >
+            Идентификатор владельца профиля. Сравнивается с UUID из JWT без
+            учёта регистра.
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: subscriber_id
+          in: path
+          required: true
+          description: Идентификатор пользователя, которого необходимо удалить из подписчиков
+          schema:
+            type: string
+            example: "987fcdeb-51a2-43d1-b789-123456789abc"
+      responses:
+        '200':
+          description: Подписчик успешно удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscriber removed successfully"
+        '400':
+          description: Некорректный формат ID пользователя или подписчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_UUID"
+                message: "Invalid user ID format"
+                field: "id"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: >
+            Попытка удалить подписчика из чужого профиля. Только владелец
+            аккаунта может управлять своими подписчиками.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Permission denied"
+        '404':
+          description: >
+            Подписка между указанными пользователями не существует. Сюда также
+            относится случай, когда subscriber_id не принадлежит существующему
+            пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscription not found"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/{id}/subscriptions:
     get:
       summary: Получить список всех подписок пользователя
@@ -592,15 +697,22 @@ paths:
 
   /projects/{id}/generate:
     post:
-      summary: Изменение/генерация проекта с помощью ИИ
+      summary: Запуск генерации/правки проекта с помощью ИИ (асинхронно)
       description: >
-        Генерирует (если у проекта ещё нет версий) либо правит (иначе) SVG по
-        запросу пользователя. В промпт модели автоматически подмешивается
-        история последних 10 предыдущих запросов пользователя по этому же
-        проекту (без ответов модели) — как контекст, не как повторное задание.
-        При успешной генерации пара "запрос пользователя + ссылка на созданную
-        версию" добавляется в историю чата проекта, доступную через
-        GET /projects/{id}/chat.
+        Запускает в фоне генерацию (если у проекта ещё нет версий) либо правку
+        (иначе) SVG по запросу пользователя — сам запрос не ждёт завершения
+        обращения к LLM и сразу отвечает job_id. В промпт модели автоматически
+        подмешивается история последних 10 предыдущих запросов пользователя по
+        этому же проекту (без ответов модели) — как контекст, не как повторное
+        задание. Сообщение пользователя добавляется в историю чата проекта
+        (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
+        независимо от того, чем закончится сама генерация. Результат (или
+        ошибку) генерации нужно опрашивать через
+        GET /projects/{id}/generate/{job_id}. Одновременно для одного проекта
+        может выполняться только одна генерация — если предыдущая ещё не
+        завершена, запрос отклоняется с 409 (её можно дождаться через
+        GET .../generate/{job_id} или прервать через
+        POST .../generate/{job_id}/cancel).
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -624,21 +736,26 @@ paths:
                   example: "Добавь логотип с изображением кружки"
                 model:
                   type: string
+                  description: >
+                    Модель генерации. gpt-5.6-luna отправляется напрямую в
+                    OpenAI, остальные доступные модели — в Yandex AI Studio.
                   example: "deepseek-v4-flash/latest"
       responses:
-        '200':
-          description: Сгенерированный SVG-код проекта
+        '202':
+          description: >
+            Генерация запущена в фоне. Дальнейший статус — через
+            GET /projects/{id}/generate/{job_id}.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  url:
+                  job_id:
                     type: string
-                    description: "S3 ссылка на объект проекта (отсутствует, если проект пуст)"
-                    example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+                    description: Идентификатор фоновой задачи генерации.
+                    example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         '400':
-          description: Не передан prompt
+          description: Не передан prompt, либо prompt длиннее 1500 символов
           content:
             application/json:
               schema:
@@ -649,6 +766,126 @@ paths:
           description: Не авторизован
         '403':
           description: Нет прав на генерацию в чужом проекте
+        '404':
+          description: Проект не найден
+        '409':
+          description: Для проекта уже выполняется другая генерация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job_id:
+                    type: string
+                    description: Идентификатор уже выполняющейся задачи.
+              example:
+                message: "Generation already in progress for project 0e8bd340-2dbd-4a8b-88ef-c76329ad80c9"
+                job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+
+  /projects/{id}/generate/{job_id}:
+    get:
+      summary: Статус фоновой задачи генерации (long polling)
+      description: >
+        Опрос результата задачи, запущенной POST /projects/{id}/generate.
+        Запрос "подвисает" на сервере до ~25 секунд, ожидая завершения
+        генерации (long polling) — если за это время задача не завершилась,
+        возвращается status="pending" и клиенту следует повторить запрос ещё
+        раз. Состояние задачи хранится в памяти процесса бэкенда и не
+        переживает его перезапуск.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          description: Идентификатор задачи, полученный из ответа POST .../generate
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий статус задачи генерации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatus'
+              examples:
+                Pending:
+                  summary: Ещё выполняется (таймаут long-poll'а истёк)
+                  value:
+                    status: "pending"
+                Done:
+                  summary: Готово
+                  value:
+                    status: "done"
+                    url: "https://s3.yandexcloud.net/bucket/project_version.svg"
+                Error:
+                  summary: Генерация упала (например, LLM вернул невалидный SVG)
+                  value:
+                    status: "error"
+                    message: "Generation service is temporarily unavailable. Please try again later."
+                Cancelled:
+                  summary: Генерация прервана через POST .../generate/{job_id}/cancel
+                  value:
+                    status: "cancelled"
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на просмотр генерации в чужом проекте
+        '404':
+          description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
+
+  /projects/{id}/generate/{job_id}/cancel:
+    post:
+      summary: Отменить выполняющуюся генерацию
+      description: >
+        Запрашивает отмену задачи. Реально прерывает фоновую работу (сетевой
+        вызов к LLM, запись результата) через кооперативную отмену корутины —
+        это не просто отметка "игнорировать результат". Ответ этого запроса
+        отдаётся немедленно и может содержать status="cancelling" — это
+        означает, что отмена запрошена, но фоновая задача ещё не успела её
+        обработать; окончательный status="cancelled" нужно дождаться через
+        GET .../generate/{job_id}. Если задача уже завершилась (done/error) к
+        моменту вызова — отмена не имеет эффекта, в ответе просто вернётся её
+        актуальный финальный статус. Отмена также добавляет запись в историю
+        чата проекта (GET /projects/{id}/chat) с тем же job_id, что и исходное
+        сообщение пользователя.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий статус задачи после запроса отмены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatus'
+              example:
+                status: "cancelling"
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на отмену генерации в чужом проекте
+        '404':
+          description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
 
   /projects/{id}/versions:
     get:
@@ -1166,7 +1403,14 @@ components:
       description: >
         Одно сообщение в истории чата проекта. Пользовательские сообщения
         несут текст запроса (text), сообщения ассистента — идентификатор
-        созданной версии (version_id) вместо самого SVG или ссылки на него.
+        созданной версии (version_id) при успехе, текст ошибки (error) при
+        неудачной генерации, либо status=cancelled, если генерацию прервали
+        через POST .../generate/{job_id}/cancel — вместо самого SVG или
+        ссылки на него. Сообщение пользователя и ответ ассистента одного
+        обмена связаны общим job_id (идентификатором фоновой задачи генерации
+        из POST .../generate); пользовательское сообщение появляется в
+        истории сразу при старте задачи, ответ ассистента — только после её
+        завершения (в т.ч. отменой).
       required:
         - role
         - created_at
@@ -1180,11 +1424,44 @@ components:
           example: "Добавь логотип с изображением кружки"
         version_id:
           type: string
-          description: "Только для role=assistant — id созданной версии проекта"
+          description: "Только для role=assistant при успешной генерации — id созданной версии проекта"
           example: "5a4e8657-151f-4088-a660-ac99b15994b7"
+        error:
+          type: string
+          description: "Только для role=assistant при неудачной генерации — текст ошибки"
+          example: "Generation service is temporarily unavailable. Please try again later."
+        status:
+          type: string
+          description: "Только для role=assistant при отменённой генерации — всегда \"cancelled\""
+          enum: [ cancelled ]
+        job_id:
+          type: string
+          description: Идентификатор фоновой задачи генерации, к которой относится сообщение.
+          example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         created_at:
           type: string
           format: date-time
+
+    GenerationStatus:
+      type: object
+      description: >
+        Текущее состояние фоновой задачи генерации. "cancelling" — переходное
+        состояние сразу после POST .../generate/{job_id}/cancel, пока фоновая
+        задача ещё не заметила запрос отмены; "cancelled" — уже финальное.
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ pending, done, error, cancelling, cancelled ]
+        url:
+          type: string
+          description: "Только при status=done — presigned-ссылка на сгенерированный SVG-объект"
+          example: "https://s3.yandexcloud.net/bucket/project_version.svg"
+        message:
+          type: string
+          description: "Только при status=error — текст ошибки"
+          example: "Generation service is temporarily unavailable. Please try again later."
 
     VersionUrl:
       type: object

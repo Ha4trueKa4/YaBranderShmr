@@ -86,6 +86,25 @@ export class EditorStore {
     return this.commitDocumentChange(initialDocument)
   }
 
+  cancelHistoryTransaction(): boolean {
+    const initialDocument = this.transactionInitialDocument
+
+    if (!initialDocument) {
+      return false
+    }
+
+    this.transactionInitialDocument = null
+
+    if (areDocumentsEqual(initialDocument, this.document)) {
+      return false
+    }
+
+    this.document = createDocumentSnapshot(initialDocument)
+    this.removeMissingSelectedNodes()
+
+    return true
+  }
+
   undo(): boolean {
     this.commitHistoryTransaction()
     const nextHistory = undoHistory(this.history)
@@ -187,12 +206,13 @@ export class EditorStore {
 
     if (
       selectedNodes.length === 0 ||
-      selectedNodes.some((node) => node.isLocked) ||
+      selectedNodes.some((node) => node.isLocked && node.type !== 'raw') ||
       selectedNodes.some(
         (node) =>
           node.type !== 'shape' &&
           node.type !== 'group' &&
-          node.type !== 'text',
+          node.type !== 'text' &&
+          node.type !== 'raw',
       ) ||
       !Number.isFinite(offsetX) ||
       !Number.isFinite(offsetY)
@@ -202,7 +222,11 @@ export class EditorStore {
 
     return this.applyDocumentChange(() => {
       for (const selectedNode of selectedNodes) {
-        if (selectedNode.type === 'shape' || selectedNode.type === 'group') {
+        if (
+          selectedNode.type === 'shape' ||
+          selectedNode.type === 'group' ||
+          selectedNode.type === 'raw'
+        ) {
           selectedNode.transform.x += offsetX
           selectedNode.transform.y += offsetY
         } else if (selectedNode.type === 'text') {

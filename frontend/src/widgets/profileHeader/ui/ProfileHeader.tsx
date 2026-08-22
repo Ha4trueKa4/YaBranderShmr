@@ -39,8 +39,8 @@ export function ProfileHeader({
           initials={getAvatarInitials(profile.name)}
         />
         <div className={styles.identity}>
-          <h1>{profile.name}</h1>
-          <p className={styles.username}>@{profile.username}</p>
+          <h1 className={styles.username}>@{profile.name}</h1>
+          {/*<p className={styles.username}>@{profile.username}</p>*/}
           {/* <p className={styles.bio}>{profile.bio}</p> */}
         </div>
         <div className={styles.actions}>

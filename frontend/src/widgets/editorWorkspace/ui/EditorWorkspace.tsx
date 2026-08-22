@@ -61,6 +61,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
+  const [measuredRotationCenter, setMeasuredRotationCenter] = useState<{
+    nodeId: string
+    x: number
+    y: number
+  } | null>(null)
   const {
     createCopy,
     hasUnsavedChanges,
@@ -123,6 +128,30 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsImageExportModalOpen(true)
   }
 
+  function handleOpenMobileProperties() {
+    editorStore.beginHistoryTransaction()
+    setIsMobileInspectorOpen(true)
+  }
+
+  function handleOpenMobileColorPicker() {
+    editorStore.beginHistoryTransaction()
+  }
+
+  function handleDoneMobileProperties() {
+    editorStore.commitHistoryTransaction()
+    setIsMobileInspectorOpen(false)
+  }
+
+  function handleCancelMobileProperties() {
+    const wasCancelled = editorStore.cancelHistoryTransaction()
+
+    if (wasCancelled) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    setIsMobileInspectorOpen(false)
+  }
+
   function handleRestoreDocument(restoredDocument: EditorDocument) {
     setEditorStore(new EditorStore(restoredDocument))
     markDocumentAsSaved(restoredDocument)
@@ -156,6 +185,19 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   function handleSceneSelectNode(nodeId: string, isMultiSelect: boolean) {
     editorStore.selectNode(nodeId, isMultiSelect)
   }
+
+  const handleMeasuredRotationCenterChange = useCallback(
+    (nextCenter: { nodeId: string; x: number; y: number } | null) => {
+      setMeasuredRotationCenter((currentCenter) =>
+        currentCenter?.nodeId === nextCenter?.nodeId &&
+        currentCenter?.x === nextCenter?.x &&
+        currentCenter?.y === nextCenter?.y
+          ? currentCenter
+          : nextCenter,
+      )
+    },
+    [],
+  )
 
   const handleDeleteSelection = useCallback(() => {
     if (!editorStore.deleteSelectedNode()) {
@@ -193,15 +235,22 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   const inspectorProps = {
     definitions: editorStore.document.definitions,
+    measuredRotationCenter:
+      measuredRotationCenter &&
+      measuredRotationCenter.nodeId === editorStore.selectedNode?.id
+        ? { x: measuredRotationCenter.x, y: measuredRotationCenter.y }
+        : undefined,
     onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
     onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
     onShapeOpacityChange: editorStore.svgNodeEditing.setShapeOpacity,
     onShapePositionChange: editorStore.svgNodeEditing.setShapePosition,
+    onShapeRotationChange: editorStore.svgNodeEditing.setShapeRotation,
     onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
     onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
     onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
     onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
+    onShapeTransformChange: editorStore.svgNodeEditing.setShapeTransform,
     onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
     onTextContentChange: editorStore.svgNodeEditing.setTextContent,
     onTextFillColorChange: editorStore.svgNodeEditing.setTextFillColor,
@@ -210,6 +259,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
     onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
     onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
+    onTextRotationChange: editorStore.svgNodeEditing.setTextRotation,
+    onTextTransformChange: editorStore.svgNodeEditing.setTextTransform,
     selectedNode: editorStore.selectedNode,
   }
   const scene = (
@@ -222,9 +273,15 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onDocumentChangeEnd={editorStore.commitHistoryTransaction}
       onDocumentChangeStart={editorStore.beginHistoryTransaction}
       onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
+      onRawPositionChange={editorStore.svgNodeEditing.setRawPosition}
+      onMeasuredRotationCenterChange={handleMeasuredRotationCenterChange}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
+      onShapeRotationChange={editorStore.svgNodeEditing.setShapeRotation}
+      onShapeTransformChange={editorStore.svgNodeEditing.setShapeTransform}
       onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}
+      onTextRotationChange={editorStore.svgNodeEditing.setTextRotation}
+      onTextTransformChange={editorStore.svgNodeEditing.setTextTransform}
       onViewportOffsetChange={setViewportOffset}
       onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
@@ -246,13 +303,17 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
-          onCloseProperties={() => setIsMobileInspectorOpen(false)}
+          onCancelColorPicker={handleCancelMobileProperties}
+          onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
-          onOpenProperties={() => setIsMobileInspectorOpen(true)}
+          onDoneColorPicker={handleDoneMobileProperties}
+          onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onSaveVersion={saveVersion}
+          onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
@@ -276,7 +337,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             />
           }
           scene={scene}
-          status={<EditorStatusBar />}
+          status={
+            <EditorStatusBar
+              selectedNode={editorStore.selectedNode}
+              zoom={zoom}
+            />
+          }
           toolbar={
             <EditorToolbar
               activeTool={activeTool}

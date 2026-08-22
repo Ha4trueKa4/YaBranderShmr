@@ -1,9 +1,9 @@
 export const themeOptions = [
+  'yandex',
   'system',
   'dark',
   'light',
   'sephia',
-  'yandex',
 ] as const
 export type Theme = (typeof themeOptions)[number]
 
@@ -26,7 +26,7 @@ export function getInitialTheme(): Theme {
     // The app still works when browser storage is unavailable.
   }
 
-  return 'system'
+  return 'yandex'
 }
 
 export function changeTheme(theme: Theme) {

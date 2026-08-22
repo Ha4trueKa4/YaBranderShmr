@@ -7,6 +7,8 @@ import styles from './FillProperty.module.css'
 interface FillPropertyProps {
   fill: string
   onFillChange: (fill: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onOpacityChange?: (opacity: number) => void
   opacity?: number
   title?: string
@@ -15,9 +17,11 @@ interface FillPropertyProps {
 export function FillProperty({
   fill,
   onFillChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onOpacityChange,
   opacity = 1,
-  title = 'Fill',
+  title,
 }: FillPropertyProps) {
   const { t } = useTranslation()
   const [draftFill, setDraftFill] = useState(fill)
@@ -69,7 +73,7 @@ export function FillProperty({
 
   return (
     <section className={styles.property}>
-      <p className={styles.title}>{title}</p>
+      <p className={styles.title}>{t(title ?? 'Fill')}</p>
       <div className={styles.colorValue}>
         <div className={styles.colorControl} ref={colorControlRef}>
           <ColorSwatch
@@ -78,13 +82,17 @@ export function FillProperty({
           />
           {isColorPickerOpen && (
             <div className={styles.colorPickerPopover}>
-              <ColorPicker color={draftFill} onChange={handleFillChange} />
+              <ColorPicker
+                color={draftFill}
+                onChange={handleFillChange}
+                onEyeDropperEnd={onEyeDropperEnd}
+                onEyeDropperStart={onEyeDropperStart}
+              />
             </div>
           )}
         </div>
         <div>
           <p className={styles.hex}>{draftFill.toUpperCase()}</p>
-          <p className={styles.colorName}>{t('Violet Primary')}</p>
         </div>
       </div>
       {onOpacityChange && (

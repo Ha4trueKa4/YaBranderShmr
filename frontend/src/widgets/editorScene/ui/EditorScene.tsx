@@ -15,8 +15,42 @@ interface EditorSceneProps {
   onDocumentChangeStart: () => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
+  onMeasuredRotationCenterChange: (
+    center: { nodeId: string; x: number; y: number } | null,
+  ) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
+  onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
+  onTextRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
   renderVersion: number
@@ -36,8 +70,14 @@ export function EditorScene({
   onDocumentChangeStart,
   onSelectNode,
   onGroupPositionChange,
+  onRawPositionChange,
+  onMeasuredRotationCenterChange,
   onShapePositionChange,
+  onShapeTransformChange,
+  onShapeRotationChange,
   onTextPositionChange,
+  onTextTransformChange,
+  onTextRotationChange,
   onViewportOffsetChange,
   onZoomChange,
   renderVersion,
@@ -57,9 +97,15 @@ export function EditorScene({
         onDocumentChangeEnd={onDocumentChangeEnd}
         onDocumentChangeStart={onDocumentChangeStart}
         onGroupPositionChange={onGroupPositionChange}
+        onRawPositionChange={onRawPositionChange}
+        onMeasuredRotationCenterChange={onMeasuredRotationCenterChange}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
+        onShapeTransformChange={onShapeTransformChange}
+        onShapeRotationChange={onShapeRotationChange}
         onTextPositionChange={onTextPositionChange}
+        onTextRotationChange={onTextRotationChange}
+        onTextTransformChange={onTextTransformChange}
         onViewportOffsetChange={onViewportOffsetChange}
         onZoomChange={onZoomChange}
         renderVersion={renderVersion}

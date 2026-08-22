@@ -3,6 +3,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefCallback,
   useCallback,
+  useLayoutEffect,
   useRef,
 } from 'react'
 import type { CanvasTool } from '../../model/canvasTool'
@@ -13,6 +14,7 @@ import { useCanvasWheel } from '../../model/useCanvasWheel'
 import { useLayerDrag } from '../../model/useLayerDrag'
 import type { ViewportOffset } from '../../model/viewportOffset'
 import { LayerRenderer } from '../layerRenderer/LayerRenderer'
+import { getSelectionBounds } from '../selectionOverlay/model/getSelectionBounds'
 import { SelectionOverlay } from '../selectionOverlay/SelectionOverlay'
 import { TransformHandles } from '../transformHandles/TransformHandles'
 import styles from './SceneFrame.module.css'
@@ -26,9 +28,43 @@ interface SceneFrameProps {
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
+  onMeasuredRotationCenterChange: (
+    center: { nodeId: string; x: number; y: number } | null,
+  ) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
+  onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
+  onTextRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
   renderVersion: number
@@ -47,9 +83,15 @@ export function SceneFrame({
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onGroupPositionChange,
+  onRawPositionChange,
+  onMeasuredRotationCenterChange,
   onSelectNode,
   onShapePositionChange,
+  onShapeTransformChange,
+  onShapeRotationChange,
   onTextPositionChange,
+  onTextTransformChange,
+  onTextRotationChange,
   onViewportOffsetChange,
   onZoomChange,
   renderVersion,
@@ -69,16 +111,19 @@ export function SceneFrame({
   const {
     onPointerMove,
     onPointerUp,
+    onRawPointerDown,
     onShapePointerDown,
     onTextPointerDown,
     svgReference,
   } = useLayerDrag({
     activeTool,
+    document: document.layers,
     getEditableElement,
     isReadOnly,
     onDocumentChangeEnd,
     onDocumentChangeStart,
     onGroupPositionChange,
+    onRawPositionChange,
     onSelectNode,
     onShapePositionChange,
     onTextPositionChange,
@@ -99,6 +144,25 @@ export function SceneFrame({
       },
     [],
   )
+  useLayoutEffect(() => {
+    if (selectedNode?.type !== 'shape' && selectedNode?.type !== 'text') {
+      onMeasuredRotationCenterChange(null)
+
+      return
+    }
+
+    const bounds = getSelectionBounds(getEditableElement(selectedNode.id))
+
+    if (!bounds) {
+      return
+    }
+
+    onMeasuredRotationCenterChange({
+      nodeId: selectedNode.id,
+      x: bounds.x + bounds.width / 2 - selectedNode.transform.x,
+      y: bounds.y + bounds.height / 2 - selectedNode.transform.y,
+    })
+  }, [getEditableElement, onMeasuredRotationCenterChange, selectedNode])
   const constrainOffset = useCallback(
     (offset: ViewportOffset, nextZoom = zoom) => {
       const frame = frameReference.current
@@ -188,6 +252,7 @@ export function SceneFrame({
               canMoveLayers={activeTool === 'select'}
               document={document}
               onSelectNode={onSelectNode}
+              onRawPointerDown={onRawPointerDown}
               onShapePointerDown={onShapePointerDown}
               onShapePointerMove={onPointerMove}
               onShapePointerUp={onPointerUp}
@@ -204,8 +269,26 @@ export function SceneFrame({
                   canvasY={document.viewBoxY ?? 0}
                   getEditableElement={getEditableElement}
                   selectedNodes={selectedNodes}
+                  zoom={zoom}
                 />
-                <TransformHandles />
+                <TransformHandles
+                  activeTool={activeTool}
+                  canvasHeight={document.height}
+                  canvasWidth={document.width}
+                  canvasX={document.viewBoxX ?? 0}
+                  canvasY={document.viewBoxY ?? 0}
+                  getEditableElement={getEditableElement}
+                  onDocumentChangeEnd={onDocumentChangeEnd}
+                  onDocumentChangeStart={onDocumentChangeStart}
+                  onShapeTransformChange={onShapeTransformChange}
+                  onShapeRotationChange={onShapeRotationChange}
+                  onTextRotationChange={onTextRotationChange}
+                  onTextTransformChange={onTextTransformChange}
+                  selectedNode={selectedNode}
+                  selectedNodes={selectedNodes}
+                  svgReference={svgReference}
+                  zoom={zoom}
+                />
               </>
             )}
           </svg>

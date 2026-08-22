@@ -4,6 +4,7 @@ export {
   zDeleteProjectsByIdResponse,
   zDeleteUsersByIdSubscribeResponse,
   zGetFeedResponse,
+  zGetProjectsByIdGenerateByJobIdResponse,
   zGetProjectsByIdPath,
   zGetProjectsByIdResponse,
   zGetProjectsByIdVersionsResponse,

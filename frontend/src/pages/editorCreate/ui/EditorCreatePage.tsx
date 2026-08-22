@@ -1,11 +1,15 @@
 import { authStore } from '@app/providers/auth'
 import {
+  deleteProject,
   getProjectSvg,
   projectQueryKey,
   projectSvgQueryKey,
 } from '@entities/project'
 import {
   DEFAULT_GENERATION_MODEL,
+  GenerationPollingTimeoutError,
+  generationProcessStore,
+  pollGenerationStatus,
   useGenerateProjectMutation,
 } from '@features/editorGenerate'
 import {
@@ -19,7 +23,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Footer } from '@widgets/footer'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -33,9 +37,6 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const toast = useToast()
   const { t } = useTranslation()
   const isAuthorized = authStore.isAuthorized
-  const [description, setDescription] = useState('')
-  const [model, setModel] = useState(DEFAULT_GENERATION_MODEL)
-  const [isGenerationInProgress, setGenerationInProgress] = useState(false)
   const { isPending: isCreatingProjectPending, mutateAsync: createProject } =
     useCreateProjectMutation()
   const {
@@ -44,16 +45,33 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   } = useGenerateProjectMutation()
 
   const isGenerationPending =
+    generationProcessStore.isInProgress ||
     isCreatingProjectPending ||
-    isGeneratingProjectPending ||
-    isGenerationInProgress
+    isGeneratingProjectPending
+  const generationDraft = generationProcessStore.draft
 
   const startGeneration = useCallback(
     async (draft: ProjectDraft) => {
-      setDescription(draft.description)
-      setModel(draft.model)
-      setGenerationInProgress(true)
+      generationProcessStore.begin(draft)
       pendingGenerationStore.save(draft)
+
+      let createdProjectId: string | undefined
+      let generationStarted = false
+
+      const deleteUnfinishedProject = async () => {
+        if (!createdProjectId) {
+          return
+        }
+
+        try {
+          await deleteProject(createdProjectId)
+          queryClient.removeQueries({
+            queryKey: projectQueryKey(createdProjectId),
+          })
+        } catch (error) {
+          console.error('Unable to delete unfinished project', error)
+        }
+      }
 
       try {
         const project = await createProject(draft)
@@ -63,14 +81,49 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
-        const generatedProject = await generateProject({
+        createdProjectId = project.id
+
+        const generation = await generateProject({
           model: draft.model,
           projectId: project.id,
           prompt: draft.description,
         })
+        const jobId = generation.job_id
+
+        if (!jobId) {
+          await deleteUnfinishedProject()
+          pendingGenerationStore.take()
+          toast.error(
+            t('The generated project is unavailable. Please try again.'),
+          )
+          return
+        }
+
+        generationStarted = true
+
+        generationProcessStore.trackJob(project.id, jobId)
+
+        const generatedProject = await pollGenerationStatus(
+          queryClient,
+          project.id,
+          jobId,
+        )
+
+        if (generatedProject.status === 'error') {
+          await deleteUnfinishedProject()
+          pendingGenerationStore.take()
+          toast.error(
+            generatedProject.message ??
+              t('The generated project is unavailable. Please try again.'),
+          )
+          return
+        }
+
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
+          await deleteUnfinishedProject()
+          pendingGenerationStore.take()
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -81,20 +134,32 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           ...project,
           url: generatedProjectUrl,
         })
-        await queryClient.fetchQuery({
+        void queryClient.prefetchQuery({
           queryKey: projectSvgQueryKey(project.id, generatedProjectUrl),
           queryFn: () => getProjectSvg(generatedProjectUrl),
         })
         pendingGenerationStore.take()
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
+        if (
+          createdProjectId &&
+          !generationStarted &&
+          !(error instanceof ApiError && error.status === 401)
+        ) {
+          await deleteUnfinishedProject()
+        }
+
         if (!(error instanceof ApiError && error.status === 401)) {
           pendingGenerationStore.take()
         }
 
-        toast.error(getApiErrorMessage(error))
+        toast.error(
+          error instanceof GenerationPollingTimeoutError
+            ? t('Generation is taking too long. Please try again.')
+            : getApiErrorMessage(error),
+        )
       } finally {
-        setGenerationInProgress(false)
+        generationProcessStore.reset()
       }
     },
     [createProject, generateProject, navigate, queryClient, t, toast],
@@ -119,7 +184,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthorized is updated by MobX observer.
   useEffect(() => {
-    if (!isAuthorized) {
+    if (!isAuthorized || generationProcessStore.isInProgress) {
       return
     }
 
@@ -135,7 +200,10 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       <Header />
       <main className={styles.content}>
         {isGenerationPending ? (
-          <EditorGeneratingState description={description} model={model} />
+          <EditorGeneratingState
+            description={generationDraft?.description ?? ''}
+            model={generationDraft?.model ?? DEFAULT_GENERATION_MODEL}
+          />
         ) : (
           <EditorEmptyState
             onGenerate={handleGenerate}
