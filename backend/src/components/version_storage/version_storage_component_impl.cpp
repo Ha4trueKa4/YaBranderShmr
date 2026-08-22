@@ -1,6 +1,6 @@
 #include "version_storage_component_impl.hpp"
 #include "../svg_validator.hpp"
-
+#include <unordered_set>
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
@@ -25,8 +25,9 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
       return "projects/" + project_id + "/" + version_id + ".svg";
     }
 
-    std::string VersionStorageComponentImpl::SaveVersion(
-        const std::string& project_id, const std::string& data) {
+std::string VersionStorageComponentImpl::SaveVersion(
+const std::string& project_id, const std::string& data) {
+
       std::string version_id;
       std::string new_key;
       std::string old_key;
@@ -34,7 +35,6 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
       {
         auto txn =
             pg_cluster_->Begin(pg::ClusterHostType::kMaster, pg::Transaction::RW);
-
 
         auto proj = txn.Execute(
             "SELECT is_private, last_version_key FROM projects "
@@ -48,6 +48,9 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
           old_key = proj[0]["last_version_key"].As<std::string>();
         }
 
+        // Резервируем строку версии с NULL, без s3 ключа. Если вдруг PUT в S3
+        // зафейлится, то строка останется как NULL и вернет 404 если будет как то
+        // запрошена. ListVersions теперь исключает строки с NULL.
         auto ins = txn.Execute(
             "INSERT INTO project_versions (project_id, version_num) VALUES "
             "($1::uuid, (SELECT COALESCE(MAX(version_num), 0) + 1 "
@@ -57,21 +60,34 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
         version_id = ins[0]["id"].As<std::string>();
         new_key = MakeKey(project_id, version_id);
 
-        txn.Execute("UPDATE project_versions SET s3_file_key = $2 WHERE id = $1::uuid",
-                    version_id, new_key);
         txn.Commit();
       }
 
+      // Если здесь возникает ошибка, она пробрасывается наверх,
+      // а строка s3_file_key просто остается пустой и фильтруется при GET запросах.
       storage_.Put(new_key, data, /*make_public=*/is_public);
 
+      // Обновляем ключ версии на реальный (был NULL).
+      pg_cluster_->Execute(
+          pg::ClusterHostType::kMaster,
+          "UPDATE project_versions SET s3_file_key = $2 WHERE id = $1::uuid",
+          version_id, new_key);
+
+      // Обновляем последний ключ на реальный.
       pg_cluster_->Execute(
           pg::ClusterHostType::kMaster,
           "UPDATE projects SET last_version_key = $2, updated_at = NOW() "
           "WHERE id = $1::uuid",
           project_id, new_key);
 
+      // Best-effort demote of the previous latest (never fail the whole save on it).
       if (is_public && !old_key.empty()) {
-        storage_.SetAcl(old_key, /*make_public=*/false);
+        try {
+          storage_.SetAcl(old_key, /*make_public=*/false);
+        } catch (const std::exception& e) {
+          LOG_ERROR() << "SaveVersion: failed to demote old version " << old_key
+                      << " to private: " << e.what();
+        }
       }
 
       return version_id;
@@ -136,8 +152,9 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
     const std::string& project_id) {
     const auto res = pg_cluster_->Execute(
         pg::ClusterHostType::kSlave,
-        "SELECT id::text, project_id::text, version_num, created_at "
-        "FROM project_versions WHERE project_id = $1::uuid "
+        "SELECT id, project_id, version_num, created_at "
+        "FROM project_versions "
+        "WHERE project_id = $1::uuid AND s3_file_key IS NOT NULL "
         "ORDER BY version_num DESC",
         project_id);
 
@@ -196,55 +213,55 @@ VersionStorageComponentImpl::VersionStorageComponentImpl(
     std::size_t VersionStorageComponentImpl::CollectGarbage(
     std::chrono::seconds grace, double max_orphan_ratio) {
 
-    const auto objects = storage_.ListKeys("projects/");
-    if (objects.empty()) return 0;
+        const auto objects = storage_.ListKeys("projects/");
+        if (objects.empty()) return 0;
 
-    std::unordered_set<std::string> referenced;
-    {
-    const auto res = pg_cluster_->Execute(
-        pg::ClusterHostType::kMaster,
-        "SELECT s3_file_key AS k FROM project_versions WHERE s3_file_key IS NOT NULL "
-        "UNION "
-        "SELECT last_version_key AS k FROM projects WHERE last_version_key IS NOT NULL");
-    referenced.reserve(res.Size());
-    for (const auto& row : res) referenced.insert(row["k"].As<std::string>());
-    }
+        std::unordered_set<std::string> referenced;
+        {
+        const auto res = pg_cluster_->Execute(
+            pg::ClusterHostType::kMaster,
+            "SELECT s3_file_key AS k FROM project_versions WHERE s3_file_key IS NOT NULL "
+            "UNION "
+            "SELECT last_version_key AS k FROM projects WHERE last_version_key IS NOT NULL");
+        referenced.reserve(res.Size());
+        for (const auto& row : res) referenced.insert(row["k"].As<std::string>());
+        }
 
-    if (referenced.empty()) {
-        LOG_ERROR() << "CollectGarbage ABORTED: reference set is empty but bucket has "
-                    << objects.size()
-                    << " objects. Likely wrong DB/bucket pairing (different "
-                       "environments). Deleting nothing.";
+        if (referenced.empty()) {
+            LOG_ERROR() << "CollectGarbage ABORTED: reference set is empty but bucket has "
+                        << objects.size()
+                        << " objects. Likely wrong DB/bucket pairing (different "
+                           "environments). Deleting nothing.";
+            return 0;
+        }
+
+        const auto cutoff = std::chrono::system_clock::now() - grace;
+        std::vector<std::string> orphans;
+        for (const auto& obj : objects) {
+            if (referenced.count(obj.key) == 0 && obj.last_modified < cutoff) {
+                orphans.push_back(obj.key);
+            }
+        }
+        if (orphans.empty()) return 0;
+
+        const double ratio =
+          static_cast<double>(orphans.size()) / static_cast<double>(objects.size());
+        if (ratio > max_orphan_ratio) {
+        LOG_ERROR() << "CollectGarbage ABORTED: " << orphans.size() << " of "
+                    << objects.size() << " objects ("
+                    << static_cast<int>(ratio * 100)
+                    << "%) look like orphans, over the "
+                    << static_cast<int>(max_orphan_ratio * 100)
+                    << "% safety threshold. Refusing to delete — likely misconfiguration.";
         return 0;
-    }
-
-    const auto cutoff = std::chrono::system_clock::now() - grace;
-    std::vector<std::string> orphans;
-    for (const auto& obj : objects) {
-        if (referenced.count(obj.key) == 0 && obj.last_modified < cutoff) {
-            orphans.push_back(obj.key);
         }
-    }
-    if (orphans.empty()) return 0;
 
-    const double ratio =
-      static_cast<double>(orphans.size()) / static_cast<double>(objects.size());
-    if (ratio > max_orphan_ratio) {
-    LOG_ERROR() << "CollectGarbage ABORTED: " << orphans.size() << " of "
-                << objects.size() << " objects ("
-                << static_cast<int>(ratio * 100)
-                << "%) look like orphans, over the "
-                << static_cast<int>(max_orphan_ratio * 100)
-                << "% safety threshold. Refusing to delete — likely misconfiguration.";
-    return 0;
-    }
-
-    try {
-        storage_.DeleteMany(orphans);
-    } catch (const std::exception& e) {
-            LOG_ERROR() << "CollectGarbage: delete failed, will retry next run: " << e.what();
-        }
-        LOG_INFO() << "CollectGarbage: reclaimed " << orphans.size() << " orphan objects";
+        try {
+            storage_.DeleteMany(orphans);
+        } catch (const std::exception& e) {
+                LOG_ERROR() << "CollectGarbage: delete failed, will retry next run: " << e.what();
+            }
+            LOG_INFO() << "CollectGarbage: reclaimed " << orphans.size() << " orphan objects";
 
         return orphans.size();
     }
