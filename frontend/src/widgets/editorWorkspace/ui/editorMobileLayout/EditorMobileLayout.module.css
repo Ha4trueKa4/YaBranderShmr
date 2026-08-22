@@ -132,25 +132,23 @@
     background: var(--color-border);
   }
 
-  .canvasControls img {
-    width: 1.125rem;
-    height: 1.125rem;
-  }
-
+  .selectIcon,
   .handIcon {
     width: 1.125rem;
     height: 1.125rem;
     background: currentcolor;
     color: #71717a;
-    mask:
-      url("../editorToolbar/assets/iconHand.svg") center / contain no-repeat;
   }
 
-  .fillSwatch {
-    width: 3.25rem;
-    height: 3.25rem;
-    border: 0;
-    border-radius: var(--radius-sm);
+  .selectIcon {
+    mask:
+      url("../editorToolbar/assets/iconMousePointer.svg") center / contain
+      no-repeat;
+  }
+
+  .handIcon {
+    mask:
+      url("../editorToolbar/assets/iconHand.svg") center / contain no-repeat;
   }
 
   .canvasControls .activeTool,
@@ -159,6 +157,7 @@
     color: var(--color-text-inverse);
   }
 
+  .canvasControls .activeTool .selectIcon,
   .canvasControls .activeTool .handIcon {
     color: var(--color-text-inverse);
   }
@@ -188,11 +187,16 @@
     color: var(--color-accent-primary);
   }
 
+  .cancelButton,
   .doneButton {
     border: 0;
     background: transparent;
     font: inherit;
     font-weight: var(--font-weight-semibold);
+  }
+
+  .cancelButton {
+    color: var(--color-text-secondary);
   }
 
   .colorPickerContent {

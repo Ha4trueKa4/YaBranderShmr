@@ -13,6 +13,10 @@
   );
 }
 
+:global(:root[data-theme="yandex"]) .cover {
+  background: var(--gradient-yandex-soft);
+}
+
 .content {
   position: relative;
   display: grid;
@@ -28,7 +32,6 @@
   width: 7rem;
   height: 7rem;
   border: 0.25rem solid var(--color-surface);
-  background: var(--color-accent-secondary);
   font-size: var(--font-size-h1);
 }
 
@@ -109,6 +112,18 @@
   flex-wrap: wrap;
   justify-content: end;
   gap: var(--space-2);
+  padding-right: var(--space-5);
+}
+
+@media (width < 960px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .stats,
+  .profileActions {
+    justify-content: end;
+  }
 }
 
 @media (width < 760px) {
@@ -143,5 +158,6 @@
 
   .profileActions {
     justify-content: start;
+    padding-right: 0;
   }
 }

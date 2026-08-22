@@ -86,6 +86,25 @@ export class EditorStore {
     return this.commitDocumentChange(initialDocument)
   }
 
+  cancelHistoryTransaction(): boolean {
+    const initialDocument = this.transactionInitialDocument
+
+    if (!initialDocument) {
+      return false
+    }
+
+    this.transactionInitialDocument = null
+
+    if (areDocumentsEqual(initialDocument, this.document)) {
+      return false
+    }
+
+    this.document = createDocumentSnapshot(initialDocument)
+    this.removeMissingSelectedNodes()
+
+    return true
+  }
+
   undo(): boolean {
     this.commitHistoryTransaction()
     const nextHistory = undoHistory(this.history)

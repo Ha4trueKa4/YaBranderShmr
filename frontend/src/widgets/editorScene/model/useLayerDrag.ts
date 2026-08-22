@@ -50,13 +50,6 @@ type TapState = {
   timestamp: number
 }
 
-type LayerCycleState = {
-  clientX: number
-  clientY: number
-  nodeIds: string[]
-  nextNodeIndex: number
-}
-
 const DOUBLE_TAP_MAX_DELAY = 300
 const DOUBLE_TAP_MAX_DISTANCE = 20
 const TAP_MAX_DISTANCE = 8
@@ -193,7 +186,6 @@ export function useLayerDrag({
 }: UseLayerDragParams) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
-  const layerCycleStateReference = useRef<LayerCycleState | null>(null)
   const lastTapReference = useRef<TapState | null>(null)
 
   const startDrag = useCallback(
@@ -228,29 +220,17 @@ export function useLayerDrag({
           event.clientX,
           event.clientY,
         )
-        const layerCycleState = layerCycleStateReference.current
-        const canContinueCycle =
-          layerCycleState &&
-          Math.hypot(
-            event.clientX - layerCycleState.clientX,
-            event.clientY - layerCycleState.clientY,
-          ) <= DOUBLE_TAP_MAX_DISTANCE &&
-          layerCycleState.nodeIds.length === overlappingNodeIds.length &&
-          layerCycleState.nodeIds.every(
-            (nodeId, index) => nodeId === overlappingNodeIds[index],
-          )
-        const nextNodeIndex = canContinueCycle
-          ? layerCycleState.nextNodeIndex % overlappingNodeIds.length
-          : 1
-        const nodeIdToSelect = overlappingNodeIds.at(nextNodeIndex) ?? node.id
+        const selectedNodeIndex = selectedNode
+          ? overlappingNodeIds.indexOf(selectedNode.id)
+          : -1
+        const nodeIdToSelect =
+          selectedNodeIndex >= 0
+            ? overlappingNodeIds.at(selectedNodeIndex - 1)
+            : undefined
 
-        layerCycleStateReference.current = {
-          clientX: event.clientX,
-          clientY: event.clientY,
-          nodeIds: overlappingNodeIds,
-          nextNodeIndex: nextNodeIndex + 1,
+        if (nodeIdToSelect) {
+          onSelectNode(nodeIdToSelect, false)
         }
-        onSelectNode(nodeIdToSelect, false)
         event.preventDefault()
 
         return
