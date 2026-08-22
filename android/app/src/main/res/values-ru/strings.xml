@@ -147,7 +147,10 @@
 
     <!-- Профиль (свой/чужой) -->
     <string name="profile_handle">\@%1$s</string>
-    <string name="profile_stats">%1$d проектов · %2$s подписчиков · %3$d подписок</string>
+    <string name="profile_stat_projects">%1$d проектов</string>
+    <string name="profile_stat_followers">%1$s подписчиков</string>
+    <string name="profile_stat_following">%1$d подписок</string>
+    <string name="profile_stat_separator">·</string>
     <string name="profile_action_edit">Редактировать профиль</string>
     <string name="profile_action_following">Вы подписаны</string>
     <string name="profile_action_follow">Подписаться</string>
@@ -158,6 +161,21 @@
     <string name="profile_empty_other_subtitle">Этот пользователь пока ничего не опубликовал</string>
     <string name="profile_error_title">Не удалось загрузить профиль</string>
     <string name="profile_error_retry">Повторить</string>
+
+    <!-- Подписки (подписчики/подписки) -->
+    <string name="subscriptions_title_followers">Подписчики</string>
+    <string name="subscriptions_title_following">Подписки</string>
+    <string name="subscriptions_followers_count">%1$d подписчиков</string>
+    <string name="subscriptions_action_follow">Подписаться</string>
+    <string name="subscriptions_action_unfollow">Отписаться</string>
+    <string name="subscriptions_you">Вы</string>
+    <string name="subscriptions_back_description">Назад</string>
+    <string name="subscriptions_error_title">Не удалось загрузить список</string>
+    <string name="subscriptions_error_retry">Повторить</string>
+    <string name="subscriptions_empty_followers_title">Пока нет подписчиков</string>
+    <string name="subscriptions_empty_followers_subtitle">Когда на профиль подпишутся, они появятся здесь</string>
+    <string name="subscriptions_empty_following_title">Пока нет подписок</string>
+    <string name="subscriptions_empty_following_subtitle">Профили, на которые подписан пользователь, появятся здесь</string>
 
     <!-- Настройки -->
     <string name="settings_title">Настройки</string>

@@ -24,6 +24,8 @@ import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
 import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
 import com.yandex.avatargenerator.feature.settings.ui.SettingsScreen
+import com.yandex.avatargenerator.feature.subscription.ui.SubscriptionsScreen
+import com.yandex.avatargenerator.feature.subscription.ui.SubscriptionsTab
 import com.yandex.avatargenerator.ui.components.BrandEmptyState
 import com.yandex.avatargenerator.ui.theme.AppColors
 
@@ -136,6 +138,12 @@ fun AppNavHost(
                         navController.navigate(Destination.Project.createRoute(projectId))
                     },
                     onActionClick = { /* TODO: экран редактирования профиля */ },
+                    onOpenFollowers = {
+                        navController.openSubscriptions(currentUser.id, SubscriptionsTab.Followers)
+                    },
+                    onOpenFollowing = {
+                        navController.openSubscriptions(currentUser.id, SubscriptionsTab.Following)
+                    },
                     onOpenSettings = {
                         navController.navigate(Destination.Settings.route) { launchSingleTop = true }
                     },
@@ -196,10 +204,44 @@ fun AppNavHost(
                     navController.navigate(Destination.PublicProject.createRoute(projectId))
                 },
                 onActionClick = { /* Подписка обрабатывается во ViewModel */ },
+                onOpenFollowers = {
+                    navController.openSubscriptions(userId, SubscriptionsTab.Followers)
+                },
+                onOpenFollowing = {
+                    navController.openSubscriptions(userId, SubscriptionsTab.Following)
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        composable(
+            route = Destination.Subscriptions.route,
+            arguments = listOf(
+                navArgument(Destination.ARG_USER_ID) { type = NavType.StringType },
+                navArgument(Destination.ARG_SUBSCRIPTIONS_TAB) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString(Destination.ARG_USER_ID).orEmpty()
+            val tab = SubscriptionsTab.fromSlug(
+                backStackEntry.arguments?.getString(Destination.ARG_SUBSCRIPTIONS_TAB),
+            )
+            SubscriptionsScreen(
+                userId = userId,
+                initialTab = tab,
+                onBack = { navController.popBackStack() },
+                onUserClick = { clickedUserId ->
+                    navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
+                },
+                currentUserId = rememberCurrentUser()?.id,
                 modifier = Modifier.fillMaxSize(),
             )
         }
     }
+}
+
+/** Открыть список подписчиков/подписок пользователя [userId] на вкладке [tab]. */
+private fun NavHostController.openSubscriptions(userId: String, tab: SubscriptionsTab) {
+    navigate(Destination.Subscriptions.createRoute(userId, tab.slug))
 }
 
 /**
