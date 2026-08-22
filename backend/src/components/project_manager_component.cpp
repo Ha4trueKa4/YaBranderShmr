@@ -1,5 +1,6 @@
 #include "project_manager_component.h"
 #include <userver/formats/json/inline.hpp>
+#include <userver/formats/json/value_builder.hpp>
 #include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
@@ -202,7 +203,52 @@ void ProjectManagerComponent::AppendAssistantCancelled(const std::string& projec
 }
 
 userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
-    return FetchChatHistoryJson(project_id);
+    auto history = FetchChatHistoryJson(project_id);
+
+    // Не больше одного активного job'а на проект (см. active_job_by_project_
+    // в StartGeneration), поэтому достаточно одного точечного lookup, а не
+    // перебора jobs_/батча по списку job_id.
+    std::shared_ptr<JobEntry> active_entry;
+    std::string active_job_id;
+    {
+        std::lock_guard lock(jobs_mutex_);
+        auto active_it = active_job_by_project_.find(project_id);
+        if (active_it != active_job_by_project_.end()) {
+            active_job_id = active_it->second;
+            auto job_it = jobs_.find(active_job_id);
+            if (job_it != jobs_.end()) {
+                active_entry = job_it->second;
+            }
+        }
+    }
+    if (!active_entry) {
+        return history;
+    }
+
+    bool still_pending;
+    bool cancel_requested;
+    {
+        std::lock_guard job_lock(active_entry->mutex);
+        still_pending = active_entry->status == JobStatus::kPending;
+        cancel_requested = active_entry->cancel_requested;
+    }
+    if (!still_pending) {
+        return history;
+    }
+
+    // Заглушка добавляется только в возвращаемый JSON, в БД ничего не пишем —
+    // сообщение пользователя для этого job'а всегда последнее в chat_history
+    // (StartGeneration резервирует active_job_by_project_ и пишет
+    // AppendUserMessage раньше, чем что-либо ещё может добавиться), поэтому
+    // достаточно просто дописать заглушку в конец скопированного массива.
+    userver::formats::json::ValueBuilder result{history};
+    userver::formats::json::ValueBuilder pending;
+    pending["role"] = "assistant";
+    pending["status"] = cancel_requested ? "cancelling" : "pending";
+    pending["job_id"] = active_job_id;
+    pending["created_at"] = std::chrono::system_clock::now();
+    result.PushBack(std::move(pending));
+    return result.ExtractValue();
 }
 
 std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {

@@ -19,37 +19,6 @@ tags:
     description: Лента публичных проектов
 
 paths:
-  /models:
-    get:
-      summary: Получение доступных моделей генерации
-      description: >
-        Возвращает модели Yandex AI Studio и поддерживаемые модели OpenAI.
-        Идентификатор из ответа передаётся без изменений в поле model запроса
-        генерации после удаления префикса gpt://{provider}/.
-      tags: [ Projects ]
-      responses:
-        '200':
-          description: Список доступных моделей
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [ data ]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      required: [ id, owned_by ]
-                      properties:
-                        id:
-                          type: string
-                        owned_by:
-                          type: string
-              example:
-                data:
-                  - id: "gpt://openai/gpt-5.6-luna"
-                    owned_by: "OpenAI"
   /auth/register:
     post:
       summary: Регистрация нового пользователя
@@ -1018,6 +987,11 @@ paths:
         фронт/мобилка сверяются со своим локальным кэшем по version_id (он
         совпадает с id из GET /projects/{id}/versions) и только при промахе
         кэша идут за свежей ссылкой в GET /projects/{id}/versions/{version_id}.
+        Пока для проекта выполняется генерация, последним элементом массива
+        приходит служебная заглушка {"role":"assistant","status":"pending"}
+        (см. схему ChatMessage) — этого достаточно, чтобы показать в чате
+        индикатор "проект генерируется", не опрашивая отдельно
+        GET .../generate/{job_id}.
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -1039,6 +1013,24 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ChatMessage'
+              example:
+                chat_history:
+                  - role: "user"
+                    text: "Добавь логотип с изображением кружки"
+                    job_id: "5a4e8657-151f-4088-a660-ac99b15994b7"
+                    created_at: "2026-08-15T00:01:55.123456+00:00"
+                  - role: "assistant"
+                    version_id: "5a4e8657-151f-4088-a660-ac99b15994b7"
+                    job_id: "5a4e8657-151f-4088-a660-ac99b15994b7"
+                    created_at: "2026-08-15T00:02:01.654321+00:00"
+                  - role: "user"
+                    text: "Сделай фон белым"
+                    job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+                    created_at: "2026-08-22T15:39:43.180295+00:00"
+                  - role: "assistant"
+                    status: "pending"
+                    job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
+                    created_at: "2026-08-22T15:40:03.000000+00:00"
         '401':
           description: Отсутствует или некорректен JWT
         '403':
@@ -1069,14 +1061,15 @@ paths:
                     description: Тип корневого объекта.
                   data:
                     type: array
-                    description: Массив доступных моделей.
+                    description: >
+                      Массив доступных моделей. Гарантирован только id — это
+                      отфильтрованный проброс ответа Yandex AI Studio плюс
+                      опциональная запись для OpenAI (у неё есть только id и
+                      owned_by, без object/created).
                     items:
                       type: object
                       required:
                         - id
-                        - object
-                        - owned_by
-                        - created
                       properties:
                         id:
                           type: string
@@ -1410,7 +1403,13 @@ components:
         обмена связаны общим job_id (идентификатором фоновой задачи генерации
         из POST .../generate); пользовательское сообщение появляется в
         истории сразу при старте задачи, ответ ассистента — только после её
-        завершения (в т.ч. отменой).
+        завершения (в т.ч. отменой). Пока задача ещё не завершилась (не
+        больше одной активной генерации на проект), в конец истории на лету
+        подставляется — только в ответе, не в БД — служебное сообщение
+        {"role":"assistant","status":"pending"|"cancelling","job_id":...}
+        (без version_id/error), сигнализирующее фронту "проект генерируется" /
+        "генерация отменяется", не требуя отдельного опроса
+        GET .../generate/{job_id} только ради этого индикатора.
       required:
         - role
         - created_at
@@ -1432,8 +1431,12 @@ components:
           example: "Generation service is temporarily unavailable. Please try again later."
         status:
           type: string
-          description: "Только для role=assistant при отменённой генерации — всегда \"cancelled\""
-          enum: [ cancelled ]
+          description: >
+            Для role=assistant: "cancelled" — запись о завершённой отмене
+            (хранится в БД); "pending"/"cancelling" — служебная заглушка ещё
+            выполняющейся/отменяемой генерации (см. описание схемы выше, в
+            БД не хранится).
+          enum: [ pending, cancelling, cancelled ]
         job_id:
           type: string
           description: Идентификатор фоновой задачи генерации, к которой относится сообщение.
@@ -1441,6 +1444,7 @@ components:
         created_at:
           type: string
           format: date-time
+          description: "Для служебной заглушки pending/cancelling — момент чтения истории, а не старта задачи"
 
     GenerationStatus:
       type: object
