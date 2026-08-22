@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
             // Регистрация модулей когда будут готовы
             .Append<ya_brander::components::S3ObjectStorageComponent>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-            .Append<ya_brander::components::PromptPolisherComponent>();
+            .Append<ya_brander::components::PromptPolisherComponent>()
 			.Append<ya_brander::components::SubscriptionStorageComponent>()
             .Append<ya_brander::components::GarbageCollectorComponent>();
 
