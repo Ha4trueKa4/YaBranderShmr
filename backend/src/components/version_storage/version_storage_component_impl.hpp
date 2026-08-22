@@ -4,6 +4,8 @@
 #include <vector>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
+#include <chrono>
+#include <cstddef>
 #include "version_storage_component.hpp"
 #include "../../models/version.hpp"
 #include "../object_storage/object_storage_component.hpp"
@@ -65,6 +67,8 @@ namespace ya_brander::components {
         ///          их подберёт фоновый orphan-GC.
         void DeleteAllVersions(const std::string& project_id) override;
 
+        std::size_t CollectGarbage(std::chrono::seconds grace,
+                                   double max_orphan_ratio) override;
     private:
         /// Ключ объекта в хранилище: projects/{project_id}/{version_id}.svg.
         /// version_id — UUID строки project_versions, гарантирует уникальность

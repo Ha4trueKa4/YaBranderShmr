@@ -122,6 +122,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/test_llm_handler/test_polisher_handler.cpp
         src/utils/errors.hpp
         src/utils/errors.cpp
+        src/components/garbage_collector/garbage_collector_component.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

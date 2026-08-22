@@ -102,6 +102,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}
       - YANDEX_OAUTH_CLIENT_SECRET=${YANDEX_OAUTH_CLIENT_SECRET}
+      - GC_ENABLED=${GC_ENABLED}
     volumes:
       - .:/ya_brander:rw
       - ${TC_CORES_DIR:-./.cores}:/cores:rw

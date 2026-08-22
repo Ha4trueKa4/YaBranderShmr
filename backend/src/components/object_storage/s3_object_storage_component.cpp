@@ -1,5 +1,7 @@
 #include "s3_object_storage_component.hpp"
 
+#include <pugixml.hpp>
+
 #include <chrono>
 #include <cstdlib>
 #include <stdexcept>
@@ -19,9 +21,9 @@ namespace {
 
 std::string GetScheme(std::string_view endpoint) {
   if (endpoint.find("http://") == 0 || endpoint.find("https://") == 0) {
-    return ""; // Протокол уже есть в строке (например, от mockserver)
+    return "";  // Протокол уже есть в строке (например, от mockserver)
   }
-  return "https://"; // По умолчанию для продакшена
+  return "https://";  // По умолчанию для продакшена
 }
 
 namespace hash = userver::crypto::hash;
@@ -92,13 +94,15 @@ S3ObjectStorageComponent::S3ObjectStorageComponent(
   secret_key_ = secret;
 }
 
-std::string S3ObjectStorageComponent::CanonicalUri(const std::string& key) const {
+std::string S3ObjectStorageComponent::CanonicalUri(
+    const std::string& key) const {
   return "/" + bucket_ + "/" + UriEncode(key, /*encode_slash=*/false);
 }
 
 std::string S3ObjectStorageComponent::ObjectUrl(const std::string& key) const {
   std::string url = GetScheme(endpoint_) + endpoint_;
-  if (!url.empty() && url.back() == '/') url.pop_back(); // Убираем слэш от mockserver
+  if (!url.empty() && url.back() == '/')
+    url.pop_back();  // Убираем слэш от mockserver
   return url + CanonicalUri(key);
 }
 
@@ -112,7 +116,8 @@ userver::http::headers::HeaderMap S3ObjectStorageComponent::SignRequest(
   const auto datestamp =
       userver::utils::datetime::Timestring(now, "UTC", "%Y%m%d");
 
-  std::map<std::string, std::string> signed_map = std::move(extra_signed_headers);
+  std::map<std::string, std::string> signed_map =
+      std::move(extra_signed_headers);
   signed_map["host"] = endpoint_;
   signed_map["x-amz-content-sha256"] = std::string{payload_hash};
   signed_map["x-amz-date"] = amz_date;
@@ -138,17 +143,20 @@ userver::http::headers::HeaderMap S3ObjectStorageComponent::SignRequest(
       '\n' + hash::Sha256(canonical_request, hash::OutputEncoding::kHex);
 
   const auto signing_key = SigningKey(secret_key_, datestamp, region_);
-  const auto signature = hash::HmacSha256(signing_key, string_to_sign,
-                                          hash::OutputEncoding::kHex);
+  const auto signature =
+      hash::HmacSha256(signing_key, string_to_sign, hash::OutputEncoding::kHex);
 
   const std::string authorization =
       std::string{kAlgorithm} + " Credential=" + access_key_id_ + '/' +
       credential_scope + ", SignedHeaders=" + signed_headers +
       ", Signature=" + signature;
 
+  // Populate the HeaderMap with RUNTIME string keys (HeaderMap forbids string
+  // literals). Host is set by the HTTP client from the URL, so skip it.
   userver::http::headers::HeaderMap out;
   for (const auto& [name, value] : signed_map) {
-    if (name == "host") continue;  // x-amz-date, x-amz-content-sha256, content-type, x-amz-acl
+    if (name == "host")
+      continue;  // x-amz-date, x-amz-content-sha256, content-type, x-amz-acl
     out[name] = value;
   }
   const std::string auth_header = "Authorization";
@@ -204,11 +212,12 @@ std::string S3ObjectStorageComponent::Get(const std::string& key) {
   return response->body();
 }
 
-void S3ObjectStorageComponent::SetAcl(const std::string& key, bool make_public) {
+void S3ObjectStorageComponent::SetAcl(const std::string& key,
+                                      bool make_public) {
   const std::string acl = make_public ? "public-read" : "private";
 
-  auto headers = SignRequest("PUT", CanonicalUri(key), "acl=",
-                             kEmptyPayloadSha256, {{"x-amz-acl", acl}});
+  auto headers = SignRequest("PUT", CanonicalUri(key),
+                             "acl=", kEmptyPayloadSha256, {{"x-amz-acl", acl}});
 
   auto response = http_client_.CreateRequest()
                       .put(ObjectUrl(key) + "?acl")
@@ -225,7 +234,7 @@ void S3ObjectStorageComponent::SetAcl(const std::string& key, bool make_public) 
   }
 }
 
-void S3ObjectStorageComponent::Delete(const std::string& key) {
+bool S3ObjectStorageComponent::Delete(const std::string& key) {
   auto headers =
       SignRequest("DELETE", CanonicalUri(key), "", kEmptyPayloadSha256, {});
 
@@ -242,13 +251,134 @@ void S3ObjectStorageComponent::Delete(const std::string& key) {
     throw std::runtime_error("object storage Delete failed, status=" +
                              std::to_string(code));
   }
+  return code != 404;
 }
 
-void S3ObjectStorageComponent::DeleteMany(
-    const std::vector<std::string>& keys) {
-  for (const auto& key : keys) {
-    Delete(key);
+namespace {
+
+std::chrono::system_clock::time_point ParseS3Time(const std::string& iso) {
+  const auto kUnparseable = std::chrono::system_clock::time_point::max();
+  if (iso.size() < 19) {
+    return kUnparseable;
   }
+  const auto parsed = userver::utils::datetime::OptionalStringtime(
+      iso.substr(0, 19), "UTC", "%Y-%m-%dT%H:%M:%S");
+  return parsed.value_or(kUnparseable);
+}
+
+}  // namespace
+
+std::vector<ObjectKey> S3ObjectStorageComponent::ListKeys(
+    const std::string& prefix) {
+  std::vector<ObjectKey> out;
+  std::string continuation_token;
+
+  do {
+    // Build the ListObjectsV2 query. Params must be sorted for SigV4.
+    std::map<std::string, std::string> params;
+    params["list-type"] = "2";
+    params["prefix"] = prefix;
+    if (!continuation_token.empty()) {
+      params["continuation-token"] = continuation_token;
+    }
+
+    std::string canonical_query;
+    for (const auto& [k, v] : params) {
+      if (!canonical_query.empty()) canonical_query += '&';
+      canonical_query += UriEncode(k, true) + '=' + UriEncode(v, true);
+    }
+
+    const std::string canonical_uri = "/" + bucket_ + "/";
+    auto headers = SignRequest("GET", canonical_uri, canonical_query,
+                               kEmptyPayloadSha256, {});
+
+    const std::string url = GetScheme(endpoint_) + endpoint_ + canonical_uri +
+                            "?" + canonical_query;
+
+    auto response = http_client_.CreateRequest()
+                        .get(url)
+                        .headers(std::move(headers))
+                        .timeout(std::chrono::seconds{30})
+                        .perform();
+
+    const int code = StatusOf(response);
+    if (code != 200) {
+      LOG_ERROR() << "S3 ListKeys failed prefix=" << prefix
+                  << " status=" << code << " body=" << response->body_view();
+      throw std::runtime_error("object storage ListKeys failed, status=" +
+                               std::to_string(code));
+    }
+
+    const std::string body = response->body();
+
+    pugi::xml_document document;
+    const auto parse_result = document.load_buffer(body.data(), body.size());
+    const pugi::xml_node root = document.document_element();
+    if (!parse_result || std::string_view{root.name()} != "ListBucketResult") {
+      LOG_ERROR()
+          << "S3 ListKeys: response is not a valid ListBucketResult XML "
+             "(prefix="
+          << prefix << ", parse_status=" << parse_result.description() << ")";
+      throw std::runtime_error(
+          "object storage ListKeys: malformed response body");
+    }
+
+    // Walk <Contents> entries; each has <Key> and <LastModified>.
+    for (const pugi::xml_node& contents : root.children("Contents")) {
+      std::string key = contents.child_value("Key");
+      if (!key.empty()) {
+        out.push_back(ObjectKey{
+            std::move(key), ParseS3Time(contents.child_value("LastModified"))});
+      }
+    }
+
+    // Pagination: read <IsTruncated> and <NextContinuationToken>.
+    const std::string_view truncated = root.child_value("IsTruncated");
+    if (truncated == "true") {
+      continuation_token = root.child_value("NextContinuationToken");
+      if (continuation_token.empty()) {
+        LOG_ERROR()
+            << "S3 ListKeys: IsTruncated=true but no "
+               "NextContinuationToken; aborting to avoid a partial listing.";
+        throw std::runtime_error(
+            "object storage ListKeys: truncated response without continuation "
+            "token");
+      }
+    } else if (truncated == "false") {
+      continuation_token.clear();
+    } else {
+      LOG_ERROR() << "S3 ListKeys: unexpected <IsTruncated> value in response "
+                     "(prefix="
+                  << prefix
+                  << "); refusing to treat a possibly-"
+                     "truncated listing as complete.";
+      throw std::runtime_error(
+          "object storage ListKeys: missing or unparseable IsTruncated tag");
+    }
+  } while (!continuation_token.empty());
+
+  return out;
+}
+
+std::size_t S3ObjectStorageComponent::DeleteMany(
+    const std::vector<std::string>& keys) {
+  std::size_t deleted = 0;
+  std::size_t already_gone = 0;
+  for (const auto& key : keys) {
+    try {
+      // 204/200/404 считаются как за удаленные, остальное exception.
+      if (!Delete(key)) ++already_gone;
+      ++deleted;
+    } catch (const std::exception& e) {
+      LOG_ERROR() << "DeleteMany: failed to delete " << key << ": " << e.what();
+    }
+  }
+  if (already_gone > 0) {
+    LOG_INFO() << "DeleteMany: " << deleted << " keys handled ("
+               << (deleted - already_gone) << " actually removed, "
+               << already_gone << " were already gone / 404).";
+  }
+  return deleted;
 }
 
 std::string S3ObjectStorageComponent::GetUrl(const std::string& key,
@@ -286,8 +416,8 @@ std::string S3ObjectStorageComponent::MakePresignedGetUrl(
   }
 
   const std::string canonical_request =
-      std::string{"GET"} + '\n' + canonical_uri + '\n' + canonical_query + '\n' +
-      "host:" + endpoint_ + '\n' + '\n' + "host" + '\n' +
+      std::string{"GET"} + '\n' + canonical_uri + '\n' + canonical_query +
+      '\n' + "host:" + endpoint_ + '\n' + '\n' + "host" + '\n' +
       std::string{kUnsignedPayload};
 
   const std::string string_to_sign =
@@ -295,8 +425,8 @@ std::string S3ObjectStorageComponent::MakePresignedGetUrl(
       '\n' + hash::Sha256(canonical_request, hash::OutputEncoding::kHex);
 
   const auto signing_key = SigningKey(secret_key_, datestamp, region_);
-  const auto signature = hash::HmacSha256(signing_key, string_to_sign,
-                                          hash::OutputEncoding::kHex);
+  const auto signature =
+      hash::HmacSha256(signing_key, string_to_sign, hash::OutputEncoding::kHex);
 
   std::string url = GetScheme(endpoint_) + endpoint_;
   if (!url.empty() && url.back() == '/') url.pop_back();
