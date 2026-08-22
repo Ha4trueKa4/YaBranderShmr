@@ -19,6 +19,37 @@ tags:
     description: Лента публичных проектов
 
 paths:
+  /models:
+    get:
+      summary: Получение доступных моделей генерации
+      description: >
+        Возвращает модели Yandex AI Studio и поддерживаемые модели OpenAI.
+        Идентификатор из ответа передаётся без изменений в поле model запроса
+        генерации после удаления префикса gpt://{provider}/.
+      tags: [ Projects ]
+      responses:
+        '200':
+          description: Список доступных моделей
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [ id, owned_by ]
+                      properties:
+                        id:
+                          type: string
+                        owned_by:
+                          type: string
+              example:
+                data:
+                  - id: "gpt://openai/gpt-5.6-luna"
+                    owned_by: "OpenAI"
   /auth/register:
     post:
       summary: Регистрация нового пользователя
@@ -627,6 +658,9 @@ paths:
                   example: "Добавь логотип с изображением кружки"
                 model:
                   type: string
+                  description: >
+                    Модель генерации. gpt-5.6-luna отправляется напрямую в
+                    OpenAI, остальные доступные модели — в Yandex AI Studio.
                   example: "deepseek-v4-flash/latest"
       responses:
         '202':

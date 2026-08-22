@@ -76,6 +76,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/LLMClientComponent.hpp
         src/components/LLMClientComponent.cpp
         src/components/llm_prompt.hpp
+        src/components/llm_models.hpp
         src/components/prompt_constructor/prompt_template.hpp
         src/components/prompt_constructor/prompt_template.cpp
         src/components/svg_validator.hpp
