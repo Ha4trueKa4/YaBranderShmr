@@ -11,7 +11,7 @@ private nonisolated final class ChatObserverHolder: @unchecked Sendable {
 @MainActor
 @Observable
 final class ChatViewModel {
-    static let maxPromptUTF8Length = 1_500
+    static let maxPromptLength = 5_000
 
     enum ProjectPrivacy: String, CaseIterable, Identifiable {
         case privateProject
@@ -66,10 +66,12 @@ final class ChatViewModel {
     private(set) var lastMessageID: ChatMessage.ID?
     private(set) var isLoading = false
     private(set) var isGenerating = false
+    private(set) var isCancelling = false
     private(set) var isOffline = false
     private(set) var loadFailed = false
     private(set) var pendingCount = 0
     private(set) var sendErrorMessage: String?
+    private(set) var activeJobID: String?
     var privacy = ProjectPrivacy.privateProject
 
     private let service: any ProjectServiceProtocol
@@ -121,8 +123,8 @@ final class ChatViewModel {
     func sendMessage(_ text: String) async {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isGenerating else { return }
-        guard text.utf8.count <= Self.maxPromptUTF8Length else {
-            sendErrorMessage = "Message is too long (maximum 1500 bytes)."
+        guard text.count <= Self.maxPromptLength else {
+            sendErrorMessage = "Message is too long (maximum 5000 characters)."
             return
         }
 
@@ -131,11 +133,21 @@ final class ChatViewModel {
         appendMessage(chatMessage)
         isGenerating = true
 
+        let jobID: String
         do {
-            let generatedURL = try await service.generate(projectID: projectID, prompt: text)
-            try? await refreshChatAfterGenerate(generatedURL: generatedURL)
+            jobID = try await service.generate(projectID: projectID, prompt: text)
+        } catch NetworkError.generationInProgress(let existingJobID) {
+            removeMessage(id: chatMessage.id)
+            activeJobID = existingJobID
+            isCancelling = false
+            sendErrorMessage = nil
+            await pollAndRefresh(jobID: existingJobID)
             isGenerating = false
+            activeJobID = nil
+            isCancelling = false
+            guard !Task.isCancelled else { return }
             await flushPendingMessages()
+            return
         } catch {
             isGenerating = false
             if shouldKeepPending(after: error) {
@@ -150,7 +162,17 @@ final class ChatViewModel {
                 markMessageFailed(id: chatMessage.id)
                 sendErrorMessage = failureMessage(for: error)
             }
+            return
         }
+
+        activeJobID = jobID
+        isCancelling = false
+        await pollAndRefresh(jobID: jobID)
+        isGenerating = false
+        activeJobID = nil
+        isCancelling = false
+        guard !Task.isCancelled else { return }
+        await flushPendingMessages()
     }
 
     func flushPendingMessages() async {
@@ -159,17 +181,25 @@ final class ChatViewModel {
         defer { isGenerating = false }
 
         while !pendingMessages.isEmpty {
+            if Task.isCancelled { break }
             let prompt = pendingMessages[0]
-            guard prompt.text.utf8.count <= Self.maxPromptUTF8Length else {
+            guard prompt.text.count <= Self.maxPromptLength else {
                 pendingMessages.removeFirst()
                 pendingCount = pendingMessages.count
                 markPendingMessageFailed(prompt)
                 continue
             }
 
-            let generatedURL: URL?
+            let jobID: String
             do {
-                generatedURL = try await service.generate(projectID: projectID, prompt: prompt.text)
+                jobID = try await service.generate(projectID: projectID, prompt: prompt.text)
+            } catch NetworkError.generationInProgress(let existingJobID) {
+                activeJobID = existingJobID
+                isCancelling = false
+                await pollAndRefresh(jobID: existingJobID)
+                activeJobID = nil
+                isCancelling = false
+                break
             } catch {
                 if shouldKeepPending(after: error) {
                     break
@@ -184,13 +214,12 @@ final class ChatViewModel {
             pendingMessages.removeFirst()
             pendingCount = pendingMessages.count
             sendErrorMessage = nil
-            do {
-                try await refreshChatAfterGenerate(generatedURL: generatedURL)
-            } catch {
-                // Generation succeeded, so the item must not return to the queue.
-                // Keep the local bubble as sent when refreshing remote history fails.
-                markPendingMessageSent(prompt)
-            }
+            activeJobID = jobID
+            isCancelling = false
+            await pollAndRefresh(jobID: jobID)
+            activeJobID = nil
+            isCancelling = false
+            markPendingMessageSent(prompt)
         }
 
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
@@ -215,6 +244,16 @@ final class ChatViewModel {
         sendErrorMessage = nil
     }
 
+    func cancelGeneration() async {
+        guard let jobID = activeJobID, !isCancelling else { return }
+        isCancelling = true
+        do {
+            _ = try await service.cancelGeneration(projectID: projectID, jobID: jobID)
+        } catch {
+            isCancelling = false
+        }
+    }
+
     func dateTitle(for date: Date) -> String {
         let calendar = Calendar.current
 
@@ -234,6 +273,122 @@ final class ChatViewModel {
         let url = try await service.fetchVersionURL(projectID: projectID, versionID: versionID)
         versionURLs[versionID] = url
         return url
+    }
+
+    // MARK: - Long polling
+
+    private enum GenerationOutcome {
+        case done(url: URL)
+        case error(message: String)
+        case cancelled
+    }
+
+    private static let maxPollRetries = 10
+    private static let pollMinDelayNs: UInt64 = 1_000_000_000        // 1 sec
+    private static let pollMaxDelayNs: UInt64 = 15 * 1_000_000_000   // 15 sec
+
+    /// Опрашивает статус фоновой задачи генерации через long-polling.
+    /// При `pending`/`cancelling` немедленно открывает новое соединение.
+    /// При разрыве делает retry с backoff, при оффлайне ждёт восстановления.
+    /// После ~10 неудачных попыток или 404 (задача потеряна) выбрасывает ошибку.
+    private func pollGeneration(jobID: String) async throws -> GenerationOutcome {
+        var attempt = 0
+        var delayNs = Self.pollMinDelayNs
+
+        while true {
+            try Task.checkCancellation()
+
+            do {
+                let status = try await service.generateStatus(projectID: projectID, jobID: jobID)
+                switch status {
+                case .pending, .cancelling:
+                    attempt = 0
+                    delayNs = Self.pollMinDelayNs
+                    continue
+                case .done(let url):
+                    guard let url else {
+                        return .error(message: "Generation completed but no result was returned.")
+                    }
+                    return .done(url: url)
+                case .error(let message):
+                    return .error(message: message)
+                case .cancelled:
+                    return .cancelled
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                if Task.isCancelled { throw CancellationError() }
+                guard !Self.isJobLost(error) else { throw error }
+                guard Self.isRetryablePollError(error), attempt < Self.maxPollRetries else {
+                    throw error
+                }
+                if Self.isOfflineError(error) {
+                    await waitForNetworkRecovery()
+                } else {
+                    try await Task.sleep(nanoseconds: delayNs)
+                    delayNs = min(Self.pollMaxDelayNs, UInt64(Double(delayNs) * 2))
+                }
+                attempt += 1
+            }
+        }
+    }
+
+    /// Опрашивает генерацию и затем подтягивает свежую историю чата.
+    private func pollAndRefresh(jobID: String) async {
+        do {
+            let outcome = try await pollGeneration(jobID: jobID)
+            switch outcome {
+            case .done(let generatedURL):
+                try? await refreshChatAfterGenerate(generatedURL: generatedURL)
+            case .error(let message):
+                sendErrorMessage = message
+                try? await refreshChatAfterGenerate(generatedURL: nil)
+            case .cancelled:
+                sendErrorMessage = nil
+                try? await refreshChatAfterGenerate(generatedURL: nil)
+            }
+        } catch is CancellationError {
+            // Таска отменена — не показываем ошибку.
+        } catch {
+            sendErrorMessage = failureMessage(for: error)
+            try? await refreshChatAfterGenerate(generatedURL: nil)
+        }
+    }
+
+    /// Ждёт восстановления сети до 60 секунд, проверяя раз в секунду.
+    private func waitForNetworkRecovery() async {
+        if NetworkMonitor.shared.isConnected { return }
+        for _ in 0..<60 {
+            if Task.isCancelled { return }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            if NetworkMonitor.shared.isConnected { return }
+        }
+    }
+
+    private static func isJobLost(_ error: Error) -> Bool {
+        if case NetworkError.httpError(let statusCode) = error {
+            return statusCode == 404
+        }
+        return false
+    }
+
+    private static func isRetryablePollError(_ error: Error) -> Bool {
+        if case NetworkError.httpError(let statusCode) = error {
+            return [408, 429, 500, 502, 503, 504].contains(statusCode)
+        }
+        return error is URLError
+    }
+
+    private static func isOfflineError(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        return [
+            .notConnectedToInternet,
+            .cannotFindHost,
+            .cannotConnectToHost,
+            .dnsLookupFailed,
+            .dataNotAllowed
+        ].contains(urlError.code)
     }
 
     /// Read-шаг после успешной генерации: подтягивает свежую историю чата,
@@ -295,6 +450,14 @@ final class ChatViewModel {
         updateMessage(id: pending.id) { message in
             message.isPending = false
             message.isFailed = false
+        }
+    }
+
+    private func removeMessage(id: ChatMessage.ID) {
+        messages.removeAll { $0.id == id }
+        sections = makeSections(from: messages)
+        if lastMessageID == id {
+            lastMessageID = messages.last?.id
         }
     }
 
@@ -370,7 +533,35 @@ final class ChatViewModel {
 
         if !pendingMessages.isEmpty {
             await flushPendingMessages()
+        } else if let jobID = findUnfinishedJobID() {
+            await resumeGeneration(jobID: jobID)
         }
+    }
+
+    /// Находит `job_id` последнего пользовательского сообщения, у которого
+    /// ещё нет ответа ассистента с тем же `job_id` (ни version_id, ни error,
+    /// ни status=cancelled) — т.е. генерация ещё в процессе.
+    private func findUnfinishedJobID() -> String? {
+        let remoteMessages = messages
+        let assistantJobIDs = Set(
+            remoteMessages
+                .filter { $0.type == .assistant }
+                .compactMap { $0.jobID }
+        )
+        return remoteMessages
+            .reversed()
+            .first { $0.type == .user && $0.jobID != nil && !assistantJobIDs.contains($0.jobID!) }?
+            .jobID
+    }
+
+    private func resumeGeneration(jobID: String) async {
+        isGenerating = true
+        activeJobID = jobID
+        isCancelling = false
+        await pollAndRefresh(jobID: jobID)
+        isGenerating = false
+        activeJobID = nil
+        isCancelling = false
     }
 
     private func applyRemoteMessages(_ remoteMessages: [RemoteChatMessage]) {
@@ -395,15 +586,35 @@ final class ChatViewModel {
 
     private func replaceMessages(_ remoteMessages: [RemoteChatMessage]) {
         let mapped = remoteMessages.map { remoteMessage in
-            ChatMessage(
-                type: remoteMessage.role.lowercased() == "assistant" ? .assistant : .user,
-                text: remoteMessage.role.lowercased() == "assistant"
-                    ? "Generated a new version."
-                    : (remoteMessage.text ?? ""),
+            let isAssistant = remoteMessage.role.lowercased() == "assistant"
+            let attachment: ChatMessageAttachment
+            let text: String
+
+            if isAssistant {
+                if let versionID = remoteMessage.versionID {
+                    attachment = .version(id: versionID, url: versionURLs[versionID])
+                    text = "Generated a new version."
+                } else if let errorMessage = remoteMessage.error {
+                    attachment = .error(message: errorMessage)
+                    text = errorMessage
+                } else if remoteMessage.status == "cancelled" {
+                    attachment = .cancelled
+                    text = "Generation cancelled"
+                } else {
+                    attachment = .none
+                    text = "Generated a new version."
+                }
+            } else {
+                attachment = .none
+                text = remoteMessage.text ?? ""
+            }
+
+            return ChatMessage(
+                type: isAssistant ? .assistant : .user,
+                text: text,
                 date: remoteMessage.createdAt,
-                attachment: remoteMessage.versionID.map {
-                    .version(id: $0, url: versionURLs[$0])
-                } ?? .none
+                attachment: attachment,
+                jobID: remoteMessage.jobID
             )
         }
         messages = mapped
@@ -471,9 +682,25 @@ final class ChatViewModel {
             ),
             RemoteChatMessage(
                 role: "assistant",
-                text: "Generated a new version.",
-                versionID: UUID(),
+                text: nil,
+                versionID: nil,
+                error: "Generation service is temporarily unavailable. Please try again later.",
                 createdAt: now.addingTimeInterval(-295)
+            ),
+            RemoteChatMessage(
+                role: "user",
+                text: "Try a minimalist approach",
+                versionID: nil,
+                jobID: "preview-job-3",
+                createdAt: now.addingTimeInterval(-100)
+            ),
+            RemoteChatMessage(
+                role: "assistant",
+                text: nil,
+                versionID: nil,
+                status: "cancelled",
+                jobID: "preview-job-3",
+                createdAt: now.addingTimeInterval(-95)
             )
         ]
 

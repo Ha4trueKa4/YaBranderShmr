@@ -109,8 +109,24 @@ struct ChatMessageView: View {
 
     private var messageContentBody: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(message.text)
-                .foregroundStyle(message.type == .user ? .white : .primary)
+            if case .error = message.attachment {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(.red)
+                    Text(message.text)
+                        .foregroundStyle(.primary)
+                }
+            } else if case .cancelled = message.attachment {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "stop.circle")
+                        .foregroundStyle(.secondary)
+                    Text(message.text)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text(message.text)
+                    .foregroundStyle(message.type == .user ? .white : .primary)
+            }
 
             if message.isPending {
                 HStack(spacing: 4) {

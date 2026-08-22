@@ -7,7 +7,9 @@ nonisolated protocol ProjectServiceProtocol: Sendable {
     func deleteProject(id: UUID) async throws
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
-    func generate(projectID: UUID, prompt: String) async throws -> URL?
+    func generate(projectID: UUID, prompt: String) async throws -> String
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus
+    func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL
 }
 
@@ -73,15 +75,33 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         return response.messages
     }
 
-    func generate(projectID: UUID, prompt: String) async throws -> URL? {
+    func generate(projectID: UUID, prompt: String) async throws -> String {
         let response: GenerateResponseDTO = try await client.request(
             .post,
             .generate(projectID: projectID),
             authorization: .required,
-            body: GenerateProjectRequest(prompt: prompt),
-            timeout: 180
+            body: GenerateProjectRequest(prompt: prompt)
         )
-        return response.url
+        guard let jobID = response.jobID else { throw NetworkError.invalidResponse }
+        return jobID
+    }
+
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        try await client.request(
+            .get,
+            .generateStatus(projectID: projectID, jobID: jobID),
+            authorization: .required,
+            body: Optional<String>.none,
+            timeout: 60
+        )
+    }
+
+    func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        try await client.request(
+            .post,
+            .cancelGeneration(projectID: projectID, jobID: jobID),
+            authorization: .required
+        )
     }
 
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL {
@@ -99,7 +119,28 @@ nonisolated struct RemoteChatMessage: Sendable, Codable {
     let role: String
     let text: String?
     let versionID: UUID?
+    let error: String?
+    let status: String?
+    let jobID: String?
     let createdAt: Date
+
+    init(
+        role: String,
+        text: String?,
+        versionID: UUID?,
+        error: String? = nil,
+        status: String? = nil,
+        jobID: String? = nil,
+        createdAt: Date
+    ) {
+        self.role = role
+        self.text = text
+        self.versionID = versionID
+        self.error = error
+        self.status = status
+        self.jobID = jobID
+        self.createdAt = createdAt
+    }
 }
 
 private nonisolated struct UserProjectsResponseDTO: Decodable, Sendable {
@@ -140,7 +181,52 @@ private nonisolated struct GenerateProjectRequest: Encodable, Sendable {
 }
 
 private nonisolated struct GenerateResponseDTO: Decodable, Sendable {
-    let url: URL?
+    let jobID: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case jobID = "jobId"
+    }
+}
+
+nonisolated enum GenerationStatus: Decodable, Sendable {
+    enum Status: String, Decodable, Sendable {
+        case pending
+        case done
+        case error
+        case cancelling
+        case cancelled
+    }
+
+    case pending
+    case done(url: URL?)
+    case error(message: String)
+    case cancelling
+    case cancelled
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let status = try container.decode(Status.self, forKey: .status)
+        switch status {
+        case .pending:
+            self = .pending
+        case .done:
+            let url = try container.decodeIfPresent(URL.self, forKey: .url)
+            self = .done(url: url)
+        case .error:
+            let message = try container.decodeIfPresent(String.self, forKey: .message) ?? "Generation failed."
+            self = .error(message: message)
+        case .cancelling:
+            self = .cancelling
+        case .cancelled:
+            self = .cancelled
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case status
+        case url
+        case message
+    }
 }
 
 private nonisolated struct ChatHistoryResponseDTO: Decodable, Sendable {
@@ -153,6 +239,9 @@ private nonisolated struct ChatHistoryResponseDTO: Decodable, Sendable {
                 role: message.role,
                 text: message.text,
                 versionID: message.versionID,
+                error: message.error,
+                status: message.status,
+                jobID: message.jobID,
                 createdAt: date
             )
         }
@@ -163,12 +252,18 @@ private nonisolated struct ChatMessageDTO: Decodable, Sendable {
     let role: String
     let text: String?
     let versionID: UUID?
+    let error: String?
+    let status: String?
+    let jobID: String?
     let createdAt: String?
 
     private enum CodingKeys: String, CodingKey {
         case role
         case text
         case versionID = "versionId"
+        case error
+        case status
+        case jobID = "jobId"
         case createdAt
     }
 }

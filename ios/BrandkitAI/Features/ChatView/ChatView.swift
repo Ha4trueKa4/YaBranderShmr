@@ -88,6 +88,10 @@ struct ChatView: View {
                                         .frame(maxWidth: .infinity)
                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                         .contentShape(RoundedRectangle(cornerRadius: 10))
+                                    case .error:
+                                        EmptyView()
+                                    case .cancelled:
+                                        EmptyView()
                                     case .none:
                                         EmptyView()
                                     }
@@ -101,7 +105,7 @@ struct ChatView: View {
                             HStack(spacing: 10) {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Generating…")
+                                Text(viewModel.isCancelling ? "Cancelling…" : "Generating…")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
@@ -279,23 +283,36 @@ struct ChatView: View {
                     .onSubmit {
                         sendMessage()
                     }
-                    .disabled(viewModel.isGenerating)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(Color(.secondarySystemBackground), in: Capsule())
 
                 Button {
-                    sendMessage()
+                    if viewModel.isGenerating {
+                        Task { await viewModel.cancelGeneration() }
+                    } else {
+                        sendMessage()
+                    }
                 } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color(.onAccent))
-                        .frame(width: 40, height: 40)
-                        .background(.tint, in: Circle())
+                    Group {
+                        if viewModel.isCancelling {
+                            ProgressView()
+                                .tint(Color(.onAccent))
+                        } else if viewModel.isGenerating {
+                            Image(systemName: "stop.fill")
+                                .font(.system(size: 17, weight: .semibold))
+                        } else {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 17, weight: .semibold))
+                        }
+                    }
+                    .foregroundStyle(Color(.onAccent))
+                    .frame(width: 40, height: 40)
+                    .background(.tint, in: Circle())
                 }
-                .opacity(canSendMessage ? 1 : 0.5)
-                .disabled(!canSendMessage)
-                .accessibilityLabel("Send message")
+                .opacity(viewModel.isGenerating ? 1 : (canSendMessage ? 1 : 0.5))
+                .disabled(viewModel.isCancelling || (!viewModel.isGenerating && !canSendMessage))
+                .accessibilityLabel(viewModel.isGenerating ? "Cancel generation" : "Send message")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -316,13 +333,13 @@ struct ChatView: View {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         return !viewModel.isGenerating
             && !text.isEmpty
-            && text.utf8.count <= ChatViewModel.maxPromptUTF8Length
+            && text.count <= ChatViewModel.maxPromptLength
     }
 
     private var inputErrorMessage: String? {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.utf8.count > ChatViewModel.maxPromptUTF8Length {
-            return "Message is too long (maximum 1500 bytes)."
+        if text.count > ChatViewModel.maxPromptLength {
+            return "Message is too long (maximum 5000 characters)."
         }
         return viewModel.sendErrorMessage
     }

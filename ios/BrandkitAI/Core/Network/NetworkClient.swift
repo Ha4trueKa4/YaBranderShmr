@@ -207,7 +207,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
             method: method,
             path: path,
             authorization: authorization,
-            body: body
+            body: body,
+            timeout: timeout
         )
     }
 
@@ -263,6 +264,9 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
                     field: serverError?.field
                 )
             }
+            if let jobID = serverError?.jobId {
+                throw NetworkError.generationInProgress(jobID: jobID)
+            }
             throw NetworkError.httpError(statusCode: httpResponse.statusCode)
         }
 
@@ -282,7 +286,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: Data?
+        body: Data?,
+        timeout: TimeInterval? = nil
     ) async throws -> Data {
         var attempt = 0
         var delayNs = Self.minDelay
@@ -292,7 +297,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
                     method: method,
                     path: path,
                     authorization: authorization,
-                    body: body
+                    body: body,
+                    timeout: timeout
                 )
             } catch NetworkError.httpError(let code) where Self.retryableStatusCodes.contains(code) {
                 if attempt >= Self.maxAttempts {
@@ -311,4 +317,6 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
 nonisolated private struct ServerErrorResponse: Decodable, Sendable {
     let code: String?
     let field: String?
+    let message: String?
+    let jobId: String?
 }
