@@ -4,6 +4,7 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/uuid4.hpp>
+#include <shared_mutex>
 
 namespace ya_brander::components {
 
@@ -191,6 +192,15 @@ void ProjectManagerComponent::AppendAssistantError(const std::string& project_id
         project_id, error_message, job_id);
 }
 
+void ProjectManagerComponent::AppendAssistantCancelled(const std::string& project_id, const std::string& job_id) {
+    pg_cluster_->Execute(
+        userver::storages::postgres::ClusterHostType::kMaster,
+        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
+        "  jsonb_build_object('role', 'assistant', 'status', 'cancelled', 'job_id', $2::text, 'created_at', NOW())"
+        "), updated_at = NOW() WHERE id = $1::uuid",
+        project_id, job_id);
+}
+
 userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
     return FetchChatHistoryJson(project_id);
 }
@@ -237,6 +247,10 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
         const auto age = now - it->second->created_at;
         const bool expired = status == JobStatus::kPending ? age > kStuckPendingRetention : age > kJobRetention;
         if (expired) {
+            auto active_it = active_job_by_project_.find(it->second->project_id);
+            if (active_it != active_job_by_project_.end() && active_it->second == it->first) {
+                active_job_by_project_.erase(active_it);
+            }
             it = jobs_.erase(it);
         } else {
             ++it;
@@ -246,66 +260,131 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
 
 std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
     std::string job_id = userver::utils::generators::GenerateUuid();
-
-    // Сообщение пользователя пишем ДО создания записи в jobs_: если этот
-    // вызов бросит исключение (например, недоступна БД), job_id никому не
-    // будет отдан и в jobs_ не останется зависшей записи, которую было бы
-    // некому и нечем завершить.
-    AppendUserMessage(project_id, job_id, prompt);
-
     auto entry = std::make_shared<JobEntry>();
     entry->project_id = project_id;
+
+    // Проверка "нет ли уже активной генерации для проекта" и резервирование
+    // слота под неё — одной атомарной операцией под jobs_mutex_. Если бы это
+    // были два отдельных захвата лока, два конкурентных StartGeneration для
+    // одного проекта могли бы оба проскочить проверку раньше, чем любой из
+    // них зарезервирует active_job_by_project_.
     {
         std::lock_guard lock(jobs_mutex_);
         PruneOldJobsLocked();
+        auto active_it = active_job_by_project_.find(project_id);
+        if (active_it != active_job_by_project_.end()) {
+            throw GenerationInProgressError(project_id, active_it->second);
+        }
         jobs_.emplace(job_id, entry);
+        active_job_by_project_.emplace(project_id, job_id);
+    }
+
+    try {
+        // Сообщение пользователя пишем сразу: если это бросит исключение
+        // (например, недоступна БД), откатываем резервацию ниже, чтобы
+        // проект не остался навсегда "занят" несостоявшимся job'ом.
+        AppendUserMessage(project_id, job_id, prompt);
+    } catch (...) {
+        std::lock_guard lock(jobs_mutex_);
+        jobs_.erase(job_id);
+        active_job_by_project_.erase(project_id);
+        throw;
     }
 
     bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, job_id, entry] {
-        // Статус job'а зависит только от того, удалась ли сама генерация
-        // (RunGeneration). Запись результата в chat_history — best-effort
-        // бухгалтерия ПОСЛЕ того, как статус уже определён и разослан
-        // ожидающим в WaitForGeneration: её падение не должно превращать уже
-        // случившийся успех в ошибку (и наоборот) — иначе клиент, опросивший
-        // чуть позже, увидел бы "error" для по факту успешной генерации.
-        std::string version_id;
-        bool succeeded = false;
-        try {
-            userver::engine::SemaphoreLock semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model);
-            succeeded = true;
-        } catch (const std::exception& e) {
-            LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
+        // Токен для внешней отмены (CancelGeneration) регистрируем сразу же,
+        // в самом начале корутины — до захвата семафора, чтобы отмена
+        // работала, даже пока job ещё стоит в очереди на генерацию.
+        {
             std::lock_guard job_lock(entry->mutex);
-            entry->status = JobStatus::kError;
-            entry->error_message = e.what();
+            entry->cancel_token = userver::engine::current_task::GetCancellationToken();
+            if (entry->cancel_requested) {
+                entry->cancel_token->RequestCancel();
+            }
         }
 
-        if (succeeded) {
+        // Статус job'а зависит только от того, чем закончилась сама
+        // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
+        // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
+        // статус уже определён и разослан ожидающим в WaitForGeneration: её
+        // падение не должно превращать уже случившийся исход в другой —
+        // иначе клиент, опросивший чуть позже, увидел бы не то, что было.
+        std::string version_id;
+        JobStatus outcome;
+        std::string error_message;
+        try {
+            std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
+            version_id = RunGeneration(project_id, prompt, model);
+            outcome = JobStatus::kDone;
+        } catch (const std::exception& e) {
+            bool was_cancelled;
+            {
+                std::lock_guard job_lock(entry->mutex);
+                was_cancelled = entry->cancel_requested;
+            }
+            if (was_cancelled) {
+                outcome = JobStatus::kCancelled;
+                // cancel_requested — это флаг "отмену запросили", а не "именно
+                // это исключение вызвано отменой": если поймана НЕ связанная с
+                // отменой ошибка (LLM/S3/БД) в узком окне гонки с конкурентным
+                // CancelGeneration, она будет классифицирована как "cancelled"
+                // и e.what() не попадёт в AppendAssistantError — поэтому
+                // логируем его здесь отдельно, чтобы не потерять для мониторинга.
+                LOG_INFO() << "Generation job " << job_id << " for project_id=" << project_id
+                           << " cancelled (underlying exception: " << e.what() << ")";
+            } else {
+                outcome = JobStatus::kError;
+                error_message = e.what();
+                LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
+            }
+        }
+
+        // Слот active_job_by_project_ освобождаем ДО того, как исход станет
+        // видимым снаружи (entry->status + NotifyAll ниже) — иначе клиент,
+        // получивший "done"/"error"/"cancelled" из WaitForGeneration, мог бы
+        // тут же получить спурьезный 409 на новый POST .../generate: его
+        // StartGeneration успел бы проверить active_job_by_project_ раньше,
+        // чем эта же корутина (на отдельном bg-task-processor) дошла бы сюда.
+        // TODO(redis): в редис-версии это должно стать одной атомарной
+        // операцией (Lua-скрипт/MULTI-EXEC: снять active_job:{project_id} и
+        // записать финальный статус job:{job_id} одной транзакцией) — простого
+        // "поменять порядок двух критических секций" через сеть недостаточно.
+        {
+            std::lock_guard lock(jobs_mutex_);
+            auto active_it = active_job_by_project_.find(project_id);
+            if (active_it != active_job_by_project_.end() && active_it->second == job_id) {
+                active_job_by_project_.erase(active_it);
+            }
+        }
+
+        {
             std::lock_guard job_lock(entry->mutex);
-            entry->status = JobStatus::kDone;
-            entry->result_version_id = version_id;
+            entry->status = outcome;
+            if (outcome == JobStatus::kDone) entry->result_version_id = version_id;
+            if (outcome == JobStatus::kError) entry->error_message = error_message;
         }
         entry->cv.NotifyAll();
 
-        // Без ретраев: если это упадёт, версия (при succeeded) всё равно
-        // сохранена и доступна через сам проект — просто не появится записью
-        // в chat_history. Громко логируем, чтобы это было видно в мониторинге.
+        // Без ретраев: при падении реальный исход (версия сохранена / job
+        // отменён) не меняется — просто не появится записью в chat_history.
+        // Громко логируем, чтобы это было видно в мониторинге.
         try {
-            if (succeeded) {
-                AppendAssistantSuccess(project_id, job_id, version_id);
-            } else {
-                std::string error_message;
-                {
-                    std::lock_guard job_lock(entry->mutex);
-                    error_message = entry->error_message;
-                }
-                AppendAssistantError(project_id, job_id, error_message);
+            switch (outcome) {
+                case JobStatus::kDone:
+                    AppendAssistantSuccess(project_id, job_id, version_id);
+                    break;
+                case JobStatus::kError:
+                    AppendAssistantError(project_id, job_id, error_message);
+                    break;
+                case JobStatus::kCancelled:
+                    AppendAssistantCancelled(project_id, job_id);
+                    break;
+                case JobStatus::kPending:
+                    break;  // недостижимо
             }
         } catch (const std::exception& e) {
             LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id
-                        << ": генерация " << (succeeded ? "succeeded" : "failed")
-                        << ", но запись в chat_history не удалась: " << e.what();
+                        << ": исход определён, но запись в chat_history не удалась: " << e.what();
         }
     });
 
@@ -325,12 +404,14 @@ std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(
     }
 
     JobStatus status;
+    bool cancel_requested;
     std::string result_version_id;
     std::string error_message;
     {
         std::unique_lock lock(entry->mutex);
         entry->cv.WaitFor(lock, timeout, [&] { return entry->status != JobStatus::kPending; });
         status = entry->status;
+        cancel_requested = entry->cancel_requested;
         result_version_id = entry->result_version_id;
         error_message = entry->error_message;
     }
@@ -340,7 +421,12 @@ std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(
     job.project_id = project_id;
     switch (status) {
         case JobStatus::kPending:
-            job.status = "pending";
+            // Отмену уже запросили (через CancelGeneration), но фоновая
+            // корутина ещё не завершилась — тот же переходный статус, что
+            // CancelGeneration возвращает сама. Без этой ветки клиент,
+            // опросивший через long-poll ПОСЛЕ чужого cancel, видел бы просто
+            // "pending", будто отмены не было вовсе.
+            job.status = cancel_requested ? "cancelling" : "pending";
             break;
         case JobStatus::kDone:
             job.status = "done";
@@ -349,6 +435,62 @@ std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(
         case JobStatus::kError:
             job.status = "error";
             job.error_message = error_message;
+            break;
+        case JobStatus::kCancelled:
+            job.status = "cancelled";
+            break;
+    }
+    return job;
+}
+
+std::optional<models::GenerationJob> ProjectManagerComponent::CancelGeneration(
+    const std::string& project_id, const std::string& job_id) {
+    std::shared_ptr<JobEntry> entry;
+    {
+        std::lock_guard lock(jobs_mutex_);
+        auto it = jobs_.find(job_id);
+        if (it == jobs_.end() || it->second->project_id != project_id) {
+            return std::nullopt;
+        }
+        entry = it->second;
+    }
+
+    JobStatus status;
+    std::string result_version_id;
+    std::string error_message;
+    {
+        std::lock_guard job_lock(entry->mutex);
+        status = entry->status;
+        if (status == JobStatus::kPending) {
+            entry->cancel_requested = true;
+            if (entry->cancel_token) {
+                entry->cancel_token->RequestCancel();
+            }
+        }
+        result_version_id = entry->result_version_id;
+        error_message = entry->error_message;
+    }
+
+    models::GenerationJob job;
+    job.id = job_id;
+    job.project_id = project_id;
+    switch (status) {
+        case JobStatus::kPending:
+            // Отмена запрошена, но фоновая корутина ещё не успела её
+            // заметить/обработать — финальный статус "cancelled" появится
+            // чуть позже, см. WaitForGeneration.
+            job.status = "cancelling";
+            break;
+        case JobStatus::kDone:
+            job.status = "done";
+            job.result_url = version_storage_.GetVersionUrl(project_id, result_version_id);
+            break;
+        case JobStatus::kError:
+            job.status = "error";
+            job.error_message = error_message;
+            break;
+        case JobStatus::kCancelled:
+            job.status = "cancelled";
             break;
     }
     return job;

@@ -1,4 +1,7 @@
-package com.yandex.avatargenerator.feature.auth.ui
+package com.yandex.avatargenerator.feature.auth.ui.login
+
+import com.yandex.avatargenerator.core.mvi.BaseState
+import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
 
 /**
  * Состояние экрана входа: поля формы и результат последней попытки.
@@ -9,7 +12,7 @@ package com.yandex.avatargenerator.feature.auth.ui
  *
  * @property isSubmitting идёт запрос — блокирует кнопку и меняет её текст.
  */
-internal data class LoginUiState(
+internal data class LoginState(
     val email: String = "",
     val password: String = "",
     val isPasswordVisible: Boolean = false,
@@ -17,17 +20,8 @@ internal data class LoginUiState(
     val emailError: AuthFormError? = null,
     val passwordError: AuthFormError? = null,
     val formError: AuthFormError? = null,
-) {
+) : BaseState {
+
     /** Минимальная валидация: правила пароля и email проверяет сервер. */
     val canSubmit: Boolean get() = email.isNotBlank() && password.isNotBlank() && !isSubmitting
-}
-
-/**
- * Одноразовое событие экрана. Отдаётся через канал, а не через [LoginUiState],
- * чтобы переход не повторялся на каждой рекомпозиции.
- */
-internal sealed interface LoginEvent {
-
-    /** Вход прошёл, токен сохранён — можно уходить в приложение. */
-    data object SignedIn : LoginEvent
 }

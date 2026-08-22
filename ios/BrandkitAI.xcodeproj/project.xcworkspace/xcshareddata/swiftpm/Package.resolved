@@ -1,5 +1,5 @@
 {
-  "originHash" : "e0938c4c6d36bddc3a9928c5a0944be61d9067ed36088e30a5c5a50ad70e2f24",
+  "originHash" : "1be8512eb21a2832fdec29ab19aa1f3380b900252ebc4b379e30a14e9b401a34",
   "pins" : [
     {
       "identity" : "swiftui-introspect",
@@ -25,6 +25,15 @@
       "state" : {
         "revision" : "11ca0d472dad0053cb8b29701ea3f108b9aa2304",
         "version" : "1.0.2"
+      }
+    },
+    {
+      "identity" : "yandex-login-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/yandexmobile/yandex-login-sdk-ios",
+      "state" : {
+        "revision" : "1e83ec1a36e0f417cfa3cbfbb05d8971cba14070",
+        "version" : "3.1.1"
       }
     }
   ],
