@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -76,9 +77,10 @@ fun ProfileHeader(
                     Icon(
                         painter = painterResource(R.drawable.ic_settings),
                         contentDescription = stringResource(R.string.settings_open_description),
-                        // Акцентный фиолетовый, а не белый: на ярком циан-конце градиента
-                        // (правый-верхний угол обложки) белая иконка в тёмной теме блёкнет.
-                        tint = AppColors.Accent,
+                        // В светлой теме — белый: на её приглушённом градиенте он читается.
+                        // В тёмной — акцент: там белая иконка блёкнет на ярком циан-конце
+                        // (правый-верхний угол обложки).
+                        tint = if (AppColors.IsDark) AppColors.Accent else Color.White,
                     )
                 }
             }
