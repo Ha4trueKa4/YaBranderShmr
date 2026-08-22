@@ -134,7 +134,7 @@
 
   .content {
     grid-template-columns: 1fr;
-    padding: var(--space-4) 0;
+    padding: 0 0 var(--space-4);
   }
 
   .avatar {
