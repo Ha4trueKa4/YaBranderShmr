@@ -18,6 +18,10 @@ processors:
   cumulative_to_delta:
   batch:
 
+extensions:
+  health_check:  # Exposes GET /health on 13133 once all pipelines are up — used by the
+    endpoint: 0.0.0.0:13133  # deploy script / compose to gate ya-brander's startup on collector readiness.
+
 exporters:    # Forwarding to Monium
   otlp_grpc/monium:
     compression: zstd
@@ -27,6 +31,7 @@ exporters:    # Forwarding to Monium
       x-monium-project: "${env:MONIUM_PROJECT}"
 
 service:
+  extensions: [ health_check ]
   pipelines:
     metrics:
       receivers: [ otlp, prometheus ]

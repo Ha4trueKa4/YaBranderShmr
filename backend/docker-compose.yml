@@ -94,6 +94,25 @@ services:
       - postgres
       - default
 
+  otel-collector-healthcheck:
+    image: curlimages/curl:8.10.1
+    container_name: service-otel-collector-healthcheck
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        for i in $(seq 1 30); do
+          curl -sf http://otel-collector:13133 >/dev/null 2>&1 && exit 0
+          sleep 1
+        done
+        echo 'otel-collector health check timed out' >&2
+        exit 1
+    restart: "no"
+    depends_on:
+      otel-collector:
+        condition: service_started
+    networks:
+      - default
+
   ya_brander-container:
     image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
     privileged: true
@@ -129,8 +148,8 @@ services:
         condition: service_completed_successfully
       migrate-vector:
         condition: service_completed_successfully
-      otel-collector:
-        condition: service_started
+      otel-collector-healthcheck:
+        condition: service_completed_successfully
     networks:
       - postgres
       - default
