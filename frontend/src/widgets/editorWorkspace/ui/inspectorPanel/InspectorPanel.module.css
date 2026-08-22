@@ -1,10 +1,14 @@
 .panel {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
   color: var(--color-text-primary);
 }
 
 .header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--space-2);
   min-height: 2.5rem;
@@ -24,6 +28,9 @@
 }
 
 .content {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: var(--space-4);
 }
 
