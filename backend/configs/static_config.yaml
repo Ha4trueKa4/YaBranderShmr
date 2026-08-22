@@ -245,6 +245,22 @@ components_manager:
       method: POST
       task_processor: main-task-processor
 
+    handler-auth-method:
+      path: /api/v1/auth/method
+      method: GET
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
+
+    handler-auth-set-password:
+      path: /api/v1/auth/password
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
+
     handler-users-subscribe:
       path: /api/v1/users/{id}/subscribe
       method: POST
