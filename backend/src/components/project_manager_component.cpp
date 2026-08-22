@@ -319,11 +319,36 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
             }
             if (was_cancelled) {
                 outcome = JobStatus::kCancelled;
-                LOG_INFO() << "Generation job " << job_id << " for project_id=" << project_id << " cancelled";
+                // cancel_requested — это флаг "отмену запросили", а не "именно
+                // это исключение вызвано отменой": если поймана НЕ связанная с
+                // отменой ошибка (LLM/S3/БД) в узком окне гонки с конкурентным
+                // CancelGeneration, она будет классифицирована как "cancelled"
+                // и e.what() не попадёт в AppendAssistantError — поэтому
+                // логируем его здесь отдельно, чтобы не потерять для мониторинга.
+                LOG_INFO() << "Generation job " << job_id << " for project_id=" << project_id
+                           << " cancelled (underlying exception: " << e.what() << ")";
             } else {
                 outcome = JobStatus::kError;
                 error_message = e.what();
                 LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
+            }
+        }
+
+        // Слот active_job_by_project_ освобождаем ДО того, как исход станет
+        // видимым снаружи (entry->status + NotifyAll ниже) — иначе клиент,
+        // получивший "done"/"error"/"cancelled" из WaitForGeneration, мог бы
+        // тут же получить спурьезный 409 на новый POST .../generate: его
+        // StartGeneration успел бы проверить active_job_by_project_ раньше,
+        // чем эта же корутина (на отдельном bg-task-processor) дошла бы сюда.
+        // TODO(redis): в редис-версии это должно стать одной атомарной
+        // операцией (Lua-скрипт/MULTI-EXEC: снять active_job:{project_id} и
+        // записать финальный статус job:{job_id} одной транзакцией) — простого
+        // "поменять порядок двух критических секций" через сеть недостаточно.
+        {
+            std::lock_guard lock(jobs_mutex_);
+            auto active_it = active_job_by_project_.find(project_id);
+            if (active_it != active_job_by_project_.end() && active_it->second == job_id) {
+                active_job_by_project_.erase(active_it);
             }
         }
 
@@ -334,14 +359,6 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
             if (outcome == JobStatus::kError) entry->error_message = error_message;
         }
         entry->cv.NotifyAll();
-
-        {
-            std::lock_guard lock(jobs_mutex_);
-            auto active_it = active_job_by_project_.find(project_id);
-            if (active_it != active_job_by_project_.end() && active_it->second == job_id) {
-                active_job_by_project_.erase(active_it);
-            }
-        }
 
         // Без ретраев: при падении реальный исход (версия сохранена / job
         // отменён) не меняется — просто не появится записью в chat_history.
@@ -382,12 +399,14 @@ std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(
     }
 
     JobStatus status;
+    bool cancel_requested;
     std::string result_version_id;
     std::string error_message;
     {
         std::unique_lock lock(entry->mutex);
         entry->cv.WaitFor(lock, timeout, [&] { return entry->status != JobStatus::kPending; });
         status = entry->status;
+        cancel_requested = entry->cancel_requested;
         result_version_id = entry->result_version_id;
         error_message = entry->error_message;
     }
@@ -397,7 +416,12 @@ std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(
     job.project_id = project_id;
     switch (status) {
         case JobStatus::kPending:
-            job.status = "pending";
+            // Отмену уже запросили (через CancelGeneration), но фоновая
+            // корутина ещё не завершилась — тот же переходный статус, что
+            // CancelGeneration возвращает сама. Без этой ветки клиент,
+            // опросивший через long-poll ПОСЛЕ чужого cancel, видел бы просто
+            // "pending", будто отмены не было вовсе.
+            job.status = cancel_requested ? "cancelling" : "pending";
             break;
         case JobStatus::kDone:
             job.status = "done";

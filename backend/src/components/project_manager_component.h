@@ -117,6 +117,23 @@ private:
   ///        shared_ptr, чтобы фоновая корутина и WaitForGeneration могли
   ///        безопасно обращаться к нему независимо от того, жив ли ещё
   ///        соответствующий элемент карты jobs_.
+  //
+  // TODO(redis, multi-instance): все поля ниже сейчас предполагают, что
+  // CancelGeneration/WaitForGeneration и сама фоновая корутина живут в одном
+  // процессе. С несколькими инстансами за балансировщиком это не так:
+  //  - mutex/cv — межпроцессный long-poll на std::condition_variable не
+  //    работает; на Redis это обычно Pub/Sub-канал per job_id (WaitForGeneration
+  //    подписывается и параллельно на всякий случай поллит с таймаутом) либо
+  //    BLPOP/BRPOPLPUSH, а не WaitFor().
+  //  - cancel_token (engine::TaskCancellationToken) — валиден только внутри
+  //    процесса, который реально выполняет корутину. Если запрос POST
+  //    .../cancel прилетел на ДРУГОЙ инстанс, чем тот, что тянет job, вызвать
+  //    RequestCancel() напрямую нельзя — нужно, чтобы владеющий инстанс сам
+  //    подписался на "запрос отмены" (тот же Pub/Sub-канал/публикация
+  //    cancel_requested в Redis) и вызвал RequestCancel() у себя локально.
+  //  - cancel_requested должен читаться не из локальной памяти, а из Redis
+  //    (иначе WaitForGeneration/CancelGeneration на инстансе-не-владельце не
+  //    увидят актуальное значение).
   struct JobEntry {
     std::string project_id;
     std::chrono::steady_clock::time_point created_at = std::chrono::steady_clock::now();
@@ -174,6 +191,12 @@ private:
   ///        ссылки на удаляемый job — иначе зависший job навсегда заблокировал
   ///        бы новые генерации для своего проекта даже после того, как сам он
   ///        уже вычищен из jobs_. Вызывается под jobs_mutex_.
+  //
+  // TODO(redis): при переезде jobs_/active_job_by_project_ на Redis эта
+  // функция должна исчезнуть целиком — вместо ручного скана и удаления по
+  // возрасту используется TTL на ключах (EXPIRE/PEXPIRE при записи, продление
+  // TTL, пока job kPending), Redis чистит протухшие записи сам. Сохранять её
+  // "просто на всякий случай" не нужно — TTL и есть замена, а не дополнение.
   void PruneOldJobsLocked();
 
   userver::storages::postgres::ClusterPtr pg_cluster_;
@@ -181,6 +204,19 @@ private:
   LLMClientComponent& llm_client_;
   PromptConstructorComponent& prompt_constructor_;
 
+  // TODO(redis, multi-instance): jobs_/active_job_by_project_/jobs_mutex_ —
+  // вся эта пара карт in-process и не переживает ни рестарт процесса, ни
+  // наличие второго инстанса за балансировщиком (каждый видит только свои
+  // job'ы). Целевая схема на Redis:
+  //   job:{job_id}          — хэш {project_id, status, result_version_id,
+  //                            error_message, created_at}, TTL = kJobRetention
+  //                            (или kStuckPendingRetention, пока pending)
+  //   active_job:{project_id} — job_id активного job'а, TTL как у job:{job_id}
+  // "Не больше одной активной генерации на проект" на Redis — это
+  // SET active_job:{project_id} {job_id} NX (атомарный check-and-reserve одной
+  // командой, замена связки "find + emplace под одним mutex" ниже). Освобождать
+  // слот — DEL active_job:{project_id}, тоже одной командой, без раздельных
+  // критических секций (см. TODO у блока erase/NotifyAll в .cpp).
   userver::engine::Mutex jobs_mutex_;
   std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
 
@@ -198,6 +234,13 @@ private:
   // CancellableSemaphore, а не Semaphore: последний игнорирует отмену
   // корутины, из-за чего CancelGeneration не смог бы прервать job, стоящий в
   // очереди на этот семафор.
+  //
+  // TODO(multi-instance): этот семафор ограничивает параллелизм ТОЛЬКО в
+  // рамках одного процесса. С N инстансами реальный параллелизм обращений к
+  // LLM/S3 может дорасти до N * kMaxConcurrentGenerations. Если лимит должен
+  // быть общим на всё приложение (а не per-instance) — нужен распределённый
+  // семафор (например, Redis-based token bucket/leases), иначе просто
+  // уменьшите kMaxConcurrentGenerations на инстанс с расчётом на N инстансов.
   userver::engine::CancellableSemaphore generation_semaphore_;
 
   // Должен быть объявлен последним: при разрушении компонента фоновые задачи
