@@ -103,6 +103,9 @@ services:
       - YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}
       - YANDEX_OAUTH_CLIENT_SECRET=${YANDEX_OAUTH_CLIENT_SECRET}
       - GC_ENABLED=${GC_ENABLED}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - MONIUM_PROJECT=${MONIUM_PROJECT}
+      - MONIUM_API_KEY=${MONIUM_API_KEY}
     volumes:
       - .:/ya_brander:rw
       - ${TC_CORES_DIR:-./.cores}:/cores:rw
