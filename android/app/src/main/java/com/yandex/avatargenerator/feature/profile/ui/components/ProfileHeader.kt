@@ -1,9 +1,12 @@
 package com.yandex.avatargenerator.feature.profile.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -14,9 +17,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
 import com.yandex.avatargenerator.ui.components.BrandAvatar
+import com.yandex.avatargenerator.ui.components.avatarInitials
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandSecondaryButton
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -41,6 +47,8 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
  *
  * @param onActionClick клик по кнопке: для чужого профиля — подписка/отписка,
  *   для своего — переход к редактированию профиля.
+ * @param onFollowersClick тап по счётчику подписчиков — открыть список.
+ * @param onFollowingClick тап по счётчику подписок — открыть список.
  * @param onOpenSettings открыть настройки; задаётся только для своего профиля —
  *   тогда в правом верхнем углу обложки показывается кнопка-шестерёнка.
  */
@@ -49,6 +57,8 @@ fun ProfileHeader(
     profile: UserProfile,
     isOwnProfile: Boolean,
     onActionClick: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit,
     onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -57,7 +67,7 @@ fun ProfileHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Cover(avatarUrl = profile.avatarUrl, initials = initials(profile.displayName))
+            Cover(avatarUrl = profile.avatarUrl, initials = avatarInitials(profile.displayName))
             if (isOwnProfile && onOpenSettings != null) {
                 IconButton(
                     onClick = onOpenSettings,
@@ -68,9 +78,10 @@ fun ProfileHeader(
                     Icon(
                         painter = painterResource(R.drawable.ic_settings),
                         contentDescription = stringResource(R.string.settings_open_description),
-                        // Акцентный фиолетовый, а не белый: на ярком циан-конце градиента
-                        // (правый-верхний угол обложки) белая иконка в тёмной теме блёкнет.
-                        tint = AppColors.Accent,
+                        // В светлой теме — белый: на её приглушённом градиенте он читается.
+                        // В тёмной — акцент: там белая иконка блёкнет на ярком циан-конце
+                        // (правый-верхний угол обложки).
+                        tint = if (AppColors.IsDark) AppColors.Accent else Color.White,
                     )
                 }
             }
@@ -101,6 +112,8 @@ fun ProfileHeader(
                 projects = profile.projectsCount,
                 followers = profile.followersCount,
                 following = profile.followingCount,
+                onFollowersClick = onFollowersClick,
+                onFollowingClick = onFollowingClick,
             )
 
             ProfileActionButton(
@@ -116,7 +129,7 @@ fun ProfileHeader(
 
 /** Градиентная обложка с [BrandAvatar], наезжающим на её нижний край. */
 @Composable
-private fun Cover(avatarUrl: String?, initials: String, modifier: Modifier = Modifier) {
+private fun Cover(avatarUrl: String?, initials: String?, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -161,19 +174,61 @@ private fun NameBlock(displayName: String, handle: String?, modifier: Modifier =
     }
 }
 
-/** «8 Projects · 1.2K Followers · 45 Following». */
+/**
+ * «8 Projects · 1.2K Followers · 45 Following». Followers и Following кликабельны
+ * (ведут на списки подписчиков/подписок) — поэтому не одна строка, а сегменты:
+ * тап нужен ровно по счётчику, а не по всей строке.
+ */
 @Composable
-private fun StatsRow(projects: Int, followers: Int, following: Int, modifier: Modifier = Modifier) {
-    Text(
+private fun StatsRow(
+    projects: Int,
+    followers: Int,
+    following: Int,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val style = AppTypography.label.copy(
+        color = AppColors.TextPrimary,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Row(
         modifier = modifier,
-        text = stringResource(R.string.profile_stats, projects, formatCount(followers), following),
-        style = AppTypography.label.copy(
-            color = AppColors.TextPrimary,
-            fontWeight = FontWeight.SemiBold,
-        ),
-        textAlign = TextAlign.Center,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = stringResource(R.string.profile_stat_projects, projects), style = style)
+        StatSeparator()
+        Text(
+            text = stringResource(R.string.profile_stat_followers, formatCount(followers)),
+            style = style,
+            modifier = Modifier.statClickable(onFollowersClick),
+        )
+        StatSeparator()
+        Text(
+            text = stringResource(R.string.profile_stat_following, following),
+            style = style,
+            modifier = Modifier.statClickable(onFollowingClick),
+        )
+    }
+}
+
+@Composable
+private fun StatSeparator() {
+    Text(
+        text = stringResource(R.string.profile_stat_separator),
+        style = AppTypography.label.copy(color = AppColors.TextMuted, fontWeight = FontWeight.SemiBold),
+        modifier = Modifier.padding(horizontal = AppSpacing.xxs),
     )
 }
+
+/** Кликабельный счётчик без ripple: подсветка на инлайновом тексте выглядит грязно. */
+@Composable
+private fun Modifier.statClickable(onClick: () -> Unit): Modifier = clickable(
+    interactionSource = remember { MutableInteractionSource() },
+    indication = null,
+    onClick = onClick,
+)
 
 /**
  * Кнопка действия шапки, три вида по макету, все — из дизайн-системы:
@@ -206,16 +261,6 @@ private fun ProfileActionButton(
             onClick = onClick,
             modifier = modifier,
         )
-    }
-}
-
-/** Инициалы для плейсхолдера аватара: «Sarah Chen» → «SC», «Prince» → «P». */
-private fun initials(displayName: String): String {
-    val parts = displayName.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    return when {
-        parts.isEmpty() -> ""
-        parts.size == 1 -> parts.first().take(1)
-        else -> "${parts.first().first()}${parts.last().first()}"
     }
 }
 

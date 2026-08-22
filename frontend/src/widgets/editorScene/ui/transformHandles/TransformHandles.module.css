@@ -1,0 +1,50 @@
+.sideHitArea {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.rotatedSideHitArea {
+  pointer-events: stroke;
+  stroke: transparent;
+  vector-effect: non-scaling-stroke;
+}
+
+.north,
+.south {
+  cursor: ns-resize;
+}
+
+.east,
+.west {
+  cursor: ew-resize;
+}
+
+.cornerHandle,
+.rotationHandle circle {
+  fill: var(--color-surface-elevated);
+  pointer-events: all;
+  stroke: #4096f2;
+  vector-effect: non-scaling-stroke;
+}
+
+.northWest,
+.southEast {
+  cursor: nwse-resize;
+}
+
+.southWest {
+  cursor: nesw-resize;
+}
+
+.rotationHandle {
+  cursor: pointer;
+}
+
+.rotationHandle path {
+  fill: none;
+  pointer-events: none;
+  stroke: #4096f2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}

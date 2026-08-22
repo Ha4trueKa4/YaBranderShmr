@@ -44,6 +44,8 @@ import org.koin.core.parameter.parametersOf
  *
  * @param onProjectClick открыть проект по id.
  * @param onActionClick клик по кнопке шапки (Follow / Edit profile).
+ * @param onOpenFollowers открыть список подписчиков этого профиля.
+ * @param onOpenFollowing открыть список подписок этого профиля.
  * @param onOpenSettings открыть настройки; задаётся только для своего профиля —
  *   тогда в правом верхнем углу показывается кнопка-шестерёнка.
  */
@@ -53,6 +55,8 @@ fun ProfileScreen(
     isOwnProfile: Boolean,
     onProjectClick: (projectId: String) -> Unit,
     onActionClick: () -> Unit,
+    onOpenFollowers: () -> Unit,
+    onOpenFollowing: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
     viewModel: ProfileViewModel = koinViewModel { parametersOf(userId, isOwnProfile) },
@@ -83,6 +87,8 @@ fun ProfileScreen(
                     onActionClick = {
                         if (current.isOwnProfile) onActionClick() else viewModel.toggleFollow()
                     },
+                    onOpenFollowers = onOpenFollowers,
+                    onOpenFollowing = onOpenFollowing,
                     onOpenSettings = onOpenSettings,
                 )
         }
@@ -94,6 +100,8 @@ private fun ProfileContent(
     state: ProfileUiState.Content,
     onProjectClick: (String) -> Unit,
     onActionClick: () -> Unit,
+    onOpenFollowers: () -> Unit,
+    onOpenFollowing: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
 ) {
@@ -106,6 +114,8 @@ private fun ProfileContent(
                 profile = state.profile,
                 isOwnProfile = state.isOwnProfile,
                 onActionClick = onActionClick,
+                onFollowersClick = onOpenFollowers,
+                onFollowingClick = onOpenFollowing,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.bleedHorizontally(AppSpacing.m),
             )

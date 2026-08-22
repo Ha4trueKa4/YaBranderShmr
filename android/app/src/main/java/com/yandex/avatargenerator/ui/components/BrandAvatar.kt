@@ -70,6 +70,19 @@ fun BrandAvatar(
     }
 }
 
+/**
+ * Инициалы для плейсхолдера [BrandAvatar]: «Sarah Chen» → «SC», «Prince» → «P».
+ * Пустое имя — `null`: аватар уходит на градиентную заглушку, а не на пустую плашку.
+ */
+fun avatarInitials(name: String): String? {
+    val parts = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    return when {
+        parts.isEmpty() -> null
+        parts.size == 1 -> parts.first().take(1).uppercase()
+        else -> "${parts.first().first()}${parts.last().first()}".uppercase()
+    }
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
 @Composable
 private fun BrandAvatarPreview() {

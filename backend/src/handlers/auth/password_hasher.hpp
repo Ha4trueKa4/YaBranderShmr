@@ -7,6 +7,8 @@ class PasswordHasher {
 public:
     static std::string Hash(const std::string& password);
     static bool Verify(const std::string& password, const std::string& stored_hash);
+    // 8-128 символов, обязательно хотя бы одна буква и одна цифра.
+    static bool IsValidPassword(const std::string& password);
 
 private:
     static constexpr int kIterations = 100000;

@@ -53,6 +53,7 @@ import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectRela
 import com.yandex.avatargenerator.feature.project.ui.components.PublicProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.util.publishedLabel
 import com.yandex.avatargenerator.ui.components.BrandAvatar
+import com.yandex.avatargenerator.ui.components.avatarInitials
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTonalButton
@@ -313,7 +314,7 @@ private fun PublicProjectAuthorRow(
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BrandAvatar(size = 40.dp, imageUrl = author.avatarUrl, initials = author.name)
+            BrandAvatar(size = 40.dp, imageUrl = author.avatarUrl, initials = avatarInitials(author.name))
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = author.name,

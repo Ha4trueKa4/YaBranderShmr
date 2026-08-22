@@ -11,6 +11,11 @@
   text-transform: uppercase;
 }
 
+.transformProperties {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .field {
   display: grid;
   gap: var(--space-1);

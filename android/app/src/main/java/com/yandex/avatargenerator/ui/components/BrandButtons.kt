@@ -32,11 +32,15 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 /** Общие размеры кнопок дизайн-системы — на них завязывают отступы соседних элементов. */
 object BrandButtonDefaults {
     val Height = 48.dp
+
+    /** Компактная высота — для кнопок внутри строк списка (Follow/Unfollow и т.п.). */
+    val CompactHeight = 36.dp
 }
 
 /**
  * Основная кнопка призыва к действию (см. "01 · Buttons" в Component Sandbox).
  * @param fullWidth растянуть на всю доступную ширину — вариант "Get Started (Full-Width)".
+ * @param compact уменьшенная высота/паддинги — для кнопки внутри строки списка.
  * @param leadingIcon значок перед текстом; цвет наследуется от `contentColor` кнопки.
  */
 @Composable
@@ -46,6 +50,7 @@ fun BrandPrimaryButton(
     modifier: Modifier = Modifier,
     fullWidth: Boolean = false,
     enabled: Boolean = true,
+    compact: Boolean = false,
     leadingIcon: (@Composable () -> Unit)? = null
 ) {
     Material3Button(
@@ -53,19 +58,24 @@ fun BrandPrimaryButton(
         enabled = enabled,
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(BrandButtonDefaults.Height),
-        shape = RoundedCornerShape(AppShape.l),
+            .height(if (compact) BrandButtonDefaults.CompactHeight else BrandButtonDefaults.Height),
+        shape = RoundedCornerShape(if (compact) AppShape.s else AppShape.l),
         colors = ButtonDefaults.buttonColors(
             containerColor = AppColors.Accent,
             contentColor = AppColors.OnAccent
         ),
-        contentPadding = PaddingValues(horizontal = AppSpacing.l)
+        contentPadding = PaddingValues(horizontal = if (compact) AppSpacing.m else AppSpacing.l)
     ) {
         if (leadingIcon != null) {
             leadingIcon()
             Spacer(modifier = Modifier.width(AppSpacing.xs))
         }
-        Text(text = text, color = AppColors.OnAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = text,
+            color = AppColors.OnAccent,
+            fontSize = if (compact) 14.sp else 15.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -109,29 +119,38 @@ fun BrandTonalButton(
     }
 }
 
-/** Второстепенная (outline) кнопка — "Secondary Action" в макете. */
+/**
+ * Второстепенная (outline) кнопка — "Secondary Action" в макете.
+ * @param compact уменьшенная высота/паддинги — для кнопки внутри строки списка.
+ */
 @Composable
 fun BrandSecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     fullWidth: Boolean = false,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    compact: Boolean = false,
 ) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(BrandButtonDefaults.Height),
-        shape = RoundedCornerShape(AppShape.l),
+            .height(if (compact) BrandButtonDefaults.CompactHeight else BrandButtonDefaults.Height),
+        shape = RoundedCornerShape(if (compact) AppShape.s else AppShape.l),
         border = BorderStroke(1.5.dp, AppColors.Accent),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = AppColors.Accent
         ),
-        contentPadding = PaddingValues(horizontal = AppSpacing.l)
+        contentPadding = PaddingValues(horizontal = if (compact) AppSpacing.m else AppSpacing.l)
     ) {
-        Text(text = text, color = AppColors.Accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = text,
+            color = AppColors.Accent,
+            fontSize = if (compact) 14.sp else 15.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

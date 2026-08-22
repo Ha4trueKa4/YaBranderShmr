@@ -8,6 +8,7 @@ import { TextProperties } from './textProperties/TextProperties'
 
 interface InspectorPanelProps {
   definitions?: EditorDefinitions
+  measuredRotationCenter?: { x: number; y: number }
   onShapeFillChange: (nodeId: string, color: string) => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
@@ -19,10 +20,25 @@ interface InspectorPanelProps {
   ) => void
   onShapeOpacityChange: (nodeId: string, opacity: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onShapeRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
   onShapeStrokeAdd: (nodeId: string) => void
   onShapeStrokeColorChange: (nodeId: string, color: string) => void
   onShapeStrokeRemove: (nodeId: string) => void
   onShapeStrokeWidthChange: (nodeId: string, strokeWidth: number) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
   onTextAnchorChange: (
     nodeId: string,
     textAnchor: 'end' | 'middle' | 'start',
@@ -37,6 +53,21 @@ interface InspectorPanelProps {
   ) => void
   onTextFontWeightChange: (nodeId: string, fontWeight: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
+  onTextRotationChange: (
+    nodeId: string,
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
+  onTextTransformChange: (
+    nodeId: string,
+    transform: {
+      rotationCenter?: { x: number; y: number }
+      scaleX: number
+      scaleY: number
+      x: number
+      y: number
+    },
+  ) => void
   selectedNode: EditorNode | null
   showHeader?: boolean
 }
@@ -63,6 +94,7 @@ function InspectorHeader({
 
 export function InspectorPanel({
   definitions,
+  measuredRotationCenter,
   onShapeFillChange,
   onEyeDropperEnd,
   onEyeDropperStart,
@@ -70,10 +102,12 @@ export function InspectorPanel({
   onGradientStopColorChange,
   onShapeOpacityChange,
   onShapePositionChange,
+  onShapeRotationChange,
   onShapeStrokeAdd,
   onShapeStrokeColorChange,
   onShapeStrokeRemove,
   onShapeStrokeWidthChange,
+  onShapeTransformChange,
   onTextAnchorChange,
   onTextContentChange,
   onTextFillColorChange,
@@ -82,6 +116,8 @@ export function InspectorPanel({
   onTextFontStyleChange,
   onTextFontWeightChange,
   onTextPositionChange,
+  onTextRotationChange,
+  onTextTransformChange,
   selectedNode,
   showHeader = true,
 }: InspectorPanelProps) {
@@ -140,6 +176,7 @@ export function InspectorPanel({
           <ShapeProperties
             definitions={definitions}
             layer={selectedNode}
+            measuredRotationCenter={measuredRotationCenter}
             onFillChange={(color) => onShapeFillChange(selectedNode.id, color)}
             onEyeDropperEnd={onEyeDropperEnd}
             onEyeDropperStart={onEyeDropperStart}
@@ -155,6 +192,9 @@ export function InspectorPanel({
             onPositionChange={(x, y) =>
               onShapePositionChange(selectedNode.id, x, y)
             }
+            onRotationChange={(rotation, rotationCenter) =>
+              onShapeRotationChange(selectedNode.id, rotation, rotationCenter)
+            }
             onStrokeAdd={() => onShapeStrokeAdd(selectedNode.id)}
             onStrokeColorChange={(color) =>
               onShapeStrokeColorChange(selectedNode.id, color)
@@ -162,6 +202,9 @@ export function InspectorPanel({
             onStrokeRemove={() => onShapeStrokeRemove(selectedNode.id)}
             onStrokeWidthChange={(strokeWidth) =>
               onShapeStrokeWidthChange(selectedNode.id, strokeWidth)
+            }
+            onTransformChange={(transform) =>
+              onShapeTransformChange(selectedNode.id, transform)
             }
           />
         </div>
@@ -178,6 +221,7 @@ export function InspectorPanel({
       <div className={styles.content}>
         <TextProperties
           layer={selectedNode}
+          measuredRotationCenter={measuredRotationCenter}
           onAnchorChange={(textAnchor) =>
             onTextAnchorChange(selectedNode.id, textAnchor)
           }
@@ -201,6 +245,12 @@ export function InspectorPanel({
           }
           onPositionChange={(x, y) =>
             onTextPositionChange(selectedNode.id, x, y)
+          }
+          onRotationChange={(rotation, rotationCenter) =>
+            onTextRotationChange(selectedNode.id, rotation, rotationCenter)
+          }
+          onTransformChange={(transform) =>
+            onTextTransformChange(selectedNode.id, transform)
           }
         />
       </div>

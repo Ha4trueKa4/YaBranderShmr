@@ -17,6 +17,8 @@
 #include "./handlers/auth/login_handler.hpp"
 #include "./handlers/auth/register_handler.hpp"
 #include "./handlers/auth/yandex_oauth_handler.hpp"
+#include "./handlers/auth/auth_method_handler.hpp"
+#include "./handlers/auth/set_password_handler.hpp"
 #include "handlers/check/check.hpp"
 #include "handlers/get_models/get_models.hpp"
 #include "handlers/projects/append_projects.h"
@@ -33,6 +35,7 @@
 #include "handlers/feed/get_feed.h"
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "handlers/test_vector_search/test_vector_search_handler.hpp"
+#include "components/garbage_collector/garbage_collector_component.hpp"
 
 int main(int argc, char* argv[]) {
     userver::server::handlers::auth::RegisterAuthCheckerFactory<ya_brander::auth::CheckerFactory>();
@@ -49,6 +52,8 @@ int main(int argc, char* argv[]) {
             .Append<ya_brander::auth::LoginHandler>()
             .Append<ya_brander::auth::RegisterHandler>()
             .Append<ya_brander::auth::YandexOAuthHandler>()
+            .Append<ya_brander::auth::AuthMethodHandler>()
+            .Append<ya_brander::auth::SetPasswordHandler>()
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-vector-db")
             .Append<userver::components::Postgres>("postgres-db-1")
@@ -64,8 +69,9 @@ int main(int argc, char* argv[]) {
             // Регистрация модулей когда будут готовы
             .Append<ya_brander::components::S3ObjectStorageComponent>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-            .Append<ya_brander::components::SubscriptionStorageComponent>()
-            .Append<ya_brander::components::PromptPolisherComponent>();
+            .Append<ya_brander::components::PromptPolisherComponent>()
+			.Append<ya_brander::components::SubscriptionStorageComponent>()
+            .Append<ya_brander::components::GarbageCollectorComponent>();
 
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);

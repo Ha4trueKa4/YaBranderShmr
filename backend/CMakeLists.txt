@@ -67,6 +67,10 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/password_hasher.cpp
         src/handlers/auth/yandex_oauth_handler.hpp
         src/handlers/auth/yandex_oauth_handler.cpp
+        src/handlers/auth/auth_method_handler.hpp
+        src/handlers/auth/auth_method_handler.cpp
+        src/handlers/auth/set_password_handler.hpp
+        src/handlers/auth/set_password_handler.cpp
         src/components/auth_checker.hpp
         src/components/auth_checker.cpp
         src/components/project_manager_component.cpp
@@ -118,6 +122,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/test_llm_handler/test_polisher_handler.cpp
         src/utils/errors.hpp
         src/utils/errors.cpp
+        src/components/garbage_collector/garbage_collector_component.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC

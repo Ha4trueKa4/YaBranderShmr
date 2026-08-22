@@ -67,8 +67,19 @@ sealed class Destination(val route: String) {
         fun createRoute(userId: String): String = "user/${Uri.encode(userId)}"
     }
 
+    /**
+     * Подписчики/подписки пользователя. Открывается с профиля по тапу на счётчик.
+     * Аргументы — id пользователя и стартовая вкладка (`followers`/`following`,
+     * см. `SubscriptionsTab.slug`).
+     */
+    data object Subscriptions : Destination("subscriptions/{$ARG_USER_ID}/{$ARG_SUBSCRIPTIONS_TAB}") {
+        fun createRoute(userId: String, tabSlug: String): String =
+            "subscriptions/${Uri.encode(userId)}/${Uri.encode(tabSlug)}"
+    }
+
     companion object {
         const val ARG_PROJECT_ID = "projectId"
         const val ARG_USER_ID = "userId"
+        const val ARG_SUBSCRIPTIONS_TAB = "tab"
     }
 }

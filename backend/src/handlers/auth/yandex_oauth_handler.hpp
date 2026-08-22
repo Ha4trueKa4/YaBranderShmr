@@ -34,6 +34,11 @@ private:
 
     std::string ExchangeCodeForToken(const std::string& code) const;
     YandexProfile FetchProfile(const std::string& access_token) const;
+    // SDK-флоу: access_token уже финальный, менять на других хостах нечего.
+    // login.yandex.ru/info?format=jwt отдаёт профиль как JWT, подписанный
+    // client_secret'ом приложения — проверяем подпись и exp локально, без
+    // похода в oauth.yandex.ru/token.
+    YandexProfile FetchProfileFromJwt(const std::string& access_token) const;
     UserRecord FindOrCreateUser(const YandexProfile& profile) const;
 
     userver::storages::postgres::ClusterPtr pg_cluster_;

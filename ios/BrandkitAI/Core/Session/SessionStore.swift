@@ -125,7 +125,11 @@ final class SessionStore {
                 guard store.save(response.accessToken) else {
                     throw NetworkError.tokenStorageError
                 }
-                self.currentUserService.save(id: response.user.id, name: response.user.nickname)
+                self.currentUserService.save(
+                    id: response.user.id,
+                    name: response.user.nickname,
+                    email: response.user.email
+                )
                 self.lastSuccessfulOperation = operation
                 self.state = .signedIn
                 self.isLoading = false
