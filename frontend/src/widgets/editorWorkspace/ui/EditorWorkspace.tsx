@@ -299,6 +299,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           {...inspectorProps}
           activeTool={activeTool}
           canEdit={canEdit}
+          canRedo={editorStore.canRedo}
+          canUndo={editorStore.canUndo}
           isCreatingProjectCopy={isCreatingCopy}
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
@@ -312,12 +314,13 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onOpenColorPicker={handleOpenMobileColorPicker}
           onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
+          onRedo={handleRedo}
           onSaveVersion={saveVersion}
           onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
+          onUndo={handleUndo}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
-          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
           zoom={zoom}

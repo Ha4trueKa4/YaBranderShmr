@@ -14,6 +14,8 @@ interface EditorMobileLayoutProps
   extends ComponentProps<typeof InspectorPanel> {
   activeTool: CanvasTool
   canEdit: boolean
+  canRedo: boolean
+  canUndo: boolean
   isCreatingProjectCopy: boolean
   isSavingVersion: boolean
   isPropertiesOpen: boolean
@@ -26,13 +28,14 @@ interface EditorMobileLayoutProps
   onOpenProperties: () => void
   onOpenVersionHistory: () => void
   onOpenColorPicker: () => void
+  onRedo: () => void
   onDoneColorPicker: () => void
   onSaveVersion: () => void
   onDoneProperties: () => void
   onToolChange: (tool: CanvasTool) => void
+  onUndo: () => void
   onZoomIn: () => void
   onZoomOut: () => void
-  onZoomReset: () => void
   projectName: string
   scene: ReactNode
   zoom: number
@@ -55,6 +58,8 @@ function getFillColor(
 export function EditorMobileLayout({
   activeTool,
   canEdit,
+  canRedo,
+  canUndo,
   isCreatingProjectCopy,
   isSavingVersion,
   isPropertiesOpen,
@@ -67,13 +72,14 @@ export function EditorMobileLayout({
   onOpenProperties,
   onOpenVersionHistory,
   onOpenColorPicker,
+  onRedo,
   onDoneColorPicker,
   onSaveVersion,
   onDoneProperties,
   onToolChange,
+  onUndo,
   onZoomIn,
   onZoomOut,
-  onZoomReset,
   projectName,
   scene,
   selectedNode,
@@ -159,10 +165,13 @@ export function EditorMobileLayout({
         <>
           <MobileCanvasControls
             activeTool={activeTool}
+            canRedo={canRedo}
+            canUndo={canUndo}
             onToolChange={onToolChange}
+            onRedo={onRedo}
+            onUndo={onUndo}
             onZoomIn={onZoomIn}
             onZoomOut={onZoomOut}
-            onZoomReset={onZoomReset}
             zoom={zoom}
           />
           <button
