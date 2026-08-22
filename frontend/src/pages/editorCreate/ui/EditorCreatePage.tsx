@@ -24,7 +24,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Footer } from '@widgets/footer'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -51,9 +51,13 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     isGeneratingProjectPending
   const generationDraft = generationProcessStore.draft
   const generationAbortControllerRef = useRef<AbortController | null>(null)
+  const [cancelledDraft, setCancelledDraft] = useState<ProjectDraft | null>(
+    null,
+  )
 
   const startGeneration = useCallback(
     async (draft: ProjectDraft) => {
+      setCancelledDraft(null)
       const controller = new AbortController()
       generationAbortControllerRef.current = controller
       generationProcessStore.begin(draft)
@@ -183,6 +187,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       } finally {
         if (controller.signal.aborted) {
           pendingGenerationStore.take()
+          setCancelledDraft(draft)
         }
 
         if (generationAbortControllerRef.current === controller) {
@@ -195,6 +200,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   )
 
   function handleGenerate(draft: ProjectDraft) {
+    setCancelledDraft(null)
+
     if (!isAuthorized) {
       pendingGenerationStore.save(draft)
       navigate('/auth', { viewTransition: true })
@@ -242,6 +249,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           />
         ) : (
           <EditorEmptyState
+            initialDescription={cancelledDraft?.description}
+            initialModel={cancelledDraft?.model}
             onGenerate={handleGenerate}
             onUnauthorizedModelSelect={
               isAuthorized ? undefined : handleUnauthorizedModelSelect
