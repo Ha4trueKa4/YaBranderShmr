@@ -126,12 +126,27 @@ paths:
     post:
       summary: Вход/регистрация через Yandex ID
       description: >
-        Обменивает authorization code, полученный фронтом от Yandex ID
-        (OAuth), на профиль пользователя и выдаёт собственный JWT. Если
-        пользователь с таким email уже зарегистрирован по паролю — Yandex ID
-        привязывается к существующему аккаунту (после этого вход возможен
-        обоими способами). Если такого пользователя нет — создаётся новый,
-        без пароля (password_hash = NULL).
+        Единая точка входа для обоих Yandex ID флоу — веб (redirect) и
+        мобильный/десктопный SDK. Тело запроса — либо {code}, либо
+        {access_token}, ровно одно из двух (см. YandexAuthRequest).
+
+
+        code — веб-флоу: бэкенд сам меняет code на access_token на
+        oauth.yandex.ru/token (Basic client_id:client_secret), затем
+        забирает профиль через GET login.yandex.ru/info?format=json.
+
+
+        access_token — SDK-флоу: клиент уже получил финальный access_token
+        через нативный Yandex ID SDK, менять его не на что. Бэкенд идёт
+        только в GET login.yandex.ru/info?format=jwt — Яндекс отдаёт профиль
+        как JWT, подписанный client_secret приложения, и бэкенд проверяет
+        подпись/exp локально, без дополнительного похода в oauth.yandex.ru.
+
+
+        В обоих случаях дальше общая логика: по provider_id/email ищется
+        существующий пользователь либо создаётся новый без пароля
+        (password_hash = NULL). Если email уже занят другим аккаунтом без
+        привязанного provider — см. 409, автолинковки нет намеренно.
       tags: [ Auth ]
       requestBody:
         required: true
@@ -141,25 +156,25 @@ paths:
               $ref: '#/components/schemas/YandexAuthRequest'
       responses:
         '200':
-          description: Успешный вход (существующий или только что привязанный аккаунт)
+          description: Успешный вход (существующий или только что созданный аккаунт)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
           description: >
-            Не передан code, либо Yandex-приложение не запросило скоуп
-            login:email и профиль пришёл без email.
+            Не передано ни code, ни access_token, либо Yandex-приложение не
+            запросило скоуп login:email и профиль пришёл без email.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
               examples:
-                MissingCode:
-                  summary: Не передан code
+                MissingCredential:
+                  summary: Не передан ни code, ни access_token
                   value:
-                    code: "INVALID_CODE"
-                    message: "Authorization code is required"
+                    code: "INVALID_REQUEST"
+                    message: "Either code or access_token is required"
                 MissingEmailScope:
                   summary: Yandex-приложение не запросило email
                   value:
@@ -181,7 +196,10 @@ paths:
                 code: "EMAIL_EXISTS"
                 message: "This email is already registered with a password. Log in with your password and link Yandex ID from account settings."
         '502':
-          description: Yandex OAuth API недоступен, code невалиден/просрочен, либо не удалось получить профиль
+          description: >
+            Yandex API недоступен, code невалиден/просрочен, access_token
+            невалиден/просрочен/подпись JWT не сходится, либо не удалось
+            получить профиль.
           content:
             application/json:
               schema:
@@ -1143,14 +1161,27 @@ components:
           example: "StrongPassword123!"
 
     YandexAuthRequest:
-      type: object
-      required:
-        - code
-      properties:
-        code:
-          type: string
-          description: Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
-          example: "7677812"
+      description: >
+        Ровно одно из полей: code — веб-флоу (redirect), access_token —
+        SDK-флоу (мобильный/десктопный нативный Yandex ID SDK).
+      oneOf:
+        - type: object
+          required: [ code ]
+          properties:
+            code:
+              type: string
+              description: Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
+              example: "7677812"
+        - type: object
+          required: [ access_token ]
+          properties:
+            access_token:
+              type: string
+              description: >
+                Финальный OAuth-токен, полученный нативным Yandex ID SDK.
+                Бэкенд не меняет его на другой — идёт напрямую в
+                login.yandex.ru/info?format=jwt.
+              example: "y0_AgAAAAAB1234..."
 
     AuthMethodResponse:
       type: object
