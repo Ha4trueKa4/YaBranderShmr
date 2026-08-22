@@ -128,6 +128,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsMobileInspectorOpen(true)
   }
 
+  function handleOpenMobileColorPicker() {
+    editorStore.beginHistoryTransaction()
+  }
+
   function handleDoneMobileProperties() {
     editorStore.commitHistoryTransaction()
     setIsMobileInspectorOpen(false)
@@ -273,7 +277,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
           onDoneColorPicker={handleDoneMobileProperties}
-          onOpenColorPicker={handleOpenMobileProperties}
+          onOpenColorPicker={handleOpenMobileColorPicker}
           onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onSaveVersion={saveVersion}

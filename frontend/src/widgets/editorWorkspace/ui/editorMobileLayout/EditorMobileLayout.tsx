@@ -84,6 +84,7 @@ export function EditorMobileLayout({
   const hasSelection = Boolean(selectedNode)
   const canDeleteSelection = Boolean(selectedNode && !selectedNode.isLocked)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
+  const [isPropertiesSheetHidden, setIsPropertiesSheetHidden] = useState(false)
   const fillColor = getFillColor(selectedNode)
 
   function handleFillChange(color: string) {
@@ -111,6 +112,24 @@ export function EditorMobileLayout({
   function handleCancelColorPicker() {
     onCancelColorPicker()
     setIsColorPickerOpen(false)
+  }
+
+  function handleEyeDropperStart() {
+    setIsColorPickerOpen(false)
+    setIsPropertiesSheetHidden(true)
+  }
+
+  function handleEyeDropperEnd() {
+    setIsColorPickerOpen(true)
+    setIsPropertiesSheetHidden(false)
+  }
+
+  function handlePropertiesEyeDropperStart() {
+    setIsPropertiesSheetHidden(true)
+  }
+
+  function handlePropertiesEyeDropperEnd() {
+    setIsPropertiesSheetHidden(false)
   }
 
   return (
@@ -172,13 +191,15 @@ export function EditorMobileLayout({
                 </button>
               </>
             }
-            isOpen={isPropertiesOpen}
+            isOpen={isPropertiesOpen && !isPropertiesSheetHidden}
             onClose={onCancelProperties}
             showCloseButton={false}
             title={t('Element properties')}
           >
             <InspectorPanel
               {...inspectorProps}
+              onEyeDropperEnd={handlePropertiesEyeDropperEnd}
+              onEyeDropperStart={handlePropertiesEyeDropperStart}
               selectedNode={selectedNode}
               showHeader={false}
             />
@@ -209,7 +230,12 @@ export function EditorMobileLayout({
               title={t('Fill color')}
             >
               <div className={styles.colorPickerContent}>
-                <ColorPicker color={fillColor} onChange={handleFillChange} />
+                <ColorPicker
+                  color={fillColor}
+                  onChange={handleFillChange}
+                  onEyeDropperEnd={handleEyeDropperEnd}
+                  onEyeDropperStart={handleEyeDropperStart}
+                />
               </div>
             </BottomSheet>
           )}
