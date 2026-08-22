@@ -134,6 +134,7 @@
 
   .content {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
     padding: 0 0 var(--space-4);
   }
 
@@ -144,6 +145,7 @@
 
   .actions {
     min-width: 0;
+    gap: var(--space-4);
   }
 
   .stats {
