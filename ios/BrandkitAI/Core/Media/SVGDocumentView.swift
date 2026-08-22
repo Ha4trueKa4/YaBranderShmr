@@ -87,21 +87,14 @@ struct SVGDocumentView: View {
             ShimmerPlaceholder()
 
         case .ready(let svg):
-            SVGWebView(svgText: svg) {
-                withAnimation(.easeIn(duration: 0.2)) {
-                    isRendered = true
-                }
-            }
-            .opacity(isRendered ? 1 : 0)
-            .overlay {
-                if !isRendered {
-                    ShimmerPlaceholder()
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard isRendered else { return }
-                onTap?()
+            if let onTap {
+                readyBase(svg)
+                    .onTapGesture {
+                        guard isRendered else { return }
+                        onTap()
+                    }
+            } else {
+                readyBase(svg)
             }
 
         case .failure:
@@ -134,6 +127,21 @@ struct SVGDocumentView: View {
         }
     }
 
+    private func readyBase(_ svg: String) -> some View {
+        SVGWebView(svgText: svg) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                isRendered = true
+            }
+        }
+        .opacity(isRendered ? 1 : 0)
+        .overlay {
+            if !isRendered {
+                ShimmerPlaceholder()
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
     private func load() async {
         switch source {
         case .text(let svg):
@@ -145,8 +153,11 @@ struct SVGDocumentView: View {
                 return
             }
 
-            if let data = await SVGCache.shared.dataIfCached(for: cacheKey),
-               let svg = String(data: data, encoding: .utf8) {
+            let cachedData = await SVGCache.shared.dataIfCached(for: cacheKey)
+            guard !Task.isCancelled else { return }
+
+            if let cachedData,
+               let svg = String(data: cachedData, encoding: .utf8) {
                 if case .ready(let current) = phase, current == svg {
                     return
                 }
@@ -180,6 +191,7 @@ struct SVGDocumentView: View {
 
         do {
             let url = try await refreshURL()
+            guard !Task.isCancelled else { return }
             let cacheKey = source.cacheKey(for: url) ?? url.absoluteString
             await download(url: url, cacheKey: cacheKey)
         } catch {
@@ -191,6 +203,7 @@ struct SVGDocumentView: View {
     private func download(url: URL, cacheKey: String) async {
         do {
             let data = try await SVGCache.shared.data(for: url, key: cacheKey)
+            guard !Task.isCancelled else { return }
             guard let svg = String(data: data, encoding: .utf8) else {
                 phase = .failure
                 return

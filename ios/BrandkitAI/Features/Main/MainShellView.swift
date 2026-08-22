@@ -41,8 +41,8 @@ struct MainShellView: View {
         case .feed:
             FeedView(
                 // TODO: экрана поиска ещё нет — кнопка в шапке пока без перехода.
-                onOpenProject: { id in
-                    router.push(.publicProject(projectID: id), in: .feed)
+                onOpenProject: { projectID in
+                    router.push(.publicProject(projectID: projectID), in: .feed)
                 }
             )
 
@@ -59,8 +59,9 @@ struct MainShellView: View {
             ProfileView(
                 session: session,
                 isCurrentUser: true,
-                // TODO: id придёт из списка проектов профиля.
-                onOpenProject: { router.push(.projectEditor(projectID: UUID()), in: .profile) }
+                onOpenProject: { projectID, title, imageURL in
+                    router.push(.projectImage(projectID: projectID, title: title, imageURL: imageURL), in: .profile)
+                }
             )
         }
     }

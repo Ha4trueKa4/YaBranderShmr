@@ -11,7 +11,7 @@ struct ChatView: View {
     let projectID: UUID
     let title: String
     var onBack: () -> Void = {}
-    var onOpenImage: (UUID) -> Void = { _ in }
+    var onOpenImage: (UUID, Date?) -> Void = { _, _ in }
 
     @State private var viewModel: ChatViewModel
     @State private var messageText = ""
@@ -24,7 +24,7 @@ struct ChatView: View {
         projectID: UUID = UUID(),
         title: String,
         onBack: @escaping () -> Void = {},
-        onOpenImage: @escaping (UUID) -> Void = { _ in },
+        onOpenImage: @escaping (UUID, Date?) -> Void = { _, _ in },
         service: any ProjectServiceProtocol = ProjectService(),
         viewModel: ChatViewModel? = nil
     ) {
@@ -80,7 +80,7 @@ struct ChatView: View {
                                                     try await viewModel.versionURL(for: versionID)
                                                 },
                                                 onTap: {
-                                                    onOpenImage(versionID)
+                                                    onOpenImage(versionID, message.date)
                                                 }
                                             )
                                         }

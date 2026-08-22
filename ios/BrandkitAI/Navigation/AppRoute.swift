@@ -4,7 +4,8 @@ import Foundation
 enum AppRoute: Hashable {
     case projectCreate
     case chat(projectID: UUID, title: String)
-    case chatImage(projectID: UUID, title: String, versionID: UUID)
+    case chatImage(projectID: UUID, title: String, versionID: UUID, createdAt: Date?)
+    case projectImage(projectID: UUID, title: String, imageURL: URL?)
     case projectEditor(projectID: UUID)
     case versionHistory(projectID: UUID)
     case publicProject(projectID: UUID)
