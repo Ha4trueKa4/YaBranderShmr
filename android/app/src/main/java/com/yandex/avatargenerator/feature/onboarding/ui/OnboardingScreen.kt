@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import com.yandex.avatargenerator.feature.onboarding.ui.components.GetStartedPage
@@ -25,6 +27,7 @@ import com.yandex.avatargenerator.feature.onboarding.ui.components.WelcomePage
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 internal const val OnboardingPagerTestTag = "onboarding_pager"
 
@@ -65,28 +68,38 @@ internal fun OnboardingScreen(
                 .fillMaxSize()
                 .testTag(OnboardingPagerTestTag),
         ) { page ->
-            when (uiState.pages[page]) {
-                OnboardingPage.Welcome -> WelcomePage()
-                OnboardingPage.HowItWorks -> HowItWorksPage()
-                OnboardingPage.GetStarted -> GetStartedPage(
-                    onGetStartedClick = onGetStartedClick,
-                    onSignInClick = onSignInClick,
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Читаем состояние пейджера в фазе отрисовки: свайп не рекомпозит страницу.
+                    .graphicsLayer { alpha = pagerState.pageAlpha(page) },
+            ) {
+                when (uiState.pages[page]) {
+                    OnboardingPage.Welcome -> WelcomePage()
+                    OnboardingPage.HowItWorks -> HowItWorksPage()
+                    OnboardingPage.GetStarted -> GetStartedPage(
+                        onGetStartedClick = onGetStartedClick,
+                        onSignInClick = onSignInClick,
+                    )
+                }
             }
         }
-        // Индикатор общий для всех страниц: на Welcome он лежит на насыщенном
-        // градиенте, дальше — на фоне палитры, который в светлой теме светлый.
-        val onGradient = uiState.pages[pagerState.currentPage] == OnboardingPage.Welcome
         PageIndicator(
             pageCount = uiState.pages.size,
             currentPage = pagerState.currentPage,
-            color = if (onGradient) AppColors.OnAccent else AppColors.TextPrimary,
+            color = AppColors.TextPrimary,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(bottom = OnboardingDefaults.BottomBarPadding),
         )
     }
+}
+
+/** Прозрачность страницы по её удалению от центра: 1 в центре, 0 на соседней позиции. */
+private fun PagerState.pageAlpha(page: Int): Float {
+    val offset = ((currentPage - page) + currentPageOffsetFraction).absoluteValue
+    return 1f - offset.coerceIn(0f, 1f)
 }
 
 @Preview(device = "id:pixel_5", showSystemUi = true)
