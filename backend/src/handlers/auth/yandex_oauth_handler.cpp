@@ -66,6 +66,23 @@ std::string GenerateLoginSuffix() {
     return std::to_string(dist(rng));
 }
 
+// uid в JWT-профиле от Яндекса — числовой ID пользователя, и разные клиенты
+// (в частности iOS SDK) кодируют его в payload как JSON-число, а не строку.
+// claim::as_string() в этом случае кидает std::bad_cast, поэтому тип клейма
+// проверяем сами и приводим к строке вручную.
+std::string ClaimToString(const jwt::claim& claim) {
+    switch (claim.get_type()) {
+        case jwt::json::type::string:
+            return claim.as_string();
+        case jwt::json::type::integer:
+            return std::to_string(claim.as_integer());
+        case jwt::json::type::number:
+            return std::to_string(static_cast<int64_t>(claim.as_number()));
+        default:
+            throw std::runtime_error("Unexpected JWT claim type");
+    }
+}
+
 }  // namespace
 
 YandexOAuthHandler::YandexOAuthHandler(const userver::components::ComponentConfig& config,
@@ -161,12 +178,12 @@ YandexOAuthHandler::YandexProfile YandexOAuthHandler::FetchProfileFromJwt(
     }
 
     YandexProfile profile;
-    profile.provider_id = decoded.get_payload_claim("uid").as_string();
+    profile.provider_id = ClaimToString(decoded.get_payload_claim("uid"));
     if (decoded.has_payload_claim("email")) {
-        profile.email = decoded.get_payload_claim("email").as_string();
+        profile.email = ClaimToString(decoded.get_payload_claim("email"));
     }
     if (decoded.has_payload_claim("login")) {
-        profile.login = decoded.get_payload_claim("login").as_string();
+        profile.login = ClaimToString(decoded.get_payload_claim("login"));
     }
     return profile;
 }
