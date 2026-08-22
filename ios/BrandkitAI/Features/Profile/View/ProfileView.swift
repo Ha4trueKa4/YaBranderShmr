@@ -92,6 +92,8 @@ struct ProfileView: View {
                                     .stroke(Color.accentColor, lineWidth: 1)
                             }
                     }
+                } else if viewModel.canFollow {
+                    followButton
                 }
             }
             .padding(.horizontal, 16)
@@ -135,21 +137,36 @@ struct ProfileView: View {
             .accessibilityLabel("Profile picture")
     }
 
+    private var followButton: some View {
+        FollowButton(
+            isSubscribed: viewModel.isSubscribed,
+            isBusy: viewModel.isFollowBusy,
+            action: viewModel.toggleFollowing
+        )
+    }
+
     private var stats: some View {
         HStack(spacing: 8) {
             stat(value: viewModel.projectsCount, title: "Projects")
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followersCount, title: "Followers")
+            stat(value: viewModel.followersCount, title: "Followers", animated: true)
             Text("·").foregroundStyle(.secondary)
             stat(value: viewModel.followingCount, title: "Following")
         }
         .font(.system(size: 13))
     }
 
-    private func stat(value: Int, title: String) -> some View {
+    private func stat(value: Int, title: String, animated: Bool = false) -> some View {
         HStack(spacing: 3) {
-            Text(value.formatted())
-                .fontWeight(.bold)
+            if animated {
+                Text(value.formatted())
+                    .fontWeight(.bold)
+                    .contentTransition(.numericText(value: Double(value)))
+                    .animation(.easeInOut(duration: 0.2), value: value)
+            } else {
+                Text(value.formatted())
+                    .fontWeight(.bold)
+            }
             Text(title)
                 .foregroundStyle(.secondary)
         }
@@ -207,9 +224,24 @@ struct ProfileView: View {
     NavigationStack {
         ProfileView(
             session: SessionStore(
-                currentUserService: MockCurrentUserService(),
-                userProfileService: MockUserProfileService(),
+                currentUserService: MockCurrentUserService(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")
+                ),
+                userProfileService: MockUserProfileService(profile: UserProfile(
+                    id: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000") ?? UUID(),
+                    name: "Alex Morgan",
+                    subscribersCount: 340,
+                    subscriptionsCount: 28,
+                    isSubscribed: false,
+                    projects: [
+                        UserProject(id: UUID(), name: "Orion Labs", url: nil),
+                        UserProject(id: UUID(), name: "Cyberpunk Identity", url: nil),
+                        UserProject(id: UUID(), name: "Aether Brand", url: nil)
+                    ]
+                ))
             ),
+            isCurrentUser: false,
+            userID: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000"),
             onBack: {}
         )
     }
