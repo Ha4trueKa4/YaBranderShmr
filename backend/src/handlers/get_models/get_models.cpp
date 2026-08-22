@@ -2,6 +2,10 @@
 #include <userver/clients/http/request.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 #include <userver/formats/json/serialize.hpp>
+#include <userver/formats/json/value.hpp>
+#include <userver/formats/json/value_builder.hpp>
+#include <string_view>
+#include <vector>
 
 namespace ya_brander::handlers {
 
@@ -35,10 +39,58 @@ std::string GetModels::HandleRequestThrow(
   // Проверяем статус ответа
   if (!response->IsOk()) {
     request.SetResponseStatus(response->status_code());
+    return response->body();
   }
 
-  // Возвращаем тело ответа как строку
-  return response->body();
+  // Парсим оригинальный JSON
+  auto json_body = userver::formats::json::FromString(response->body());
+
+  // Создаем билдер для нового ответа
+  userver::formats::json::ValueBuilder response_builder;
+  if (json_body.HasMember("object")) {
+    response_builder["object"] = json_body["object"];
+  } else {
+    response_builder["object"] = "list";
+  }
+
+  // Список разрешенных моделей
+  const std::vector<std::string_view> allowed_models = {
+    "/deepseek-v4-flash/latest",
+    "/gpt-oss-120b/latest",
+    "/qwen3-235b-a22b-fp8/latest"
+  };
+
+  // Билдер для отфильтрованного массива data
+  userver::formats::json::ValueBuilder data_builder(userver::formats::json::Type::kArray);
+
+  // Итерируемся по моделям и фильтруем
+  if (json_body.HasMember("data") && json_body["data"].IsArray()) {
+    for (const auto& item : json_body["data"]) {
+
+      if (!item.HasMember("id") || !item["id"].IsString()) {
+        continue;
+      }
+      std::string id = item["id"].As<std::string>();
+
+      bool keep = false;
+      for (const auto& allowed : allowed_models) {
+        // Проверяем, содержит ли URI модели разрешенную подстроку
+        if (id.find(allowed) != std::string::npos) {
+          keep = true;
+          break;
+        }
+      }
+
+      if (keep) {
+        data_builder.PushBack(item);
+      }
+    }
+  }
+
+  response_builder["data"] = data_builder;
+
+  // Сериализуем обратно в строку
+  return userver::formats::json::ToString(response_builder.ExtractValue());
 }
 
 userver::yaml_config::Schema GetModels::GetStaticConfigSchema() {
@@ -58,4 +110,4 @@ void AppendGetModels(userver::components::ComponentList& component_list) {
   component_list.Append<GetModels>();
 }
 
-}
+} // namespace ya_brander::handlers
