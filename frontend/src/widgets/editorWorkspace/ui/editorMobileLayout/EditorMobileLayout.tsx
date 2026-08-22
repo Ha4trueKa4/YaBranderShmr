@@ -117,8 +117,6 @@ export function EditorMobileLayout({
         <>
           <MobileCanvasControls
             activeTool={activeTool}
-            fillColor={fillColor}
-            onOpenColorPicker={() => setIsColorPickerOpen(true)}
             onToolChange={onToolChange}
             onZoomIn={onZoomIn}
             onZoomOut={onZoomOut}
