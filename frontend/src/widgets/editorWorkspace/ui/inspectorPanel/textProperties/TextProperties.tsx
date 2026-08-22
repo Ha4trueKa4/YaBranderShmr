@@ -22,6 +22,8 @@ interface TextPropertiesProps {
   onAnchorChange: (textAnchor: 'end' | 'middle' | 'start') => void
   onContentChange: (text: string) => void
   onFillColorChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onFontFamilyChange: (fontFamily: string) => void
   onFontSizeChange: (fontSize: number) => void
   onFontStyleChange: (fontStyle: 'italic' | 'normal') => void
@@ -40,6 +42,8 @@ export const TextProperties = observer(function TextProperties({
   onAnchorChange,
   onContentChange,
   onFillColorChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onFontFamilyChange,
   onFontSizeChange,
   onFontStyleChange,
@@ -103,6 +107,8 @@ export const TextProperties = observer(function TextProperties({
       <FillProperty
         fill={fill}
         onFillChange={onFillColorChange}
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
         title={t('Color')}
       />
       <label className={styles.field}>

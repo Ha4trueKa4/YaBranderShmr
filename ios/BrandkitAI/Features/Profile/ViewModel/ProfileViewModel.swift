@@ -8,6 +8,7 @@ final class ProfileViewModel {
         let title: String
         let colors: [Color]
         let coverHeight: CGFloat
+        let previewURL: URL?
     }
 
     private(set) var name = ""
@@ -17,6 +18,17 @@ final class ProfileViewModel {
     private(set) var projects: [Project] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var profileID: UUID?
+
+    private(set) var isSubscribed = false
+    private(set) var isFollowBusy = false
+    private(set) var isCurrentUser = false
+
+    private var hasAuthenticatedViewer = false
+    private var hasFollowState = false
+    private var followOverride: Bool?
+    private var followOperationID: UUID?
+    private var followTask: Task<Void, Never>?
 
     private let currentUserService: any CurrentUserService
     private let userProfileService: any UserProfileService
@@ -31,6 +43,7 @@ final class ProfileViewModel {
         self.userProfileService = userProfileService
         self.userID = userID
         self.name = (userID == nil) ? (currentUserService.name ?? "") : ""
+        self.profileID = userID ?? currentUserService.id
     }
 
     var initials: String {
@@ -42,6 +55,14 @@ final class ProfileViewModel {
             .joined()
     }
 
+    var canFollow: Bool {
+        guard userID != nil,
+              hasAuthenticatedViewer,
+              hasFollowState
+        else { return false }
+        return !isCurrentUser
+    }
+
     func load() async {
         guard !isLoading else { return }
         defer { isLoading = false }
@@ -49,11 +70,18 @@ final class ProfileViewModel {
         isLoading = true
         errorMessage = nil
 
-        if userID == nil && currentUserService.id == nil {
+        if currentUserService.id == nil {
             await currentUserService.restore()
         }
 
         guard let id = userID ?? currentUserService.id else { return }
+        profileID = id
+
+        if userID != nil {
+            let viewerID = currentUserService.id
+            hasAuthenticatedViewer = viewerID != nil
+            isCurrentUser = viewerID == userID
+        }
 
         do {
             let profile = try await userProfileService.profile(for: id)
@@ -66,11 +94,77 @@ final class ProfileViewModel {
                     id: project.id,
                     title: project.name,
                     colors: Self.palette(for: project.name),
-                    coverHeight: Self.coverHeight(for: offset)
+                    coverHeight: Self.coverHeight(for: offset),
+                    previewURL: project.url
                 )
             }
+            mergeRemoteFollow(profile.isSubscribed)
         } catch {
             errorMessage = "Couldn't load profile."
+        }
+    }
+
+    func toggleFollowing() {
+        guard canFollow,
+              let id = userID,
+              !isFollowBusy,
+              followTask == nil
+        else { return }
+
+        let operationID = UUID()
+        let previous = isSubscribed
+        let previousCount = followersCount
+        let previousOverride = followOverride
+        let target = !previous
+        let service = userProfileService
+
+        followOperationID = operationID
+        followOverride = target
+        isSubscribed = target
+        followersCount = max(0, previousCount + (target ? 1 : -1))
+        isFollowBusy = true
+
+        followTask = Task { @MainActor [weak self] in
+            let succeeded: Bool
+            do {
+                if target {
+                    try await service.subscribe(to: id)
+                } else {
+                    try await service.unsubscribe(from: id)
+                }
+                succeeded = true
+            } catch {
+                succeeded = false
+            }
+
+            guard let self, self.followOperationID == operationID else { return }
+
+            if succeeded {
+                self.isSubscribed = target
+                self.followOverride = target
+            } else {
+                self.isSubscribed = previous
+                self.followersCount = previousCount
+                self.followOverride = previousOverride
+            }
+
+            self.isFollowBusy = false
+            self.followOperationID = nil
+            self.followTask = nil
+        }
+    }
+
+    private func mergeRemoteFollow(_ remote: Bool?) {
+        guard let remote else { return }
+        hasFollowState = true
+
+        if let followOverride {
+            isSubscribed = followOverride
+            if !isFollowBusy, remote == followOverride {
+                self.followOverride = nil
+            }
+        } else {
+            isSubscribed = remote
         }
     }
 

@@ -123,6 +123,30 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsImageExportModalOpen(true)
   }
 
+  function handleOpenMobileProperties() {
+    editorStore.beginHistoryTransaction()
+    setIsMobileInspectorOpen(true)
+  }
+
+  function handleOpenMobileColorPicker() {
+    editorStore.beginHistoryTransaction()
+  }
+
+  function handleDoneMobileProperties() {
+    editorStore.commitHistoryTransaction()
+    setIsMobileInspectorOpen(false)
+  }
+
+  function handleCancelMobileProperties() {
+    const wasCancelled = editorStore.cancelHistoryTransaction()
+
+    if (wasCancelled) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    setIsMobileInspectorOpen(false)
+  }
+
   function handleRestoreDocument(restoredDocument: EditorDocument) {
     setEditorStore(new EditorStore(restoredDocument))
     markDocumentAsSaved(restoredDocument)
@@ -222,6 +246,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onDocumentChangeEnd={editorStore.commitHistoryTransaction}
       onDocumentChangeStart={editorStore.beginHistoryTransaction}
       onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
+      onRawPositionChange={editorStore.svgNodeEditing.setRawPosition}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
       onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}
@@ -246,13 +271,17 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
-          onCloseProperties={() => setIsMobileInspectorOpen(false)}
+          onCancelColorPicker={handleCancelMobileProperties}
+          onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
-          onOpenProperties={() => setIsMobileInspectorOpen(true)}
+          onDoneColorPicker={handleDoneMobileProperties}
+          onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onSaveVersion={saveVersion}
+          onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
@@ -276,7 +305,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             />
           }
           scene={scene}
-          status={<EditorStatusBar />}
+          status={
+            <EditorStatusBar
+              selectedNode={editorStore.selectedNode}
+              zoom={zoom}
+            />
+          }
           toolbar={
             <EditorToolbar
               activeTool={activeTool}

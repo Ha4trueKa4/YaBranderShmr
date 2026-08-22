@@ -1,7 +1,7 @@
 .tooltip {
-  background: var(--color-text-primary);
+  background: var(--color-surface-elevated);
   border-radius: var(--radius-sm);
-  color: var(--color-text-inverse);
+  color: var(--color-text-primary);
   font-size: var(--font-size-caption);
   left: 0;
   line-height: 1.25;
@@ -12,5 +12,6 @@
   top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
+  box-shadow: var(--shadow-sm);
   z-index: 10;
 }

@@ -10,17 +10,17 @@ struct ShimmerPlaceholder: View {
                     TimelineView(.animation) { context in
                         let progress = context.date.timeIntervalSinceReferenceDate
                             .truncatingRemainder(dividingBy: Self.period) / Self.period
-                        let bandWidth = proxy.size.width * 0.6
+                        let bandWidth = proxy.size.width * 0.75
                         let travel = proxy.size.width + bandWidth
 
                         LinearGradient(
                             colors: [
-                                Color(.shimmerHighlight).opacity(0),
+                                Color(.clear),
                                 Color(.shimmerHighlight),
-                                Color(.shimmerHighlight).opacity(0)
+                                Color(.clear)
                             ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
                         .frame(width: bandWidth)
                         .offset(x: travel * progress - bandWidth)
@@ -28,6 +28,7 @@ struct ShimmerPlaceholder: View {
                 }
             }
             .accessibilityHidden(true)
+            .clipped()
     }
 }
 
@@ -42,5 +43,4 @@ struct ShimmerPlaceholder: View {
             .clipShape(Capsule())
     }
     .padding(16)
-    .preferredColorScheme(.dark)
 }

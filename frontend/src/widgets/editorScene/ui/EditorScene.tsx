@@ -15,6 +15,7 @@ interface EditorSceneProps {
   onDocumentChangeStart: () => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
@@ -36,6 +37,7 @@ export function EditorScene({
   onDocumentChangeStart,
   onSelectNode,
   onGroupPositionChange,
+  onRawPositionChange,
   onShapePositionChange,
   onTextPositionChange,
   onViewportOffsetChange,
@@ -57,6 +59,7 @@ export function EditorScene({
         onDocumentChangeEnd={onDocumentChangeEnd}
         onDocumentChangeStart={onDocumentChangeStart}
         onGroupPositionChange={onGroupPositionChange}
+        onRawPositionChange={onRawPositionChange}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
         onTextPositionChange={onTextPositionChange}

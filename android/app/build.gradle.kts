@@ -48,6 +48,14 @@ android {
         compose = true
         buildConfig = true
     }
+    // Язык переключается в приложении (подмена локали на корне Compose), поэтому все
+    // локали должны лежать в base APK: иначе в AAB из Play на устройстве оказались бы
+    // ресурсы только системной локали и смена языка ничего бы не поменяла.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
 }
 
 dependencies {
