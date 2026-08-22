@@ -40,7 +40,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.project.data.MockPublicProjectRepository
@@ -109,11 +112,16 @@ internal fun PublicProjectScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Тост с результатом выгрузки. Событие одноразовое (Channel во ViewModel).
-    LaunchedEffect(viewModel) {
-        viewModel.exportEvents.collect { event ->
-            Toast.makeText(context, event.message(context), Toast.LENGTH_SHORT).show()
+    // Собираем только пока экран STARTED — событие, пришедшее в фоне, буфер
+    // Channel придержит до возврата, тост не всплывёт мимо переднего плана.
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.exportEvents.collect { event ->
+                Toast.makeText(context, event.message(context), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

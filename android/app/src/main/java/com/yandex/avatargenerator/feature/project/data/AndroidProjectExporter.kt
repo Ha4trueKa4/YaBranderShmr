@@ -106,13 +106,21 @@ class AndroidProjectExporter(
             }
             val uri = resolver.insert(collection, pending)
                 ?: error("MediaStore rejected the entry")
-            resolver.openOutputStream(uri)?.use(write) ?: error("Cannot open output stream")
-            resolver.update(
-                uri,
-                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
-                null,
-                null,
-            )
+            // Обрыв записи (сеть/растеризация) или отмена корутины при уходе с экрана
+            // оставили бы запись с IS_PENDING = 1 — невидимый файл, занимающий место,
+            // пока система не подчистит pending (до 7 дней). Откатываем сами.
+            try {
+                resolver.openOutputStream(uri)?.use(write) ?: error("Cannot open output stream")
+                resolver.update(
+                    uri,
+                    ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+                    null,
+                    null,
+                )
+            } catch (t: Throwable) {
+                resolver.delete(uri, null, null)
+                throw t
+            }
         } else {
             // На API 26–28 публичные папки требуют WRITE_EXTERNAL_STORAGE. Чтобы не
             // тянуть runtime-разрешение, пишем в app-specific папку приложения; для
@@ -125,7 +133,13 @@ class AndroidProjectExporter(
                 ?: error("External files dir unavailable")
             dir.mkdirs()
             val file = File(dir, fileName)
-            file.outputStream().use(write)
+            // При исключении на записи остался бы обрезанный файл — подчищаем.
+            try {
+                file.outputStream().use(write)
+            } catch (t: Throwable) {
+                file.delete()
+                throw t
+            }
             if (destination == Destination.GALLERY) {
                 MediaScannerConnection.scanFile(
                     context,
@@ -140,7 +154,9 @@ class AndroidProjectExporter(
     /** Чистим название от символов, недопустимых в имени файла, и вешаем метку времени. */
     private fun buildFileName(baseName: String, format: ExportFormat): String {
         val safe = baseName.trim()
-            .replace(Regex("[^A-Za-z0-9._-]+"), "_")
+            // Буквы/цифры любого алфавита (в т.ч. кириллица) валидны в имени файла —
+            // режем только разделители пути и прочие спецсимволы.
+            .replace(Regex("[^\\p{L}\\p{N}._-]+"), "_")
             .trim('_')
             .ifEmpty { DEFAULT_BASE_NAME }
         return "${safe}_${System.currentTimeMillis()}.${format.extension}"
