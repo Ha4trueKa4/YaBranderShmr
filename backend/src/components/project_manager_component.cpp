@@ -317,27 +317,6 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
     }
 
     bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
-        // Статус job'а зависит только от того, удалась ли сама генерация
-        // (RunGeneration). Запись результата в chat_history — best-effort
-        // бухгалтерия ПОСЛЕ того, как статус уже определён и разослан
-        // ожидающим в WaitForGeneration: её падение не должно превращать уже
-        // случившийся успех в ошибку (и наоборот) — иначе клиент, опросивший
-        // чуть позже, увидел бы "error" для по факту успешной генерации.
-        std::string version_id;
-        bool succeeded = false;
-        try {
-            userver::engine::SemaphoreLock semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
-            succeeded = true;
-        } catch (const std::exception& e) {
-            LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
-            std::lock_guard job_lock(entry->mutex);
-            entry->cancel_token = userver::engine::current_task::GetCancellationToken();
-            if (entry->cancel_requested) {
-                entry->cancel_token->RequestCancel();
-            }
-        }
-
         // Статус job'а зависит только от того, чем закончилась сама
         // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
         // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
@@ -349,7 +328,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         std::string error_message;
         try {
             std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model);
+            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
             outcome = JobStatus::kDone;
         } catch (const std::exception& e) {
             bool was_cancelled;

@@ -73,7 +73,8 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
   // ещё до обращения к LLM — так оно не теряется, даже если сама генерация
   // потом упадёт. Результат (или ошибка) генерации опрашивается отдельным
   // long-poll эндпоинтом GET .../generate/{job_id}.
-  std::string job_id = project_manager_.StartGeneration(id, prompt, model, user_id, references);
+  try {
+    std::string job_id = project_manager_.StartGeneration(id, prompt, model, user_id, references);
 
     request.SetResponseStatus(userver::server::http::HttpStatus::kAccepted);
     userver::formats::json::ValueBuilder res;

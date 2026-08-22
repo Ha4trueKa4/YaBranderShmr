@@ -332,6 +332,17 @@ async def _generate_and_wait(service_client, project_id, headers, payload):
     return data
 
 
+def _last_generation_call(mock_yandex_gpt):
+    """Возвращает вызов основной генерации, пропустив вызов
+    PromptPolisherComponent — он тоже бьёт в /yandex-gpt-mock (тот же
+    api-url) перед реальной генерацией, поэтому на каждый успешный job
+    в очереди мока оказывается ровно два вызова: сначала polish, потом
+    сама генерация.
+    """
+    mock_yandex_gpt.next_call()  # PromptPolisherComponent.Polish*
+    return mock_yandex_gpt.next_call()
+
+
 async def test_generate_ai_initial_with_own_reference(
         service_client, project_a, project_a2, auth_header_a, mock_yandex_gpt
 ):
@@ -349,7 +360,7 @@ async def test_generate_ai_initial_with_own_reference(
         {"prompt": "Сделай логотип", "references": [project_a2["id"]]},
     )
 
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС 1" in call["request"].json["input"]
     assert REFERENCE_SVG in call["request"].json["input"]
 
@@ -372,7 +383,7 @@ async def test_generate_ai_initial_with_public_reference_from_other_user(
         {"prompt": "Сделай логотип", "references": [project_b["id"]]},
     )
 
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС 1" in call["request"].json["input"]
 
 
@@ -394,7 +405,7 @@ async def test_generate_ai_initial_reference_private_skipped(
         {"prompt": "Сделай логотип", "references": [project_b["id"]]},
     )
 
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
 
@@ -410,7 +421,7 @@ async def test_generate_ai_initial_reference_nonexistent_silently_skipped(
         {"prompt": "Сделай логотип", "references": [fake_id]},
     )
 
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
 
@@ -425,7 +436,7 @@ async def test_generate_ai_initial_reference_default_svg_silently_skipped(
         {"prompt": "Сделай логотип", "references": [project_a2["id"]]},
     )
 
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
 
@@ -448,14 +459,14 @@ async def test_generate_ai_edit_mode_references_ignored(
         service_client, project_id, auth_header_a,
         {"prompt": "Сделай логотип"},
     )
-    mock_yandex_gpt.next_call()  # первый вызов, не проверяем
+    _last_generation_call(mock_yandex_gpt)  # первый вызов, не проверяем
 
     # Второй вызов уже в edit-режиме, с валидным references
     await _generate_and_wait(
         service_client, project_id, auth_header_a,
         {"prompt": "Поменяй цвет", "references": [project_a2["id"]]},
     )
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
 
 
@@ -492,5 +503,5 @@ async def test_generate_ai_references_self_reference_no_error(
         {"prompt": "Сделай логотип", "references": [project_id]},
     )
 
-    call = mock_yandex_gpt.next_call()
+    call = _last_generation_call(mock_yandex_gpt)
     assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
