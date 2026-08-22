@@ -64,6 +64,7 @@
 .characterCounter {
   color: var(--color-text-muted);
   font-size: var(--font-size-caption);
+  transform: translateY(var(--space-1));
 }
 
 .actionControls {
