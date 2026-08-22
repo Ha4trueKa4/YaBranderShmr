@@ -305,7 +305,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             />
           }
           scene={scene}
-          status={<EditorStatusBar />}
+          status={
+            <EditorStatusBar
+              selectedNode={editorStore.selectedNode}
+              zoom={zoom}
+            />
+          }
           toolbar={
             <EditorToolbar
               activeTool={activeTool}

@@ -85,9 +85,15 @@ export const ShapeProperties = observer(function ShapeProperties({
           labelClassName={styles.sectionTitle}
           value={t('Gradient has no editable color stops')}
         />
+      ) : fill.type === 'none' ? (
+        <PropertyField
+          label={t('Fill')}
+          labelClassName={styles.sectionTitle}
+          value={t('No fill')}
+        />
       ) : (
         <FillProperty
-          fill={fill.type === 'color' ? fill.value : '#000000'}
+          fill={fill.value}
           onFillChange={onFillChange}
           onEyeDropperEnd={onEyeDropperEnd}
           onEyeDropperStart={onEyeDropperStart}
