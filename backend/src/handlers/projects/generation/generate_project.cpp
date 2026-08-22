@@ -1,5 +1,4 @@
 #include "generate_project.h"
-#include "svg_validation_error_response.hpp"
 
 #include <userver/formats/json/serialize.hpp>
 #include <userver/logging/log.hpp>
@@ -48,30 +47,15 @@ userver::formats::json::Value GenerateProjectHandler::HandleRequestJsonThrow(
     return err.ExtractValue();
   }
 
+  // Сообщение пользователя сохраняется в chat_history внутри StartGeneration
+  // ещё до обращения к LLM — так оно не теряется, даже если сама генерация
+  // потом упадёт. Результат (или ошибка) генерации опрашивается отдельным
+  // long-poll эндпоинтом GET .../generate/{job_id}.
+  std::string job_id = project_manager_.StartGeneration(id, prompt, model);
+
+  request.SetResponseStatus(userver::server::http::HttpStatus::kAccepted);
   userver::formats::json::ValueBuilder res;
-  try {
-      std::string new_url = project_manager_.GenerateAI(id, prompt, model);
-
-    if (!new_url.empty()) {
-      res["url"] = new_url;
-    }
-
-  }catch (const components::SVGValidationError& error) {
-      request.SetResponseStatus(
-          userver::server::http::HttpStatus::kUnprocessableEntity);
-    userver::formats::json::ValueBuilder err;
-    err["message"] = error.what();
-    return err.ExtractValue();
-  }catch (const std::exception& e) {
-    // Логируем реальную причину падения
-    LOG_ERROR() << "AI generation failed for project_id=" << id << ": " << e.what();
-    // Отдаем клиенту 503 статус вместо краша
-    request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
-    userver::formats::json::ValueBuilder err;
-    err["message"] = "Generation service is temporarily unavailable. Please try again later.";
-    return err.ExtractValue();
-  }
-
+  res["job_id"] = job_id;
   return res.ExtractValue();
 }
 

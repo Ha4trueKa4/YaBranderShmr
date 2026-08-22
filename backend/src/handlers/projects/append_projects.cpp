@@ -8,18 +8,17 @@
 #include "get_project_chat.h"
 #include "patch_project.h"
 #include "delete_project.h"
-#include "generate_project.h"
-#include "versions/get_version.hpp"
-#include "versions/list_versions.hpp"
-#include "versions/restore_version.hpp"
 
 namespace ya_brander {
 
+// Регистрирует общую для домена "проекты" инфраструктуру (компоненты) и
+// core CRUD-хендлеры. Хендлеры версий и генерации регистрируются отдельно —
+// см. AppendProjectVersions и AppendProjectGeneration, вызываемые из main.cpp.
 void AppendProjects(userver::components::ComponentList& component_list) {
   component_list
       // .Append<components::VersionStorageComponentImpl>()
       .Append<components::LLMClientComponent>()
-      .Append<components::VectorSearchComponent>() 
+      .Append<components::VectorSearchComponent>()
       .Append<components::PromptConstructorComponent>()
       //.Append<components::MockVectorSearchComponent>()
 
@@ -31,11 +30,7 @@ void AppendProjects(userver::components::ComponentList& component_list) {
       .Append<handlers::GetProjectHandler>()
       .Append<handlers::GetProjectChatHandler>()
       .Append<handlers::PatchProjectHandler>()
-      .Append<handlers::DeleteProjectHandler>()
-      .Append<handlers::GenerateProjectHandler>()
-      .Append<handlers::GetVersionHandler>()
-      .Append<handlers::ListVersionsHandler>()
-      .Append<handlers::RestoreVersionHandler>();
+      .Append<handlers::DeleteProjectHandler>();
 }
 
 } // namespace ya_brander
