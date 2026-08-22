@@ -86,13 +86,20 @@ components_manager:
       task_processor: main-task-processor
       throttling_enabled: false
 
+    handler-test-polisher:
+      path: /test/polisher
+      method: POST
+      task_processor: main-task-processor
+      throttling_enabled: false
+    
     handler-test-vector-search:
       path: /test/vector-search
       method: GET
       task_processor: main-task-processor
 
     llm-client:
-      api-url: $yandex-gpt-url
+      yandex-api-url: $yandex-gpt-url
+      openai-api-url: $openai-responses-url
 
     postgres-db-1:
       dbconnection: $dbconnection
@@ -134,6 +141,8 @@ components_manager:
     # ==========================================
     project-manager: { }
     prompt-constructor: { }
+    prompt-polisher:
+      api-url: $yandex-gpt-url
     subscription-storage: { }
 
 
@@ -197,6 +206,14 @@ components_manager:
           - jwt-required
       max_requests_in_flight: 300
       max_requests_per_second: 300
+
+    handler-projects-generate-cancel:
+      path: /api/v1/projects/{id}/generate/{job_id}/cancel
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
 
     handler-projects-versions-list:
       path: /api/v1/projects/{id}/versions
@@ -268,6 +285,7 @@ components_manager:
       auth:
         types:
           - jwt
+
     handler-users-get:
       path: /api/v1/users/{id}
       method: GET
@@ -291,6 +309,14 @@ components_manager:
       auth:
         types:
           - jwt
+
+    handler-users-subscribers-delete:
+      path: /api/v1/users/{id}/subscribers/{subscriber_id}
+      method: DELETE
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
 
     handler-users-subscriptions-get:
       path: /api/v1/users/{id}/subscriptions

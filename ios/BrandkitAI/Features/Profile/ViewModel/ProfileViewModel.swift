@@ -18,6 +18,7 @@ final class ProfileViewModel {
     private(set) var projects: [Project] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var profileID: UUID?
 
     private(set) var isSubscribed = false
     private(set) var isFollowBusy = false
@@ -42,6 +43,7 @@ final class ProfileViewModel {
         self.userProfileService = userProfileService
         self.userID = userID
         self.name = (userID == nil) ? (currentUserService.name ?? "") : ""
+        self.profileID = userID ?? currentUserService.id
     }
 
     var initials: String {
@@ -73,6 +75,7 @@ final class ProfileViewModel {
         }
 
         guard let id = userID ?? currentUserService.id else { return }
+        profileID = id
 
         if userID != nil {
             let viewerID = currentUserService.id

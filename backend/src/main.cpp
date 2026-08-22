@@ -24,6 +24,8 @@
 #include "components/subscription_storage/subscription_storage_component.h"
 #include "components/vector_search_component.h"
 #include "components/version_storage/version_storage_component_impl.hpp"
+#include "components/prompt_constructor/prompt_polisher_component.h"
+#include "handlers/test_llm_handler/test_polisher_handler.h"
 #include "handlers/feed/get_feed.h"
 #include "handlers/test_llm_handler/test_llm_handler.hpp"
 #include "handlers/test_vector_search/test_vector_search_handler.hpp"
@@ -48,11 +50,13 @@ int main(int argc, char* argv[]) {
             .Append<userver::clients::dns::Component>()
             .Append<userver::server::middlewares::CorsFactory>()
             .Append<ya_brander::handlers::TestVectorSearchHandler>()
+            .Append<ya_brander::TestPolisherHandler>()
             .Append<ya_brander::handlers::GetFeedHandler>()
             // Регистрация модулей когда будут готовы
             .Append<ya_brander::components::S3ObjectStorageComponent>()
             .Append<ya_brander::components::VersionStorageComponentImpl>()
-			.Append<ya_brander::components::SubscriptionStorageComponent>();
+            .Append<ya_brander::components::SubscriptionStorageComponent>()
+            .Append<ya_brander::components::PromptPolisherComponent>();
 
     ya_brander::AppendCheck(component_list);
     ya_brander::AppendLLM(component_list);

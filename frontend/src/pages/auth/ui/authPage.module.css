@@ -2,7 +2,7 @@
   background: var(--color-auth-panel);
   display: grid;
   grid-template-columns: minmax(26rem, 42.25%) 1fr;
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
 }
 
@@ -37,7 +37,7 @@
   color: var(--color-auth-promo-text);
   display: grid;
   grid-template-rows: auto 1fr auto;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   padding: 5.5rem clamp(2rem, 5.1vw, 5.875rem) 9.625rem;
 }
@@ -140,7 +140,7 @@
   }
 
   .formPanel {
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: 2rem 1.5rem;
   }
 }

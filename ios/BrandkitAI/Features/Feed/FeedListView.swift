@@ -79,7 +79,7 @@ struct FeedListView: View {
                     .padding(.bottom, 16)
             }
         }
-        .refreshable {
+        .brandRefresher {
             await viewModel.refresh()
         }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ProjectsView: View {
     private let session: SessionStore
@@ -60,17 +61,10 @@ struct ProjectsView: View {
             } else {
                 List {
                     ForEach(viewModel.items) { item in
-                        ProjectRow(
-                            item: item,
-                            refreshPreview: {
-                                try await viewModel.refreshPreview(for: item.id)
-                            }
-                        ) {
-                            onOpenChat(item)
-                        }
-                        .listRowInsets(
-                            EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16)
-                        )
+                        deletableProjectRow(item)
+                            .listRowInsets(
+                                EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16)
+                            )
                     }
                     .onDelete(perform: viewModel.delete)
                     .listRowSeparator(.hidden)
@@ -79,7 +73,7 @@ struct ProjectsView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .contentMargins(.top, 6, for: .scrollContent)
-                .refreshable {
+                .brandListRefresher {
                     await viewModel.refresh()
                 }
             }
@@ -88,6 +82,35 @@ struct ProjectsView: View {
             if let errorMessage = viewModel.errorMessage, !viewModel.isEmpty {
                 errorBanner(errorMessage)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func deletableProjectRow(_ item: ProjectListItem) -> some View {
+        if #available(iOS 26.0, *) {
+            projectRow(item)
+        } else {
+            projectRow(item)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        viewModel.delete(item)
+                    } label: {
+                        DeleteSwipeActionIcon()
+                    }
+                    .tint(.clear)
+                    .accessibilityLabel("Delete \(item.title)")
+                }
+        }
+    }
+
+    private func projectRow(_ item: ProjectListItem) -> some View {
+        ProjectRow(
+            item: item,
+            refreshPreview: {
+                try await viewModel.refreshPreview(for: item.id)
+            }
+        ) {
+            onOpenChat(item)
         }
     }
 
@@ -136,6 +159,57 @@ struct ProjectsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
+    }
+}
+
+private struct DeleteSwipeActionIcon: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Image(uiImage: Self.image(for: colorScheme))
+            .renderingMode(.original)
+    }
+
+    private static let lightImage = makeImage(userInterfaceStyle: .light)
+    private static let darkImage = makeImage(userInterfaceStyle: .dark)
+
+    private static func image(for colorScheme: ColorScheme) -> UIImage {
+        colorScheme == .dark ? darkImage : lightImage
+    }
+
+    private static func makeImage(userInterfaceStyle: UIUserInterfaceStyle) -> UIImage {
+        let canvasSize = CGSize(width: 48, height: 64)
+        let renderer = UIGraphicsImageRenderer(size: canvasSize)
+
+        return renderer.image { _ in
+            UIColor.systemRed.setFill()
+            UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: 48, height: 48)).fill()
+
+            let configuration = UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+            guard let symbol = UIImage(
+                systemName: "trash",
+                withConfiguration: configuration
+            )?.withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
+
+            symbol.draw(at: CGPoint(
+                x: (canvasSize.width - symbol.size.width) / 2,
+                y: (48 - symbol.size.height) / 2
+            ))
+
+            let traits = UITraitCollection(userInterfaceStyle: userInterfaceStyle)
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12),
+                .foregroundColor: UIColor.secondaryLabel.resolvedColor(with: traits)
+            ]
+            let title = "Delete" as NSString
+            let titleSize = title.size(withAttributes: attributes)
+            title.draw(
+                at: CGPoint(x: (canvasSize.width - titleSize.width) / 2, y: 50),
+                withAttributes: attributes
+            )
+        }
+        .withRenderingMode(.alwaysOriginal)
+        .withAlignmentRectInsets(UIEdgeInsets(top: 0, left: 0, bottom: 16, right: 0))
     }
 }
 

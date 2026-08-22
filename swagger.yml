@@ -19,6 +19,37 @@ tags:
     description: Лента публичных проектов
 
 paths:
+  /models:
+    get:
+      summary: Получение доступных моделей генерации
+      description: >
+        Возвращает модели Yandex AI Studio и поддерживаемые модели OpenAI.
+        Идентификатор из ответа передаётся без изменений в поле model запроса
+        генерации после удаления префикса gpt://{provider}/.
+      tags: [ Projects ]
+      responses:
+        '200':
+          description: Список доступных моделей
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [ id, owned_by ]
+                      properties:
+                        id:
+                          type: string
+                        owned_by:
+                          type: string
+              example:
+                data:
+                  - id: "gpt://openai/gpt-5.6-luna"
+                    owned_by: "OpenAI"
   /auth/register:
     post:
       summary: Регистрация нового пользователя
@@ -394,7 +425,81 @@ paths:
           description: Некорректный формат ID
         '404':
           description: Пользователь не найден
-
+  /users/{id}/subscribers/{subscriber_id}:
+    delete:
+      summary: Удалить подписчика из своего аккаунта
+      description: >
+        Позволяет авторизованному пользователю удалить конкретного подписчика
+        из списка своих подписчиков. Только владелец профиля может удалять
+        своих подписчиков — это эндпоинт для модерации аудитории.
+      tags: [ Users ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: >
+            Идентификатор владельца профиля. Сравнивается с UUID из JWT без
+            учёта регистра.
+          schema:
+            type: string
+            example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: subscriber_id
+          in: path
+          required: true
+          description: Идентификатор пользователя, которого необходимо удалить из подписчиков
+          schema:
+            type: string
+            example: "987fcdeb-51a2-43d1-b789-123456789abc"
+      responses:
+        '200':
+          description: Подписчик успешно удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscriber removed successfully"
+        '400':
+          description: Некорректный формат ID пользователя или подписчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_UUID"
+                message: "Invalid user ID format"
+                field: "id"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '403':
+          description: >
+            Попытка удалить подписчика из чужого профиля. Только владелец
+            аккаунта может управлять своими подписчиками.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Permission denied"
+        '404':
+          description: >
+            Подписка между указанными пользователями не существует. Сюда также
+            относится случай, когда subscriber_id не принадлежит существующему
+            пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "Subscription not found"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/{id}/subscriptions:
     get:
       summary: Получить список всех подписок пользователя
@@ -595,17 +700,19 @@ paths:
       summary: Запуск генерации/правки проекта с помощью ИИ (асинхронно)
       description: >
         Запускает в фоне генерацию (если у проекта ещё нет версий) либо правку
-                (иначе) SVG по запросу пользователя — сам запрос не ждёт завершения
-                обращения к LLM и сразу отвечает job_id. В промпт модели автоматически
-                подмешивается история последних 10 предыдущих запросов пользователя по
-                этому же проекту (без ответов модели) — как контекст, не как повторное
-                задание. Сообщение пользователя добавляется в историю чата проекта
-                (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
-                независимо от того, чем закончится сама генерация. Результат (или
-                ошибку) генерации нужно опрашивать через
-                GET /projects/{id}/generate/{job_id}. Поле references учитывается только при
-        первичной генерации (у проекта ещё нет версий) — при редактировании
-        существующего проекта оно молча игнорируется.
+        (иначе) SVG по запросу пользователя — сам запрос не ждёт завершения
+        обращения к LLM и сразу отвечает job_id. В промпт модели автоматически
+        подмешивается история последних 10 предыдущих запросов пользователя по
+        этому же проекту (без ответов модели) — как контекст, не как повторное
+        задание. Сообщение пользователя добавляется в историю чата проекта
+        (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
+        независимо от того, чем закончится сама генерация. Результат (или
+        ошибку) генерации нужно опрашивать через
+        GET /projects/{id}/generate/{job_id}. Одновременно для одного проекта
+        может выполняться только одна генерация — если предыдущая ещё не
+        завершена, запрос отклоняется с 409 (её можно дождаться через
+        GET .../generate/{job_id} или прервать через
+        POST .../generate/{job_id}/cancel).
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -629,6 +736,9 @@ paths:
                   example: "Добавь логотип с изображением кружки"
                 model:
                   type: string
+                  description: >
+                    Модель генерации. gpt-5.6-luna отправляется напрямую в
+                    OpenAI, остальные доступные модели — в Yandex AI Studio.
                   example: "deepseek-v4-flash/latest"
                 references:
                   type: array
@@ -683,6 +793,21 @@ paths:
           description: Нет прав на генерацию в чужом проекте
         '404':
           description: Проект не найден
+        '409':
+          description: Для проекта уже выполняется другая генерация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job_id:
+                    type: string
+                    description: Идентификатор уже выполняющейся задачи.
+              example:
+                message: "Generation already in progress for project 0e8bd340-2dbd-4a8b-88ef-c76329ad80c9"
+                job_id: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
 
   /projects/{id}/generate/{job_id}:
     get:
@@ -731,10 +856,59 @@ paths:
                   value:
                     status: "error"
                     message: "Generation service is temporarily unavailable. Please try again later."
+                Cancelled:
+                  summary: Генерация прервана через POST .../generate/{job_id}/cancel
+                  value:
+                    status: "cancelled"
         '401':
           description: Не авторизован
         '403':
           description: Нет прав на просмотр генерации в чужом проекте
+        '404':
+          description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
+
+  /projects/{id}/generate/{job_id}/cancel:
+    post:
+      summary: Отменить выполняющуюся генерацию
+      description: >
+        Запрашивает отмену задачи. Реально прерывает фоновую работу (сетевой
+        вызов к LLM, запись результата) через кооперативную отмену корутины —
+        это не просто отметка "игнорировать результат". Ответ этого запроса
+        отдаётся немедленно и может содержать status="cancelling" — это
+        означает, что отмена запрошена, но фоновая задача ещё не успела её
+        обработать; окончательный status="cancelled" нужно дождаться через
+        GET .../generate/{job_id}. Если задача уже завершилась (done/error) к
+        моменту вызова — отмена не имеет эффекта, в ответе просто вернётся её
+        актуальный финальный статус. Отмена также добавляет запись в историю
+        чата проекта (GET /projects/{id}/chat) с тем же job_id, что и исходное
+        сообщение пользователя.
+      tags: [ Projects ]
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий статус задачи после запроса отмены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationStatus'
+              example:
+                status: "cancelling"
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на отмену генерации в чужом проекте
         '404':
           description: Проект не найден, либо job_id не существует / не принадлежит этому проекту
 
@@ -896,55 +1070,6 @@ paths:
           description: Вы авторизованы, но не автор проекта
         '404':
           description: Проект не найден
-
-  /models:
-    get:
-      summary: Получение списка доступных ИИ-моделей
-      description: Возвращает список всех языковых и других ИИ-моделей (Yandex, DeepSeek, OpenAI и др.), доступных для использования в сервисе. Формат ответа совместим с OpenAI API.
-      tags:
-        - Models
-      responses:
-        '200':
-          description: Успешный запрос. Возвращает объект со списком моделей.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - object
-                  - data
-                properties:
-                  object:
-                    type: string
-                    example: "list"
-                    description: Тип корневого объекта.
-                  data:
-                    type: array
-                    description: Массив доступных моделей.
-                    items:
-                      type: object
-                      required:
-                        - id
-                        - object
-                        - owned_by
-                        - created
-                      properties:
-                        id:
-                          type: string
-                          example: "gpt://b1gttnvmtpd0tagdlb7o/deepseek-v4-flash/latest"
-                          description: Уникальный идентификатор (URI) модели.
-                        object:
-                          type: string
-                          example: "model"
-                          description: Тип сущности элемента массива.
-                        owned_by:
-                          type: string
-                          example: "Yandex"
-                          description: Владелец или разработчик модели (Yandex, DeepSeek, OpenAI, Alibaba).
-                        created:
-                          type: integer
-                          example: 0
-                          description: Временная метка создания модели (Unix timestamp).
 
   /feed:
     get:
@@ -1253,13 +1378,15 @@ components:
       type: object
       description: >
         Одно сообщение в истории чата проекта. Пользовательские сообщения
-        несут текст запроса (text), сообщения ассистента — либо идентификатор
-        созданной версии (version_id), либо, если генерация упала, текст
-        ошибки (error) — вместо самого SVG или ссылки на него. Сообщение
-        пользователя и ответ ассистента одного обмена связаны общим job_id
-        (идентификатором фоновой задачи генерации из POST .../generate);
-        пользовательское сообщение появляется в истории сразу при старте
-        задачи, ответ ассистента — только после её завершения.
+        несут текст запроса (text), сообщения ассистента — идентификатор
+        созданной версии (version_id) при успехе, текст ошибки (error) при
+        неудачной генерации, либо status=cancelled, если генерацию прервали
+        через POST .../generate/{job_id}/cancel — вместо самого SVG или
+        ссылки на него. Сообщение пользователя и ответ ассистента одного
+        обмена связаны общим job_id (идентификатором фоновой задачи генерации
+        из POST .../generate); пользовательское сообщение появляется в
+        истории сразу при старте задачи, ответ ассистента — только после её
+        завершения (в т.ч. отменой).
       required:
         - role
         - created_at
@@ -1279,6 +1406,10 @@ components:
           type: string
           description: "Только для role=assistant при неудачной генерации — текст ошибки"
           example: "Generation service is temporarily unavailable. Please try again later."
+        status:
+          type: string
+          description: "Только для role=assistant при отменённой генерации — всегда \"cancelled\""
+          enum: [ cancelled ]
         job_id:
           type: string
           description: Идентификатор фоновой задачи генерации, к которой относится сообщение.
@@ -1289,13 +1420,16 @@ components:
 
     GenerationStatus:
       type: object
-      description: Текущее состояние фоновой задачи генерации.
+      description: >
+        Текущее состояние фоновой задачи генерации. "cancelling" — переходное
+        состояние сразу после POST .../generate/{job_id}/cancel, пока фоновая
+        задача ещё не заметила запрос отмены; "cancelled" — уже финальное.
       required:
         - status
       properties:
         status:
           type: string
-          enum: [ pending, done, error ]
+          enum: [ pending, done, error, cancelling, cancelled ]
         url:
           type: string
           description: "Только при status=done — presigned-ссылка на сгенерированный SVG-объект"

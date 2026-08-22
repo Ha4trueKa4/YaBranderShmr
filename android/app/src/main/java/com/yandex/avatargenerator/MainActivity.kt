@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -72,25 +73,45 @@ class MainActivity : ComponentActivity() {
  *
  * `AppBundleLocaleChanges` подавлен осознанно: релизную корректность обеспечивает
  * `enableSplit = false` (все локали в base APK), Play Core-загрузка языков не нужна.
+ *
+ * Вместе с контекстом переопределяем [LocalActivityResultRegistryOwner]: его дефолтный
+ * резолвер ищет владельца, обходя `ContextWrapper`-цепочку от [LocalContext]
+ * (`findOwner` в activity-compose), а подменённый `createConfigurationContext`-контекст к
+ * Activity по этой цепочке не ведёт. Без явного проброса любой
+ * `rememberLauncherForActivityResult` в поддереве (системные пикеры, запрос разрешений,
+ * фото-пикер) падал бы с `IllegalStateException: No ActivityResultRegistryOwner...`.
+ * Остальные owner'ы (Lifecycle/SavedState/OnBackPressedDispatcher) резолвятся через
+ * `LocalView`/view-tree, а не через контекст, и подмену переживают — их не трогаем.
  */
 @SuppressLint("AppBundleLocaleChanges")
 @Composable
 private fun ProvideAppLocale(language: AppLanguage, content: @Composable () -> Unit) {
-    if (language.tag.isEmpty()) {
-        content()
-        return
-    }
     val baseContext = LocalContext.current
     val baseConfiguration = LocalConfiguration.current
+    // Захватываем владельца до подмены LocalContext, пока цепочка ещё ведёт к Activity.
+    val activityResultRegistryOwner = checkNotNull(LocalActivityResultRegistryOwner.current) {
+        "ProvideAppLocale must be hosted in a ComponentActivity"
+    }
+    // Контекст пересобираем только для явного языка; для SYSTEM (пустой тег) отдаём
+    // базовый как есть. Важно, что content() при любом языке вызывается из одного и
+    // того же CompositionLocalProvider: раньше пустой тег уходил в отдельную ветку с
+    // прямым content(), и первая смена SYSTEM→язык переносила вызов в другое место
+    // композиции — поддерево (вместе с NavHost и его navController) пересоздавалось,
+    // сбрасывая навигацию на стартовый экран (условно, с настроек на ленту).
     val localizedContext = remember(language, baseConfiguration) {
-        val configuration = Configuration(baseConfiguration).apply {
-            setLocale(Locale.forLanguageTag(language.tag))
+        if (language.tag.isEmpty()) {
+            baseContext
+        } else {
+            val configuration = Configuration(baseConfiguration).apply {
+                setLocale(Locale.forLanguageTag(language.tag))
+            }
+            baseContext.createConfigurationContext(configuration)
         }
-        baseContext.createConfigurationContext(configuration)
     }
     CompositionLocalProvider(
         LocalContext provides localizedContext,
         LocalConfiguration provides localizedContext.resources.configuration,
+        LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
         content = content,
     )
 }
