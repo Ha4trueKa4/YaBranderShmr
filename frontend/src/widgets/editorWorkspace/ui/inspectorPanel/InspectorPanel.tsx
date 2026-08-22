@@ -1,4 +1,5 @@
 import type { EditorDefinitions, EditorNode } from '@entities/editorDocument'
+import { Button } from '@shared/ui'
 import { useTranslation } from 'react-i18next'
 import { getLayerPresentation } from '../layerPresentation'
 import { GroupProperties } from './groupProperties/GroupProperties'
@@ -18,6 +19,7 @@ interface InspectorPanelProps {
     stopIndex: number,
     color: string,
   ) => void
+  onDeleteSelectedNode: () => boolean
   onShapeOpacityChange: (nodeId: string, opacity: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onShapeRotationChange: (
@@ -101,6 +103,7 @@ export function InspectorPanel({
   onEyeDropperStart,
   onShapeFillOpacityChange,
   onGradientStopColorChange,
+  onDeleteSelectedNode,
   onShapeOpacityChange,
   onShapePositionChange,
   onShapeRotationChange,
@@ -209,6 +212,15 @@ export function InspectorPanel({
               onShapeTransformChange(selectedNode.id, transform)
             }
           />
+          <Button
+            className={styles.deleteButton}
+            disabled={selectedNode.isLocked}
+            fullWidth
+            onClick={onDeleteSelectedNode}
+            variant="danger"
+          >
+            {t('Delete')}
+          </Button>
         </div>
       </section>
     )
@@ -258,6 +270,15 @@ export function InspectorPanel({
             onTextTransformChange(selectedNode.id, transform)
           }
         />
+        <Button
+          className={styles.deleteButton}
+          disabled={selectedNode.isLocked}
+          fullWidth
+          onClick={onDeleteSelectedNode}
+          variant="danger"
+        >
+          {t('Delete')}
+        </Button>
       </div>
     </section>
   )

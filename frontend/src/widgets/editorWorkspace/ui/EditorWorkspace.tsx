@@ -240,6 +240,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       measuredRotationCenter.nodeId === editorStore.selectedNode?.id
         ? { x: measuredRotationCenter.x, y: measuredRotationCenter.y }
         : undefined,
+    onDeleteSelectedNode: handleDeleteSelection,
     onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
     onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
