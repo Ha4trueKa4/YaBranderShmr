@@ -548,17 +548,18 @@ class ChatRepositoryImplTest {
     }
 
     @Test
-    fun `404 без ответа в истории — провал без текста`() = runBlocking {
-        // Бэкенд упал в середине генерации: результата не будет вообще.
+    fun `404 без ответа в истории — ошибка, а не провал генерации`() = runBlocking {
+        // Исход остался неизвестен: задача могла оборваться вместе с процессом,
+        // а могла и досчитаться. Отдать Failed значило бы соврать экрану, что
+        // на сервере лежит запись об ошибке, — он пошёл бы перечитывать ленту.
         val repository = repository(
             status = { respondError(HttpStatusCode.NotFound) },
             chat = { respondJson("""{"chat_history":[{"role":"user","text":"Violet logo"}]}""") },
         )
 
-        assertEquals(
-            GenerationOutcome.Failed(message = null),
-            repository.awaitGeneration("p-1", JobId).getOrThrow(),
-        )
+        val error = repository.awaitGeneration("p-1", JobId).exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.NotFound)
         // Пара попыток: запись в историю могла отстать от рестарта.
         assertEquals(2, requestedPaths.count { it.endsWith("/chat") })
     }

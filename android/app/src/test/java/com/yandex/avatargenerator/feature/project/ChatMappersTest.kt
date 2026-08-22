@@ -27,8 +27,28 @@ class ChatMappersTest {
         )
 
         assertEquals(
-            ChatMessage.Failed(id = "chat-1-assistant", text = "Invalid SVG", sentAt = null),
+            ChatMessage.Failed(
+                id = "chat-1-assistant",
+                text = "Invalid SVG",
+                sentAt = null,
+                jobId = "job-1",
+            ),
             messages.last(),
+        )
+    }
+
+    @Test
+    fun `job_id ответа доезжает до ленты`() {
+        // По нему экран узнаёт в перечитанной ленте ответ на свою генерацию:
+        // бэкенд дописывает историю уже после ответа на опрос статуса.
+        val messages = timeline(
+            ChatMessageDto(role = "user", text = "Violet logo", jobId = "job-7"),
+            ChatMessageDto(role = "assistant", versionId = "v-2", jobId = "job-7"),
+        )
+
+        assertEquals(
+            "job-7",
+            messages.filterIsInstance<ChatMessage.Incoming>().single().jobId,
         )
     }
 

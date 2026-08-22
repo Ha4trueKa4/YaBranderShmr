@@ -47,6 +47,16 @@ internal class ProjectViewModelTest {
             id = "chat-2-assistant",
             versionId = "v-2",
             sentAt = Instant.parse("2026-08-12T11:32:20Z"),
+            jobId = FakeChatRepository.JOB_ID,
+        ),
+    )
+
+    /** Та же лента, но ответ бэкенд ещё не дописал: есть только промпт. */
+    private val reloadedWithoutAnswer = messages + listOf(
+        ChatMessage.Outgoing(
+            id = "chat-1-user",
+            text = "Make it rounder",
+            sentAt = Instant.parse("2026-08-12T11:32:00Z"),
         ),
     )
     /**
@@ -65,6 +75,7 @@ internal class ProjectViewModelTest {
             versionId = "v-2",
             sentAt = Instant.parse("2026-08-12T11:32:00Z"),
             previewUrl = LATEST_URL,
+            jobId = FakeChatRepository.JOB_ID,
         ),
     )
 
@@ -79,6 +90,7 @@ internal class ProjectViewModelTest {
             id = "chat-2-assistant",
             text = "Invalid SVG",
             sentAt = Instant.parse("2026-08-12T11:32:20Z"),
+            jobId = FakeChatRepository.JOB_ID,
         ),
     )
 
@@ -416,15 +428,85 @@ internal class ProjectViewModelTest {
         advanceUntilIdle()
 
         chatRepository.awaitResult = Result.failure(NetworkException.Forbidden())
-        chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
         viewModel.onDraftChange("Make it rounder")
         viewModel.send()
         advanceUntilIdle()
 
+        val content = contentOf(viewModel)
+        assertEquals(null, content.messages.filterIsInstance<ChatMessage.Failed>().single().text)
+        // Лента читается, но перечитывать её нельзя: записи об исходе на сервере
+        // нет, и она молча заменила бы пузырь ошибки пустотой.
+        assertEquals(1, chatRepository.getChatCallCount)
+        assertEquals(false, content.isSending)
+    }
+
+    @Test
+    fun `лента перечитывается, пока ответ не появится в истории`() = runTest(dispatcher) {
+        // Бэкенд отвечает на опрос статуса раньше, чем дописывает ответ в
+        // историю: первая перечитанная лента приходит ещё без него.
+        chatRepository.chatResults += Result.success(chat)
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedWithoutAnswer))
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals(reloadedMessages, content.messages)
+        assertEquals(3, chatRepository.getChatCallCount)
+        assertEquals(false, content.isSending)
+    }
+
+    @Test
+    fun `ответ так и не появился в истории — лента остаётся своей`() = runTest(dispatcher) {
+        // Запись в историю у бэкенда best-effort: она могла не пройти вовсе.
+        // Заменить ленту на серверную значило бы стереть промпт и скелетон,
+        // не дав взамен ничего.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        chatRepository.chatResult = Result.success(chat.copy(messages = reloadedWithoutAnswer))
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
         assertEquals(
-            null,
-            contentOf(viewModel).messages.filterIsInstance<ChatMessage.Failed>().single().text,
+            "Make it rounder",
+            content.messages.filterIsInstance<ChatMessage.Outgoing>().last().text,
         )
+        assertEquals(emptyList<ChatMessage.Pending>(), content.messages.filterIsInstance<ChatMessage.Pending>())
+        assertEquals(false, content.isSending)
+    }
+
+    @Test
+    fun `провал без записи в истории показывается локальным пузырём`() = runTest(dispatcher) {
+        // Ошибку сервер назвал, но дописать её в историю не успел — текст берём
+        // из ответа опроса, а не теряем вместе с перечитанной лентой.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        chatRepository.awaitResult = Result.success(GenerationOutcome.Failed("Invalid SVG"))
+        chatRepository.chatResult = Result.success(chat.copy(messages = reloadedWithoutAnswer))
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals(
+            "Invalid SVG",
+            content.messages.filterIsInstance<ChatMessage.Failed>().single().text,
+        )
+        assertEquals(
+            "Make it rounder",
+            content.messages.filterIsInstance<ChatMessage.Outgoing>().last().text,
+        )
+        assertEquals(false, content.isSending)
     }
 
     @Test

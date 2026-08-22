@@ -37,12 +37,16 @@ sealed interface ChatMessage {
      *  час и при каждом запросе новая, так что ключом кэша быть не может.
      * @property previewUrl готовая ссылка на SVG версии; `null` — ссылку ещё
      *  предстоит запросить (в истории её не отдают).
+     * @property jobId задача, которая создала этот ответ; `null` — записи
+     *  старого формата, у них `job_id` нет. По нему экран узнаёт свой ответ в
+     *  перечитанной ленте (см. `ProjectViewModel.reloadUntilAnswered`).
      */
     data class Incoming(
         override val id: String,
         val versionId: String,
         val sentAt: Instant?,
         val previewUrl: String? = null,
+        val jobId: String? = null,
     ) : ChatMessage
 
     /**
@@ -71,11 +75,14 @@ sealed interface ChatMessage {
      * @property text текст ошибки **с сервера**, показываем как есть; `null` —
      *  текста не прислали (или ошибка клиентская), подпись возьмёт UI из
      *  `strings.xml`.
+     * @property jobId задача, которая упала; `null` — пузырь нарисован
+     *  локально, на сервере такой записи нет. См. [Incoming.jobId].
      */
     data class Failed(
         override val id: String,
         val text: String?,
         val sentAt: Instant?,
+        val jobId: String? = null,
     ) : ChatMessage
 
     /**

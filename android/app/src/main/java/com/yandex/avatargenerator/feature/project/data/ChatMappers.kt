@@ -61,6 +61,7 @@ internal fun buildChatTimeline(
                             id = "chat-$index-$AssistantRole",
                             text = error,
                             sentAt = createdAt,
+                            jobId = record.jobId,
                         ),
                     )
                     return@forEachIndexed
@@ -72,6 +73,7 @@ internal fun buildChatTimeline(
                         versionId = versionId,
                         sentAt = createdAt,
                         previewUrl = latestVersionUrl.takeIf { versionId == latestVersionId },
+                        jobId = record.jobId,
                     ),
                 )
                 add(

@@ -7,6 +7,7 @@ import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -133,30 +134,54 @@ internal class ProjectViewModel(
     /**
      * Ждёт результат задачи [jobId], показывая на её месте скелетон ответа.
      *
-     * По [GenerationOutcome.Failed] лента перечитывается: сервер уже положил в
-     * историю и промпт, и запись об ошибке — после перезахода экран должен
-     * выглядеть так же. Не удалось перечитать — рисуем пузырь ошибки локально,
-     * оптимистичный промпт при этом не трогаем: на сервере он есть.
+     * Исход, о котором знает сервер (версия готова либо генерация упала), лежит
+     * в истории чата — по нему лента перечитывается целиком, и после перезахода
+     * экран выглядит так же. Сорвавшийся опрос — другое дело: записи об исходе
+     * на сервере нет, перечитывать нечего, пузырь ошибки рисуем локально. Текст
+     * `NetworkException` в него не кладём — он служебный.
      */
     private suspend fun awaitGeneration(jobId: String) {
         val skeleton = ChatMessage.Pending(id = UUID.randomUUID().toString(), jobId = jobId)
         _uiState.updateContent { it.copy(messages = it.messages + skeleton) }
 
-        val outcome = chatRepository.awaitGeneration(projectId, jobId)
-            // Опрос сорвался — о судьбе генерации ничего не известно. Текст
-            // NetworkException пользователю не показываем: он служебный.
-            .getOrElse { GenerationOutcome.Failed(message = null) }
-
-        when (outcome) {
-            is GenerationOutcome.Done -> reloadAfterSend()
-            is GenerationOutcome.Failed -> showFailure(skeleton, outcome.message)
-            GenerationOutcome.TimedOut -> showStillRunning(skeleton)
-        }
+        chatRepository.awaitGeneration(projectId, jobId).fold(
+            onSuccess = { outcome ->
+                when (outcome) {
+                    is GenerationOutcome.Done -> showAnswer(skeleton, jobId)
+                    is GenerationOutcome.Failed -> showFailure(skeleton, jobId, outcome.message)
+                    GenerationOutcome.TimedOut -> showStillRunning(skeleton)
+                }
+            },
+            onFailure = { showFailure(skeleton, jobId = null, message = null) },
+        )
     }
 
-    /** Заменяет скелетон пузырём ошибки, если ленту перечитать не удалось. */
-    private suspend fun showFailure(skeleton: ChatMessage.Pending, message: String?) {
-        val chat = chatRepository.getChat(projectId).getOrNull()
+    /**
+     * Версия готова — показываем её перечитанной лентой.
+     *
+     * Не дождались ответа в истории — ленту не трогаем вовсе, только снимаем
+     * скелетон: перечитанная без ответа, она заменила бы собой и оптимистичный
+     * промпт, и скелетон, и результат генерации пропал бы с экрана совсем.
+     */
+    private suspend fun showAnswer(skeleton: ChatMessage.Pending, jobId: String) {
+        val chat = reloadUntilAnswered(jobId)
+        if (chat != null) applyChat(chat) else dropSkeleton(skeleton)
+    }
+
+    /**
+     * Показывает провал: записью из перечитанной ленты, а если её там нет —
+     * локальным пузырём ошибки. Оптимистичный промпт при этом не трогаем: на
+     * сервере он есть.
+     *
+     * @param jobId задача, ответ которой ищем в ленте; `null` — сорвался сам
+     *  опрос, на сервере записи об исходе нет и искать нечего.
+     */
+    private suspend fun showFailure(
+        skeleton: ChatMessage.Pending,
+        jobId: String?,
+        message: String?,
+    ) {
+        val chat = jobId?.let { reloadUntilAnswered(it) }
         if (chat != null) {
             applyChat(chat)
             return
@@ -167,6 +192,25 @@ internal class ProjectViewModel(
             sentAt = Instant.now(),
         )
         replaceSkeleton(skeleton, failure)
+    }
+
+    /**
+     * Перечитывает ленту, пока в ней не появится ответ на задачу [jobId].
+     *
+     * Бэкенд будит опрос статуса **до** того, как допишет результат в историю
+     * (и сама запись у него best-effort — может не пройти вовсе), так что первая
+     * же перечитанная лента вполне может прийти ещё без ответа. Без этой
+     * проверки она молча затирала бы собой всё, что экран знает о генерации.
+     *
+     * @return лента с ответом; `null` — ответа так и нет либо лента не читается.
+     */
+    private suspend fun reloadUntilAnswered(jobId: String): ProjectChat? {
+        repeat(ReloadAttempts) { attempt ->
+            if (attempt > 0) delay(ReloadRetryDelayMillis)
+            val chat = chatRepository.getChat(projectId).getOrNull()
+            if (chat != null && chat.messages.hasAnswerFor(jobId)) return chat
+        }
+        return null
     }
 
     /**
@@ -207,25 +251,15 @@ internal class ProjectViewModel(
     }
 
     /**
-     * Перечитывает ленту после удачной генерации, не показывая скелетон: экран
-     * уже с содержимым, и мигать им из-за фонового обновления незачем.
-     *
-     * Если перезапрос не удался, версия всё равно создана — оставляем ленту как
-     * есть вместо [ProjectUiState.Error]: показать пользователю ошибку там, где
-     * всё сработало, было бы враньём. Скелетон при этом убираем — ждать больше
-     * нечего.
+     * Убирает скелетон, оставив ленту как есть: версия создана, и показать
+     * из-за неудачного перезапроса [ProjectUiState.Error] было бы враньём.
      */
-    private suspend fun reloadAfterSend() {
-        val chat = chatRepository.getChat(projectId).getOrNull()
-        if (chat == null) {
-            _uiState.updateContent { content ->
-                content.copy(
-                    messages = content.messages.filterNot { it is ChatMessage.Pending },
-                    isSending = false,
-                )
-            }
-        } else {
-            applyChat(chat)
+    private fun dropSkeleton(skeleton: ChatMessage.Pending) {
+        _uiState.updateContent { content ->
+            content.copy(
+                messages = content.messages.filterNot { it.id == skeleton.id },
+                isSending = false,
+            )
         }
     }
 
@@ -321,6 +355,21 @@ internal class ProjectViewModel(
                 onFailure = { ProjectUiState.Error },
             )
         }
+    }
+}
+
+/** Сколько раз перечитать ленту, дожидаясь ответа сервера на нашу задачу. */
+private const val ReloadAttempts = 3
+
+/** Пауза между перечитываниями: даём бэкенду дописать историю. */
+private const val ReloadRetryDelayMillis = 500L
+
+/** Есть ли в ленте ответ ИИ на задачу [jobId] — удачный или с ошибкой. */
+private fun List<ChatMessage>.hasAnswerFor(jobId: String): Boolean = any { message ->
+    when (message) {
+        is ChatMessage.Incoming -> message.jobId == jobId
+        is ChatMessage.Failed -> message.jobId == jobId
+        else -> false
     }
 }
 

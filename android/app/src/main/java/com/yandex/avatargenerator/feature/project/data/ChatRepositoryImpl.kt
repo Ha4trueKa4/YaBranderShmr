@@ -114,7 +114,8 @@ class ChatRepositoryImpl(
      *
      * Таймаут и обрыв связи ожидание не прерывают: сеть могла моргнуть ровно на
      * этом опросе. А 404 значит, что бэкенд перезапустился и потерял задачу
-     * (она живёт в памяти процесса) — тогда результат ищем в истории чата.
+     * (она живёт в памяти процесса) — тогда результат ищем в истории чата, а не
+     * найдя, отдаём тот же 404 ошибкой: исход генерации остался неизвестен.
      */
     override suspend fun awaitGeneration(
         projectId: String,
@@ -144,7 +145,7 @@ class ChatRepositoryImpl(
                     is NetworkException.NoConnection,
                     -> delay(polling.guardMillis)
 
-                    is NetworkException.NotFound -> return fromHistory(projectId, jobId)
+                    is NetworkException.NotFound -> return fromHistory(projectId, jobId, error)
 
                     else -> return Result.failure(error)
                 }
@@ -167,15 +168,24 @@ class ChatRepositoryImpl(
      * и версии здесь ни при чём — экран всё равно перечитает ленту сам.
      *
      * Пара попыток с паузой: бэкенд мог перезапуститься ровно между генерацией и
-     * записью её результата в историю. Не нашли — генерация оборвалась вместе с
-     * процессом, результата не будет.
+     * записью её результата в историю.
+     *
+     * Не нашли — отдаём [notFound], а не [GenerationOutcome.Failed]: исхода
+     * генерации мы так и не узнали (задача могла оборваться вместе с процессом,
+     * а могла просто не читаться история), и записи об ошибке на сервере нет.
+     * Экрану это различие важно — по `Failed` он перечитывает ленту, а тут
+     * читать нечего.
      */
-    private suspend fun fromHistory(projectId: String, jobId: String): Result<GenerationOutcome> {
+    private suspend fun fromHistory(
+        projectId: String,
+        jobId: String,
+        notFound: NetworkException.NotFound,
+    ): Result<GenerationOutcome> {
         repeat(FallbackAttempts) { attempt ->
             if (attempt > 0) delay(polling.guardMillis)
             loadHistory(projectId).findGenerationOutcome(jobId)?.let { return Result.success(it) }
         }
-        return Result.success(GenerationOutcome.Failed(message = null))
+        return Result.failure(notFound)
     }
 
     /** Пустая история и недоступная история для экрана одинаковы: см. KDoc класса. */
