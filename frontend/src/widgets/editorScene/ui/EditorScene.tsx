@@ -16,6 +16,10 @@ interface EditorSceneProps {
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: { scaleX: number; scaleY: number; x: number; y: number },
+  ) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
@@ -37,6 +41,7 @@ export function EditorScene({
   onSelectNode,
   onGroupPositionChange,
   onShapePositionChange,
+  onShapeTransformChange,
   onTextPositionChange,
   onViewportOffsetChange,
   onZoomChange,
@@ -59,6 +64,7 @@ export function EditorScene({
         onGroupPositionChange={onGroupPositionChange}
         onSelectNode={onSelectNode}
         onShapePositionChange={onShapePositionChange}
+        onShapeTransformChange={onShapeTransformChange}
         onTextPositionChange={onTextPositionChange}
         onViewportOffsetChange={onViewportOffsetChange}
         onZoomChange={onZoomChange}

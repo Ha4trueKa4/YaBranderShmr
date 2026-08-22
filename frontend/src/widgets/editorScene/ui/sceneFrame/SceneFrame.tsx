@@ -28,6 +28,10 @@ interface SceneFrameProps {
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
+  onShapeTransformChange: (
+    nodeId: string,
+    transform: { scaleX: number; scaleY: number; x: number; y: number },
+  ) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
   onViewportOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
@@ -49,6 +53,7 @@ export function SceneFrame({
   onGroupPositionChange,
   onSelectNode,
   onShapePositionChange,
+  onShapeTransformChange,
   onTextPositionChange,
   onViewportOffsetChange,
   onZoomChange,
@@ -205,7 +210,20 @@ export function SceneFrame({
                   getEditableElement={getEditableElement}
                   selectedNodes={selectedNodes}
                 />
-                <TransformHandles />
+                <TransformHandles
+                  activeTool={activeTool}
+                  canvasHeight={document.height}
+                  canvasWidth={document.width}
+                  canvasX={document.viewBoxX ?? 0}
+                  canvasY={document.viewBoxY ?? 0}
+                  getEditableElement={getEditableElement}
+                  onDocumentChangeEnd={onDocumentChangeEnd}
+                  onDocumentChangeStart={onDocumentChangeStart}
+                  onShapeTransformChange={onShapeTransformChange}
+                  selectedNode={selectedNode}
+                  selectedNodes={selectedNodes}
+                  svgReference={svgReference}
+                />
               </>
             )}
           </svg>

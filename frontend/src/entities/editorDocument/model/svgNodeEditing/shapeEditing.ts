@@ -102,6 +102,32 @@ export function createShapeEditing({
       })
     },
 
+    setShapeTransform(
+      nodeId: string,
+      transform: { scaleX: number; scaleY: number; x: number; y: number },
+    ) {
+      const node = getEditableShape(getDocument(), nodeId)
+
+      if (
+        !node ||
+        !Number.isFinite(transform.x) ||
+        !Number.isFinite(transform.y) ||
+        !Number.isFinite(transform.scaleX) ||
+        !Number.isFinite(transform.scaleY) ||
+        transform.scaleX <= 0 ||
+        transform.scaleY <= 0
+      ) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.transform.x = transform.x
+        node.transform.y = transform.y
+        node.transform.scaleX = transform.scaleX
+        node.transform.scaleY = transform.scaleY
+      })
+    },
+
     setShapeStrokeColor(nodeId: string, color: string) {
       const node = getEditableShape(getDocument(), nodeId)
 
