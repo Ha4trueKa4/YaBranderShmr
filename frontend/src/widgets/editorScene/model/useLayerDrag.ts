@@ -1,6 +1,7 @@
 import type {
   EditorGroup,
   EditorNode,
+  EditorRawNode,
   EditorShape,
   EditorText,
 } from '@entities/editorDocument'
@@ -14,11 +15,13 @@ import type { CanvasTool } from './canvasTool'
 
 interface UseLayerDragParams {
   activeTool: CanvasTool
+  document: EditorNode[]
   getEditableElement: (nodeId: string) => SVGGElement | undefined
   isReadOnly: boolean
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onGroupPositionChange: (nodeId: string, x: number, y: number) => void
+  onRawPositionChange: (nodeId: string, x: number, y: number) => void
   onSelectNode: (nodeId: string, isMultiSelect: boolean) => void
   onShapePositionChange: (nodeId: string, x: number, y: number) => void
   onTextPositionChange: (nodeId: string, x: number, y: number) => void
@@ -28,7 +31,7 @@ interface UseLayerDragParams {
 
 type PointerPosition = { x: number; y: number }
 type DragTarget = {
-  elementType: 'group' | 'shape' | 'text'
+  elementType: 'group' | 'raw' | 'shape' | 'text'
   nodeId: string
   startPosition: PointerPosition
 }
@@ -45,6 +48,13 @@ type TapState = {
   clientY: number
   nodeId: string
   timestamp: number
+}
+
+type LayerCycleState = {
+  clientX: number
+  clientY: number
+  nodeIds: string[]
+  nextNodeIndex: number
 }
 
 const DOUBLE_TAP_MAX_DELAY = 300
@@ -89,7 +99,7 @@ function hasLockedDescendant(node: EditorGroup): boolean {
 }
 
 function toDragTarget(
-  node: EditorShape | EditorText | EditorGroup,
+  node: EditorShape | EditorText | EditorGroup | EditorRawNode,
 ): DragTarget {
   if (node.type === 'text') {
     return {
@@ -131,10 +141,6 @@ function isPointerWithinNode(
   clientX: number,
   clientY: number,
 ): boolean {
-  if (node.type === 'raw') {
-    return false
-  }
-
   if (node.type === 'group') {
     return node.children.some((child) =>
       isPointerWithinNode(child, getEditableElement, clientX, clientY),
@@ -144,13 +150,41 @@ function isPointerWithinNode(
   return isPointerWithinElement(getEditableElement(node.id), clientX, clientY)
 }
 
+function getVisibleLeafNodes(nodes: EditorNode[]): EditorNode[] {
+  return nodes.flatMap((node) => {
+    if (!node.isVisible) {
+      return []
+    }
+
+    return node.type === 'group' ? getVisibleLeafNodes(node.children) : [node]
+  })
+}
+
+function getOverlappingNodeIds(
+  nodes: EditorNode[],
+  getEditableElement: (nodeId: string) => SVGGElement | undefined,
+  clientX: number,
+  clientY: number,
+) {
+  return getVisibleLeafNodes(nodes)
+    .filter(
+      (node) =>
+        (node.type === 'raw' || !node.isLocked) &&
+        isPointerWithinElement(getEditableElement(node.id), clientX, clientY),
+    )
+    .map((node) => node.id)
+    .reverse()
+}
+
 export function useLayerDrag({
   activeTool,
+  document,
   getEditableElement,
   isReadOnly,
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onGroupPositionChange,
+  onRawPositionChange,
   onSelectNode,
   onShapePositionChange,
   onTextPositionChange,
@@ -159,10 +193,14 @@ export function useLayerDrag({
 }: UseLayerDragParams) {
   const svgReference = useRef<SVGSVGElement>(null)
   const dragStateReference = useRef<DragState | null>(null)
+  const layerCycleStateReference = useRef<LayerCycleState | null>(null)
   const lastTapReference = useRef<TapState | null>(null)
 
   const startDrag = useCallback(
-    (node: EditorShape | EditorText, event: ReactPointerEvent<SVGGElement>) => {
+    (
+      node: EditorShape | EditorText | EditorRawNode,
+      event: ReactPointerEvent<SVGGElement>,
+    ) => {
       if (isReadOnly || event.button !== 0 || activeTool !== 'select') {
         return
       }
@@ -184,7 +222,35 @@ export function useLayerDrag({
 
       if (isDoubleTap) {
         lastTapReference.current = null
-        onSelectNode(node.id, false)
+        const overlappingNodeIds = getOverlappingNodeIds(
+          document,
+          getEditableElement,
+          event.clientX,
+          event.clientY,
+        )
+        const layerCycleState = layerCycleStateReference.current
+        const canContinueCycle =
+          layerCycleState &&
+          Math.hypot(
+            event.clientX - layerCycleState.clientX,
+            event.clientY - layerCycleState.clientY,
+          ) <= DOUBLE_TAP_MAX_DISTANCE &&
+          layerCycleState.nodeIds.length === overlappingNodeIds.length &&
+          layerCycleState.nodeIds.every(
+            (nodeId, index) => nodeId === overlappingNodeIds[index],
+          )
+        const nextNodeIndex = canContinueCycle
+          ? layerCycleState.nextNodeIndex % overlappingNodeIds.length
+          : 1
+        const nodeIdToSelect = overlappingNodeIds.at(nextNodeIndex) ?? node.id
+
+        layerCycleStateReference.current = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          nodeIds: overlappingNodeIds,
+          nextNodeIndex: nextNodeIndex + 1,
+        }
+        onSelectNode(nodeIdToSelect, false)
         event.preventDefault()
 
         return
@@ -197,7 +263,9 @@ export function useLayerDrag({
       }
 
       const preferredNode =
-        (selectedNode?.type === 'shape' || selectedNode?.type === 'text') &&
+        (selectedNode?.type === 'shape' ||
+          selectedNode?.type === 'text' ||
+          selectedNode?.type === 'raw') &&
         isPointerWithinNode(
           selectedNode,
           getEditableElement,
@@ -225,7 +293,7 @@ export function useLayerDrag({
       )
 
       if (
-        node.isLocked ||
+        (node.isLocked && node.type !== 'raw') ||
         selectedGroupToDrag?.isLocked ||
         (selectedGroupToDrag && hasLockedDescendant(selectedGroupToDrag))
       ) {
@@ -237,8 +305,10 @@ export function useLayerDrag({
         : isSelectedNode
           ? selectedNodes.filter(
               (selected): selected is EditorShape | EditorText =>
-                (selected.type === 'shape' || selected.type === 'text') &&
-                !selected.isLocked,
+                (selected.type === 'shape' ||
+                  selected.type === 'text' ||
+                  selected.type === 'raw') &&
+                (!selected.isLocked || selected.type === 'raw'),
             )
           : [preferredNode]
 
@@ -273,6 +343,7 @@ export function useLayerDrag({
     },
     [
       activeTool,
+      document,
       getEditableElement,
       isReadOnly,
       onDocumentChangeStart,
@@ -291,6 +362,13 @@ export function useLayerDrag({
 
   const onTextPointerDown = useCallback(
     (node: EditorText, event: ReactPointerEvent<SVGGElement>) => {
+      startDrag(node, event)
+    },
+    [startDrag],
+  )
+
+  const onRawPointerDown = useCallback(
+    (node: EditorRawNode, event: ReactPointerEvent<SVGGElement>) => {
       startDrag(node, event)
     },
     [startDrag],
@@ -327,12 +405,19 @@ export function useLayerDrag({
           onShapePositionChange(target.nodeId, x, y)
         } else if (target.elementType === 'text') {
           onTextPositionChange(target.nodeId, x, y)
+        } else if (target.elementType === 'raw') {
+          onRawPositionChange(target.nodeId, x, y)
         } else {
           onGroupPositionChange(target.nodeId, x, y)
         }
       }
     },
-    [onGroupPositionChange, onShapePositionChange, onTextPositionChange],
+    [
+      onGroupPositionChange,
+      onRawPositionChange,
+      onShapePositionChange,
+      onTextPositionChange,
+    ],
   )
 
   const onPointerUp = useCallback(
@@ -371,6 +456,7 @@ export function useLayerDrag({
   return {
     onPointerMove,
     onPointerUp,
+    onRawPointerDown,
     onShapePointerDown,
     onTextPointerDown,
     svgReference,

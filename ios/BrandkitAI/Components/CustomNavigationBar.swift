@@ -17,6 +17,7 @@ struct NavigationBackButton: View {
 private struct CustomNavigationBarModifier: ViewModifier {
     let title: String
     let onBack: (() -> Void)?
+    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         content
@@ -28,6 +29,9 @@ private struct CustomNavigationBarModifier: ViewModifier {
                     backItem(action: onBack)
                 }
             }
+            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+            .toolbarBackground(Color.background, for: .navigationBar)
+            .toolbarColorScheme(colorScheme, for: .navigationBar)
     }
 
     @ToolbarContentBuilder

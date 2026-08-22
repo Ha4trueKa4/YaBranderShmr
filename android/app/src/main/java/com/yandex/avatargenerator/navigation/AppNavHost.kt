@@ -23,6 +23,7 @@ import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
 import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
+import com.yandex.avatargenerator.feature.settings.ui.SettingsScreen
 import com.yandex.avatargenerator.ui.components.BrandEmptyState
 import com.yandex.avatargenerator.ui.theme.AppColors
 
@@ -135,11 +136,22 @@ fun AppNavHost(
                         navController.navigate(Destination.Project.createRoute(projectId))
                     },
                     onActionClick = { /* TODO: экран редактирования профиля */ },
+                    onOpenSettings = {
+                        navController.navigate(Destination.Settings.route) { launchSingleTop = true }
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
                 ProfileWithoutSessionState(modifier = Modifier.fillMaxSize())
             }
+        }
+
+        composable(Destination.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onLoggedOut = { navController.navigateToAuthAfterLogout() },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         composable(
@@ -218,6 +230,18 @@ private fun ProfileWithoutSessionState(modifier: Modifier = Modifier) {
  */
 private fun NavHostController.navigateIntoAppAfterAuth() {
     navigate(Destination.Feed.route) {
+        popUpTo(0) { inclusive = true }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * Разлогин → экран входа. `popUpTo(0) { inclusive = true }` полностью очищает
+ * бэкстек (лента, профиль, настройки), чтобы «назад» со входа не возвращал в
+ * приложение после выхода из аккаунта.
+ */
+private fun NavHostController.navigateToAuthAfterLogout() {
+    navigate(Destination.Login.route) {
         popUpTo(0) { inclusive = true }
         launchSingleTop = true
     }

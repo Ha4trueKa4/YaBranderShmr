@@ -44,6 +44,8 @@ import org.koin.core.parameter.parametersOf
  *
  * @param onProjectClick открыть проект по id.
  * @param onActionClick клик по кнопке шапки (Follow / Edit profile).
+ * @param onOpenSettings открыть настройки; задаётся только для своего профиля —
+ *   тогда в правом верхнем углу показывается кнопка-шестерёнка.
  */
 @Composable
 fun ProfileScreen(
@@ -52,6 +54,7 @@ fun ProfileScreen(
     onProjectClick: (projectId: String) -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSettings: (() -> Unit)? = null,
     viewModel: ProfileViewModel = koinViewModel { parametersOf(userId, isOwnProfile) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -80,6 +83,7 @@ fun ProfileScreen(
                     onActionClick = {
                         if (current.isOwnProfile) onActionClick() else viewModel.toggleFollow()
                     },
+                    onOpenSettings = onOpenSettings,
                 )
         }
     }
@@ -91,6 +95,7 @@ private fun ProfileContent(
     onProjectClick: (String) -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     ProjectMasonryGrid(
         modifier = modifier.fillMaxSize(),
@@ -101,6 +106,7 @@ private fun ProfileContent(
                 profile = state.profile,
                 isOwnProfile = state.isOwnProfile,
                 onActionClick = onActionClick,
+                onOpenSettings = onOpenSettings,
                 modifier = Modifier.bleedHorizontally(AppSpacing.m),
             )
         }
