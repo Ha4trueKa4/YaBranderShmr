@@ -1,6 +1,5 @@
-package com.yandex.avatargenerator.feature.project
+package com.yandex.avatargenerator.core.data
 
-import com.yandex.avatargenerator.feature.project.data.toInstantOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

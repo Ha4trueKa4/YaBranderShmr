@@ -1,5 +1,6 @@
 package com.yandex.avatargenerator.feature.project.data
 
+import com.yandex.avatargenerator.core.data.toInstantOrNull
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.project.data.dto.ProjectDto
 import com.yandex.avatargenerator.feature.project.domain.model.Project

@@ -123,6 +123,7 @@
 
     <string name="chats_error_title">Couldn\'t load chats</string>
     <string name="chats_error_retry">Retry</string>
+    <string name="chats_refresh_error">Couldn\'t refresh</string>
 
     <!-- Создание проекта -->
     <string name="create_project_title">New Project</string>

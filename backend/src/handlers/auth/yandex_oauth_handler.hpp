@@ -4,6 +4,7 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 #include "jwt_service.hpp"
+#include "yandex_profile_client.hpp"
 
 namespace ya_brander::auth {
 
@@ -20,32 +21,17 @@ public:
         userver::server::request::RequestContext& context) const override;
 
 private:
-    struct YandexProfile {
-        std::string provider_id;
-        std::string email;
-        std::string login;
-    };
-
     struct UserRecord {
         std::string id;
         std::string login;
         std::string email;
     };
 
-    std::string ExchangeCodeForToken(const std::string& code) const;
-    YandexProfile FetchProfile(const std::string& access_token) const;
-    // SDK-флоу: access_token уже финальный, менять на других хостах нечего.
-    // login.yandex.ru/info?format=jwt отдаёт профиль как JWT, подписанный
-    // client_secret'ом приложения — проверяем подпись и exp локально, без
-    // похода в oauth.yandex.ru/token.
-    YandexProfile FetchProfileFromJwt(const std::string& access_token) const;
     UserRecord FindOrCreateUser(const YandexProfile& profile) const;
 
     userver::storages::postgres::ClusterPtr pg_cluster_;
-    userver::clients::http::Client& http_client_;
+    YandexProfileClient yandex_client_;
     JwtService jwt_service_;
-    std::string client_id_;
-    std::string client_secret_;
 };
 
 }  // namespace ya_brander::auth

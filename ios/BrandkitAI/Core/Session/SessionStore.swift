@@ -3,8 +3,8 @@ import Foundation
 /// Состояние авторизации приложения.
 ///
 /// Источник правды — токен в Keychain, а не отдельный флаг: «залогинен»
-/// означает ровно «токен есть». Экраны состояние не проверяют, они только
-/// вызывают методы ниже, а корневой вью реагирует на изменение.
+/// означает ровно «токен есть». Гостевые экраны читают `state`, а защищённые
+/// действия вызывают `requireAuthentication()` вместо прямой проверки токена.
 @MainActor
 @Observable
 final class SessionStore {
@@ -31,11 +31,13 @@ final class SessionStore {
     private(set) var errorMessage: String?
     private(set) var errorField: AuthField?
     private(set) var lastSuccessfulOperation: AuthOperation?
+    private(set) var signInPresentationRequestID = UUID()
 
     private let tokenStore: TokenStore
     private let networkClient: NetworkClient
     private var authenticationTask: Task<Void, Never>?
     private var authenticationRequestID = UUID()
+    private var pendingAuthenticatedAction: (@MainActor () -> Void)?
 
     /// Данные авторизованного пользователя (id + имя) и доступ к профилям.
     let currentUserService: any CurrentUserService
@@ -92,6 +94,37 @@ final class SessionStore {
         errorField = nil
     }
 
+    /// Возвращает `true`, если защищённое действие можно выполнить сейчас.
+    /// Для гостя просит корневой экран показать авторизацию и возвращает `false`.
+    @discardableResult
+    func requireAuthentication() -> Bool {
+        guard state == .signedIn else {
+            pendingAuthenticatedAction = nil
+            signInPresentationRequestID = UUID()
+            return false
+        }
+        return true
+    }
+
+    /// Выполняет защищённое действие сразу, если пользователь залогинен.
+    /// Для гостя показывает авторизацию и выполняет действие после успешного
+    /// входа; закрытие авторизации без входа сбрасывает отложенное действие
+    /// (`cancelPendingAuthentication`).
+    func performAuthenticated(_ action: @escaping @MainActor () -> Void) {
+        guard state != .signedIn else {
+            action()
+            return
+        }
+        pendingAuthenticatedAction = action
+        signInPresentationRequestID = UUID()
+    }
+
+    /// Корневой экран зовёт это, когда авторизацию закрыли без входа:
+    /// отложенное действие не должно выстрелить при позднем логине.
+    func cancelPendingAuthentication() {
+        pendingAuthenticatedAction = nil
+    }
+
     private func authenticate<Request: Encodable & Sendable>(
         endpoint: APIEndpoint,
         body: Request,
@@ -134,6 +167,7 @@ final class SessionStore {
                 self.state = .signedIn
                 self.isLoading = false
                 self.authenticationTask = nil
+                self.runPendingAuthenticatedAction()
             } catch is CancellationError {
                 return
             } catch {
@@ -150,9 +184,16 @@ final class SessionStore {
         }
     }
 
+    private func runPendingAuthenticatedAction() {
+        let action = pendingAuthenticatedAction
+        pendingAuthenticatedAction = nil
+        action?()
+    }
+
     /// Единственная точка выхода: сюда же придёт интерцептор на 401.
     func signOut() {
         authenticationRequestID = UUID()
+        pendingAuthenticatedAction = nil
         authenticationTask?.cancel()
         authenticationTask = nil
         isLoading = false

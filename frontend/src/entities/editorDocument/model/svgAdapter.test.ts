@@ -9,6 +9,24 @@ describe('parseSvg', () => {
     )
   })
 
+  it('keeps the first duplicate attribute so the SVG can be imported', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <path id="background" data-name="First name" data-name="Ignored name" d="M0 0H100V100H0Z" />
+      </svg>
+    `)
+
+    expect(result.document.layers[0]).toMatchObject({
+      name: 'First name',
+      type: 'shape',
+    })
+    expect(result.warnings).toContainEqual({
+      attributeName: 'data-name',
+      code: 'ignored-duplicate-attribute',
+      elementName: 'path',
+    })
+  })
+
   it('adds a fallback viewBox when it is missing', () => {
     const result = importSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>')
 
@@ -551,5 +569,43 @@ describe('parseSvg', () => {
         },
       ]),
     )
+  })
+
+  it('inherits a group fill for editable and raw child elements', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+        <defs>
+          <linearGradient id="building-gradient">
+            <stop offset="0%" stop-color="#F2E9E4" />
+            <stop offset="100%" stop-color="#C9ADA7" />
+          </linearGradient>
+        </defs>
+        <g id="city" fill="url(#building-gradient)">
+          <rect id="editable-building" x="20" y="280" width="40" height="60" />
+          <rect x="65" y="260" width="35" height="80" filter="url(#building-shadow)" />
+        </g>
+      </svg>
+    `)
+
+    expect(result.document.layers).toMatchObject([
+      {
+        children: [
+          {
+            id: 'editable-building',
+            style: {
+              fill: { gradientId: 'building-gradient', type: 'gradient' },
+            },
+            type: 'shape',
+          },
+          {
+            isLocked: true,
+            rawSvg: expect.stringContaining('fill="url(#building-gradient)"'),
+            type: 'raw',
+          },
+        ],
+        id: 'city',
+        type: 'group',
+      },
+    ])
   })
 })
