@@ -7,6 +7,8 @@ import { OpacityProperty } from './OpacityProperty'
 
 interface StrokePropertyProps {
   onAdd: () => void
+  onColorChangeEnd?: () => void
+  onColorChangeStart?: () => void
   onColorChange: (color: string) => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
@@ -26,6 +28,8 @@ function getFiniteNumber(value: string): number | null {
 
 export function StrokeProperty({
   onAdd,
+  onColorChangeEnd,
+  onColorChangeStart,
   onColorChange,
   onEyeDropperEnd,
   onEyeDropperStart,
@@ -67,6 +71,8 @@ export function StrokeProperty({
     <>
       <FillProperty
         fill={color}
+        onColorChangeEnd={onColorChangeEnd}
+        onColorChangeStart={onColorChangeStart}
         onFillChange={onColorChange}
         onEyeDropperEnd={onEyeDropperEnd}
         onEyeDropperStart={onEyeDropperStart}

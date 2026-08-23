@@ -2,10 +2,12 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
 import auth from './locales/ru/auth.json'
+import chat from './locales/ru/chat.json'
 import common from './locales/ru/common.json'
 import editor from './locales/ru/editor.json'
 import errors from './locales/ru/errors.json'
 import projects from './locales/ru/projects.json'
+import projectVisibility from './locales/ru/projectVisibility.json'
 
 export const supportedLanguages = ['en', 'ru'] as const
 export type SupportedLanguage = (typeof supportedLanguages)[number]
@@ -33,7 +35,9 @@ void i18n.use(initReactI18next).init({
       translation: {
         ...common,
         ...auth,
+        ...chat,
         ...projects,
+        ...projectVisibility,
         ...editor,
         ...errors,
       },

@@ -50,6 +50,16 @@
   padding: 0;
 }
 
+.visibilityToggle {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.mobileVisibilityToggle {
+  color: var(--color-text-secondary);
+}
+
 .canvasControls {
   gap: var(--space-2);
   left: 50%;

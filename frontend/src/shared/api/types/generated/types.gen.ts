@@ -154,6 +154,10 @@ export type ChatMessage = {
    */
   error?: string
   /**
+   * Для role=assistant: статус выполнения или отмены генерации.
+   */
+  status?: 'pending' | 'cancelling' | 'cancelled'
+  /**
    * Идентификатор фоновой задачи генерации, к которой относится сообщение.
    */
   job_id?: string

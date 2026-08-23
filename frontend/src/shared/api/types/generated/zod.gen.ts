@@ -112,6 +112,7 @@ export const zChatMessage = z.object({
   text: z.string().optional(),
   version_id: z.string().optional(),
   error: z.string().optional(),
+  status: z.enum(['pending', 'cancelling', 'cancelled']).optional(),
   job_id: z.string().optional(),
   created_at: z.iso.datetime({ offset: true }),
 })
