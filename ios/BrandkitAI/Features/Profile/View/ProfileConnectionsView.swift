@@ -88,8 +88,9 @@ struct ProfileConnectionsView: View {
                     isSubscribed: user.isSubscribed ?? false,
                     isBusy: viewModel.busyUserIDs.contains(user.id),
                     action: {
-                        guard session.requireAuthentication() else { return }
-                        viewModel.toggleFollowing(userID: user.id)
+                        session.performAuthenticated { [viewModel] in
+                            viewModel.requestFollowToggle(userID: user.id)
+                        }
                     }
                 )
             }

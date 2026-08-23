@@ -39,6 +39,8 @@ final class ProjectPreviewViewModel {
     private var followOverride: Bool?
     private var followOperationID: UUID?
     private var followTask: Task<Void, Never>?
+    private var loadGeneration = 0
+    private var pendingFollowToggle = false
 
     private let projectService: any ProjectServiceProtocol
     private let userProfileService: any UserProfileService
@@ -58,6 +60,7 @@ final class ProjectPreviewViewModel {
         self.userProfileService = userProfileService
         self.title = title
         self.projectService = projectService
+        self.hasAuthenticatedViewer = currentUserService.id != nil
 
         switch mode {
         case .version(let versionID, let createdAt):
@@ -82,9 +85,11 @@ final class ProjectPreviewViewModel {
         return !isCurrentUser
     }
 
+    /// Гостю кнопка видна всегда (тап уведёт в авторизацию), залогиненному —
+    /// только когда сервер вернул состояние подписки и тап реально сработает.
     var showsFollowButton: Bool {
-        guard case .publicProject = mode, authorID != nil else { return false }
-        return !isCurrentUser
+        guard case .publicProject = mode, authorID != nil, !isCurrentUser else { return false }
+        return hasAuthenticatedViewer ? hasFollowState : true
     }
 
     var authorInitials: String { authorName.initials }
@@ -141,10 +146,16 @@ final class ProjectPreviewViewModel {
     }
 
     func load() async {
-        guard !isLoading else { return }
+        // Каждый вызов перекрывает предыдущий: `.task(id: session.state)`
+        // отменяет старую задачу при смене сессии, а устаревшая загрузка не
+        // должна ни применить данные, ни показать ошибку отмены.
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         loadFailed = false
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration { isLoading = false }
+        }
 
         switch mode {
         case .version:
@@ -153,15 +164,32 @@ final class ProjectPreviewViewModel {
             do {
                 let project = try await projectService.fetchProject(id: projectID)
                 try Task.checkCancellation()
+                guard generation == loadGeneration else { return }
                 applyOwnedProject(project)
-            } catch is CancellationError {
-                return
             } catch {
+                guard generation == loadGeneration, !error.isTaskCancellation else { return }
                 loadFailed = true
             }
         case .publicProject:
-            await loadPublicProject()
+            await loadPublicProject(generation: generation)
         }
+    }
+
+    /// Тап по кнопке Follow. Сразу после входа данные автора ещё загружены
+    /// по-гостевому (без состояния подписки), поэтому переключение
+    /// откладывается до ближайшей успешной перезагрузки.
+    func requestFollowToggle() {
+        if canFollow {
+            toggleFollowing()
+        } else {
+            pendingFollowToggle = true
+        }
+    }
+
+    private func consumePendingFollowToggle() {
+        guard pendingFollowToggle else { return }
+        pendingFollowToggle = false
+        toggleFollowing()
     }
 
     func toggleFollowing() {
@@ -211,17 +239,17 @@ final class ProjectPreviewViewModel {
         }
     }
 
-    private func loadPublicProject() async {
+    private func loadPublicProject(generation: Int) async {
         let project: Project
         do {
             project = try await projectService.fetchProject(id: projectID)
             try Task.checkCancellation()
-        } catch is CancellationError {
-            return
         } catch {
+            guard generation == loadGeneration, !error.isTaskCancellation else { return }
             loadFailed = true
             return
         }
+        guard generation == loadGeneration else { return }
 
         title = project.name
         createdAt = project.createdAt
@@ -242,16 +270,19 @@ final class ProjectPreviewViewModel {
         do {
             let profile = try await userProfileService.profile(for: authorID)
             try Task.checkCancellation()
+            guard generation == loadGeneration else { return }
 
             authorName = profile.name
             moreProjects = profile.projects
                 .filter { $0.id != projectID }
                 .map { RelatedProject(id: $0.id, title: $0.name, previewURL: $0.url) }
             mergeRemoteFollow(profile.isSubscribed)
+            consumePendingFollowToggle()
         } catch is CancellationError {
             return
         } catch {
             // Project data remains usable; follow stays hidden until its state is known.
+            pendingFollowToggle = false
         }
     }
 

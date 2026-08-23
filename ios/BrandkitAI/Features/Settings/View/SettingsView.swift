@@ -29,10 +29,14 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                accountSection
+                if session.state == .signedIn {
+                    accountSection
+                }
                 appearanceSection
                 aboutSection
-                exitButton
+                if session.state == .signedIn {
+                    exitButton
+                }
             }
             .padding(16)
         }

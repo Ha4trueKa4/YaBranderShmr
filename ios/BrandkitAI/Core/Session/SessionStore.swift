@@ -37,6 +37,7 @@ final class SessionStore {
     private let networkClient: NetworkClient
     private var authenticationTask: Task<Void, Never>?
     private var authenticationRequestID = UUID()
+    private var pendingAuthenticatedAction: (@MainActor () -> Void)?
 
     /// Данные авторизованного пользователя (id + имя) и доступ к профилям.
     let currentUserService: any CurrentUserService
@@ -98,12 +99,30 @@ final class SessionStore {
     @discardableResult
     func requireAuthentication() -> Bool {
         guard state == .signedIn else {
-            if state == .signedOut {
-                signInPresentationRequestID = UUID()
-            }
+            pendingAuthenticatedAction = nil
+            signInPresentationRequestID = UUID()
             return false
         }
         return true
+    }
+
+    /// Выполняет защищённое действие сразу, если пользователь залогинен.
+    /// Для гостя показывает авторизацию и выполняет действие после успешного
+    /// входа; закрытие авторизации без входа сбрасывает отложенное действие
+    /// (`cancelPendingAuthentication`).
+    func performAuthenticated(_ action: @escaping @MainActor () -> Void) {
+        guard state != .signedIn else {
+            action()
+            return
+        }
+        pendingAuthenticatedAction = action
+        signInPresentationRequestID = UUID()
+    }
+
+    /// Корневой экран зовёт это, когда авторизацию закрыли без входа:
+    /// отложенное действие не должно выстрелить при позднем логине.
+    func cancelPendingAuthentication() {
+        pendingAuthenticatedAction = nil
     }
 
     private func authenticate<Request: Encodable & Sendable>(
@@ -148,6 +167,7 @@ final class SessionStore {
                 self.state = .signedIn
                 self.isLoading = false
                 self.authenticationTask = nil
+                self.runPendingAuthenticatedAction()
             } catch is CancellationError {
                 return
             } catch {
@@ -164,9 +184,16 @@ final class SessionStore {
         }
     }
 
+    private func runPendingAuthenticatedAction() {
+        let action = pendingAuthenticatedAction
+        pendingAuthenticatedAction = nil
+        action?()
+    }
+
     /// Единственная точка выхода: сюда же придёт интерцептор на 401.
     func signOut() {
         authenticationRequestID = UUID()
+        pendingAuthenticatedAction = nil
         authenticationTask?.cancel()
         authenticationTask = nil
         isLoading = false

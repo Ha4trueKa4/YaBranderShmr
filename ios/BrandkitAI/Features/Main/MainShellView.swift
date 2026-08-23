@@ -58,8 +58,9 @@ struct MainShellView: View {
                     router.push(.chat(projectID: item.id, title: item.title), in: .create)
                 },
                 onNewProject: {
-                    guard session.requireAuthentication() else { return }
-                    router.push(.projectCreate, in: .create)
+                    session.performAuthenticated {
+                        router.push(.projectCreate, in: .create)
+                    }
                 }
             )
 
@@ -104,6 +105,13 @@ struct MainShellView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
+        .overlay(alignment: .topTrailing) {
+            // Та же кнопка, что и у залогиненного профиля (`CoverSettingsButton`).
+            CoverSettingsButton {
+                router.push(.settings, in: .profile)
+            }
+            .padding(.trailing, 12)
+        }
     }
 }
 

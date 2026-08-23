@@ -29,7 +29,7 @@ struct RootView: View {
 
     private var isSignInPresented: Binding<Bool> {
         Binding(
-            get: { coverFlow == .signIn && session.state == .signedOut },
+            get: { coverFlow == .signIn && session.state != .signedIn },
             set: { isPresented in
                 guard !isPresented, coverFlow == .signIn else { return }
                 coverFlow = .none
@@ -39,7 +39,7 @@ struct RootView: View {
 
     private var isSignUpPresented: Binding<Bool> {
         Binding(
-            get: { coverFlow == .signUp && session.state == .signedOut },
+            get: { coverFlow == .signUp && session.state != .signedIn },
             set: { isPresented in
                 guard !isPresented, coverFlow == .signUp else { return }
                 coverFlow = .none
@@ -130,7 +130,7 @@ struct RootView: View {
             }
         }
         .onChange(of: session.signInPresentationRequestID) {
-            guard session.state == .signedOut else { return }
+            guard session.state != .signedIn else { return }
             present(.signIn)
         }
     }
@@ -200,7 +200,14 @@ struct RootView: View {
     private func finishDismissal(of dismissedCover: CoverFlow) {
         guard coverFlow == .none else { return }
         guard pendingCoverSource == dismissedCover,
-              let pendingCover else { return }
+              let pendingCover else {
+            // Авторизацию закрыли, не войдя и не переключаясь на второй
+            // экран — отложенное защищённое действие больше не актуально.
+            if dismissedCover != .onboarding, session.state != .signedIn {
+                session.cancelPendingAuthentication()
+            }
+            return
+        }
         let pendingTransitionID = transitionID
         self.pendingCover = nil
         self.pendingCoverSource = nil

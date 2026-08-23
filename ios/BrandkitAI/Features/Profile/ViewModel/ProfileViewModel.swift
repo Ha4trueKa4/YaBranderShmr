@@ -30,6 +30,8 @@ final class ProfileViewModel {
     private var followOverride: Bool?
     private var followOperationID: UUID?
     private var followTask: Task<Void, Never>?
+    private var loadGeneration = 0
+    private var pendingFollowToggle = false
 
     private let currentUserService: any CurrentUserService
     private let userProfileService: any UserProfileService
@@ -44,6 +46,7 @@ final class ProfileViewModel {
         self.userProfileService = userProfileService
         self.userID = userID
         self.profileID = userID ?? currentUserService.id
+        self.hasAuthenticatedViewer = currentUserService.id != nil
     }
 
     var name: String {
@@ -70,20 +73,29 @@ final class ProfileViewModel {
         return !isCurrentUser
     }
 
+    /// Гостю кнопка видна всегда (тап уведёт в авторизацию), залогиненному —
+    /// только когда сервер вернул состояние подписки и тап реально сработает.
     var showsFollowButton: Bool {
-        userID != nil && !isCurrentUser
+        guard userID != nil, !isCurrentUser else { return false }
+        return hasAuthenticatedViewer ? hasFollowState : true
     }
 
     func load() async {
-        guard !isLoading else { return }
-        defer { isLoading = false }
-
+        // Каждый вызов перекрывает предыдущий: `.task(id: session.state)`
+        // отменяет старую задачу при смене сессии, а устаревшая загрузка не
+        // должна ни применить данные, ни показать ошибку отмены.
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         errorMessage = nil
+        defer {
+            if generation == loadGeneration { isLoading = false }
+        }
 
         if currentUserService.id == nil {
             await currentUserService.restore()
         }
+        guard generation == loadGeneration else { return }
 
         guard let id = userID ?? currentUserService.id else { return }
         profileID = id
@@ -96,6 +108,7 @@ final class ProfileViewModel {
 
         do {
             let profile = try await userProfileService.profile(for: id)
+            guard generation == loadGeneration else { return }
             loadedName = profile.name
 
             if userID == nil {
@@ -115,9 +128,29 @@ final class ProfileViewModel {
                 )
             }
             mergeRemoteFollow(profile.isSubscribed)
+            consumePendingFollowToggle()
         } catch {
+            guard generation == loadGeneration, !error.isTaskCancellation else { return }
+            pendingFollowToggle = false
             errorMessage = "Couldn't load profile."
         }
+    }
+
+    /// Тап по кнопке Follow. Сразу после входа профиль ещё загружен по-гостевому
+    /// (без состояния подписки), поэтому переключение откладывается до
+    /// ближайшей успешной перезагрузки.
+    func requestFollowToggle() {
+        if canFollow {
+            toggleFollowing()
+        } else {
+            pendingFollowToggle = true
+        }
+    }
+
+    private func consumePendingFollowToggle() {
+        guard pendingFollowToggle else { return }
+        pendingFollowToggle = false
+        toggleFollowing()
     }
 
     func toggleFollowing() {

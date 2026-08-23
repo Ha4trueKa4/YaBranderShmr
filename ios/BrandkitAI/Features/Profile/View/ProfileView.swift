@@ -140,19 +140,7 @@ struct ProfileView: View {
     }
 
     private var settingsButton: some View {
-        Button(action: onOpenSettings) {
-            ZStack {
-                Circle()
-                    .fill(Color(.onAccent).opacity(0.25))
-                    .stroke(Color(.onAccent).opacity(0.35), lineWidth: 1)
-                    .frame(width: 38, height: 38)
-                Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(width: 44, height: 44)
-            }
-        }
-        .foregroundStyle(Color(.onAccent))
-        .accessibilityLabel("Settings")
+        CoverSettingsButton(action: onOpenSettings)
     }
 
     private var avatar: some View {
@@ -165,8 +153,9 @@ struct ProfileView: View {
             isSubscribed: viewModel.isSubscribed,
             isBusy: viewModel.isFollowBusy,
             action: {
-                guard session.requireAuthentication() else { return }
-                viewModel.toggleFollowing()
+                session.performAuthenticated { [viewModel] in
+                    viewModel.requestFollowToggle()
+                }
             }
         )
     }

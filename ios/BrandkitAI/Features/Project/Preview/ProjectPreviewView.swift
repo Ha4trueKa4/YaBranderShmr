@@ -56,20 +56,22 @@ struct ProjectPreviewView: View {
     // MARK: - Экспорт
 
     private func exportSVG() {
-        guard session.requireAuthentication() else { return }
-        export(.svg) { data in
-            try SVGExporter.writeSVGFile(data, named: viewModel.title)
+        session.performAuthenticated {
+            export(.svg) { data in
+                try SVGExporter.writeSVGFile(data, named: viewModel.title)
+            }
         }
     }
 
     private func exportPNG() {
-        guard session.requireAuthentication() else { return }
-        export(.png) { data in
-            guard let svgText = String(data: data, encoding: .utf8) else {
-                throw SVGRasterizer.RasterizationError.renderingFailed
+        session.performAuthenticated {
+            export(.png) { data in
+                guard let svgText = String(data: data, encoding: .utf8) else {
+                    throw SVGRasterizer.RasterizationError.renderingFailed
+                }
+                let pngData = try await SVGRasterizer.pngData(fromSVG: svgText)
+                return try SVGExporter.writePNGFile(pngData, named: viewModel.title)
             }
-            let pngData = try await SVGRasterizer.pngData(fromSVG: svgText)
-            return try SVGExporter.writePNGFile(pngData, named: viewModel.title)
         }
     }
 
@@ -261,8 +263,9 @@ struct ProjectPreviewView: View {
             isSubscribed: viewModel.isSubscribed,
             isBusy: viewModel.isFollowBusy,
             action: {
-                guard session.requireAuthentication() else { return }
-                viewModel.toggleFollowing()
+                session.performAuthenticated { [viewModel] in
+                    viewModel.requestFollowToggle()
+                }
             }
         )
     }
