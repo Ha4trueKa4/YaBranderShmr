@@ -56,15 +56,19 @@ export function GenerationPromptComposer({
           disabled={isGenerating}
           onChange={(event) => onDescriptionChange(event.target.value)}
           onKeyDown={(event) => {
+            const isNewLineShortcut = event.metaKey || event.ctrlKey
+
             if (
-              event.key === 'Enter' &&
-              !event.shiftKey &&
-              !event.metaKey &&
-              !event.ctrlKey
+              event.key !== 'Enter' ||
+              event.shiftKey ||
+              isNewLineShortcut ||
+              event.nativeEvent.isComposing
             ) {
-              event.preventDefault()
-              onGenerate()
+              return
             }
+
+            event.preventDefault()
+            onGenerate()
           }}
           maxLength={MAX_PROMPT_LENGTH}
           placeholder={t(
