@@ -87,6 +87,14 @@ private fun FeedContent(
     onExplore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Пока в ленте уже есть элементы, показываем их при любом состоянии refresh:
+    // тихий рефреш (Loading/Error поверх непустого списка) не должен прятать контент
+    // под полноэкранный скелетон/ошибку и сбрасывать позицию скролла.
+    if (projects.itemCount > 0) {
+        FeedGrid(projects, onProjectClick, onAuthorClick, modifier)
+        return
+    }
+
     when (projects.loadState.refresh) {
         is LoadState.Loading -> FeedSkeletonGrid(modifier)
         is LoadState.Error -> CenteredState(modifier) {
@@ -97,13 +105,8 @@ private fun FeedContent(
             )
         }
 
-        is LoadState.NotLoading -> {
-            if (projects.itemCount == 0) {
-                FeedEmpty(selectedTab = selectedTab, onExplore = onExplore, modifier = modifier)
-            } else {
-                FeedGrid(projects, onProjectClick, onAuthorClick, modifier)
-            }
-        }
+        is LoadState.NotLoading ->
+            FeedEmpty(selectedTab = selectedTab, onExplore = onExplore, modifier = modifier)
     }
 }
 

@@ -36,16 +36,19 @@ internal class PublicProjectViewModel(
     private val _exportEvents = Channel<ExportEvent>(Channel.BUFFERED)
     val exportEvents: Flow<ExportEvent> = _exportEvents.receiveAsFlow()
 
+    // Объявлены до init: инициализаторы свойств выполняются в порядке объявления,
+    // и если бы они шли после init { load() }, то `= null` обнулил бы loadJob,
+    // который load() уже присвоил при старте.
+    private var followJob: Job? = null
+    private var exportJob: Job? = null
+    private var loadJob: Job? = null
+
     init {
         load()
     }
 
     /** Повтор после ошибки. */
     fun retry() = load()
-
-    private var followJob: Job? = null
-    private var exportJob: Job? = null
-    private var loadJob: Job? = null
 
     /**
      * Тихая перезагрузка при возврате на экран: скелетон не показываем, при ошибке
