@@ -1,13 +1,16 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <string_view>
 
+#include <userver/engine/sleep.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/server/handlers/exceptions.hpp>
 #include <userver/server/http/http_error.hpp>
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
+#include <userver/utils/rand.hpp>
 
 namespace ya_brander::utils {
 
@@ -66,6 +69,10 @@ auto ExecuteSelectWithRetry(std::string_view operation, Callable&& execute) {
     LOG_WARNING() << "PostgreSQL SELECT '" << operation
                   << "' failed, retrying once: " << error.what();
   }
+
+  const auto retry_delay = std::chrono::milliseconds{
+      userver::utils::RandRange(50, 151)};
+  userver::engine::InterruptibleSleepFor(retry_delay);
 
   try {
     return execute();
