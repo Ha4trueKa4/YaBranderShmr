@@ -3,6 +3,7 @@ package com.yandex.avatargenerator.feature.create.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.feature.create.domain.ChatsRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,8 @@ internal class ChatsViewModel(
     private val _uiState = MutableStateFlow<ChatsUiState>(ChatsUiState.Loading)
     val uiState: StateFlow<ChatsUiState> = _uiState.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
         load()
     }
@@ -26,10 +29,19 @@ internal class ChatsViewModel(
     /** Повтор после ошибки. */
     fun retry() = load()
 
-    private fun load() {
-        viewModelScope.launch {
-            _uiState.value = ChatsUiState.Loading
-            _uiState.value = runCatching { repository.getChats() }.fold(
+    /**
+     * Перечитать список при возврате на вкладку — пока пользователь был в чате,
+     * он мог создать проект. Скелетон не показываем: список уже на экране, и
+     * мигать им на каждом возврате незачем.
+     */
+    fun refresh() = load(showSkeleton = false)
+
+    private fun load(showSkeleton: Boolean = true) {
+        // Предыдущую загрузку отменяем, иначе её ответ может приехать поверх свежего.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            if (showSkeleton) _uiState.value = ChatsUiState.Loading
+            _uiState.value = repository.getChats().fold(
                 onSuccess = { chats ->
                     if (chats.isEmpty()) ChatsUiState.Empty else ChatsUiState.Content(chats)
                 },

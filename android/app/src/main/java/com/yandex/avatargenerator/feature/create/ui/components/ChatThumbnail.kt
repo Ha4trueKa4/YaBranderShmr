@@ -6,14 +6,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import com.yandex.avatargenerator.feature.create.ui.theme.ChatsColors
+import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 
 /**
- * Превью чата — градиентный квадрат. Реального изображения проекта бэкенд пока
- * не отдаёт, поэтому градиент выбирается детерминированно по [chatId]
- * (см. [ChatsColors.rememberThumbnailGradient]): у одного и того же чата
- * плитка всегда одного цвета.
+ * Превью чата. Есть [previewUrl] — рисуем SVG последней версии (декодер
+ * подключён в `AvatarGeneratorApplication`), нет — градиентный квадрат,
+ * выбранный детерминированно по [chatId] (см.
+ * [ChatsColors.rememberThumbnailGradient]): у одного и того же чата плитка
+ * всегда одного цвета.
+ *
+ * Под картинкой градиента нет: у SVG фон обычно прозрачный, и он просвечивал бы
+ * насквозь. Там ровная [AppColors.SurfaceVariant] — она же плейсхолдер на время
+ * загрузки, как в `ProjectCard`.
  *
  * Размер задаёт вызывающий (в макете — 56.dp).
  */
@@ -21,12 +29,19 @@ import com.yandex.avatargenerator.ui.theme.AppShape
 internal fun ChatThumbnail(
     chatId: String,
     modifier: Modifier = Modifier,
+    previewUrl: String? = null,
 ) {
-    val gradient = ChatsColors.rememberThumbnailGradient(chatId)
+    val shape = RoundedCornerShape(AppShape.s)
 
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(AppShape.s))
-            .background(gradient),
-    )
+    if (previewUrl == null) {
+        val gradient = ChatsColors.rememberThumbnailGradient(chatId)
+        Box(modifier = modifier.clip(shape).background(gradient))
+    } else {
+        AsyncImage(
+            model = previewUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier.clip(shape).background(AppColors.SurfaceVariant),
+        )
+    }
 }

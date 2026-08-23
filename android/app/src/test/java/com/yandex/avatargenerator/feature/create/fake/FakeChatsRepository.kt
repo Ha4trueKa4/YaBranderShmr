@@ -1,4 +1,4 @@
-package com.yandex.avatargenerator.feature.create
+package com.yandex.avatargenerator.feature.create.fake
 
 import com.yandex.avatargenerator.feature.create.domain.ChatsRepository
 import com.yandex.avatargenerator.feature.create.domain.model.Chat
@@ -16,8 +16,8 @@ internal class FakeChatsRepository(
     var callCount: Int = 0
         private set
 
-    override suspend fun getChats(): List<Chat> {
+    override suspend fun getChats(): Result<List<Chat>> {
         callCount++
-        return result.getOrThrow()
+        return result
     }
 }

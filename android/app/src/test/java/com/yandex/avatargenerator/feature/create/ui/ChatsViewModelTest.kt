@@ -1,8 +1,7 @@
-package com.yandex.avatargenerator.feature.create
+package com.yandex.avatargenerator.feature.create.ui
 
 import com.yandex.avatargenerator.feature.create.domain.model.Chat
-import com.yandex.avatargenerator.feature.create.ui.ChatsUiState
-import com.yandex.avatargenerator.feature.create.ui.ChatsViewModel
+import com.yandex.avatargenerator.feature.create.fake.FakeChatsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -74,6 +73,28 @@ internal class ChatsViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ChatsUiState.Error, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `refresh reloads the list without flashing the skeleton`() = runTest(dispatcher) {
+        repository.result = Result.success(chats)
+        val viewModel = ChatsViewModel(repository)
+        advanceUntilIdle()
+
+        val updated = chats + Chat(
+            id = "chat-2",
+            title = "Chat 2",
+            updatedAt = Instant.parse("2026-08-09T12:00:00Z"),
+        )
+        repository.result = Result.success(updated)
+        viewModel.refresh()
+        // Список ещё старый, но это Content, а не Loading: скелетон не мигает.
+        assertEquals(ChatsUiState.Content(chats), viewModel.uiState.value)
+
+        advanceUntilIdle()
+
+        assertEquals(ChatsUiState.Content(updated), viewModel.uiState.value)
+        assertEquals(2, repository.callCount)
     }
 
     @Test

@@ -13,12 +13,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.create.data.MockChatsRepository
@@ -57,6 +62,13 @@ internal fun ChatsScreen(
     viewModel: ChatsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Перечитываем список при возврате на вкладку (кроме первого входа — там уже
+    // грузит init): пока пользователь был в чате, он мог создать новый проект.
+    var isFirstResume by remember { mutableStateOf(true) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (isFirstResume) isFirstResume = false else viewModel.refresh()
+    }
 
     ChatsContent(
         uiState = uiState,
@@ -145,7 +157,7 @@ private fun ChatsList(
         items(items = chats, key = { chat -> chat.id }) { chat ->
             ChatRow(
                 chat = chat,
-                timeLabel = rememberRelativeTimeLabel(chat.updatedAt),
+                timeLabel = chat.updatedAt?.let { rememberRelativeTimeLabel(it) },
                 onClick = { onChatClick(chat.id) },
             )
         }
