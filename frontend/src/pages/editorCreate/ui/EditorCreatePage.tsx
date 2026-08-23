@@ -50,10 +50,9 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const startGeneration = useCallback(
     async (draft: ProjectDraft) => {
       setCancelledDraft(null)
-      const controller = new AbortController()
-      generationAbortControllerRef.current = controller
       generationProcessStore.begin(draft)
       pendingGenerationStore.save(draft)
+      let pollingController: AbortController | null = null
 
       const cancelUnfinishedGeneration = async (
         projectId: string | undefined,
@@ -73,7 +72,6 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       try {
         const project = await createProject({
           body: { ...draft, prompt: draft.description },
-          signal: controller.signal,
         })
 
         if (!project.id) {
@@ -83,7 +81,10 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
         const jobId = project.job_id
 
-        if (controller.signal.aborted) {
+        // Не прерываем запрос создания проекта по AbortSignal: сервер мог уже
+        // создать job, но клиент ещё не получил его id. В этом случае отменить
+        // fetch означало бы потерять единственную возможность вызвать cancel.
+        if (generationProcessStore.isCancelling) {
           await cancelUnfinishedGeneration(project.id, jobId)
           return
         }
@@ -97,13 +98,15 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         }
 
         generationProcessStore.trackJob(project.id, jobId)
+        pollingController = new AbortController()
+        generationAbortControllerRef.current = pollingController
 
         const generatedProject = await pollGenerationStatus(
           queryClient,
           project.id,
           jobId,
           undefined,
-          controller.signal,
+          pollingController.signal,
         )
 
         if (generatedProject.status === 'error') {
@@ -135,10 +138,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         pendingGenerationStore.take()
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
-        if (
-          controller.signal.aborted ||
-          error instanceof GenerationPollingCancelledError
-        ) {
+        if (error instanceof GenerationPollingCancelledError) {
           await cancelUnfinishedGeneration(
             generationProcessStore.projectId ?? undefined,
             generationProcessStore.jobId ?? undefined,
@@ -156,12 +156,12 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
             : getApiErrorMessage(error),
         )
       } finally {
-        if (controller.signal.aborted) {
+        if (generationProcessStore.isCancelling) {
           pendingGenerationStore.take()
           setCancelledDraft(draft)
         }
 
-        if (generationAbortControllerRef.current === controller) {
+        if (generationAbortControllerRef.current === pollingController) {
           generationAbortControllerRef.current = null
         }
         generationProcessStore.reset()
