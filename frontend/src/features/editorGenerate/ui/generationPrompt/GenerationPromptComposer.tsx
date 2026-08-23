@@ -56,7 +56,12 @@ export function GenerationPromptComposer({
           disabled={isGenerating}
           onChange={(event) => onDescriptionChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            if (
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.metaKey &&
+              !event.ctrlKey
+            ) {
               event.preventDefault()
               onGenerate()
             }
