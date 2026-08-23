@@ -115,6 +115,17 @@
     <string name="project_back_description">Назад</string>
     <string name="project_history_description">История версий</string>
     <string name="project_share_description">Поделиться проектом</string>
+
+    <!-- Приватность проекта: чип в шапке и шторка выбора видимости -->
+    <string name="project_visibility_private_badge">Приватный</string>
+    <string name="project_visibility_public_badge">Публичный</string>
+    <string name="project_visibility_open_description">Изменить видимость проекта</string>
+    <string name="project_visibility_title">Видимость проекта</string>
+    <string name="project_visibility_subtitle">Выберите, кто может просматривать и копировать ваш брендбук.</string>
+    <string name="project_visibility_private_title">Приватный проект</string>
+    <string name="project_visibility_private_subtitle">Только вы можете просматривать и редактировать</string>
+    <string name="project_visibility_public_title">Публичный проект</string>
+    <string name="project_visibility_public_subtitle">Любой по ссылке сможет просматривать</string>
     <string name="project_input_placeholder">Опишите, что изменить…</string>
     <string name="project_send_description">Отправить сообщение</string>
 
