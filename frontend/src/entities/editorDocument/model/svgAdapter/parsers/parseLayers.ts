@@ -5,6 +5,7 @@ import type {
   EditorRawNode,
   EditorShape,
   EditorText,
+  Paint,
   TextStyle,
 } from '../../types'
 import { SvgParseError } from '../errors'
@@ -111,6 +112,7 @@ const attributeNamesByElement = {
 } as const
 
 const tspanAttributeNames = new Set(['dy', 'x'])
+const defaultFill: Paint = { type: 'color', value: '#000000' }
 
 function parseBase(element: Element): EditorElementBase {
   const id =
@@ -137,9 +139,9 @@ function parseBase(element: Element): EditorElementBase {
   }
 }
 
-function parseShape(element: Element): EditorShape {
+function parseShape(element: Element, inheritedFill: Paint): EditorShape {
   const base = parseBase(element)
-  const style = parseShapeStyle(element)
+  const style = parseShapeStyle(element, inheritedFill)
 
   switch (element.localName) {
     case 'rect':
@@ -231,9 +233,9 @@ function parseGroupFill(element: Element): Pick<EditorGroup, 'fill'> {
     : { fill: parsePaint(fill, { type: 'color', value: '#000000' }) }
 }
 
-function parseText(element: Element): EditorText {
+function parseText(element: Element, inheritedFill: Paint): EditorText {
   const tspans = Array.from(element.children)
-  const style = parseTextStyle(element)
+  const style = parseTextStyle(element, inheritedFill)
 
   return {
     ...parseBase(element),
@@ -270,11 +272,17 @@ function getTextLineHeight(
   return { lineHeight: lineHeight || style.fontSize * 1.2 }
 }
 
-function createRawNode(element: Element): EditorRawNode {
+function createRawNode(element: Element, inheritedFill: Paint): EditorRawNode {
   const id =
     element.getAttribute('data-editor-id') ??
     element.getAttribute('id') ??
     'unsupported'
+
+  const rawElement = element.cloneNode(true) as Element
+
+  if (!rawElement.hasAttribute('fill')) {
+    rawElement.setAttribute('fill', getPaintValue(inheritedFill))
+  }
 
   return {
     id,
@@ -282,9 +290,20 @@ function createRawNode(element: Element): EditorRawNode {
     isVisible: true,
     name: element.getAttribute('data-name') ?? element.getAttribute('id') ?? id,
     opacity: 1,
-    rawSvg: new XMLSerializer().serializeToString(element),
+    rawSvg: new XMLSerializer().serializeToString(rawElement),
     transform: { rotation: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 },
     type: 'raw',
+  }
+}
+
+function getPaintValue(paint: Paint): string {
+  switch (paint.type) {
+    case 'color':
+      return paint.value
+    case 'gradient':
+      return `url(#${paint.gradientId})`
+    case 'none':
+      return 'none'
   }
 }
 
@@ -375,20 +394,34 @@ function hasLosslessTspanPositions(element: Element): boolean {
   })
 }
 
-function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
+function getEffectiveFill(element: Element, inheritedFill: Paint): Paint {
+  return parsePaint(element.getAttribute('fill'), inheritedFill)
+}
+
+function parseNode(
+  element: Element,
+  warnings: SvgImportWarning[],
+  inheritedFill: Paint,
+): EditorNode {
   try {
     const unsupportedReason = getUnsupportedReason(element)
 
     if (unsupportedReason) {
-      return createLockedRawNode(element, unsupportedReason, warnings)
+      return createLockedRawNode(
+        element,
+        inheritedFill,
+        unsupportedReason,
+        warnings,
+      )
     }
 
     if (element.localName === 'g') {
+      const groupFill = getEffectiveFill(element, inheritedFill)
       const group: EditorGroup = {
         ...parseBase(element),
         ...parseGroupFill(element),
         children: Array.from(element.children).map((child) =>
-          parseNode(child, warnings),
+          parseNode(child, warnings, groupFill),
         ),
         type: 'group',
       }
@@ -397,12 +430,17 @@ function parseNode(element: Element, warnings: SvgImportWarning[]): EditorNode {
     }
 
     if (element.localName === 'text') {
-      return parseText(element)
+      return parseText(element, inheritedFill)
     }
 
-    return parseShape(element)
+    return parseShape(element, inheritedFill)
   } catch (error) {
-    return createLockedRawNode(element, getParseFailureReason(error), warnings)
+    return createLockedRawNode(
+      element,
+      inheritedFill,
+      getParseFailureReason(error),
+      warnings,
+    )
   }
 }
 
@@ -416,10 +454,11 @@ function getParseFailureReason(error: unknown): string {
 
 function createLockedRawNode(
   element: Element,
+  inheritedFill: Paint,
   reason: string,
   warnings: SvgImportWarning[],
 ): EditorRawNode {
-  const rawNode = createRawNode(element)
+  const rawNode = createRawNode(element, inheritedFill)
 
   warnings.push({
     code: 'locked-raw-node',
@@ -437,5 +476,5 @@ export function parseLayersTolerant(
 ): EditorNode[] {
   return Array.from(root.children)
     .filter((element) => element.localName !== 'defs')
-    .map((element) => parseNode(element, warnings))
+    .map((element) => parseNode(element, warnings, defaultFill))
 }
