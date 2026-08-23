@@ -151,6 +151,10 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
         return MakeError("INTERNAL_ERROR", "Something went wrong on our side. Please try again.");
+    } catch (const InvalidYandexCredentialError&) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+        return MakeError("INVALID_YANDEX_CREDENTIAL",
+                          "The provided Yandex code/access_token is invalid or expired");
     } catch (const utils::DatabaseUnavailableError&) {
         throw;
     } catch (const std::exception& ex) {

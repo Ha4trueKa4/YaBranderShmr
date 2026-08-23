@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include <string>
 
 #include <userver/clients/http/client.hpp>
@@ -9,6 +10,16 @@ struct YandexProfile {
     std::string provider_id;
     std::string email;
     std::string login;
+};
+
+// code/access_token, присланный клиентом, сам по себе невалиден, просрочен
+// или не проходит проверку подписи (JWT-флоу) — вина на входных данных
+// запроса, а не на доступности Yandex API. Хендлеры должны мапить это на
+// 400, а не на 502 (в отличие от сетевых сбоев/5xx со стороны Яндекса).
+class InvalidYandexCredentialError final : public std::runtime_error {
+public:
+    explicit InvalidYandexCredentialError(const std::string& message)
+        : std::runtime_error(message) {}
 };
 
 // Общая логика похода во внешние сервисы Yandex ID: обмен authorization

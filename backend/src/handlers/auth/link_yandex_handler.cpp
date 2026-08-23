@@ -11,7 +11,10 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::auth {
 
@@ -44,18 +47,13 @@ userver::formats::json::Value LinkYandexHandler::HandleRequestJsonThrow(
         return MakeError("INVALID_REQUEST", "Either code or access_token is required");
     }
 
-    const auto user_result = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kMaster,
-        "SELECT provider_id FROM users WHERE id = $1::uuid", user_id);
-    if (user_result.IsEmpty()) {
-        request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
-        return MakeError("USER_NOT_FOUND", "User not found");
-    }
-    const auto existing_provider_id = user_result.Front()[0].As<std::optional<std::string>>();
-
     YandexProfile profile;
     try {
         profile = yandex_client_.FetchProfile(code, sdk_access_token);
+    } catch (const InvalidYandexCredentialError&) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+        return MakeError("INVALID_YANDEX_CREDENTIAL",
+                          "The provided Yandex code/access_token is invalid or expired");
     } catch (const std::exception& ex) {
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadGateway);
@@ -63,22 +61,19 @@ userver::formats::json::Value LinkYandexHandler::HandleRequestJsonThrow(
                           "Yandex authentication is temporarily unavailable. Please try again.");
     }
 
-    if (existing_provider_id.has_value()) {
-        if (*existing_provider_id == profile.provider_id) {
-            // Повторная привязка того же Yandex-аккаунта — идемпотентно ок.
-            return MakeMessage("Yandex ID is already linked to this account");
-        }
-        request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
-        return MakeError("ACCOUNT_ALREADY_LINKED",
-                          "This account is already linked to a different Yandex ID");
-    }
-
+    // Атомарная привязка: WHERE provider_id IS NULL в самом UPDATE, без
+    // отдельного SELECT перед записью — иначе между проверкой и записью
+    // конкурентный запрос мог бы успеть изменить состояние (TOCTOU).
     try {
-        pg_cluster_->Execute(
+        const auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "UPDATE users SET provider = 'yandex', provider_id = $1 WHERE id = $2::uuid",
-            profile.provider_id, user_id);
+            sql::kLinkYandexAccount, profile.provider_id, user_id);
+        if (result.Size() > 0) {
+            return MakeMessage("Yandex ID linked successfully");
+        }
     } catch (const userver::storages::postgres::UniqueViolation& ex) {
+        // Гонка: два запроса одновременно линкуют один и тот же Yandex-аккаунт
+        // к разным пользователям — проигравший ловит нарушение уникального индекса.
         if (ex.GetConstraint() == kProviderIdentityIndex) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
             return MakeError("YANDEX_ACCOUNT_ALREADY_LINKED",
@@ -87,7 +82,30 @@ userver::formats::json::Value LinkYandexHandler::HandleRequestJsonThrow(
         throw;
     }
 
-    return MakeMessage("Yandex ID linked successfully");
+    // UPDATE не тронул ни одной строки: либо пользователя нет, либо у него
+    // уже есть какая-то привязка (её отсеяло WHERE provider_id IS NULL).
+    // Этот SELECT нужен только чтобы сформировать осмысленный ответ — решение
+    // уже принято атомарно выше, гонки тут нет.
+    const auto existing = utils::ExecuteSelectWithRetry("select-provider-id", [&] {
+        return pg_cluster_->Execute(
+            userver::storages::postgres::ClusterHostType::kMaster,
+            sql::kSelectProviderId, user_id);
+    });
+
+    if (existing.IsEmpty()) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
+        return MakeError("USER_NOT_FOUND", "User not found");
+    }
+
+    const auto existing_provider_id = existing.Front()[0].As<std::optional<std::string>>();
+    if (existing_provider_id.has_value() && *existing_provider_id == profile.provider_id) {
+        // Повторный вызов с тем же Yandex-аккаунтом — идемпотентно ок.
+        return MakeMessage("Yandex ID is already linked to this account");
+    }
+
+    request.SetResponseStatus(userver::server::http::HttpStatus::kConflict);
+    return MakeError("ACCOUNT_ALREADY_LINKED",
+                      "This account is already linked to a different Yandex ID");
 }
 
 }  // namespace ya_brander::auth

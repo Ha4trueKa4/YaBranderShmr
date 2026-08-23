@@ -50,6 +50,17 @@ std::string ClaimToString(const jwt::claim& claim) {
     }
 }
 
+// 4xx от Яндекса означает "сам code/access_token невалиден/просрочен" — это
+// InvalidYandexCredentialError (мапится хендлерами на 400). Всё прочее
+// (5xx, сетевые сбои) — обычный runtime_error (мапится на 502).
+[[noreturn]] void ThrowForStatus(int status_code, std::string_view context) {
+    const auto message = std::string(context) + ": HTTP " + std::to_string(status_code);
+    if (status_code >= 400 && status_code < 500) {
+        throw InvalidYandexCredentialError(message);
+    }
+    throw std::runtime_error(message);
+}
+
 }  // namespace
 
 YandexProfileClient::YandexProfileClient(userver::clients::http::Client& http_client)
@@ -93,8 +104,7 @@ std::string YandexProfileClient::ExchangeCodeForToken(const std::string& code) c
 
     auto response = request.perform();
     if (response->status_code() != 200) {
-        throw std::runtime_error("Yandex token exchange failed: HTTP " +
-                                  std::to_string(response->status_code()));
+        ThrowForStatus(response->status_code(), "Yandex token exchange failed");
     }
 
     auto json = userver::formats::json::FromString(response->body());
@@ -110,8 +120,7 @@ YandexProfile YandexProfileClient::FetchProfileFromJson(const std::string& acces
 
     auto response = request.perform();
     if (response->status_code() != 200) {
-        throw std::runtime_error("Failed to fetch Yandex profile: HTTP " +
-                                  std::to_string(response->status_code()));
+        ThrowForStatus(response->status_code(), "Failed to fetch Yandex profile");
     }
 
     auto json = userver::formats::json::FromString(response->body());
@@ -132,30 +141,38 @@ YandexProfile YandexProfileClient::FetchProfileFromJwt(const std::string& access
 
     auto response = request.perform();
     if (response->status_code() != 200) {
-        throw std::runtime_error("Failed to fetch Yandex profile (jwt): HTTP " +
-                                  std::to_string(response->status_code()));
+        ThrowForStatus(response->status_code(), "Failed to fetch Yandex profile (jwt)");
     }
 
     // login.yandex.ru/info?format=jwt отдаёт не JSON, а сам JWT телом ответа.
     // jwt_secret по умолчанию (мы его не переопределяли) равен client_secret
-    // приложения — им и проверяем подпись, без обращения к Яндексу.
-    const auto decoded = jwt::decode(response->body());
-    auto verifier = jwt::verify().allow_algorithm(jwt::algorithm::hs256{client_secret_});
-    verifier.verify(decoded);
+    // приложения — им и проверяем подпись, без обращения к Яндексу. Любая
+    // ошибка здесь (битая подпись, просроченный exp, кривой формат) значит
+    // ровно одно — присланный access_token невалиден, это тоже
+    // InvalidYandexCredentialError, а не сбой инфраструктуры.
+    try {
+        const auto decoded = jwt::decode(response->body());
+        auto verifier = jwt::verify().allow_algorithm(jwt::algorithm::hs256{client_secret_});
+        verifier.verify(decoded);
 
-    if (!decoded.has_payload_claim("uid")) {
-        throw std::runtime_error("Yandex profile JWT is missing the 'uid' claim");
-    }
+        if (!decoded.has_payload_claim("uid")) {
+            throw InvalidYandexCredentialError("Yandex profile JWT is missing the 'uid' claim");
+        }
 
-    YandexProfile profile;
-    profile.provider_id = ClaimToString(decoded.get_payload_claim("uid"));
-    if (decoded.has_payload_claim("email")) {
-        profile.email = ClaimToString(decoded.get_payload_claim("email"));
+        YandexProfile profile;
+        profile.provider_id = ClaimToString(decoded.get_payload_claim("uid"));
+        if (decoded.has_payload_claim("email")) {
+            profile.email = ClaimToString(decoded.get_payload_claim("email"));
+        }
+        if (decoded.has_payload_claim("login")) {
+            profile.login = ClaimToString(decoded.get_payload_claim("login"));
+        }
+        return profile;
+    } catch (const InvalidYandexCredentialError&) {
+        throw;
+    } catch (const std::exception& ex) {
+        throw InvalidYandexCredentialError(std::string("Invalid Yandex profile JWT: ") + ex.what());
     }
-    if (decoded.has_payload_claim("login")) {
-        profile.login = ClaimToString(decoded.get_payload_claim("login"));
-    }
-    return profile;
 }
 
 }  // namespace ya_brander::auth
