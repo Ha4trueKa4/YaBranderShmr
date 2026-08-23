@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -53,10 +54,11 @@ import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectRela
 import com.yandex.avatargenerator.feature.project.ui.components.PublicProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.util.publishedLabel
 import com.yandex.avatargenerator.ui.components.BrandAvatar
-import com.yandex.avatargenerator.ui.components.avatarInitials
+import com.yandex.avatargenerator.ui.components.BrandBackTopBar
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTonalButton
+import com.yandex.avatargenerator.ui.components.avatarInitials
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
@@ -66,9 +68,9 @@ import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-// Декоративный градиент hero-баннера по макету (violet → cyan → pink, слева направо):
-// виден, пока грузится превью проекта или если превью нет. Розовый — точечное
-// значение баннера, вне палитры AppColors. AppColors — @Composable-геттеры (зависят
+// Декоративный градиент hero-баннера (коралл → мягкий коралл, слева направо):
+// виден, пока грузится превью проекта или если превью нет. Собран целиком на
+// токенах палитры. AppColors — @Composable-геттеры (зависят
 // от темы), поэтому градиент собирается функцией, а не top-level val;
 // remember по палитре — чтобы Brush не пересобирался на каждой рекомпозиции.
 @Composable
@@ -76,7 +78,7 @@ private fun heroGradient(): Brush {
     val colors = LocalAppColorScheme.current
     return remember(colors) {
         Brush.horizontalGradient(
-            listOf(colors.accent, colors.accentCyan, Color(0xFFEC4899)),
+            listOf(colors.accent, colors.accentSoft),
         )
     }
 }
@@ -86,7 +88,7 @@ private fun heroGradient(): Brush {
 private fun previewGradient(): Brush {
     val colors = LocalAppColorScheme.current
     return remember(colors) {
-        Brush.horizontalGradient(listOf(colors.accent, colors.accentCyan))
+        Brush.horizontalGradient(listOf(colors.accent, colors.accentSoft))
     }
 }
 
@@ -98,14 +100,15 @@ private val ActionIconSize = 18.dp
  * Экран публичного проекта: грузит проект по [projectId] через
  * [PublicProjectViewModel] и показывает Loading/Error/Content.
  *
- * Точка входа — тап по проекту в ленте (`Destination.PublicProject`). Публичный
- * проект открывается по прямой ссылке, поэтому шапки с «назад» в макете нет —
- * возврат делает системная кнопка. `projectId` известен только при открытии, так
+ * Точка входа — тап по проекту в ленте (`Destination.PublicProject`), поэтому
+ * сверху [BrandBackTopBar]: на системную кнопку «назад» как на единственный путь
+ * возврата полагаться нельзя. `projectId` известен только при открытии, так
  * что передаём его параметром ([parametersOf]), как в `ProjectScreen`.
  */
 @Composable
 internal fun PublicProjectScreen(
     projectId: String,
+    onBackClick: () -> Unit,
     onAuthorClick: (String) -> Unit,
     onRelatedClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -126,26 +129,39 @@ internal fun PublicProjectScreen(
         }
     }
 
-    when (val state = uiState) {
-        PublicProjectUiState.Loading -> PublicProjectSkeleton(modifier)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
+    ) {
+        // Заголовок дублирует название под hero намеренно: оно уезжает со
+        // скроллом, а шапка остаётся. Пока проект грузится, названия ещё нет.
+        BrandBackTopBar(
+            onBackClick = onBackClick,
+            title = (uiState as? PublicProjectUiState.Content)?.project?.title,
+        )
 
-        PublicProjectUiState.Error -> PublicProjectCenteredBox(modifier) {
-            BrandErrorState(
-                title = stringResource(R.string.public_project_error_title),
-                retryLabel = stringResource(R.string.public_project_error_retry),
-                onRetry = viewModel::retry,
+        when (val state = uiState) {
+            PublicProjectUiState.Loading -> PublicProjectSkeleton(Modifier.weight(1f))
+
+            PublicProjectUiState.Error -> PublicProjectCenteredBox(Modifier.weight(1f)) {
+                BrandErrorState(
+                    title = stringResource(R.string.public_project_error_title),
+                    retryLabel = stringResource(R.string.public_project_error_retry),
+                    onRetry = viewModel::retry,
+                )
+            }
+
+            is PublicProjectUiState.Content -> PublicProjectContent(
+                project = state.project,
+                onAuthorClick = { onAuthorClick(state.project.author.id) },
+                onFollowClick = viewModel::toggleFollow,
+                onDownloadPngClick = { viewModel.export(ExportFormat.PNG) },
+                onDownloadSvgClick = { viewModel.export(ExportFormat.SVG) },
+                onRelatedClick = onRelatedClick,
+                modifier = Modifier.weight(1f),
             )
         }
-
-        is PublicProjectUiState.Content -> PublicProjectContent(
-            project = state.project,
-            onAuthorClick = { onAuthorClick(state.project.author.id) },
-            onFollowClick = viewModel::toggleFollow,
-            onDownloadPngClick = { viewModel.export(ExportFormat.PNG) },
-            onDownloadSvgClick = { viewModel.export(ExportFormat.SVG) },
-            onRelatedClick = onRelatedClick,
-            modifier = modifier,
-        )
     }
 }
 
@@ -277,20 +293,27 @@ private fun PublicProjectHero(
         }
         // «Стекло» имитируем полупрозрачной подложкой и тонким светлым бордером —
         // backdrop-blur из макета в Compose портативно не воспроизвести.
-        val badgeShape = RoundedCornerShape(AppShape.full)
-        Text(
-            text = badge,
-            style = AppTypography.caption.copy(
-                color = AppColors.TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-            ),
-            modifier = Modifier
-                .padding(AppSpacing.l)
-                .clip(badgeShape)
-                .background(Color.Black.copy(alpha = 0.4f))
-                .border(1.dp, Color.White.copy(alpha = 0.1f), badgeShape)
-                .padding(horizontal = AppSpacing.s, vertical = 6.dp),
-        )
+        //
+        // Метку бэкенд не отдаёт (маппер подставляет ""), а пустой Text оставлял
+        // поверх превью тёмную пилюлю из одних отступов — похожую на неработающую
+        // кнопку. Цвет текста здесь не из палитры: подложка тёмная в обеих темах,
+        // и TextPrimary в светлой темнел до нечитаемого.
+        if (badge.isNotBlank()) {
+            val badgeShape = RoundedCornerShape(AppShape.full)
+            Text(
+                text = badge,
+                style = AppTypography.caption.copy(
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                modifier = Modifier
+                    .padding(AppSpacing.l)
+                    .clip(badgeShape)
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), badgeShape)
+                    .padding(horizontal = AppSpacing.s, vertical = 6.dp),
+            )
+        }
     }
 }
 
@@ -322,12 +345,17 @@ private fun PublicProjectAuthorRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = author.role,
-                    style = AppTypography.caption,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // Роль бэкенд не отдаёт (маппер подставляет ""). Пустой Text
+                // занимал вторую строку, и имя вставало выше центра — мимо
+                // аватара и кнопки, которые Row центрирует по вертикали.
+                if (author.role.isNotBlank()) {
+                    Text(
+                        text = author.role,
+                        style = AppTypography.caption,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
         PublicProjectFollowButton(isFollowing = author.isFollowing, onClick = onFollowClick)
@@ -347,11 +375,10 @@ private fun PublicProjectFollowButton(
     val shape = RoundedCornerShape(AppShape.full)
     val background = if (isFollowing) AppColors.Surface else AppColors.Accent
     val foreground = if (isFollowing) AppColors.TextSecondary else AppColors.OnAccent
-    Text(
-        text = stringResource(
-            if (isFollowing) R.string.public_project_following else R.string.public_project_follow,
-        ),
-        style = AppTypography.caption.copy(color = foreground, fontWeight = FontWeight.Bold),
+    // Текст лежит в Box, а не красится отступами напрямую: у caption lineHeight
+    // (16sp) больше кегля (12sp), и этот излишек Text распределяет по baseline —
+    // подпись съезжала от центра пилюли.
+    Box(
         modifier = modifier
             .clip(shape)
             .background(background)
@@ -360,7 +387,19 @@ private fun PublicProjectFollowButton(
             )
             .clickable(onClick = onClick)
             .padding(horizontal = AppSpacing.m, vertical = AppSpacing.xs),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(
+                if (isFollowing) R.string.public_project_following else R.string.public_project_follow,
+            ),
+            style = AppTypography.caption.copy(
+                color = foreground,
+                fontWeight = FontWeight.Bold,
+                lineHeight = TextUnit.Unspecified,
+            ),
+        )
+    }
 }
 
 /** Пара кнопок экспорта: акцентная «Download PNG» и нейтральная «Download SVG». */
@@ -446,7 +485,6 @@ private fun PublicProjectRelatedCard(
         modifier = modifier
             .clip(shape)
             .background(AppColors.Surface)
-            .border(1.dp, AppColors.Border, shape)
             .clickable(onClick = onClick),
     ) {
         Box(
@@ -494,7 +532,7 @@ private fun PublicProjectRelatedCard(
 
 // --- Preview -----------------------------------------------------------------
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14, heightDp = 960)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A, heightDp = 960)
 @Composable
 private fun PublicProjectContentPreview() {
     AvatarGeneratorTheme {
@@ -509,7 +547,7 @@ private fun PublicProjectContentPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14, heightDp = 960)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A, heightDp = 960)
 @Composable
 private fun PublicProjectContentFollowingPreview() {
     AvatarGeneratorTheme {

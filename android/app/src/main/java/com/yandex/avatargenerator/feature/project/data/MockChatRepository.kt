@@ -65,14 +65,14 @@ class MockChatRepository(
             ChatMessage.System.ProjectCreated(id = "system-created"),
             ChatMessage.Outgoing(
                 id = "out-1",
-                text = "Can you generate a modern violet branding kit for my AI startup?",
+                text = "Can you generate a modern coral branding kit for my AI startup?",
                 sentAt = now.minus(12, ChronoUnit.MINUTES),
             ),
             ChatMessage.Incoming(
                 id = "in-1",
                 versionId = "version-1",
                 sentAt = now.minus(11, ChronoUnit.MINUTES),
-                previewUrl = "https://placehold.co/248x100/7C3AED/FFFFFF/png",
+                previewUrl = "https://placehold.co/248x100/F8604A/FFFFFF/png",
             ),
             ChatMessage.System.VersionSaved(
                 id = "system-version-1",
@@ -89,7 +89,7 @@ class MockChatRepository(
                 id = "in-2",
                 versionId = "version-2",
                 sentAt = now.minus(3, ChronoUnit.MINUTES),
-                previewUrl = "https://placehold.co/248x100/06B6D4/FFFFFF/png",
+                previewUrl = "https://placehold.co/248x100/FE9693/FFFFFF/png",
             ),
             ChatMessage.System.VersionSaved(
                 id = "system-version-2",

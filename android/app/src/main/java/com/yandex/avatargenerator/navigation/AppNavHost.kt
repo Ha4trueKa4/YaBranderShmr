@@ -183,6 +183,7 @@ fun AppNavHost(
             val projectId = backStackEntry.arguments?.getString(Destination.ARG_PROJECT_ID).orEmpty()
             PublicProjectScreen(
                 projectId = projectId,
+                onBackClick = { navController.popBackStack() },
                 onAuthorClick = { authorId ->
                     navController.navigate(Destination.UserProfile.createRoute(authorId))
                 },
@@ -211,6 +212,7 @@ fun AppNavHost(
                 onOpenFollowing = {
                     navController.openSubscriptions(userId, SubscriptionsTab.Following)
                 },
+                onBackClick = { navController.popBackStack() },
                 modifier = Modifier.fillMaxSize(),
             )
         }

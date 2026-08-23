@@ -7,6 +7,10 @@
 #include <userver/utils/uuid4.hpp>
 #include <shared_mutex>
 
+#include <ya_brander/sql_queries.hpp>
+
+#include "../utils/postgres_retry.hpp"
+
 namespace ya_brander::components {
 
 const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -51,7 +55,7 @@ ProjectManagerComponent::ProjectManagerComponent(
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
+        sql::kCreateProject,
         author_id, name, description
     );
 
@@ -66,11 +70,11 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
-        id
-    );
+    auto res = utils::ExecuteSelectWithRetry("select-project", [&] {
+      return pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kSlave,
+          sql::kSelectProject, id);
+    });
 
     if (res.IsEmpty()) return std::nullopt;
 
@@ -95,8 +99,7 @@ void ProjectManagerComponent::UpdateProject(
   if (name.has_value()) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET name = $2, updated_at = NOW() "
-        "WHERE id = $1::uuid",
+        sql::kUpdateProjectName,
         id, *name);
   }
   if (is_public.has_value()) {
@@ -104,14 +107,12 @@ void ProjectManagerComponent::UpdateProject(
       version_storage_.SetLatestAcl(id, true);
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=false, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kPublishProject,
           id);
     } else {
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=true, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kMakeProjectPrivate,
           id);
       version_storage_.SetLatestAcl(id, false);
     }
@@ -129,7 +130,7 @@ void ProjectManagerComponent::UpdateProject(
 
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "DELETE FROM projects WHERE id = $1::uuid", id
+        sql::kDeleteProject, id
     );
 }
 
@@ -140,21 +141,24 @@ constexpr std::size_t kMaxReferenceProjects = 2;
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
     const std::string& project_id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT chat_history FROM projects WHERE id = $1::uuid",
-        project_id);
+    auto res = utils::ExecuteSelectWithRetry(
+        "select-project-chat-history", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectProjectChatHistory, project_id);
+        });
     if (res.IsEmpty()) return userver::formats::json::MakeArray();
     return res[0]["chat_history"].As<userver::formats::json::Value>();
 }
 
 std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
-    const std::string& project_id, std::size_t limit) {
+    const std::string& project_id, std::size_t limit, const std::string& exclude_job_id) {
     auto history_json = FetchChatHistoryJson(project_id);
 
     std::vector<std::string> prompts;
     for (const auto& entry : history_json) {
-        if (entry["role"].As<std::string>("") == "user") {
+        if (entry["role"].As<std::string>("") == "user" &&
+            entry["job_id"].As<std::string>("") != exclude_job_id) {
             prompts.push_back(entry["text"].As<std::string>(""));
         }
     }
@@ -168,9 +172,7 @@ void ProjectManagerComponent::AppendUserMessage(const std::string& project_id, c
                                                  const std::string& user_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'user', 'text', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendUserMessage,
         project_id, user_message, job_id);
 }
 
@@ -178,9 +180,7 @@ void ProjectManagerComponent::AppendAssistantSuccess(const std::string& project_
                                                       const std::string& version_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'version_id', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantSuccess,
         project_id, version_id, job_id);
 }
 
@@ -188,18 +188,14 @@ void ProjectManagerComponent::AppendAssistantError(const std::string& project_id
                                                     const std::string& error_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'error', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantError,
         project_id, error_message, job_id);
 }
 
 void ProjectManagerComponent::AppendAssistantCancelled(const std::string& project_id, const std::string& job_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'status', 'cancelled', 'job_id', $2::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantCancelled,
         project_id, job_id);
 }
 
@@ -207,8 +203,8 @@ userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std:
     auto history = FetchChatHistoryJson(project_id);
 
     // Не больше одного активного job'а на проект (см. active_job_by_project_
-    // в StartGeneration), поэтому достаточно одного точечного lookup, а не
-    // перебора jobs_/батча по списку job_id.
+    // в StartGenerationJob), поэтому достаточно одного точечного lookup, а
+    // не перебора jobs_/батча по списку job_id.
     std::shared_ptr<JobEntry> active_entry;
     std::string active_job_id;
     {
@@ -239,7 +235,7 @@ userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std:
 
     // Заглушка добавляется только в возвращаемый JSON, в БД ничего не пишем —
     // сообщение пользователя для этого job'а всегда последнее в chat_history
-    // (StartGeneration резервирует active_job_by_project_ и пишет
+    // (StartGenerationJob резервирует active_job_by_project_ и пишет
     // AppendUserMessage раньше, чем что-либо ещё может добавиться), поэтому
     // достаточно просто дописать заглушку в конец скопированного массива.
     userver::formats::json::ValueBuilder result{history};
@@ -271,27 +267,42 @@ std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
     return result;
 }
 
-std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt,
-                                                    const std::string& model, const std::string& caller_id,
-                                                    const std::vector<std::string>& reference_project_ids) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+std::string ProjectManagerComponent::RunInitialGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model,
+    const std::string& caller_id, const std::vector<std::string>& reference_project_ids) {
+    // Без истории: это первая генерация проекта, предыдущих запросов по
+    // определению нет. AppendUserMessage уже синхронно записал этот же prompt
+    // в chat_history до запуска этой корутины — GetRecentUserPrompts вернул
+    // бы его же как "историю", задвоив текущий запрос ещё раз (в сыром виде,
+    // рядом с уже отполированным блоком "ЗАПРОС ПОЛЬЗОВАТЕЛЯ" ниже).
+    std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
+    std::string safe_prompt = EscapeXml(polished_prompt_text);
+    auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
+    LlmPrompt full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, {}, reference_svgs);
 
-    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
+    auto new_data = llm_client_.SendPrompt(
+        full_prompt, kMaxGenerationOutputTokens, model, 0.1);
+    return version_storage_.SaveVersion(project_id, new_data);
+}
+
+std::string ProjectManagerComponent::RunEditGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model,
+    const std::string& job_id) {
+    std::string current_state = version_storage_.GetLatestVersionData(project_id);
+
+    // exclude_job_id=job_id: AppendUserMessage уже синхронно записал текущий
+    // prompt в chat_history под этим же job_id до запуска этой корутины —
+    // без исключения он попал бы в "историю" ещё раз, задвоив себя рядом с
+    // блоком "ЗАПРОС ПОЛЬЗОВАТЕЛЯ" ниже.
+    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit, job_id);
     for (auto& past_message : history) {
         past_message = EscapeXml(past_message);
     }
 
-    LlmPrompt full_prompt;
-    if (current_state.empty() || current_state == kDefaultSvg) {
-		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
-		std::string safe_prompt = EscapeXml(polished_prompt_text);
-        auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history, reference_svgs);
-    }else {
-		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
-		std::string safe_prompt = EscapeXml(polished_prompt_text);
-        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
-    }
+    std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
+    std::string safe_prompt = EscapeXml(polished_prompt_text);
+    LlmPrompt full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
+
     auto new_data = llm_client_.SendPrompt(
         full_prompt, kMaxGenerationOutputTokens, model, 0.1);
     return version_storage_.SaveVersion(project_id, new_data);
@@ -327,18 +338,18 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
     }
 }
 
-std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt,
-                                                     const std::string& model, const std::string& caller_id,
-                                                     const std::vector<std::string>& reference_project_ids) {
+std::string ProjectManagerComponent::StartGenerationJob(
+    const std::string& project_id, const std::string& prompt,
+    std::function<std::string(const std::string& job_id)> run_core_generation) {
     std::string job_id = userver::utils::generators::GenerateUuid();
     auto entry = std::make_shared<JobEntry>();
     entry->project_id = project_id;
 
     // Проверка "нет ли уже активной генерации для проекта" и резервирование
     // слота под неё — одной атомарной операцией под jobs_mutex_. Если бы это
-    // были два отдельных захвата лока, два конкурентных StartGeneration для
-    // одного проекта могли бы оба проскочить проверку раньше, чем любой из
-    // них зарезервирует active_job_by_project_.
+    // были два отдельных захвата лока, два конкурентных StartGenerationJob
+    // для одного проекта могли бы оба проскочить проверку раньше, чем любой
+    // из них зарезервирует active_job_by_project_.
     {
         std::lock_guard lock(jobs_mutex_);
         PruneOldJobsLocked();
@@ -362,7 +373,8 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         throw;
     }
 
-    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
+    bts_.AsyncDetach("generation-job", [this, project_id, job_id, entry,
+                                        run_core_generation = std::move(run_core_generation)] {
         // Токен для внешней отмены (CancelGeneration) регистрируем сразу же,
         // в самом начале корутины — до захвата семафора, чтобы отмена
         // работала, даже пока job ещё стоит в очереди на генерацию.
@@ -376,17 +388,18 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
 
 
 		// Статус job'а зависит только от того, чем закончилась сама
-        // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
-        // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
-        // статус уже определён и разослан ожидающим в WaitForGeneration: её
-        // падение не должно превращать уже случившийся исход в другой —
-        // иначе клиент, опросивший чуть позже, увидел бы не то, что было.
+        // генерация (run_core_generation): успехом, ошибкой или отменой.
+        // Запись результата в chat_history — best-effort бухгалтерия ПОСЛЕ
+        // того, как статус уже определён и разослан ожидающим в
+        // WaitForGeneration: её падение не должно превращать уже случившийся
+        // исход в другой — иначе клиент, опросивший чуть позже, увидел бы не
+        // то, что было.
         std::string version_id;
         JobStatus outcome;
         std::string error_message;
         try {
             std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
+            version_id = run_core_generation(job_id);
             outcome = JobStatus::kDone;
         } catch (const std::exception& e) {
             bool was_cancelled;
@@ -415,8 +428,9 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         // видимым снаружи (entry->status + NotifyAll ниже) — иначе клиент,
         // получивший "done"/"error"/"cancelled" из WaitForGeneration, мог бы
         // тут же получить спурьезный 409 на новый POST .../generate: его
-        // StartGeneration успел бы проверить active_job_by_project_ раньше,
-        // чем эта же корутина (на отдельном bg-task-processor) дошла бы сюда.
+        // StartGenerationJob успел бы проверить active_job_by_project_
+        // раньше, чем эта же корутина (на отдельном bg-task-processor) дошла
+        // бы сюда.
         // TODO(redis): в редис-версии это должно стать одной атомарной
         // операцией (Lua-скрипт/MULTI-EXEC: снять active_job:{project_id} и
         // записать финальный статус job:{job_id} одной транзакцией) — простого
@@ -471,6 +485,23 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
     });
 
     return job_id;
+}
+
+std::string ProjectManagerComponent::StartInitialGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model,
+    const std::string& caller_id, const std::vector<std::string>& reference_project_ids) {
+    return StartGenerationJob(project_id, prompt,
+        [this, project_id, prompt, model, caller_id, reference_project_ids](const std::string&) {
+            return RunInitialGeneration(project_id, prompt, model, caller_id, reference_project_ids);
+        });
+}
+
+std::string ProjectManagerComponent::StartEditGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model) {
+    return StartGenerationJob(project_id, prompt,
+        [this, project_id, prompt, model](const std::string& job_id) {
+            return RunEditGeneration(project_id, prompt, model, job_id);
+        });
 }
 
 std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(

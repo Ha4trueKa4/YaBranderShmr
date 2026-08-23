@@ -32,14 +32,37 @@ def auth_headers(token: str) -> dict:
 async def create_project(
         service_client, token: str, name: str, is_public: bool = False
 ) -> str:
-    """Создает проект и делает его публичным при необходимости"""
+    """Создает проект (с первичной генерацией) и делает его публичным
+    при необходимости.
+
+    Создание асинхронно (202 + job_id) — дожидаемся done ДО последующего
+    PATCH: иначе фоновая первичная генерация могла бы сохранить свою версию
+    уже после PATCH, тихо затерев его.
+    """
     resp = await service_client.post(
         "/api/v1/projects",
-        json={"name": name, "description": "Test description"},
+        json={
+            "name": name,
+            "description": "Test description",
+            "prompt": "Нарисуй что-нибудь простое",
+        },
         headers=auth_headers(token),
     )
-    assert resp.status == 201
+    assert resp.status == 202
     proj_id = resp.json()["id"]
+    job_id = resp.json()["job_id"]
+
+    status = "pending"
+    for _ in range(10):
+        poll = await service_client.get(
+            f"/api/v1/projects/{proj_id}/generate/{job_id}",
+            headers=auth_headers(token),
+        )
+        assert poll.status == 200
+        status = poll.json()["status"]
+        if status != "pending":
+            break
+    assert status == "done"
 
     if is_public:
         patch_resp = await service_client.patch(

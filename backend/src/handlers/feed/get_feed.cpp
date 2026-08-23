@@ -6,36 +6,16 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/datetime.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
+#include "../../utils/postgres_retry.hpp"
+
 namespace ya_brander::handlers {
 
 namespace {
 
 constexpr int kDefaultLimit = 20;
 constexpr int kMaxLimit = 50;
-
-const std::string kDiscoverQuery = R"(
-  SELECT p.id::text AS id, p.author_id::text AS author_id, u.login AS author_login,
-         p.name, p.created_at, COALESCE(p.last_version_key, '') AS last_version_key
-  FROM projects p
-  JOIN users u ON u.id = p.author_id
-  WHERE p.is_private = FALSE
-    AND ($1::timestamptz IS NULL OR (p.created_at, p.id) < ($1::timestamptz, $2::uuid))
-  ORDER BY p.created_at DESC, p.id DESC
-  LIMIT $3
-)";
-
-const std::string kFollowingQuery = R"(
-  SELECT p.id::text AS id, p.author_id::text AS author_id, u.login AS author_login,
-         p.name, p.created_at, COALESCE(p.last_version_key, '') AS last_version_key
-  FROM projects p
-  JOIN users u ON u.id = p.author_id
-  JOIN subscriptions s ON s.target_user_id = p.author_id
-  WHERE p.is_private = FALSE
-    AND s.subscriber_id = $4::uuid
-    AND ($1::timestamptz IS NULL OR (p.created_at, p.id) < ($1::timestamptz, $2::uuid))
-  ORDER BY p.created_at DESC, p.id DESC
-  LIMIT $3
-)";
 
 std::optional<std::pair<std::string, std::string>> DecodeCursor(const std::string& cursor) {
   const auto sep = cursor.rfind('|');
@@ -87,13 +67,19 @@ userver::formats::json::Value GetFeedHandler::HandleRequestJsonThrow(
     }
   }
 
-  const auto res = (scope == "following")
-      ? pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            kFollowingQuery, cursor_created_at, cursor_id, limit + 1, *user_id)
-      : pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            kDiscoverQuery, cursor_created_at, cursor_id, limit + 1);
+  const auto res = utils::ExecuteSelectWithRetry(
+      scope == "following" ? "select-following-feed" : "select-discover-feed",
+      [&] {
+        return scope == "following"
+                   ? pg_cluster_->Execute(
+                         userver::storages::postgres::ClusterHostType::kSlave,
+                         sql::kSelectFollowingFeed, cursor_created_at, cursor_id,
+                         limit + 1, *user_id)
+                   : pg_cluster_->Execute(
+                         userver::storages::postgres::ClusterHostType::kSlave,
+                         sql::kSelectDiscoverFeed, cursor_created_at, cursor_id,
+                         limit + 1);
+      });
 
   const bool has_more = res.Size() > static_cast<std::size_t>(limit);
   const std::size_t items_count = has_more ? static_cast<std::size_t>(limit) : res.Size();

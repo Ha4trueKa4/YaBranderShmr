@@ -9,6 +9,7 @@ struct ProfileView: View {
     var onEditProfile: () -> Void
     var onOpenSettings: () -> Void
     var onOpenProject: (UUID, String, URL?) -> Void
+    var onOpenConnections: (UUID, ProfileConnectionsKind) -> Void
 
     init(
         session: SessionStore,
@@ -17,7 +18,8 @@ struct ProfileView: View {
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
         onOpenSettings: @escaping () -> Void = {},
-        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in }
+        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in },
+        onOpenConnections: @escaping (UUID, ProfileConnectionsKind) -> Void = { _, _ in }
     ) {
         self.session = session
         self.isCurrentUser = isCurrentUser
@@ -25,6 +27,7 @@ struct ProfileView: View {
         self.onEditProfile = onEditProfile
         self.onOpenSettings = onOpenSettings
         self.onOpenProject = onOpenProject
+        self.onOpenConnections = onOpenConnections
         _viewModel = State(initialValue: ProfileViewModel(
             currentUserService: session.currentUserService,
             userProfileService: session.userProfileService,
@@ -169,11 +172,38 @@ struct ProfileView: View {
         HStack(spacing: 8) {
             stat(value: viewModel.projectsCount, title: "Projects")
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followersCount, title: "Followers", animated: true)
+            connectionStat(
+                value: viewModel.followersCount,
+                title: "Followers",
+                kind: .followers,
+                animated: true
+            )
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followingCount, title: "Following")
+            connectionStat(
+                value: viewModel.followingCount,
+                title: "Following",
+                kind: .following
+            )
         }
         .font(.system(size: 13))
+    }
+
+    private func connectionStat(
+        value: Int,
+        title: String,
+        kind: ProfileConnectionsKind,
+        animated: Bool = false
+    ) -> some View {
+        Button {
+            guard let profileID = viewModel.profileID else { return }
+            onOpenConnections(profileID, kind)
+        } label: {
+            stat(value: value, title: title, animated: animated)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.profileID == nil)
+        .accessibilityHint("Opens \(title.lowercased()) list")
     }
 
     private func stat(value: Int, title: String, animated: Bool = false) -> some View {

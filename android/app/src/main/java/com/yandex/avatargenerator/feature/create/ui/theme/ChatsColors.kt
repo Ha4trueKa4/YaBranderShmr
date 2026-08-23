@@ -25,9 +25,9 @@ internal object ChatsColors {
      * а не из отдельной константы).
      */
     private val ThumbnailGradientStops: List<(AppColorScheme) -> List<Color>> = listOf(
-        { listOf(it.error, it.accent) },
-        { listOf(it.success, it.accentCyan) },
-        { listOf(it.accent, it.accentCyan) },
+        { listOf(it.accent, it.accentSoft) },
+        { listOf(it.accentSoft, it.accentWarm) },
+        { listOf(it.accentWarm, it.accent) },
     )
 
     /**

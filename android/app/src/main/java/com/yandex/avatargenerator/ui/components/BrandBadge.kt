@@ -20,7 +20,7 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
 /** Цветовой вариант плашки-бейджа (см. "Badges &amp; Tags" в Component Sandbox). */
-enum class BrandBadgeVariant { Violet, Cyan, Success, Neutral }
+enum class BrandBadgeVariant { Accent, Soft, Warm, Success, Neutral }
 
 /** Компактная плашка-тег (статус, категория, метка версии). */
 @Composable
@@ -30,8 +30,9 @@ fun BrandBadge(
     variant: BrandBadgeVariant = BrandBadgeVariant.Neutral
 ) {
     val (background, foreground) = when (variant) {
-        BrandBadgeVariant.Violet -> AppColors.Accent.copy(alpha = 0.15f) to AppColors.Accent
-        BrandBadgeVariant.Cyan -> AppColors.AccentCyan.copy(alpha = 0.15f) to AppColors.AccentCyan
+        BrandBadgeVariant.Accent -> AppColors.Accent.copy(alpha = 0.15f) to AppColors.AccentText
+        BrandBadgeVariant.Soft -> AppColors.AccentSoft.copy(alpha = 0.15f) to AppColors.AccentText
+        BrandBadgeVariant.Warm -> AppColors.AccentWarm to AppColors.OnAccentWarm
         BrandBadgeVariant.Success -> AppColors.Success.copy(alpha = 0.15f) to AppColors.Success
         BrandBadgeVariant.Neutral -> AppColors.SurfaceVariant to AppColors.TextSecondary
     }
@@ -45,7 +46,7 @@ fun BrandBadge(
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun BrandBadgePreview() {
     AvatarGeneratorTheme {
@@ -54,8 +55,9 @@ private fun BrandBadgePreview() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BrandBadge(text = "Violet Pro", variant = BrandBadgeVariant.Violet)
-                BrandBadge(text = "Cyan Creative", variant = BrandBadgeVariant.Cyan)
+                BrandBadge(text = "Coral Pro", variant = BrandBadgeVariant.Accent)
+                BrandBadge(text = "Creative", variant = BrandBadgeVariant.Soft)
+                BrandBadge(text = "Pro", variant = BrandBadgeVariant.Warm)
                 BrandBadge(text = "Success", variant = BrandBadgeVariant.Success)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

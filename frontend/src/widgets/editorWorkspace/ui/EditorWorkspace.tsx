@@ -58,7 +58,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     () => new EditorStore(document),
   )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
-  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [activeTool, setActiveTool] = useState<CanvasTool>(
+    isMobileLayout ? 'hand' : 'select',
+  )
   const [zoom, setZoom] = useState(1)
   const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
@@ -253,6 +255,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     }
   }
 
+  async function handleSaveAndExit() {
+    const wasSaved = await saveVersion()
+
+    if (wasSaved && navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed()
+    }
+  }
+
   const inspectorProps = {
     definitions: editorStore.document.definitions,
     onColorChangeEnd: editorStore.commitHistoryTransaction,
@@ -417,8 +427,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       )}
       <ConfirmUnsavedChangeModal
         isOpen={navigationBlocker.state === 'blocked'}
-        onCancel={handleCancelExit}
-        onConfirm={handleConfirmExit}
+        isSaving={isSavingVersion}
+        onDismiss={handleCancelExit}
+        onLeave={handleConfirmExit}
+        onSave={handleSaveAndExit}
       />
       <ImageExportModal
         isExporting={isImageExporting}

@@ -83,7 +83,7 @@ fun avatarInitials(name: String): String? {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun BrandAvatarPreview() {
     AvatarGeneratorTheme {
