@@ -91,8 +91,10 @@ services:
       interval: 2s
       timeout: 5s
       retries: 10
-    ports:
-      - 6379
+    # Порт на хост не публикуется: ya_brander-container достаёт service-redis
+    # по имени внутри docker-сети postgres, доступ с хоста не нужен. С пустым
+    # паролем (см. .env.example) публиковать порт на всех интерфейсах было бы
+    # небезопасно.
     networks:
       - postgres
 
