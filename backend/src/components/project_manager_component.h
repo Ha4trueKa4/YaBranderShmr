@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -26,7 +27,8 @@
 
 namespace ya_brander::components {
 
-/// @brief Бросается StartGeneration, если для проекта уже есть незавершённый
+/// @brief Бросается StartGenerationJob (через StartInitialGeneration или
+///        StartEditGeneration), если для проекта уже есть незавершённый
 ///        (kPending) job генерации — одновременно может выполняться не
 ///        больше одной генерации на проект.
 class GenerationInProgressError : public std::runtime_error {
@@ -57,31 +59,56 @@ public:
 
   void DeleteProject(const std::string& id);
 
-  /// @brief Запускает фоновую генерацию: сразу сохраняет сообщение
-  ///        пользователя в chat_history и возвращает job_id, не дожидаясь
-  ///        ответа LLM. Сама генерация выполняется в фоновой корутине на
-  ///        bg-task-processor (отдельно от main-task-processor, который
-  ///        обслуживает HTTP-запросы, включая long-poll GET .../generate/{job_id}).
+  /// @brief Запускает фоновую ПЕРВИЧНУЮ генерацию нового проекта: сразу
+  ///        сохраняет сообщение пользователя в chat_history и возвращает
+  ///        job_id, не дожидаясь ответа LLM. Вызывается ровно один раз, сразу
+  ///        после CreateProject, из CreateProjectHandler — это единственный
+  ///        путь, которым SVG проекта вообще может быть впервые сгенерирован
+  ///        (POST /projects/{id}/generate умеет только править уже
+  ///        существующий SVG, см. StartEditGeneration). Сама генерация
+  ///        выполняется в фоновой корутине на bg-task-processor (отдельно от
+  ///        main-task-processor, который обслуживает HTTP-запросы, включая
+  ///        long-poll GET .../generate/{job_id} — тот же эндпоинт опроса,
+  ///        что и для StartEditGeneration: коду поллинга/отмены безразлично,
+  ///        какой из двух методов создал job).
   ///        version_storage_/llm_client_/prompt_constructor_ безопасны для
   ///        конкурентных вызовов из разных корутин: ни один из них не хранит
   ///        изменяемое состояние между вызовами (методы, читающие/пишущие
   ///        данные, либо const, либо работают только через
   ///        userver::storages::postgres::ClusterPtr / userver::clients::http::Client,
   ///        которые сами по себе конкурентно-безопасны).
+  /// @throws GenerationInProgressError структурно недостижимо здесь: у
+  ///         только что созданного project_id не может быть записи в
+  ///         active_job_by_project_ — вызывающему не нужно его ловить.
+  /// @throws std::exception если не удалось создать job (например, недоступна
+  ///         БД при записи сообщения пользователя) — в этом случае job_id
+  ///         никому не отдаётся и в jobs_ ничего не остаётся; строка проекта
+  ///         и плейсхолдер-версия (kDefaultSvg) при этом уже закоммичены
+  ///         CreateProject — проект остаётся в "легаси"-состоянии и правится
+  ///         дальше через StartEditGeneration как обычно.
+  /// @param caller_id Автор запроса — используется для проверки доступа к
+  ///        reference_project_ids внутри ResolveReferenceSvgs.
+  /// @param reference_project_ids Id (не более 2) других проектов, чьи SVG
+  ///        подмешиваются в промпт (см. ResolveReferenceSvgs).
+  std::string StartInitialGeneration(const std::string& project_id, const std::string& prompt,
+                                      const std::string& model, const std::string& caller_id,
+                                      const std::vector<std::string>& reference_project_ids = {});
+
+  /// @brief Запускает фоновую генерацию ПРАВКИ уже существующего SVG
+  ///        проекта — вызывается только из POST /projects/{id}/generate.
+  ///        Правит SVG безусловно, каким бы он ни был на текущий момент
+  ///        (включая kDefaultSvg-плейсхолдер для проектов, у которых
+  ///        первичная генерация ещё не завершилась/провалилась) — никакой
+  ///        особой ветки для "первого раза" больше нет, см.
+  ///        RunEditGeneration. Референсы здесь не поддерживаются: они имеют
+  ///        смысл только при первичной генерации, см. StartInitialGeneration.
   /// @throws GenerationInProgressError если для проекта уже выполняется
   ///         другой job (не больше одной генерации на проект одновременно).
   /// @throws std::exception если не удалось создать job (например, недоступна
   ///         БД при записи сообщения пользователя) — в этом случае job_id
   ///         никому не отдаётся и в jobs_ ничего не остаётся.
-  /// @param caller_id Автор запроса (уже проверен хендлером как владелец
-  ///        project_id) — используется для проверки доступа к
-  ///        reference_project_ids внутри ResolveReferenceSvgs.
-  /// @param reference_project_ids Id (не более 2) других проектов, чьи SVG
-  ///        подмешиваются в промпт — учитываются только при первичной
-  ///        генерации project_id (см. ResolveReferenceSvgs).
-  std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model,
-                              const std::string& caller_id,
-                              const std::vector<std::string>& reference_project_ids = {});
+  std::string StartEditGeneration(const std::string& project_id, const std::string& prompt,
+                                  const std::string& model);
 
   /// @brief Ждёт завершения job'а генерации не дольше timeout (long polling).
   /// @returns std::nullopt, если job с таким id не найден для этого проекта.
@@ -173,7 +200,13 @@ private:
 
   /// @brief Последние limit текстов запросов пользователя (без ответов
   ///        модели), от старых к новым — контекст для промпта LLM.
-  std::vector<std::string> GetRecentUserPrompts(const std::string& project_id, std::size_t limit);
+  /// @param exclude_job_id К моменту вызова этого метода AppendUserMessage
+  ///        для ТЕКУЩЕГО job'а уже синхронно записал его сообщение в
+  ///        chat_history (см. StartGenerationJob) — без исключения по
+  ///        job_id текущий запрос попал бы в "историю" ещё раз, задвоив себя
+  ///        рядом с блоком "ЗАПРОС ПОЛЬЗОВАТЕЛЯ" в промпте.
+  std::vector<std::string> GetRecentUserPrompts(const std::string& project_id, std::size_t limit,
+                                                const std::string& exclude_job_id);
 
   /// @brief Добавляет сообщение пользователя в конец project.chat_history.
   ///        Вызывается сразу при старте job'а, до обращения к LLM.
@@ -191,12 +224,46 @@ private:
   /// @brief Добавляет запись об отменённой генерации в конец project.chat_history.
   void AppendAssistantCancelled(const std::string& project_id, const std::string& job_id);
 
-  /// @brief Собственно генерация (построение промпта, вызов LLM, сохранение
-  ///        версии), выполняется в фоновой корутине из StartGeneration.
+  /// @brief Общая асинхронная "обвязка" job'а генерации, используемая и
+  ///        StartInitialGeneration, и StartEditGeneration: генерация job_id,
+  ///        атомарное резервирование/освобождение active_job_by_project_,
+  ///        синхронная запись сообщения пользователя (с откатом резервации
+  ///        при ошибке), запуск фоновой корутины на bts_ с cancellation
+  ///        token'ом и generation_semaphore_, классификация исхода
+  ///        (done/error/cancelled) и соответствующая запись в chat_history.
+  ///        run_core_generation вызывается внутри фоновой корутины, под
+  ///        семафором, с уже сгенерированным job_id (нужен, например,
+  ///        RunEditGeneration для исключения текущего сообщения из
+  ///        "истории" — см. GetRecentUserPrompts), и должен вернуть id
+  ///        сохранённой версии (или бросить исключение) — это единственное,
+  ///        что отличает первичную генерацию от правки; вся остальная
+  ///        механика job'а одна на двоих.
+  /// @throws GenerationInProgressError если для project_id уже есть
+  ///         незавершённый job.
+  std::string StartGenerationJob(const std::string& project_id, const std::string& prompt,
+                                 std::function<std::string(const std::string& job_id)> run_core_generation);
+
+  /// @brief Строит промпт ПЕРВИЧНОЙ генерации (PolishGenerate +
+  ///        ResolveReferenceSvgs + BuildGenerationPrompt), отправляет в LLM,
+  ///        сохраняет результат. Без чтения current_state — вызывается
+  ///        только из StartInitialGeneration, где по построению всегда
+  ///        нужна именно генерация "с нуля", а не правка.
   ///        @returns id сохранённой версии.
-  std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model,
-                           const std::string& caller_id,
-                           const std::vector<std::string>& reference_project_ids);
+  std::string RunInitialGeneration(const std::string& project_id, const std::string& prompt,
+                                   const std::string& model, const std::string& caller_id,
+                                   const std::vector<std::string>& reference_project_ids);
+
+  /// @brief Строит промпт ПРАВКИ (PolishEdit + BuildEditPrompt) против того,
+  ///        что version_storage_.GetLatestVersionData вернёт прямо сейчас —
+  ///        безусловно, каким бы ни было текущее содержимое (включая
+  ///        kDefaultSvg для проектов, чья первичная генерация не завершена).
+  ///        Вызывается только из StartEditGeneration.
+  /// @param job_id Job текущего вызова — передаётся в GetRecentUserPrompts,
+  ///        чтобы исключить из "истории" только что записанное сообщение
+  ///        этого же запроса (см. GetRecentUserPrompts).
+  ///        @returns id сохранённой версии.
+  std::string RunEditGeneration(const std::string& project_id, const std::string& prompt,
+                                const std::string& model, const std::string& job_id);
 
   /// @brief Удаляет из jobs_ завершённые job'ы старше kJobRetention, а
   ///        зависшие в kPending (задача так и не запустилась/не завершилась,
@@ -250,10 +317,10 @@ private:
   std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
 
   // project_id -> job_id незавершённого job'а этого проекта (если есть).
-  // Не больше одной активной генерации на проект: StartGeneration проверяет
-  // и резервирует запись здесь атомарно, под тем же jobs_mutex_, что и
-  // вставку в jobs_ — иначе два конкурентных запроса могли бы оба проскочить
-  // проверку до того, как любой из них зарезервирует слот.
+  // Не больше одной активной генерации на проект: StartGenerationJob
+  // проверяет и резервирует запись здесь атомарно, под тем же jobs_mutex_,
+  // что и вставку в jobs_ — иначе два конкурентных запроса могли бы оба
+  // проскочить проверку до того, как любой из них зарезервирует слот.
   std::unordered_map<std::string, std::string> active_job_by_project_;
 
   // Ограничивает число одновременно выполняющихся генераций (SendPrompt к
