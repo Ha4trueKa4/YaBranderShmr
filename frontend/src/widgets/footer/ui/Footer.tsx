@@ -18,11 +18,9 @@ export function Footer() {
   const [theme, setTheme] = useState(getInitialTheme)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const themeOptions = [
-    { label: t('Yandex Colors'), value: 'yandex' },
     { label: t('System'), value: 'system' },
     { label: t('Dark'), value: 'dark' },
     { label: t('Light'), value: 'light' },
-    { label: t('Sephia Colors'), value: 'sephia' },
   ]
   const languageSelectOptions = languageOptions.map((option) => ({
     label: option.label,
@@ -30,13 +28,7 @@ export function Footer() {
   }))
 
   function handleThemeChange(value: string) {
-    if (
-      value === 'system' ||
-      value === 'dark' ||
-      value === 'light' ||
-      value === 'sephia' ||
-      value === 'yandex'
-    ) {
+    if (value === 'system' || value === 'dark' || value === 'light') {
       changeTheme(value)
       setTheme(value)
     }

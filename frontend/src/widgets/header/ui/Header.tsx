@@ -1,6 +1,5 @@
 import { authStore } from '@app/providers/auth'
 import { AppRoute } from '@app/providers/router/routes'
-import brandMark from '@shared/assets/brandmark.svg'
 import { cn, getAvatarInitials } from '@shared/lib'
 import { Avatar, Button } from '@shared/ui'
 import { LogIn } from 'lucide-react'
@@ -8,8 +7,9 @@ import { observer } from 'mobx-react-lite'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate } from 'react-router-dom'
 
-import yandexLogo from './assets/yandex-en.svg'
-import yandexRuLogo from './assets/yandex-ru.svg'
+import mobileLogo from './assets/logo.svg'
+import darkLogo from './assets/logo-dark.svg'
+import lightLogo from './assets/logo-light.svg'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -19,7 +19,7 @@ interface HeaderProps {
 export const Header = observer(function Header({
   fullWidth = false,
 }: HeaderProps) {
-  const { i18n, t } = useTranslation()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const isAuthorized = authStore.isAuthorized
   const session = authStore.getSession
@@ -52,13 +52,19 @@ export const Header = observer(function Header({
           onClick={() => navigate('/', { viewTransition: true })}
           type="button"
         >
-          <img alt="" className={styles.brandMark} src={brandMark} />
-          <img
-            alt=""
-            className={styles.yandexLogo}
-            src={i18n.resolvedLanguage === 'ru' ? yandexRuLogo : yandexLogo}
-          />
-          <span>Ya Brander</span>
+          <span className={styles.fullLogo}>
+            <img
+              alt=""
+              className={cn(styles.logo, styles.logoDark)}
+              src={darkLogo}
+            />
+            <img
+              alt=""
+              className={cn(styles.logo, styles.logoLight)}
+              src={lightLogo}
+            />
+          </span>
+          <img alt="" className={styles.mobileLogo} src={mobileLogo} />
         </button>
         <nav className={styles.navigation}>
           <NavLink

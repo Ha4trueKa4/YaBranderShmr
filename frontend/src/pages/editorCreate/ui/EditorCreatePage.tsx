@@ -11,7 +11,6 @@ import {
   GenerationPollingTimeoutError,
   generationProcessStore,
   pollGenerationStatus,
-  useGenerateProjectMutation,
 } from '@features/editorGenerate'
 import {
   type ProjectDraft,
@@ -40,15 +39,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const isAuthorized = authStore.isAuthorized
   const { isPending: isCreatingProjectPending, mutateAsync: createProject } =
     useCreateProjectMutation()
-  const {
-    isPending: isGeneratingProjectPending,
-    mutateAsync: generateProject,
-  } = useGenerateProjectMutation()
-
   const isGenerationPending =
-    generationProcessStore.isInProgress ||
-    isCreatingProjectPending ||
-    isGeneratingProjectPending
+    generationProcessStore.isInProgress || isCreatingProjectPending
   const generationDraft = generationProcessStore.draft
   const generationAbortControllerRef = useRef<AbortController | null>(null)
   const [cancelledDraft, setCancelledDraft] = useState<ProjectDraft | null>(
@@ -63,27 +55,24 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       generationProcessStore.begin(draft)
       pendingGenerationStore.save(draft)
 
-      let createdProjectId: string | undefined
-      let generationStarted = false
-
-      const cancelUnfinishedGeneration = async () => {
-        if (!createdProjectId) {
+      const cancelUnfinishedGeneration = async (
+        projectId: string | undefined,
+        jobId: string | undefined,
+      ) => {
+        if (!projectId || !jobId) {
           return
         }
 
         try {
-          await cancelGeneration(createdProjectId)
-          queryClient.removeQueries({
-            queryKey: projectQueryKey(createdProjectId),
-          })
+          await cancelGeneration(projectId, jobId)
         } catch (error) {
-          console.error('Unable to delete unfinished project', error)
+          console.error('Unable to cancel generation', error)
         }
       }
 
       try {
         const project = await createProject({
-          body: draft,
+          body: { ...draft, prompt: draft.description },
           signal: controller.signal,
         })
 
@@ -92,31 +81,20 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
-        createdProjectId = project.id
+        const jobId = project.job_id
 
         if (controller.signal.aborted) {
-          await cancelUnfinishedGeneration()
+          await cancelUnfinishedGeneration(project.id, jobId)
           return
         }
 
-        const generation = await generateProject({
-          model: draft.model,
-          projectId: project.id,
-          prompt: draft.description,
-          signal: controller.signal,
-        })
-        const jobId = generation.job_id
-
         if (!jobId) {
-          await cancelUnfinishedGeneration()
           pendingGenerationStore.take()
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
           return
         }
-
-        generationStarted = true
 
         generationProcessStore.trackJob(project.id, jobId)
 
@@ -129,7 +107,6 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         )
 
         if (generatedProject.status === 'error') {
-          await cancelUnfinishedGeneration()
           pendingGenerationStore.take()
           toast.error(
             t('The generated project is unavailable. Please try again.'),
@@ -140,7 +117,6 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
-          await cancelUnfinishedGeneration()
           pendingGenerationStore.take()
           toast.error(
             t('The generated project is unavailable. Please try again.'),
@@ -163,16 +139,11 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           controller.signal.aborted ||
           error instanceof GenerationPollingCancelledError
         ) {
-          await cancelUnfinishedGeneration()
+          await cancelUnfinishedGeneration(
+            generationProcessStore.projectId ?? undefined,
+            generationProcessStore.jobId ?? undefined,
+          )
           return
-        }
-
-        if (
-          createdProjectId &&
-          !generationStarted &&
-          !(error instanceof ApiError && error.status === 401)
-        ) {
-          await cancelUnfinishedGeneration()
         }
 
         if (!(error instanceof ApiError && error.status === 401)) {
@@ -196,7 +167,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         generationProcessStore.reset()
       }
     },
-    [createProject, generateProject, navigate, queryClient, t, toast],
+    [createProject, navigate, queryClient, t, toast],
   )
 
   function handleGenerate(draft: ProjectDraft) {

@@ -13,8 +13,27 @@ export const zLoginRequest = z.object({
   password: z.string(),
 })
 
-export const zYandexAuthRequest = z.object({
-  code: z.string(),
+/**
+ * Ровно одно из полей: code — веб-флоу (redirect), access_token — SDK-флоу (мобильный/десктопный нативный Yandex ID SDK).
+ *
+ */
+export const zYandexAuthRequest = z.union([
+  z.object({
+    code: z.string(),
+  }),
+  z.object({
+    access_token: z.string(),
+  }),
+])
+
+export const zAuthMethodResponse = z.object({
+  has_password: z.boolean(),
+  provider: z.enum(['yandex']).nullable(),
+})
+
+export const zSetPasswordRequest = z.object({
+  current_password: z.string().optional(),
+  new_password: z.string().min(8).max(128),
 })
 
 export const zAuthResponse = z.object({
@@ -104,7 +123,7 @@ export const zVersionInfo = z.object({
 })
 
 /**
- * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — либо идентификатор созданной версии (version_id), либо, если генерация упала, текст ошибки (error) — вместо самого SVG или ссылки на него. Сообщение пользователя и ответ ассистента одного обмена связаны общим job_id (идентификатором фоновой задачи генерации из POST .../generate); пользовательское сообщение появляется в истории сразу при старте задачи, ответ ассистента — только после её завершения.
+ * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — идентификатор созданной версии (version_id) при успехе, текст ошибки (error) при неудачной генерации, либо status=cancelled, если генерацию прервали через POST .../generate/{job_id}/cancel — вместо самого SVG или ссылки на него. Сообщение пользователя и ответ ассистента одного обмена связаны общим job_id (идентификатором фоновой задачи генерации из POST /projects — для первой пары сообщений проекта — либо из последующих POST .../generate); пользовательское сообщение появляется в истории сразу при старте задачи, ответ ассистента — только после её завершения (в т.ч. отменой). Пока задача ещё не завершилась (не больше одной активной генерации на проект), в конец истории на лету подставляется — только в ответе, не в БД — служебное сообщение {"role":"assistant","status":"pending"|"cancelling","job_id":...} (без version_id/error), сигнализирующее фронту "проект генерируется" / "генерация отменяется", не требуя отдельного опроса GET .../generate/{job_id} только ради этого индикатора.
  *
  */
 export const zChatMessage = z.object({
@@ -118,10 +137,11 @@ export const zChatMessage = z.object({
 })
 
 /**
- * Текущее состояние фоновой задачи генерации.
+ * Текущее состояние фоновой задачи генерации. "cancelling" — переходное состояние сразу после POST .../generate/{job_id}/cancel, пока фоновая задача ещё не заметила запрос отмены; "cancelled" — уже финальное.
+ *
  */
 export const zGenerationStatus = z.object({
-  status: z.enum(['pending', 'done', 'error']),
+  status: z.enum(['pending', 'done', 'error', 'cancelling', 'cancelled']),
   url: z.string().optional(),
   message: z.string().optional(),
 })
@@ -152,9 +172,21 @@ export const zPostAuthLoginResponse = zAuthResponse
 export const zPostAuthYandexBody = zYandexAuthRequest
 
 /**
- * Успешный вход (существующий или только что привязанный аккаунт)
+ * Успешный вход (существующий или только что созданный аккаунт)
  */
 export const zPostAuthYandexResponse = zAuthResponse
+
+/**
+ * Текущий способ(-ы) входа пользователя
+ */
+export const zGetAuthMethodResponse = zAuthMethodResponse
+
+export const zPostAuthPasswordBody = zSetPasswordRequest
+
+/**
+ * Пароль установлен или изменён
+ */
+export const zPostAuthPasswordResponse = zMessageResponse
 
 export const zGetUsersByIdPath = z.object({
   id: z.string(),
@@ -214,6 +246,17 @@ export const zGetUsersByIdSubscribersResponse = z.array(
   }),
 )
 
+export const zDeleteUsersByIdSubscribersBySubscriberIdPath = z.object({
+  id: z.string(),
+  subscriber_id: z.string(),
+})
+
+/**
+ * Подписчик успешно удалён
+ */
+export const zDeleteUsersByIdSubscribersBySubscriberIdResponse =
+  zMessageResponse
+
 export const zGetUsersByIdSubscriptionsPath = z.object({
   id: z.string(),
 })
@@ -230,14 +273,22 @@ export const zGetUsersByIdSubscriptionsResponse = z.array(
 )
 
 export const zPostProjectsBody = z.object({
-  name: z.string(),
+  name: z.string().optional(),
   description: z.string().optional(),
+  prompt: z.string(),
+  model: z.string().optional(),
+  references: z.array(z.string()).max(2).optional(),
 })
 
 /**
- * Проект создан
+ * Проект создан, первичная генерация запущена в фоне. Дальнейший статус — через GET /projects/{id}/generate/{job_id}.
+ *
  */
-export const zPostProjectsResponse = zProject
+export const zPostProjectsResponse = zProject.and(
+  z.object({
+    job_id: z.string().optional(),
+  }),
+)
 
 export const zDeleteProjectsByIdPath = z.object({
   id: z.string(),
@@ -299,6 +350,16 @@ export const zGetProjectsByIdGenerateByJobIdPath = z.object({
  */
 export const zGetProjectsByIdGenerateByJobIdResponse = zGenerationStatus
 
+export const zPostProjectsByIdGenerateByJobIdCancelPath = z.object({
+  id: z.string(),
+  job_id: z.string(),
+})
+
+/**
+ * Текущий статус задачи после запроса отмены
+ */
+export const zPostProjectsByIdGenerateByJobIdCancelResponse = zGenerationStatus
+
 export const zGetProjectsByIdVersionsPath = z.object({
   id: z.string(),
 })
@@ -350,9 +411,9 @@ export const zGetModelsResponse = z.object({
   data: z.array(
     z.object({
       id: z.string(),
-      object: z.string(),
-      owned_by: z.string(),
-      created: z.int(),
+      object: z.string().optional(),
+      owned_by: z.string().optional(),
+      created: z.int().optional(),
     }),
   ),
 })
