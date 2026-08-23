@@ -20,8 +20,8 @@ namespace {
 // Сколько генераций может выполняться одновременно (SendPrompt к LLM +
 // SaveVersion) — защита bg-task-processor и внешних зависимостей (LLM API,
 // S3) от всплеска параллельных запросов.
-constexpr std::size_t kMaxConcurrentGenerations = 8;
-constexpr std::size_t kMaxGenerationOutputTokens = 20000;
+constexpr std::size_t kMaxConcurrentGenerations = 40;
+constexpr std::size_t kMaxGenerationOutputTokens = 40000;
 
 std::string EscapeXml(const std::string& input) {
     std::string output;

@@ -306,6 +306,14 @@ components_manager:
       method: POST
       task_processor: main-task-processor
 
+    handler-auth-yandex-link:
+      path: /api/v1/auth/yandex/link
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
+
     handler-auth-method:
       path: /api/v1/auth/method
       method: GET

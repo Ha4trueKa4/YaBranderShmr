@@ -1,4 +1,4 @@
-import type { ShapeStyle, TextStyle } from '../../types'
+import type { Paint, ShapeStyle, TextStyle } from '../../types'
 
 import { SvgParseError } from '../errors'
 import { parseNumberAttribute } from './parseNumber'
@@ -30,16 +30,16 @@ function parseFontWeight(value: string | null): number | undefined {
   return fontWeight
 }
 
-export function parseShapeStyle(element: Element): ShapeStyle {
+export function parseShapeStyle(
+  element: Element,
+  inheritedFill: Paint = { type: 'color', value: '#000000' },
+): ShapeStyle {
   const strokeDasharray = element.getAttribute('stroke-dasharray')
   const strokeLineCap = element.getAttribute('stroke-linecap')
   const strokeLineJoin = element.getAttribute('stroke-linejoin')
 
   return {
-    fill: parsePaint(element.getAttribute('fill'), {
-      type: 'color',
-      value: '#000000',
-    }),
+    fill: parsePaint(element.getAttribute('fill'), inheritedFill),
     fillOpacity: parseOpacity(element, 'fill-opacity'),
     stroke: parsePaint(element.getAttribute('stroke'), { type: 'none' }),
     ...(strokeDasharray === null ? {} : { strokeDasharray }),
@@ -58,17 +58,17 @@ export function parseShapeStyle(element: Element): ShapeStyle {
   }
 }
 
-export function parseTextStyle(element: Element): TextStyle {
+export function parseTextStyle(
+  element: Element,
+  inheritedFill: Paint = { type: 'color', value: '#000000' },
+): TextStyle {
   const fontStyle = element.getAttribute('font-style')
   const textAnchor = element.getAttribute('text-anchor')
   const fontWeight = parseFontWeight(element.getAttribute('font-weight'))
   const letterSpacing = element.getAttribute('letter-spacing')
 
   return {
-    fill: parsePaint(element.getAttribute('fill'), {
-      type: 'color',
-      value: '#000000',
-    }),
+    fill: parsePaint(element.getAttribute('fill'), inheritedFill),
     fontFamily: element.getAttribute('font-family') ?? 'sans-serif',
     fontSize: parseNumberAttribute(element, 'font-size', 16),
     ...(fontStyle === 'italic' || fontStyle === 'normal' ? { fontStyle } : {}),

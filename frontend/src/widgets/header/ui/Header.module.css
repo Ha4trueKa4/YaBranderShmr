@@ -4,10 +4,6 @@
   background: var(--color-surface);
 }
 
-:global(:root[data-theme="sephia"]) .header {
-  border-bottom: 0;
-}
-
 .content {
   position: relative;
   display: flex;
@@ -37,30 +33,47 @@
   padding: 0;
 }
 
-.brandMark,
-.yandexLogo {
-  width: 2rem;
+.fullLogo {
+  position: relative;
+  display: block;
+  width: 7.2rem;
   height: 2rem;
 }
 
-.brandMark {
+.logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.logoDark {
   display: block;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-primary);
 }
 
-.yandexLogo {
-  display: none;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-primary);
-}
-
-:global(:root[data-theme="yandex"]) .brandMark {
+.logoLight,
+.mobileLogo {
   display: none;
 }
 
-:global(:root[data-theme="yandex"]) .yandexLogo {
+@media (prefers-color-scheme: light) {
+  .logoDark {
+    display: none;
+  }
+
+  .logoLight {
+    display: block;
+  }
+}
+
+:global(:root[data-theme="dark"]) .logoDark,
+:global(:root[data-theme="light"]) .logoLight {
   display: block;
+}
+
+:global(:root[data-theme="dark"]) .logoLight,
+:global(:root[data-theme="light"]) .logoDark {
+  display: none;
 }
 
 .navigation {
@@ -149,8 +162,14 @@
     width: min(100% - 2rem, var(--content-max-width));
   }
 
-  .brand span {
+  .fullLogo {
     display: none;
+  }
+
+  .mobileLogo {
+    display: block;
+    width: 2rem;
+    height: 2rem;
   }
 
   .avatar > span:first-child {
