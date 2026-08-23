@@ -1,8 +1,15 @@
-import { type CSSProperties, type RefObject, useEffect, useRef } from 'react'
+import {
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+} from 'react'
 
 import styles from './PopupMenu.module.css'
 
 export interface PopupMenuItem {
+  icon?: ReactNode
   label: string
   onClick: () => void
   selected?: boolean
@@ -54,6 +61,7 @@ export function PopupMenu({
           }}
           type="button"
         >
+          {item.icon && <span className={styles.icon}>{item.icon}</span>}
           {item.label}
         </button>
       ))}

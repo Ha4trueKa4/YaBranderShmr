@@ -63,6 +63,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const [measuredRotationCenter, setMeasuredRotationCenter] = useState<{
     nodeId: string
     x: number
@@ -330,6 +331,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onExport={handleExport}
           onDoneColorPicker={handleDoneMobileProperties}
           onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenChat={() => setIsMobileChatOpen(true)}
           onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onRedo={handleRedo}
@@ -394,8 +396,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       )}
       {canEdit && (
         <EditorChat
+          isOpen={isMobileLayout ? isMobileChatOpen : undefined}
           isPending={isChatGenerationPending}
           messages={chatMessages}
+          onOpenChange={isMobileLayout ? setIsMobileChatOpen : undefined}
           onSendPrompt={(prompt) => void sendChatPrompt(prompt)}
         />
       )}

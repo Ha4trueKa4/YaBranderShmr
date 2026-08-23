@@ -26,6 +26,7 @@ interface EditorMobileLayoutProps
   onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
+  onOpenChat: () => void
   onOpenVersionHistory: () => void
   onOpenColorPicker: () => void
   onRedo: () => void
@@ -70,6 +71,7 @@ export function EditorMobileLayout({
   onDeleteSelection,
   onExport,
   onOpenProperties,
+  onOpenChat,
   onOpenVersionHistory,
   onOpenColorPicker,
   onRedo,
@@ -147,6 +149,7 @@ export function EditorMobileLayout({
         onBack={onBack}
         onCreateCopy={onCreateCopy}
         onExport={onExport}
+        onOpenChat={onOpenChat}
         onOpenVersionHistory={onOpenVersionHistory}
         onSaveVersion={onSaveVersion}
         projectName={projectName}

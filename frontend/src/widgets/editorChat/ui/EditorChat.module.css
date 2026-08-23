@@ -29,7 +29,7 @@
 
 @media (width < 640px) {
   .collapsed {
-    bottom: var(--space-3);
+    display: none;
   }
 
   .window {

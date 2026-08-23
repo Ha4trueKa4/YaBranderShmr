@@ -11,8 +11,10 @@ import styles from './EditorChat.module.css'
 
 interface EditorChatProps {
   disabled?: boolean
+  isOpen?: boolean
   isPending?: boolean
   messages: ProjectChatMessage[]
+  onOpenChange?: (isOpen: boolean) => void
   onSendPrompt: (prompt: string) => void
 }
 
@@ -22,15 +24,26 @@ const VIEWPORT_GAP = 16
 
 export function EditorChat({
   disabled = false,
+  isOpen,
   isPending = false,
   messages,
+  onOpenChange,
   onSendPrompt,
 }: EditorChatProps) {
   const { t } = useTranslation()
   const dragOffset = useRef<EditorChatPosition | null>(null)
   const [draft, setDraft] = useState('')
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpandedState, setIsExpandedState] = useState(false)
   const [position, setPosition] = useState<EditorChatPosition | null>(null)
+  const isExpanded = isOpen ?? isExpandedState
+
+  function setIsExpanded(nextIsExpanded: boolean) {
+    if (isOpen === undefined) {
+      setIsExpandedState(nextIsExpanded)
+    }
+
+    onOpenChange?.(nextIsExpanded)
+  }
 
   function submitPrompt() {
     const prompt = draft.trim()
