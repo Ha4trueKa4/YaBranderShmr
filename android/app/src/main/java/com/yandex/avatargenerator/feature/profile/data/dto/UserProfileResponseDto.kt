@@ -1,6 +1,6 @@
 package com.yandex.avatargenerator.feature.profile.data.dto
 
-import com.yandex.avatargenerator.feature.project.data.dto.ProjectDescriptionDto
+import com.yandex.avatargenerator.core.network.dto.ProjectDescriptionDto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

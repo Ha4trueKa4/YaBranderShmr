@@ -121,6 +121,7 @@
 
     <string name="chats_error_title">Не удалось загрузить чаты</string>
     <string name="chats_error_retry">Повторить</string>
+    <string name="chats_refresh_error">Не удалось обновить</string>
 
     <!-- Создание проекта -->
     <string name="create_project_title">Новый проект</string>

@@ -1,9 +1,9 @@
 package com.yandex.avatargenerator.feature.create.data
 
+import com.yandex.avatargenerator.core.data.toInstantOrNull
+import com.yandex.avatargenerator.core.network.dto.ProjectDescriptionDto
 import com.yandex.avatargenerator.feature.create.data.dto.UserProjectsResponseDto
 import com.yandex.avatargenerator.feature.create.domain.model.Chat
-import com.yandex.avatargenerator.feature.project.data.dto.ProjectDescriptionDto
-import com.yandex.avatargenerator.feature.project.data.toInstantOrNull
 
 /**
  * DTO выше `data/` не поднимаются: маппинг живёт здесь.

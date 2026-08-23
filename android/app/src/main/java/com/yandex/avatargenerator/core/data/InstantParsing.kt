@@ -1,4 +1,4 @@
-package com.yandex.avatargenerator.feature.project.data
+package com.yandex.avatargenerator.core.data
 
 import java.time.Instant
 import java.time.LocalDateTime
@@ -6,7 +6,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 /**
- * Разбирает время из ответа API (`created_at`). Один парсер на всю фичу:
+ * Разбирает время из ответа API (`created_at`). Один парсер на всё приложение:
  * бэкенд сериализует время по-разному в разных хендлерах, и расходиться в
  * трактовке между мапперами нельзя.
  *

@@ -1,9 +1,14 @@
-package com.yandex.avatargenerator.feature.project.data.dto
+package com.yandex.avatargenerator.core.network.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Метаданные проекта без холста (`ProjectDescription`), списком в `GET /users/{id}`. */
+/**
+ * Метаданные проекта без холста (`ProjectDescription`), списком в `GET /users/{id}`.
+ *
+ * Общий кусок ответов `GET /users/{id}` и `GET /projects/{id}` — владельца среди
+ * фич у него нет, поэтому живёт в `core`.
+ */
 @Serializable
 data class ProjectDescriptionDto(
     @SerialName("id") val id: String? = null,

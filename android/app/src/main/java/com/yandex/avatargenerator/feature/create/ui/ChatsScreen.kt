@@ -13,9 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -29,6 +26,7 @@ import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.create.data.MockChatsRepository
 import com.yandex.avatargenerator.feature.create.domain.model.Chat
 import com.yandex.avatargenerator.feature.create.ui.components.ChatRow
+import com.yandex.avatargenerator.feature.create.ui.components.ChatsRefreshErrorBanner
 import com.yandex.avatargenerator.feature.create.ui.components.ChatsSkeleton
 import com.yandex.avatargenerator.feature.create.ui.components.ChatsTopBar
 import com.yandex.avatargenerator.feature.create.ui.util.rememberRelativeTimeLabel
@@ -63,12 +61,9 @@ internal fun ChatsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Перечитываем список при возврате на вкладку (кроме первого входа — там уже
-    // грузит init): пока пользователь был в чате, он мог создать новый проект.
-    var isFirstResume by remember { mutableStateOf(true) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (isFirstResume) isFirstResume = false else viewModel.refresh()
-    }
+    // Перечитываем список при возврате на вкладку: пока пользователь был в чате,
+    // он мог создать проект. Частые ON_RESUME гасит троттлинг во ViewModel.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     ChatsContent(
         uiState = uiState,
@@ -97,6 +92,10 @@ private fun ChatsContent(
             .background(AppColors.Background),
     ) {
         ChatsTopBar()
+
+        if (uiState is ChatsUiState.Content && uiState.isRefreshFailed) {
+            ChatsRefreshErrorBanner(onRetry = onRetry)
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             when (uiState) {
@@ -170,6 +169,22 @@ private fun ChatsScreenContentPreview() {
     AvatarGeneratorTheme {
         ChatsContent(
             uiState = ChatsUiState.Content(MockChatsRepository.defaultChats()),
+            onChatClick = {},
+            onNewProject = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ChatsScreenRefreshFailedPreview() {
+    AvatarGeneratorTheme {
+        ChatsContent(
+            uiState = ChatsUiState.Content(
+                chats = MockChatsRepository.defaultChats(),
+                isRefreshFailed = true,
+            ),
             onChatClick = {},
             onNewProject = {},
             onRetry = {},
