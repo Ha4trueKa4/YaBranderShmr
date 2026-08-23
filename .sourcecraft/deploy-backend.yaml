@@ -110,7 +110,11 @@ deploy:
         docker run --rm --network ya-brander-net curlimages/curl:8.10.1 -sf http://otel-collector:13133 >/dev/null 2>&1 \
           && echo 'otel-collector is ready' \
           || echo 'WARNING: otel-collector not ready after 30s, starting ya-brander anyway'
-        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
+        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env \
+          -e http_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
+          -e https_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
+          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis \
+          $REGISTRY/$IMAGE:latest
         docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
           echo "WARNING: service-redis не запущен!"
       "
