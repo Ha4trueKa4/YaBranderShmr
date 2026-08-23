@@ -1,4 +1,6 @@
+import { projectReferencesStore } from '@entities/project'
 import { GenerationPromptComposer } from '@features/editorGenerate'
+import { observer } from 'mobx-react-lite'
 import { useState } from 'react'
 import { Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -20,7 +22,7 @@ interface EditorEmptyStateProps {
   onUnauthorizedModelSelect?: () => void
 }
 
-export function EditorEmptyState({
+export const EditorEmptyState = observer(function EditorEmptyState({
   initialDescription,
   initialModel,
   onGenerate,
@@ -29,6 +31,7 @@ export function EditorEmptyState({
 }: EditorEmptyStateProps) {
   const { t } = useTranslation()
   const [isFileDragging, setIsFileDragging] = useState(false)
+  const selectedReferences = projectReferencesStore.references
   const { form, submit } = useGenerationForm({
     initialValues: {
       description: initialDescription,
@@ -57,7 +60,9 @@ export function EditorEmptyState({
                     onDescriptionChange={field.onChange}
                     onGenerate={submit}
                     onModelChange={modelField.onChange}
+                    onRemoveReference={projectReferencesStore.remove}
                     onUnauthorizedModelSelect={onUnauthorizedModelSelect}
+                    references={selectedReferences}
                   />
                 )}
               />
@@ -84,4 +89,4 @@ export function EditorEmptyState({
       title={t('Paste your description and generate')}
     />
   )
-}
+})

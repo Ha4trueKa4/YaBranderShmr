@@ -3,6 +3,7 @@ import {
   deleteProject,
   getProjectSvg,
   projectQueryKey,
+  projectReferencesStore,
   projectSvgQueryKey,
 } from '@entities/project'
 import {
@@ -35,6 +36,7 @@ interface ProjectDraft {
   description: string
   model: string
   name: string
+  references?: string[]
 }
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
@@ -74,8 +76,20 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       try {
         const project = await createProject({
           body: draft.data
-            ? { data: draft.data, name: draft.name }
-            : { ...draft, prompt: draft.description },
+            ? {
+                data: draft.data,
+                name: draft.name,
+                references: draft.references,
+              }
+            : {
+                model: draft.model,
+                name: draft.name,
+                prompt: draft.description,
+                references:
+                  draft.references && draft.references.length > 0
+                    ? draft.references
+                    : undefined,
+              },
         })
 
         if (!project.id) {
@@ -175,7 +189,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     }
 
     pendingGenerationStore.clear()
-    void startGeneration(draft)
+    void startGeneration({ ...draft, references: projectReferencesStore.ids })
   }
 
   function handleUpload(data: string) {

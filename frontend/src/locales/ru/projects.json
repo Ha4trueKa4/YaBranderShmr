@@ -1,5 +1,6 @@
 {
   "All projects": "Все проекты",
+  "Add reference": "Добавить референс",
   "Delete project": "Удалить проект",
   "Delete project?": "Удалить проект?",
   "Delete “{{projectName}}”? This action cannot be undone.": "Удалить «{{projectName}}»? Это действие нельзя отменить.",
@@ -33,6 +34,8 @@
   "Public projects": "Публичные проекты",
   "Published": "Опубликован",
   "Rename project": "Переименовать проект",
+  "Reference limit reached": "Достигнут лимит референсов",
+  "Remove reference": "Убрать референс",
   "Save changes": "Сохранить изменения",
   "Save name": "Сохранить название",
   "Search projects": "Поиск проектов",
