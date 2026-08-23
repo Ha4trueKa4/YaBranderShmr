@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 907.62 188.19">
+  <title>Ya Brander</title>
   <defs>
     <style>
       .cls-1 {
@@ -11,7 +12,7 @@
       }
 
       .cls-2, .cls-3 {
-        font-family: YSTextWebRoman-Text Cond Medium, 'YS Text Web';
+        font-family: YSTextWebRoman-Text Cond Medium, 'YS Text Web', sans-serif;
         font-size: 173px;
         font-variation-settings: 'wght' 500, 'wdth' 70;
         font-weight: 500;
