@@ -1,21 +1,22 @@
 import { api, parseApiResponse } from '@shared/api/api'
 import {
   type PostProjectsData,
-  type Project,
-  zPostProjectsBody,
+  type PostProjectsResponse,
   zPostProjectsResponse,
 } from '@shared/api/types'
 
-type CreateProjectRequest = PostProjectsData['body']
+type CreateProjectRequest = Omit<PostProjectsData['body'], 'prompt'> & {
+  data?: string
+  prompt?: string
+}
 
 export async function createProject(
   body: CreateProjectRequest,
   signal?: AbortSignal,
-): Promise<Project> {
-  const validBody = zPostProjectsBody.parse(body)
+): Promise<PostProjectsResponse> {
   const response = await api<unknown, CreateProjectRequest>('/projects', {
     method: 'POST',
-    body: validBody,
+    body,
     requiresAuth: true,
     signal,
   })

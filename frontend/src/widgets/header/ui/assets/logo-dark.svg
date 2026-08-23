@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 907.62 188.19">
+  <title>Ya Brander</title>
+  <defs>
+    <style>
+      .cls-1 {
+        letter-spacing: 0em;
+      }
+
+      .cls-2 {
+        fill: #231f20;
+      }
+
+      .cls-2, .cls-3 {
+        font-family: YSTextWebRoman-Text Cond Medium, 'YS Text Web', sans-serif;
+        font-size: 173px;
+        font-variation-settings: 'wght' 500, 'wdth' 70;
+        font-weight: 500;
+      }
+
+      .cls-4 {
+        fill: #fc401e;
+      }
+
+      .cls-5, .cls-3 {
+        fill: #fff;
+      }
+
+      .cls-6 {
+        letter-spacing: -.05em;
+      }
+
+      .cls-7 {
+        letter-spacing: 0em;
+      }
+
+      .cls-8 {
+        letter-spacing: 0em;
+      }
+    </style>
+  </defs>
+  <text class="cls-2" transform="translate(-710.26 154.78)"><tspan class="cls-6" x="0" y="0">Y</tspan><tspan x="73.87" y="0">a B</tspan><tspan class="cls-7" x="264.17" y="0">r</tspan><tspan class="cls-1" x="319.01" y="0">and</tspan><tspan class="cls-8" x="562.76" y="0">e</tspan><tspan x="638.02" y="0">r</tspan></text>
+  <g>
+    <rect class="cls-5" x="46.16" y="42.1" width="104.5" height="104.5"/>
+    <g id="illustration-layer">
+      <path id="segment-top" class="cls-4" d="M94.06,0C74.48,0,56.54,7.61,43.49,20.66s-20.66,30.99-20.66,50.56c0,9.79,2.17,19.03,5.98,27.19l25.55-25.55c3.81-3.81,9.24-5.98,14.68-5.98h25.01c7.61,0,13.59-5.98,13.59-13.59V13.59C107.65,5.98,101.67,0,94.06,0Z"/>
+      <path id="segment-right" class="cls-4" d="M188.35,93.89c0-19.57-7.61-37.52-20.66-50.56-13.05-13.05-30.99-20.66-50.56-20.66-9.79,0-19.03,2.17-27.19,5.98l25.55,25.55c3.81,3.81,5.98,9.24,5.98,14.68v25.01c0,7.61,5.98,13.59,13.59,13.59h39.69c7.61,0,13.59-5.98,13.59-13.59Z"/>
+      <path id="segment-bottom" class="cls-4" d="M94.35,188.19c19.57,0,37.52-7.61,50.56-20.66s20.66-30.99,20.66-50.56c0-9.79-2.17-19.03-5.98-27.19l-25.55,25.55c-3.81,3.81-9.24,5.98-14.68,5.98h-25.01c-7.61,0-13.59,5.98-13.59,13.59v39.69c0,7.61,5.98,13.59,13.59,13.59Z"/>
+      <path id="segment-left" class="cls-4" d="M0,94.01c0,19.57,7.61,37.52,20.66,50.56,13.05,13.05,30.99,20.66,50.56,20.66,9.79,0,19.03-2.17,27.19-5.98l-25.55-25.55c-3.81-3.81-5.98-9.24-5.98-14.68v-25.01c0-7.61-5.98-13.59-13.59-13.59H13.59c-7.61,0-13.59,5.98-13.59,13.59Z"/>
+    </g>
+    <text class="cls-3" transform="translate(217.35 154.78)"><tspan class="cls-6" x="0" y="0">Y</tspan><tspan x="73.87" y="0">a B</tspan><tspan class="cls-7" x="264.17" y="0">r</tspan><tspan class="cls-1" x="319.01" y="0">and</tspan><tspan class="cls-8" x="562.76" y="0">e</tspan><tspan x="638.02" y="0">r</tspan></text>
+  </g>
+</svg>

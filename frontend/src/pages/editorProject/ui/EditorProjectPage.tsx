@@ -76,6 +76,7 @@ export function EditorProjectPage() {
               projectQuery.data.author_id === authStore.getSession?.user.id
             }
             document={parsedDocument.document}
+            isPublic={projectQuery.data.is_public ?? false}
             key={projectId}
             projectId={projectId}
             projectName={projectQuery.data.name ?? 'Untitled project'}

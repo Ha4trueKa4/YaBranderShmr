@@ -18,11 +18,45 @@ export type LoginRequest = {
   password: string
 }
 
-export type YandexAuthRequest = {
+/**
+ * Ровно одно из полей: code — веб-флоу (redirect), access_token — SDK-флоу (мобильный/десктопный нативный Yandex ID SDK).
+ *
+ */
+export type YandexAuthRequest =
+  | {
+      /**
+       * Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
+       */
+      code: string
+    }
+  | {
+      /**
+       * Финальный OAuth-токен, полученный нативным Yandex ID SDK. Бэкенд не меняет его на другой — идёт напрямую в login.yandex.ru/info?format=jwt.
+       *
+       */
+      access_token: string
+    }
+
+export type AuthMethodResponse = {
   /**
-   * Authorization code, полученный фронтом после редиректа с oauth.yandex.ru/authorize
+   * Можно ли войти по email+паролю (POST /auth/login)
    */
-  code: string
+  has_password: boolean
+  /**
+   * Привязанный внешний провайдер, либо null, если ни один не привязан
+   */
+  provider: 'yandex' | null
+}
+
+export type SetPasswordRequest = {
+  /**
+   * Обязателен, только если у пользователя уже есть пароль
+   */
+  current_password?: string
+  /**
+   * 8-128 символов, обязательно хотя бы одна буква и одна цифра
+   */
+  new_password: string
 }
 
 export type AuthResponse = {
@@ -136,7 +170,7 @@ export type VersionInfo = {
 }
 
 /**
- * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — либо идентификатор созданной версии (version_id), либо, если генерация упала, текст ошибки (error) — вместо самого SVG или ссылки на него. Сообщение пользователя и ответ ассистента одного обмена связаны общим job_id (идентификатором фоновой задачи генерации из POST .../generate); пользовательское сообщение появляется в истории сразу при старте задачи, ответ ассистента — только после её завершения.
+ * Одно сообщение в истории чата проекта. Пользовательские сообщения несут текст запроса (text), сообщения ассистента — идентификатор созданной версии (version_id) при успехе, текст ошибки (error) при неудачной генерации, либо status=cancelled, если генерацию прервали через POST .../generate/{job_id}/cancel — вместо самого SVG или ссылки на него. Сообщение пользователя и ответ ассистента одного обмена связаны общим job_id (идентификатором фоновой задачи генерации из POST /projects — для первой пары сообщений проекта — либо из последующих POST .../generate); пользовательское сообщение появляется в истории сразу при старте задачи, ответ ассистента — только после её завершения (в т.ч. отменой). Пока задача ещё не завершилась (не больше одной активной генерации на проект), в конец истории на лету подставляется — только в ответе, не в БД — служебное сообщение {"role":"assistant","status":"pending"|"cancelling","job_id":...} (без version_id/error), сигнализирующее фронту "проект генерируется" / "генерация отменяется", не требуя отдельного опроса GET .../generate/{job_id} только ради этого индикатора.
  *
  */
 export type ChatMessage = {
@@ -154,17 +188,26 @@ export type ChatMessage = {
    */
   error?: string
   /**
+   * Для role=assistant: "cancelled" — запись о завершённой отмене (хранится в БД); "pending"/"cancelling" — служебная заглушка ещё выполняющейся/отменяемой генерации (см. описание схемы выше, в БД не хранится).
+   *
+   */
+  status?: 'pending' | 'cancelling' | 'cancelled'
+  /**
    * Идентификатор фоновой задачи генерации, к которой относится сообщение.
    */
   job_id?: string
+  /**
+   * Для служебной заглушки pending/cancelling — момент чтения истории, а не старта задачи
+   */
   created_at: string
 }
 
 /**
- * Текущее состояние фоновой задачи генерации.
+ * Текущее состояние фоновой задачи генерации. "cancelling" — переходное состояние сразу после POST .../generate/{job_id}/cancel, пока фоновая задача ещё не заметила запрос отмены; "cancelled" — уже финальное.
+ *
  */
 export type GenerationStatus = {
-  status: 'pending' | 'done' | 'error'
+  status: 'pending' | 'done' | 'error' | 'cancelling' | 'cancelled'
   /**
    * Только при status=done — presigned-ссылка на сгенерированный SVG-объект
    */
@@ -231,7 +274,8 @@ export type PostAuthLoginData = {
 
 export type PostAuthLoginErrors = {
   /**
-   * Неверный email, пароль или одно из полей не передано
+   * Неверный email/пароль, одно из полей не передано, либо аккаунт зарегистрирован через Yandex ID и пароля у него нет.
+   *
    */
   401: AuthError
   /**
@@ -261,7 +305,7 @@ export type PostAuthYandexData = {
 
 export type PostAuthYandexErrors = {
   /**
-   * Не передан code, либо Yandex-приложение не запросило скоуп login:email и профиль пришёл без email.
+   * Не передано ни code, ни access_token, либо Yandex-приложение не запросило скоуп login:email и профиль пришёл без email.
    *
    */
   400: ValidationError
@@ -275,7 +319,8 @@ export type PostAuthYandexErrors = {
    */
   500: unknown
   /**
-   * Yandex OAuth API недоступен, code невалиден/просрочен, либо не удалось получить профиль
+   * Yandex API недоступен, code невалиден/просрочен, access_token невалиден/просрочен/подпись JWT не сходится, либо не удалось получить профиль.
+   *
    */
   502: ValidationError
 }
@@ -285,13 +330,88 @@ export type PostAuthYandexError =
 
 export type PostAuthYandexResponses = {
   /**
-   * Успешный вход (существующий или только что привязанный аккаунт)
+   * Успешный вход (существующий или только что созданный аккаунт)
    */
   200: AuthResponse
 }
 
 export type PostAuthYandexResponse =
   PostAuthYandexResponses[keyof PostAuthYandexResponses]
+
+export type GetAuthMethodData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/auth/method'
+}
+
+export type GetAuthMethodErrors = {
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Пользователь не найден
+   */
+  404: Error
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+}
+
+export type GetAuthMethodError = GetAuthMethodErrors[keyof GetAuthMethodErrors]
+
+export type GetAuthMethodResponses = {
+  /**
+   * Текущий способ(-ы) входа пользователя
+   */
+  200: AuthMethodResponse
+}
+
+export type GetAuthMethodResponse =
+  GetAuthMethodResponses[keyof GetAuthMethodResponses]
+
+export type PostAuthPasswordData = {
+  body: SetPasswordRequest
+  path?: never
+  query?: never
+  url: '/auth/password'
+}
+
+export type PostAuthPasswordErrors = {
+  /**
+   * new_password не проходит требования, либо у пользователя уже есть пароль, а current_password не передан.
+   *
+   */
+  400: ValidationError
+  /**
+   * Отсутствует/некорректен JWT, либо (если пароль уже был) неверный current_password.
+   *
+   */
+  401: ValidationError
+  /**
+   * Пользователь не найден
+   */
+  404: Error
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+}
+
+export type PostAuthPasswordError =
+  PostAuthPasswordErrors[keyof PostAuthPasswordErrors]
+
+export type PostAuthPasswordResponses = {
+  /**
+   * Пароль установлен или изменён
+   */
+  200: MessageResponse
+}
+
+export type PostAuthPasswordResponse =
+  PostAuthPasswordResponses[keyof PostAuthPasswordResponses]
 
 export type GetUsersByIdData = {
   body?: never
@@ -490,6 +610,61 @@ export type GetUsersByIdSubscribersResponses = {
 export type GetUsersByIdSubscribersResponse =
   GetUsersByIdSubscribersResponses[keyof GetUsersByIdSubscribersResponses]
 
+export type DeleteUsersByIdSubscribersBySubscriberIdData = {
+  body?: never
+  path: {
+    /**
+     * Идентификатор владельца профиля. Сравнивается с UUID из JWT без учёта регистра.
+     *
+     */
+    id: string
+    /**
+     * Идентификатор пользователя, которого необходимо удалить из подписчиков
+     */
+    subscriber_id: string
+  }
+  query?: never
+  url: '/users/{id}/subscribers/{subscriber_id}'
+}
+
+export type DeleteUsersByIdSubscribersBySubscriberIdErrors = {
+  /**
+   * Некорректный формат ID пользователя или подписчика
+   */
+  400: ValidationError
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Попытка удалить подписчика из чужого профиля. Только владелец аккаунта может управлять своими подписчиками.
+   *
+   */
+  403: MessageResponse
+  /**
+   * Подписка между указанными пользователями не существует. Сюда также относится случай, когда subscriber_id не принадлежит существующему пользователю.
+   *
+   */
+  404: MessageResponse
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: Error
+}
+
+export type DeleteUsersByIdSubscribersBySubscriberIdError =
+  DeleteUsersByIdSubscribersBySubscriberIdErrors[keyof DeleteUsersByIdSubscribersBySubscriberIdErrors]
+
+export type DeleteUsersByIdSubscribersBySubscriberIdResponses = {
+  /**
+   * Подписчик успешно удалён
+   */
+  200: MessageResponse
+}
+
+export type DeleteUsersByIdSubscribersBySubscriberIdResponse =
+  DeleteUsersByIdSubscribersBySubscriberIdResponses[keyof DeleteUsersByIdSubscribersBySubscriberIdResponses]
+
 export type GetUsersByIdSubscriptionsData = {
   body?: never
   path: {
@@ -529,8 +704,19 @@ export type GetUsersByIdSubscriptionsResponse =
 
 export type PostProjectsData = {
   body: {
-    name: string
+    name?: string
     description?: string
+    prompt: string
+    /**
+     * Модель генерации. gpt-5.6-luna отправляется напрямую в OpenAI, остальные доступные модели — в Yandex AI Studio.
+     *
+     */
+    model?: string
+    /**
+     * Опционально: id (UUID, до 2) других проектов пользователя (или чужих публичных проектов), чьи последние SVG используются как референсы стиля/содержимого — не файлы и не изображения, а именно id уже существующих проектов в системе. Недоступные (несуществующие, приватные чужие) или пустые референсы молча пропускаются.
+     *
+     */
+    references?: Array<string>
   }
   path?: never
   query?: never
@@ -539,7 +725,7 @@ export type PostProjectsData = {
 
 export type PostProjectsErrors = {
   /**
-   * Не передано название проекта (name)
+   * Не передан prompt, prompt длиннее 5000 символов, либо references содержит больше 2 id
    */
   400: MessageResponse
   /**
@@ -556,9 +742,15 @@ export type PostProjectsError = PostProjectsErrors[keyof PostProjectsErrors]
 
 export type PostProjectsResponses = {
   /**
-   * Проект создан
+   * Проект создан, первичная генерация запущена в фоне. Дальнейший статус — через GET /projects/{id}/generate/{job_id}.
+   *
    */
-  201: Project
+  202: Project & {
+    /**
+     * Идентификатор фоновой задачи первичной генерации.
+     */
+    job_id?: string
+  }
 }
 
 export type PostProjectsResponse =
@@ -703,6 +895,10 @@ export type PatchProjectsByIdResponse =
 export type PostProjectsByIdGenerateData = {
   body: {
     prompt: string
+    /**
+     * Модель генерации. gpt-5.6-luna отправляется напрямую в OpenAI, остальные доступные модели — в Yandex AI Studio.
+     *
+     */
     model?: string
   }
   path: {
@@ -714,7 +910,7 @@ export type PostProjectsByIdGenerateData = {
 
 export type PostProjectsByIdGenerateErrors = {
   /**
-   * Не передан prompt, либо prompt длиннее 1500 символов
+   * Не передан prompt, либо prompt длиннее 5000 символов
    */
   400: MessageResponse
   /**
@@ -729,6 +925,16 @@ export type PostProjectsByIdGenerateErrors = {
    * Проект не найден
    */
   404: unknown
+  /**
+   * Для проекта уже выполняется другая генерация
+   */
+  409: {
+    message?: string
+    /**
+     * Идентификатор уже выполняющейся задачи.
+     */
+    job_id?: string
+  }
 }
 
 export type PostProjectsByIdGenerateError =
@@ -787,6 +993,41 @@ export type GetProjectsByIdGenerateByJobIdResponses = {
 
 export type GetProjectsByIdGenerateByJobIdResponse =
   GetProjectsByIdGenerateByJobIdResponses[keyof GetProjectsByIdGenerateByJobIdResponses]
+
+export type PostProjectsByIdGenerateByJobIdCancelData = {
+  body?: never
+  path: {
+    id: string
+    job_id: string
+  }
+  query?: never
+  url: '/projects/{id}/generate/{job_id}/cancel'
+}
+
+export type PostProjectsByIdGenerateByJobIdCancelErrors = {
+  /**
+   * Не авторизован
+   */
+  401: unknown
+  /**
+   * Нет прав на отмену генерации в чужом проекте
+   */
+  403: unknown
+  /**
+   * Проект не найден, либо job_id не существует / не принадлежит этому проекту
+   */
+  404: unknown
+}
+
+export type PostProjectsByIdGenerateByJobIdCancelResponses = {
+  /**
+   * Текущий статус задачи после запроса отмены
+   */
+  200: GenerationStatus
+}
+
+export type PostProjectsByIdGenerateByJobIdCancelResponse =
+  PostProjectsByIdGenerateByJobIdCancelResponses[keyof PostProjectsByIdGenerateByJobIdCancelResponses]
 
 export type GetProjectsByIdVersionsData = {
   body?: never
@@ -967,7 +1208,8 @@ export type GetModelsResponses = {
      */
     object: string
     /**
-     * Массив доступных моделей.
+     * Массив доступных моделей. Гарантирован только id — это отфильтрованный проброс ответа Yandex AI Studio плюс опциональная запись для OpenAI (у неё есть только id и owned_by, без object/created).
+     *
      */
     data: Array<{
       /**
@@ -977,15 +1219,15 @@ export type GetModelsResponses = {
       /**
        * Тип сущности элемента массива.
        */
-      object: string
+      object?: string
       /**
        * Владелец или разработчик модели (Yandex, DeepSeek, OpenAI, Alibaba).
        */
-      owned_by: string
+      owned_by?: string
       /**
        * Временная метка создания модели (Unix timestamp).
        */
-      created: number
+      created?: number
     }>
   }
 }

@@ -16,6 +16,8 @@ interface ShapePropertiesProps {
   layer: EditorShape
   measuredRotationCenter?: { x: number; y: number }
   onFillChange: (color: string) => void
+  onColorChangeEnd?: () => void
+  onColorChangeStart?: () => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
   onFillOpacityChange: (opacity: number) => void
@@ -49,6 +51,8 @@ export const ShapeProperties = observer(function ShapeProperties({
   layer,
   measuredRotationCenter,
   onFillChange,
+  onColorChangeEnd,
+  onColorChangeStart,
   onEyeDropperEnd,
   onEyeDropperStart,
   onFillOpacityChange,
@@ -103,6 +107,8 @@ export const ShapeProperties = observer(function ShapeProperties({
       {isEditableGradient && gradient ? (
         <GradientProperty
           gradient={gradient}
+          onColorChangeEnd={onColorChangeEnd}
+          onColorChangeStart={onColorChangeStart}
           onStopColorChange={(stopIndex, color) =>
             onGradientStopColorChange(gradient.id, stopIndex, color)
           }
@@ -124,6 +130,8 @@ export const ShapeProperties = observer(function ShapeProperties({
       ) : (
         <FillProperty
           fill={fill.value}
+          onColorChangeEnd={onColorChangeEnd}
+          onColorChangeStart={onColorChangeStart}
           onFillChange={onFillChange}
           onEyeDropperEnd={onEyeDropperEnd}
           onEyeDropperStart={onEyeDropperStart}
@@ -133,6 +141,8 @@ export const ShapeProperties = observer(function ShapeProperties({
       )}
       <StrokeProperty
         onAdd={onStrokeAdd}
+        onColorChangeEnd={onColorChangeEnd}
+        onColorChangeStart={onColorChangeStart}
         onColorChange={onStrokeColorChange}
         onEyeDropperEnd={onEyeDropperEnd}
         onEyeDropperStart={onEyeDropperStart}

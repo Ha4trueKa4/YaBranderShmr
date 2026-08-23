@@ -1,33 +1,26 @@
 #include "yandex_oauth_handler.hpp"
 
-#include <cctype>
-#include <cstdlib>
-#include <cstring>
 #include <random>
 #include <stdexcept>
 
-#include <jwt-cpp/jwt.h>
-
 #include <userver/clients/http/component.hpp>
 #include <userver/components/component.hpp>
-#include <userver/crypto/base64.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::auth {
 
 using utils::MakeError;
 
 namespace {
-
-constexpr std::string_view kTokenUrl = "https://oauth.yandex.ru/token";
-constexpr std::string_view kProfileUrl = "https://login.yandex.ru/info?format=json";
-constexpr std::string_view kProfileJwtUrl = "https://login.yandex.ru/info?format=jwt";
 
 constexpr std::string_view kLoginUniqueConstraint = "users_login_key";
 constexpr std::string_view kEmailUniqueConstraint = "users_email_key";
@@ -45,42 +38,10 @@ class LoginGenerationExhaustedError final : public std::runtime_error {
       : std::runtime_error("failed to generate a unique login after multiple attempts") {}
 };
 
-std::string UrlEncode(const std::string& value) {
-    static const char* kHex = "0123456789ABCDEF";
-    std::string result;
-    for (unsigned char c : value) {
-        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            result += static_cast<char>(c);
-        } else {
-            result += '%';
-            result += kHex[c >> 4];
-            result += kHex[c & 0xF];
-        }
-    }
-    return result;
-}
-
 std::string GenerateLoginSuffix() {
     static thread_local std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<int> dist(1000, 9999);
     return std::to_string(dist(rng));
-}
-
-// uid в JWT-профиле от Яндекса — числовой ID пользователя, и разные клиенты
-// (в частности iOS SDK) кодируют его в payload как JSON-число, а не строку.
-// claim::as_string() в этом случае кидает std::bad_cast, поэтому тип клейма
-// проверяем сами и приводим к строке вручную.
-std::string ClaimToString(const jwt::claim& claim) {
-    switch (claim.get_type()) {
-        case jwt::json::type::string:
-            return claim.as_string();
-        case jwt::json::type::integer:
-            return std::to_string(claim.as_integer());
-        case jwt::json::type::number:
-            return std::to_string(static_cast<int64_t>(claim.as_number()));
-        default:
-            throw std::runtime_error("Unexpected JWT claim type");
-    }
 }
 
 }  // namespace
@@ -90,111 +51,17 @@ YandexOAuthHandler::YandexOAuthHandler(const userver::components::ComponentConfi
     : HttpHandlerJsonBase(config, context),
       pg_cluster_(context.FindComponent<userver::components::Postgres>("postgres-db-1")
                       .GetCluster()),
-      http_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()) {
-    const char* client_id = std::getenv("YANDEX_OAUTH_CLIENT_ID");
-    const char* client_secret = std::getenv("YANDEX_OAUTH_CLIENT_SECRET");
-    if (!client_id || std::strlen(client_id) == 0) {
-        throw std::runtime_error("YANDEX_OAUTH_CLIENT_ID environment variable is not set!");
-    }
-    if (!client_secret || std::strlen(client_secret) == 0) {
-        throw std::runtime_error("YANDEX_OAUTH_CLIENT_SECRET environment variable is not set!");
-    }
-    client_id_ = client_id;
-    client_secret_ = client_secret;
-}
-
-std::string YandexOAuthHandler::ExchangeCodeForToken(const std::string& code) const {
-    const std::string body = "grant_type=authorization_code"
-                              "&code=" + UrlEncode(code);
-
-    const std::string basic_auth = userver::crypto::base64::Base64Encode(
-        client_id_ + ":" + client_secret_);
-
-    auto request = http_client_.CreateRequest();
-    request.method(userver::clients::http::HttpMethod::kPost);
-    request.url(std::string(kTokenUrl));
-    request.headers({
-        {"Content-Type", "application/x-www-form-urlencoded"},
-        {"Authorization", "Basic " + basic_auth}
-    });
-    request.data(body);
-    request.timeout(10000);
-
-    auto response = request.perform();
-    if (response->status_code() != 200) {
-        throw std::runtime_error("Yandex token exchange failed: HTTP " +
-                                  std::to_string(response->status_code()));
-    }
-
-    auto json = userver::formats::json::FromString(response->body());
-    return json["access_token"].As<std::string>();
-}
-
-YandexOAuthHandler::YandexProfile YandexOAuthHandler::FetchProfile(const std::string& access_token) const {
-    auto request = http_client_.CreateRequest();
-    request.method(userver::clients::http::HttpMethod::kGet);
-    request.url(std::string(kProfileUrl));
-    request.headers({{"Authorization", "OAuth " + access_token}});
-    request.timeout(10000);
-
-    auto response = request.perform();
-    if (response->status_code() != 200) {
-        throw std::runtime_error("Failed to fetch Yandex profile: HTTP " +
-                                  std::to_string(response->status_code()));
-    }
-
-    auto json = userver::formats::json::FromString(response->body());
-
-    YandexProfile profile;
-    profile.provider_id = json["id"].As<std::string>();
-    profile.email = json["default_email"].As<std::string>("");
-    profile.login = json["login"].As<std::string>("");
-    return profile;
-}
-
-YandexOAuthHandler::YandexProfile YandexOAuthHandler::FetchProfileFromJwt(
-    const std::string& access_token) const {
-    auto request = http_client_.CreateRequest();
-    request.method(userver::clients::http::HttpMethod::kGet);
-    request.url(std::string(kProfileJwtUrl));
-    request.headers({{"Authorization", "OAuth " + access_token}});
-    request.timeout(10000);
-
-    auto response = request.perform();
-    if (response->status_code() != 200) {
-        throw std::runtime_error("Failed to fetch Yandex profile (jwt): HTTP " +
-                                  std::to_string(response->status_code()));
-    }
-
-    // login.yandex.ru/info?format=jwt отдаёт не JSON, а сам JWT телом ответа.
-    // jwt_secret по умолчанию (мы его не переопределяли) равен client_secret
-    // приложения — им и проверяем подпись, без обращения к Яндексу.
-    const auto decoded = jwt::decode(response->body());
-    auto verifier = jwt::verify().allow_algorithm(jwt::algorithm::hs256{client_secret_});
-    verifier.verify(decoded);
-
-    if (!decoded.has_payload_claim("uid")) {
-        throw std::runtime_error("Yandex profile JWT is missing the 'uid' claim");
-    }
-
-    YandexProfile profile;
-    profile.provider_id = ClaimToString(decoded.get_payload_claim("uid"));
-    if (decoded.has_payload_claim("email")) {
-        profile.email = ClaimToString(decoded.get_payload_claim("email"));
-    }
-    if (decoded.has_payload_claim("login")) {
-        profile.login = ClaimToString(decoded.get_payload_claim("login"));
-    }
-    return profile;
-}
+      yandex_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()) {}
 
 YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const YandexProfile& profile) const {
     // 1. Пользователь уже входил через Yandex ID раньше.
     {
-        auto result = pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kMaster,
-            "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
-            profile.provider_id);
+        auto result = utils::ExecuteSelectWithRetry(
+            "select-yandex-user", [&] {
+              return pg_cluster_->Execute(
+                  userver::storages::postgres::ClusterHostType::kMaster,
+                  sql::kSelectYandexUser, profile.provider_id);
+            });
         if (result.Size() > 0) {
             const auto row = result.Front();
             return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
@@ -205,10 +72,12 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
     //    привязываем Yandex ID автоматически (см. EmailOwnedByAnotherAccountError),
     //    отдаём наверх ошибку, чтобы пользователь подтвердил привязку явно.
     {
-        auto result = pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kMaster,
-            "SELECT 1 FROM users WHERE email = $1 AND provider_id IS NULL",
-            profile.email);
+        auto result = utils::ExecuteSelectWithRetry(
+            "select-password-user-by-email", [&] {
+              return pg_cluster_->Execute(
+                  userver::storages::postgres::ClusterHostType::kMaster,
+                  sql::kSelectPasswordUserByEmail, profile.email);
+            });
         if (result.Size() > 0) {
             throw EmailOwnedByAnotherAccountError{};
         }
@@ -221,9 +90,7 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
         try {
             auto result = pg_cluster_->Execute(
                 userver::storages::postgres::ClusterHostType::kMaster,
-                "INSERT INTO users(login, email, password_hash, provider, provider_id) "
-                "VALUES($1, $2, NULL, 'yandex', $3) "
-                "RETURNING id::text, login, email",
+                sql::kRegisterYandexUser,
                 login, profile.email, profile.provider_id);
             const auto row = result.Front();
             return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
@@ -234,10 +101,12 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
                 continue;
             }
             if (constraint == kProviderIdentityIndex) {
-                auto result = pg_cluster_->Execute(
-                    userver::storages::postgres::ClusterHostType::kMaster,
-                    "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
-                    profile.provider_id);
+                auto result = utils::ExecuteSelectWithRetry(
+                    "select-yandex-user", [&] {
+                      return pg_cluster_->Execute(
+                          userver::storages::postgres::ClusterHostType::kMaster,
+                          sql::kSelectYandexUser, profile.provider_id);
+                    });
                 const auto row = result.Front();
                 return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
             }
@@ -264,10 +133,7 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
 
     UserRecord user;
     try {
-        // code — веб-флоу (обмен на токен на бэке), access_token — SDK-флоу
-        // (токен уже финальный, меняем сразу на профиль).
-        const auto profile = !code.empty() ? FetchProfile(ExchangeCodeForToken(code))
-                                            : FetchProfileFromJwt(sdk_access_token);
+        const auto profile = yandex_client_.FetchProfile(code, sdk_access_token);
 
         if (profile.email.empty()) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
@@ -285,6 +151,12 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
         return MakeError("INTERNAL_ERROR", "Something went wrong on our side. Please try again.");
+    } catch (const InvalidYandexCredentialError&) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
+        return MakeError("INVALID_YANDEX_CREDENTIAL",
+                          "The provided Yandex code/access_token is invalid or expired");
+    } catch (const utils::DatabaseUnavailableError&) {
+        throw;
     } catch (const std::exception& ex) {
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadGateway);

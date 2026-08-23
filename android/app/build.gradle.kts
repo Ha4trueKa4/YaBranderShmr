@@ -12,6 +12,14 @@ android {
         version = release(36)
     }
 
+    // local.properties в .gitignore: сюда можно положить свой client_id/redirect_uri
+    // Yandex ID для локального переопределения (напр. другое OAuth-приложение),
+    // не передавая -P каждый раз и не коммитя значение. Дефолт закоммичен ниже.
+    val localProperties = Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+
     defaultConfig {
         applicationId = "com.yandex.avatargenerator"
         minSdk = 26
@@ -27,6 +35,26 @@ android {
         val apiBaseUrl = providers.gradleProperty("apiBaseUrl")
             .getOrElse("http://158.160.155.144:8080/api/v1/")
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+
+        // OAuth-приложение Yandex ID. client_id публичный (уходит в URL страницы
+        // согласия), секрет живёт на бэкенде (обмен code → token делает он) и
+        // обязан совпадать с его YANDEX_OAUTH_CLIENT_ID. Источник по приоритету:
+        // -PyandexClientId=... → local.properties (yandexClientId=...) → дефолт
+        // нашего OAuth-приложения. Дефолт закоммичен, чтобы вход через Yandex ID
+        // работал у всех и в CI без ручной настройки; своё приложение подставляют
+        // через -P или local.properties.
+        val yandexClientId = providers.gradleProperty("yandexClientId").orNull
+            ?: localProperties.getProperty("yandexClientId")
+        buildConfigField("String", "YANDEX_CLIENT_ID", "\"$yandexClientId\"")
+        // Тот же redirect_uri, что зарегистрирован в приложении Yandex под веб
+        // (frontend). Yandex принимает только зарегистрированный URI, поэтому
+        // свою схему не выдумываем — WebView всё равно перехватывает переход на
+        // него до загрузки страницы и достаёт code. Для dev-фронта переопределяют
+        // на http://localhost:5173/auth/yandex/callback.
+        val yandexRedirectUri = providers.gradleProperty("yandexRedirectUri").orNull
+            ?: localProperties.getProperty("yandexRedirectUri")
+            ?: "https://ya-brander-frontend.website.yandexcloud.net/auth/yandex/callback"
+        buildConfigField("String", "YANDEX_REDIRECT_URI", "\"$yandexRedirectUri\"")
 
         // Значение по умолчанию здесь, иначе новый build type уронит компиляцию
         buildConfigField("boolean", "NETWORK_LOGGING", "false")

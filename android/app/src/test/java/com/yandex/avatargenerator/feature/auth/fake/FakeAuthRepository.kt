@@ -25,6 +25,11 @@ internal class FakeAuthRepository : AuthRepository {
     private val _currentUser = MutableStateFlow<AuthUser?>(null)
     override val currentUser: Flow<AuthUser?> = _currentUser.asStateFlow()
 
+    /** Подставить пользователя без входа — для тестов, которым нужна готовая сессия. */
+    fun setCurrentUser(user: AuthUser?) {
+        _currentUser.value = user
+    }
+
     /** Если задано — [login] и [register] бросают это вместо успешного ответа. */
     var failure: Exception? = null
 
@@ -39,6 +44,8 @@ internal class FakeAuthRepository : AuthRepository {
         private set
     var registerCallCount: Int = 0
         private set
+    var yandexCallCount: Int = 0
+        private set
 
     /** Аргументы последнего вызова — для проверки, что они дошли до репозитория. */
     var lastEmail: String? = null
@@ -46,6 +53,8 @@ internal class FakeAuthRepository : AuthRepository {
     var lastPassword: String? = null
         private set
     var lastNickname: String? = null
+        private set
+    var lastYandexCode: String? = null
         private set
 
     /**
@@ -75,6 +84,12 @@ internal class FakeAuthRepository : AuthRepository {
         loginCallCount++
         lastEmail = email
         lastPassword = password
+        return awaitResult()
+    }
+
+    override suspend fun loginWithYandex(code: String): AuthSession {
+        yandexCallCount++
+        lastYandexCode = code
         return awaitResult()
     }
 

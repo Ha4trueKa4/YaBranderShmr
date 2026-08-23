@@ -15,7 +15,7 @@ function createState() {
 }
 
 function getStoredSession(): YandexOAuthSession | null {
-  const rawSession = sessionStorage.getItem(yandexOAuthStorageKey)
+  const rawSession = localStorage.getItem(yandexOAuthStorageKey)
 
   if (!rawSession) {
     return null
@@ -36,7 +36,7 @@ function getStoredSession(): YandexOAuthSession | null {
     // Invalid storage data is cleared below.
   }
 
-  sessionStorage.removeItem(yandexOAuthStorageKey)
+  localStorage.removeItem(yandexOAuthStorageKey)
 
   return null
 }
@@ -53,7 +53,7 @@ export function startYandexOAuth(returnPath: string) {
   }
 
   const state = createState()
-  sessionStorage.setItem(
+  localStorage.setItem(
     yandexOAuthStorageKey,
     JSON.stringify({ returnPath, state }),
   )
@@ -82,7 +82,7 @@ export function validateYandexOAuthState(state: string | null) {
 
 export function getYandexOAuthReturnPath() {
   const session = getStoredSession()
-  sessionStorage.removeItem(yandexOAuthStorageKey)
+  localStorage.removeItem(yandexOAuthStorageKey)
 
   return session?.returnPath ?? '/'
 }

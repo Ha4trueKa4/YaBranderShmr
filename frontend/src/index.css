@@ -1,36 +1,36 @@
-:root {
+/* Dark Yandex theme. This is also the fallback for the System preference. */
+:root,
+:root[data-theme="dark"] {
   color-scheme: dark;
-  /* Colors */
-  --color-bg: #0f0f14;
-  --color-surface: #1a1a24;
-  --color-surface-elevated: #22222f;
-  --color-accent-primary: #7c3aed;
-  --color-accent-primary-hover: #6d28d9;
-  --color-accent-subtle: #2e2542;
-  --color-accent-secondary: #06b6d4;
-  --color-text-primary: #f4f4f5;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #a1a1aa;
+  --color-bg: #1f1e1d;
+  --color-surface: #292827;
+  --color-surface-elevated: #363534;
+  --color-accent-primary: #ff5a36;
+  --color-accent-primary-hover: #ff7454;
+  --color-accent-subtle: #4d2a23;
+  --color-accent-secondary: #ffd633;
+  --color-text-primary: #f5f4f2;
+  --color-text-secondary: #c5c3c0;
+  --color-text-muted: #9d9a96;
   --color-text-inverse: #fff;
-  --color-success: #22c55e;
-  --color-error: #ef4444;
-  --color-border: #27272a;
+  --color-success: #61b66c;
+  --color-error: #ff6b61;
+  --color-border: #4a4845;
   --color-card-border: var(--color-border);
-  --color-focus: #06b6d4;
+  --color-focus: #ffd633;
   --color-auth-panel: var(--color-surface);
   --color-auth-field: var(--color-surface-elevated);
   --color-auth-text: var(--color-text-primary);
   --color-auth-muted: var(--color-text-secondary);
-  --color-auth-promo-background: #0f0f14;
-  --color-auth-promo-text: #f4f4f5;
+  --color-auth-promo-background: #292827;
+  --color-auth-promo-text: #f5f4f2;
 
-  /* Gradients */
-  --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+  --gradient-accent: linear-gradient(135deg, #ff5a36 0%, #ffd633 100%);
   --gradient-profile-cover: linear-gradient(
     145deg,
-    #24104f 0%,
-    #173c56 52%,
-    #0f2b3b 100%
+    #3d2924 0%,
+    #3c3724 52%,
+    #292827 100%
   );
 
   /* Typography */
@@ -63,10 +63,10 @@
   --content-max-width: 85rem;
 
   /* Elevation */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 20%);
-  --shadow-md: 0 8px 24px rgb(0 0 0 / 28%);
-  --shadow-lg: 0 16px 40px rgb(0 0 0 / 36%);
-  --shadow-card-hover: 0 4px 16px rgb(244 244 245 / 12%);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 32%);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 40%);
+  --shadow-card-hover: 0 4px 16px rgb(255 255 255 / 10%);
 
   /* Backward-compatible semantic aliases */
   --border: var(--color-border);
@@ -78,67 +78,78 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
-    --color-bg: #f9fafb;
-    --color-surface: #ffffff;
-    --color-surface-elevated: #f4f4f5;
-    --color-accent-secondary: #0891b2;
-    --color-accent-subtle: #f5f3ff;
-    --color-text-primary: #18181b;
-    --color-text-secondary: #52525b;
-    --color-text-muted: #71717a;
+    --color-bg: #fff;
+    --color-surface: #fff;
+    --color-surface-elevated: #f5f5f5;
+    --color-accent-primary: #fc3f1d;
+    --color-accent-primary-hover: #e53417;
+    --color-accent-subtle: #fff0ed;
+    --color-accent-secondary: #ffcc00;
+    --color-text-primary: #21201f;
+    --color-text-secondary: #6b6b6b;
+    --color-text-muted: #858585;
     --color-text-inverse: #fff;
-    --color-success: #16a34a;
-    --color-error: #dc2626;
-    --color-border: #e4e4e7;
-    --color-focus: #7c3aed;
-    --color-auth-panel: #f9fafb;
-    --color-auth-field: #f4f4f5;
-    --color-auth-text: #18181b;
-    --color-auth-muted: #71717a;
+    --color-success: #2e7d32;
+    --color-error: #d93025;
+    --color-border: #e6e6e6;
+    --color-focus: #fc3f1d;
+    --color-auth-panel: #fff;
+    --color-auth-field: #f5f5f5;
+    --color-auth-text: #21201f;
+    --color-auth-muted: #858585;
+    --color-auth-promo-background: #ffcc00;
+    --color-auth-promo-text: #21201f;
     --gradient-profile-cover: linear-gradient(
       145deg,
-      #eee8ff 0%,
-      #ddf6fb 52%,
-      #e9f9f5 100%
+      #fff0eb 0%,
+      #fff7df 52%,
+      #fffcef 100%
     );
-    --shadow-sm: 0 1px 2px rgb(24 24 27 / 8%);
-    --shadow-md: 0 8px 24px rgb(24 24 27 / 12%);
-    --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
-    --shadow-card-hover: 0 4px 12px rgb(24 24 27 / 14%);
+    --gradient-accent: linear-gradient(135deg, #fc3f1d 0%, #ffcc00 100%);
+    --shadow-sm: 0 1px 2px rgb(33 32 31 / 8%);
+    --shadow-md: 0 8px 24px rgb(33 32 31 / 12%);
+    --shadow-lg: 0 16px 40px rgb(33 32 31 / 16%);
+    --shadow-card-hover: 0 4px 12px rgb(33 32 31 / 14%);
   }
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #f9fafb;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #f4f4f5;
-  --color-accent-secondary: #0891b2;
-  --color-accent-subtle: #f5f3ff;
-  --color-text-primary: #18181b;
-  --color-text-secondary: #52525b;
-  --color-text-muted: #71717a;
+  --color-bg: #fff;
+  --color-surface: #fff;
+  --color-surface-elevated: #f5f5f5;
+  --color-accent-primary: #fc3f1d;
+  --color-accent-primary-hover: #e53417;
+  --color-accent-subtle: #fff0ed;
+  --color-accent-secondary: #ffcc00;
+  --color-text-primary: #21201f;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #858585;
   --color-text-inverse: #fff;
-  --color-success: #16a34a;
-  --color-error: #dc2626;
-  --color-border: #e4e4e7;
-  --color-focus: #7c3aed;
-  --color-auth-panel: #f9fafb;
-  --color-auth-field: #f4f4f5;
-  --color-auth-text: #18181b;
-  --color-auth-muted: #71717a;
+  --color-success: #2e7d32;
+  --color-error: #d93025;
+  --color-border: #e6e6e6;
+  --color-focus: #fc3f1d;
+  --color-auth-panel: #fff;
+  --color-auth-field: #f5f5f5;
+  --color-auth-text: #21201f;
+  --color-auth-muted: #858585;
+  --color-auth-promo-background: #ffcc00;
+  --color-auth-promo-text: #21201f;
   --gradient-profile-cover: linear-gradient(
     145deg,
-    #eee8ff 0%,
-    #ddf6fb 52%,
-    #e9f9f5 100%
+    #fff0eb 0%,
+    #fff7df 52%,
+    #fffcef 100%
   );
-  --shadow-sm: 0 1px 2px rgb(24 24 27 / 8%);
-  --shadow-md: 0 8px 24px rgb(24 24 27 / 12%);
-  --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
-  --shadow-card-hover: 0 4px 12px rgb(24 24 27 / 14%);
+  --gradient-accent: linear-gradient(135deg, #fc3f1d 0%, #ffcc00 100%);
+  --shadow-sm: 0 1px 2px rgb(33 32 31 / 8%);
+  --shadow-md: 0 8px 24px rgb(33 32 31 / 12%);
+  --shadow-lg: 0 16px 40px rgb(33 32 31 / 16%);
+  --shadow-card-hover: 0 4px 12px rgb(33 32 31 / 14%);
 }
 
+/* Legacy theme definitions retained for reference.
 :root[data-theme="sephia"] {
   color-scheme: light;
   --color-bg: #f1e5d5;
@@ -211,6 +222,7 @@
   --shadow-lg: 0 16px 40px rgb(33 32 31 / 16%);
   --shadow-card-hover: 0 4px 12px rgb(33 32 31 / 14%);
 }
+*/
 
 * {
   box-sizing: border-box;

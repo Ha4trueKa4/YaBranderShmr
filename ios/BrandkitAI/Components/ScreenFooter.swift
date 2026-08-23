@@ -1,8 +1,3 @@
-//
-//  ScreenFooter.swift
-//  BrandkitAI
-//
-
 import SwiftUI
 
 struct ScreenFooter: View {
@@ -11,13 +6,14 @@ struct ScreenFooter: View {
     let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        VStack(spacing: 10) {
             Text(question)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             LinkButton(title: actionTitle, action: action)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 

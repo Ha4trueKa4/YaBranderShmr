@@ -13,7 +13,7 @@ components_manager:
 
     bg-task-processor: # Фоновые генерации (ProjectManagerComponent) — отдельно от
       worker_threads: $worker-bg-threads   # main-task-processor, чтобы не конкурировать
-                                            # с обработкой HTTP-запросов (в т.ч. long-poll).
+      # с обработкой HTTP-запросов (в т.ч. long-poll).
 
     grpc-blocking-task-processor: # Для блокирующей инициализации gRPC-каналов (otlp-logger).
       worker_threads: 2
@@ -139,6 +139,25 @@ components_manager:
     dns-client:
       fs-task-processor: fs-task-processor
 
+    # Секреты (сейчас только Redis) — JSON целиком приходит из переменной
+    # окружения SECDIST_CONFIG, без файла на диске.
+    default-secdist-provider:
+      config: ''
+      missing-ok: true
+      environment-secrets-key: SECDIST_CONFIG
+
+    secdist:
+      provider: default-secdist-provider
+
+    redis:
+      groups:
+        - config_name: ya_brander_jobs
+          db: ya_brander_jobs
+      subscribe_groups: []
+      thread_pools:
+        redis_thread_pool_size: 2
+        sentinel_thread_pool_size: 1
+
     # ==========================================
     # Monium telemetry (OTLP logs + traces)
     # ==========================================
@@ -204,6 +223,8 @@ components_manager:
       auth:
         types:
           - jwt-required
+      max_requests_in_flight: 150
+      max_requests_per_second: 300
 
     handler-projects-get:
       path: /api/v1/projects/{id}
@@ -303,6 +324,14 @@ components_manager:
       path: /api/v1/auth/yandex
       method: POST
       task_processor: main-task-processor
+
+    handler-auth-yandex-link:
+      path: /api/v1/auth/yandex/link
+      method: POST
+      task_processor: main-task-processor
+      auth:
+        types:
+          - jwt-required
 
     handler-auth-method:
       path: /api/v1/auth/method

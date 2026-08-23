@@ -1,6 +1,7 @@
 package com.yandex.avatargenerator.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.text.LocalAutofillHighlightBrush
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -8,6 +9,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+
+/**
+ * Системная жёлтая заливка автозаполнения не вписывается в палитру и не совпадает
+ * с формой поля — гасим её, значение и так видно.
+ */
+private val AutofillHighlightBrush = SolidColor(Color.Transparent)
 
 /**
  * Material-схема поверх наших токенов — ради системных примитивов Material3
@@ -52,7 +61,8 @@ fun AvatarGeneratorTheme(
 
     CompositionLocalProvider(
         LocalAppColorScheme provides colors,
-        LocalAppTypography provides typography
+        LocalAppTypography provides typography,
+        LocalAutofillHighlightBrush provides AutofillHighlightBrush
     ) {
         MaterialTheme(
             colorScheme = colors.toMaterialColorScheme(darkTheme),

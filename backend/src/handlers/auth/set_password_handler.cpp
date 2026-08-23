@@ -7,7 +7,10 @@
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 #include "password_hasher.hpp"
 
 namespace ya_brander::auth {
@@ -37,9 +40,12 @@ userver::formats::json::Value SetPasswordHandler::HandleRequestJsonThrow(
                           "new_password");
     }
 
-    const auto result = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kMaster,
-        "SELECT password_hash FROM users WHERE id = $1::uuid", user_id);
+    const auto result =
+        utils::ExecuteSelectWithRetry("select-user-password-hash", [&] {
+            return pg_cluster_->Execute(
+                userver::storages::postgres::ClusterHostType::kMaster,
+                sql::kSelectUserPasswordHash, user_id);
+        });
 
     if (result.IsEmpty()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -65,7 +71,7 @@ userver::formats::json::Value SetPasswordHandler::HandleRequestJsonThrow(
     const auto new_hash = PasswordHasher::Hash(new_password);
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE users SET password_hash = $1 WHERE id = $2::uuid", new_hash, user_id);
+        sql::kUpdateUserPassword, new_hash, user_id);
 
     return MakeMessage(existing_hash.has_value() ? "Password changed successfully"
                                                    : "Password set successfully");

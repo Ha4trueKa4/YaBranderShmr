@@ -23,6 +23,17 @@ struct FormScreenLayout<Content: View>: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
+        .background {
+            LinearGradient(
+                stops: [
+                    .init(color: .startGradient.opacity(0.8), location: 0),
+                    .init(color: .clear, location: 0.6),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .brandBackground()
         .onTapGesture {
             UIApplication.shared.sendAction(

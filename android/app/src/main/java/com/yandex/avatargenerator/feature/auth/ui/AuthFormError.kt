@@ -30,6 +30,12 @@ internal enum class AuthFormError {
     /** `400`/`422` `INVALID_NICKNAME`. */
     InvalidNickname,
 
+    /** `409` на входе через Yandex ID: email занят аккаунтом с паролем. */
+    YandexEmailTaken,
+
+    /** `400`/`502` на входе через Yandex ID: провайдер не отдал профиль. */
+    YandexFailed,
+
     /** Нет сети или таймаут. */
     NoConnection,
 
@@ -58,6 +64,9 @@ internal fun Throwable.toAuthFormError(): AuthFormError = when (this) {
         AuthException.Field.Nickname -> AuthFormError.InvalidNickname
         else -> AuthFormError.Unknown
     }
+
+    is AuthException.YandexEmailConflict -> AuthFormError.YandexEmailTaken
+    is AuthException.YandexAuthFailed -> AuthFormError.YandexFailed
 
     is NetworkException.NoConnection, is NetworkException.Timeout -> AuthFormError.NoConnection
     is NetworkException.ServerError -> AuthFormError.ServerUnavailable

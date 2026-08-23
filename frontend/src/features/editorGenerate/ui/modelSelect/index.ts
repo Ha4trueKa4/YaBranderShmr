@@ -1,1 +1,5 @@
-export { DEFAULT_GENERATION_MODEL, ModelSelect } from './ModelSelect'
+export { ModelSelect } from './ModelSelect'
+export {
+  DEFAULT_GENERATION_MODEL,
+  getDefaultGenerationModel,
+} from './modelDefaults'

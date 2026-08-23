@@ -10,6 +10,7 @@ interface GestureEvent extends Event {
 interface UseCanvasGestureParams {
   constrainOffset: (offset: ViewportOffset, zoom: number) => ViewportOffset
   offset: ViewportOffset
+  onPinchStart: () => void
   onOffsetChange: (offset: ViewportOffset) => void
   onZoomChange: (zoom: number) => number
   isNativeGestureActiveReference: MutableRefObject<boolean>
@@ -19,13 +20,30 @@ interface UseCanvasGestureParams {
 
 interface GestureState {
   cursor: ViewportOffset
+  initialDistance?: number
   isZooming: boolean
   offset: ViewportOffset
   zoom: number
 }
 
+interface PointerPosition {
+  x: number
+  y: number
+}
+
 const GESTURE_ZOOM_SENSITIVITY = 1.5
 const PINCH_SCALE_THRESHOLD = 0.05
+
+function getDistance(first: PointerPosition, second: PointerPosition) {
+  return Math.hypot(second.x - first.x, second.y - first.y)
+}
+
+function getCenter(first: PointerPosition, second: PointerPosition) {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  }
+}
 
 function isSafariBrowser() {
   return (
@@ -38,6 +56,7 @@ export function useCanvasGesture({
   isNativeGestureActiveReference,
   constrainOffset,
   offset,
+  onPinchStart,
   onOffsetChange,
   onZoomChange,
   viewportReference,
@@ -89,6 +108,7 @@ export function useCanvasGesture({
         offset,
         zoom,
       }
+      onPinchStart()
     }
 
     function handleGestureChange(event: Event) {
@@ -154,5 +174,146 @@ export function useCanvasGesture({
       viewportElement.removeEventListener('gesturechange', handleGestureChange)
       viewportElement.removeEventListener('gestureend', handleGestureEnd)
     }
-  }, [isNativeGestureActiveReference, viewportReference])
+  }, [isNativeGestureActiveReference, onPinchStart, viewportReference])
+
+  useEffect(() => {
+    if (isSafariBrowser()) {
+      return
+    }
+
+    const viewport = viewportReference.current
+
+    if (!viewport) {
+      return
+    }
+
+    const viewportElement = viewport
+    const pointers = new Map<number, PointerPosition>()
+
+    function startPinch() {
+      const [first, second] = [...pointers.values()]
+
+      if (!first || !second) {
+        return
+      }
+
+      const bounds = viewportElement.getBoundingClientRect()
+      const center = getCenter(first, second)
+      const { offset, zoom } = latestStateReference.current
+
+      gestureStateReference.current = {
+        cursor: {
+          x: center.x - bounds.left - bounds.width / 2,
+          y: center.y - bounds.top - bounds.height / 2,
+        },
+        initialDistance: getDistance(first, second),
+        isZooming: true,
+        offset,
+        zoom,
+      }
+      isNativeGestureActiveReference.current = true
+      onPinchStart()
+
+      for (const pointerId of pointers.keys()) {
+        viewportElement.setPointerCapture(pointerId)
+      }
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+
+      if (pointers.size === 2) {
+        return
+      }
+
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+      viewportElement.setPointerCapture(event.pointerId)
+
+      if (pointers.size === 2) {
+        startPinch()
+      }
+    }
+
+    function handlePointerMove(event: PointerEvent) {
+      if (!pointers.has(event.pointerId)) {
+        return
+      }
+
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+      const gestureState = gestureStateReference.current
+
+      if (!gestureState || pointers.size < 2) {
+        return
+      }
+
+      const [first, second] = [...pointers.values()]
+
+      if (!first || !second) {
+        return
+      }
+
+      event.preventDefault()
+      const { onOffsetChange, onZoomChange } = latestStateReference.current
+      const initialDistance = gestureState.initialDistance
+
+      if (!initialDistance) {
+        return
+      }
+      const nextZoom = onZoomChange(
+        gestureState.zoom *
+          (getDistance(first, second) / initialDistance) **
+            GESTURE_ZOOM_SENSITIVITY,
+      )
+      const zoomRatio = nextZoom / gestureState.zoom
+      const nextOffset = latestStateReference.current.constrainOffset(
+        {
+          x:
+            gestureState.cursor.x -
+            (gestureState.cursor.x - gestureState.offset.x) * zoomRatio,
+          y:
+            gestureState.cursor.y -
+            (gestureState.cursor.y - gestureState.offset.y) * zoomRatio,
+        },
+        nextZoom,
+      )
+
+      latestStateReference.current = {
+        ...latestStateReference.current,
+        offset: nextOffset,
+        zoom: nextZoom,
+      }
+      onOffsetChange(nextOffset)
+    }
+
+    function handlePointerEnd(event: PointerEvent) {
+      pointers.delete(event.pointerId)
+
+      if (viewportElement.hasPointerCapture(event.pointerId)) {
+        viewportElement.releasePointerCapture(event.pointerId)
+      }
+
+      if (pointers.size < 2) {
+        gestureStateReference.current = null
+        isNativeGestureActiveReference.current = false
+      }
+    }
+
+    viewportElement.addEventListener('pointerdown', handlePointerDown, {
+      passive: true,
+    })
+    viewportElement.addEventListener('pointermove', handlePointerMove, {
+      passive: false,
+    })
+    viewportElement.addEventListener('pointerup', handlePointerEnd)
+    viewportElement.addEventListener('pointercancel', handlePointerEnd)
+
+    return () => {
+      viewportElement.removeEventListener('pointerdown', handlePointerDown)
+      viewportElement.removeEventListener('pointermove', handlePointerMove)
+      viewportElement.removeEventListener('pointerup', handlePointerEnd)
+      viewportElement.removeEventListener('pointercancel', handlePointerEnd)
+    }
+  }, [isNativeGestureActiveReference, onPinchStart, viewportReference])
 }

@@ -13,6 +13,8 @@ private nonisolated final class ChatObserverHolder: @unchecked Sendable {
 final class ChatViewModel {
     static let maxPromptUTF8Length = 1_500
 
+    private static let selectedModelStorageKey = "chat.selectedGenerationModel"
+
     enum ProjectPrivacy: String, CaseIterable, Identifiable {
         case privateProject
         case publicShowcase
@@ -70,6 +72,10 @@ final class ChatViewModel {
     private(set) var loadFailed = false
     private(set) var pendingCount = 0
     private(set) var sendErrorMessage: String?
+    private(set) var availableModels: [GenerationModel] = []
+    private(set) var isLoadingModels = false
+    private(set) var modelsLoadFailed = false
+    private(set) var selectedModelID: String
     var privacy = ProjectPrivacy.privateProject
 
     private let service: any ProjectServiceProtocol
@@ -84,6 +90,9 @@ final class ChatViewModel {
     ) {
         self.projectID = projectID
         self.service = service
+        self.selectedModelID = UserDefaults.standard.string(
+            forKey: Self.selectedModelStorageKey
+        ) ?? GenerationModel.defaultID
         observerHolder.token = NotificationCenter.default.addObserver(
             forName: .networkDidBecomeAvailable,
             object: nil,
@@ -93,6 +102,39 @@ final class ChatViewModel {
                 await self?.flushPendingMessages()
             }
         }
+    }
+
+    var selectedModel: GenerationModel {
+        availableModels.first(where: { $0.id == selectedModelID })
+            ?? GenerationModel(remoteID: selectedModelID, owner: nil)
+    }
+
+    func loadModels(force: Bool = false) async {
+        guard !isLoadingModels else { return }
+        guard force || availableModels.isEmpty else { return }
+
+        isLoadingModels = true
+        modelsLoadFailed = false
+        defer { isLoadingModels = false }
+
+        do {
+            let models = try await service.fetchModels()
+            guard !models.isEmpty else { throw NetworkError.invalidResponse }
+            availableModels = models
+
+            if !models.contains(where: { $0.id == selectedModelID }) {
+                selectedModelID = models.first(where: { $0.id == GenerationModel.defaultID })?.id
+                    ?? models[0].id
+                persistSelectedModel()
+            }
+        } catch {
+            modelsLoadFailed = true
+        }
+    }
+
+    func selectModel(_ model: GenerationModel) {
+        selectedModelID = model.id
+        persistSelectedModel()
     }
 
     deinit {
@@ -128,11 +170,16 @@ final class ChatViewModel {
 
         sendErrorMessage = nil
         let chatMessage = ChatMessage(type: .user, text: text, date: Date())
+        let modelID = selectedModel.id
         appendMessage(chatMessage)
         isGenerating = true
 
         do {
-            let generatedURL = try await service.generate(projectID: projectID, prompt: text)
+            let generatedURL = try await service.generate(
+                projectID: projectID,
+                prompt: text,
+                modelID: modelID
+            )
             try? await refreshChatAfterGenerate(generatedURL: generatedURL)
             isGenerating = false
             await flushPendingMessages()
@@ -143,7 +190,8 @@ final class ChatViewModel {
                 await queuePendingMessage(
                     id: chatMessage.id,
                     text: text,
-                    createdAt: chatMessage.date
+                    createdAt: chatMessage.date,
+                    modelID: modelID
                 )
                 sendErrorMessage = "Message is pending and will be sent when the connection recovers."
             } else {
@@ -169,7 +217,11 @@ final class ChatViewModel {
 
             let generatedURL: URL?
             do {
-                generatedURL = try await service.generate(projectID: projectID, prompt: prompt.text)
+                generatedURL = try await service.generate(
+                    projectID: projectID,
+                    prompt: prompt.text,
+                    modelID: prompt.modelID
+                )
             } catch {
                 if shouldKeepPending(after: error) {
                     break
@@ -307,10 +359,24 @@ final class ChatViewModel {
         sections = makeSections(from: messages)
     }
 
-    private func queuePendingMessage(id: ChatMessage.ID, text: String, createdAt: Date) async {
-        pendingMessages.append(ChatCache.PendingMessage(id: id, text: text, createdAt: createdAt))
+    private func queuePendingMessage(
+        id: ChatMessage.ID,
+        text: String,
+        createdAt: Date,
+        modelID: String
+    ) async {
+        pendingMessages.append(ChatCache.PendingMessage(
+            id: id,
+            text: text,
+            createdAt: createdAt,
+            modelID: modelID
+        ))
         pendingCount = pendingMessages.count
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+    }
+
+    private func persistSelectedModel() {
+        UserDefaults.standard.set(selectedModelID, forKey: Self.selectedModelStorageKey)
     }
 
     private func shouldKeepPending(after error: Error) -> Bool {
@@ -506,6 +572,10 @@ final class ChatViewModel {
         ]
 
         viewModel.replaceMessages(messages)
+        viewModel.availableModels = [
+            .fallback,
+            GenerationModel(remoteID: "gpt://openai/gpt-5.6-luna", owner: "OpenAI")
+        ]
         viewModel.didLoad = true
         return viewModel
     }

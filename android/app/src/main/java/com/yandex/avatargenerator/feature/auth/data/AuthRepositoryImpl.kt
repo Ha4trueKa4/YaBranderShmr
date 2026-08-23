@@ -7,6 +7,7 @@ import com.yandex.avatargenerator.core.network.validationError
 import com.yandex.avatargenerator.feature.auth.data.dto.AuthResponseDto
 import com.yandex.avatargenerator.feature.auth.data.dto.LoginRequestDto
 import com.yandex.avatargenerator.feature.auth.data.dto.RegisterRequestDto
+import com.yandex.avatargenerator.feature.auth.data.dto.YandexAuthRequestDto
 import com.yandex.avatargenerator.feature.auth.domain.AuthException
 import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
 import com.yandex.avatargenerator.feature.auth.domain.model.AuthSession
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.map
 
 private const val RegisterPath = "auth/register"
 private const val LoginPath = "auth/login"
+private const val YandexPath = "auth/yandex"
 private const val BadRequestCode = 400
 private const val ConflictCode = 409
 
@@ -81,6 +83,30 @@ class AuthRepositoryImpl(
             // Формат email сервер отвергает и на входе — показываем ошибку под
             // полем, а не общее «что-то пошло не так».
             throw clientError.toFieldFailure()
+        }
+        return response.toSessionAndRemember()
+    }
+
+    override suspend fun loginWithYandex(code: String): AuthSession {
+        val response = try {
+            apiCall {
+                client.post(YandexPath) {
+                    setBody(YandexAuthRequestDto(code = code))
+                }.body<AuthResponseDto>()
+            }
+        } catch (conflict: NetworkException.ClientError) {
+            // 409 EMAIL_EXISTS — email занят аккаунтом с паролем. Прочие 4xx
+            // (400 INVALID_REQUEST / YANDEX_EMAIL_SCOPE_REQUIRED) — общий сбой
+            // провайдера: детали пользователю не показываем.
+            throw if (conflict.code == ConflictCode) {
+                AuthException.YandexEmailConflict(conflict)
+            } else {
+                AuthException.YandexAuthFailed(conflict)
+            }
+        } catch (serverError: NetworkException.ServerError) {
+            // 502 YANDEX_OAUTH_FAILED: это не «наш бэкенд лёг», а Yandex ID не
+            // отдал профиль — сообщение должно быть про Yandex, а не про сервер.
+            throw AuthException.YandexAuthFailed(serverError)
         }
         return response.toSessionAndRemember()
     }

@@ -17,6 +17,9 @@ struct ChatView: View {
     @State private var messageText = ""
     @State private var didFinishInitialLoad = false
     @State private var isPrivacyPickerPresented = false
+    @State private var isModelPickerPresented = false
+    @State private var isModelControlVisible = false
+    @State private var isComposerExpanded = false
     @State private var selectedPrivacy = ChatViewModel.ProjectPrivacy.privateProject
     @FocusState private var isInputFocused: Bool
 
@@ -93,6 +96,12 @@ struct ChatView: View {
                 PrivacyPicker(selection: $selectedPrivacy) { newPrivacy in
                     Task { await viewModel.updatePrivacy(newPrivacy) }
                 }
+            }
+            .sheet(isPresented: $isModelPickerPresented) {
+                ModelPickerSheet(viewModel: viewModel)
+            }
+            .task {
+                await viewModel.loadModels()
             }
     }
 
@@ -279,33 +288,7 @@ struct ChatView: View {
                 .padding(.horizontal, 16)
             }
 
-            HStack(spacing: 12) {
-                TextField("Ask brand assistant...", text: $messageText, axis: .vertical)
-                    .font(.subheadline)
-                    .lineLimit(1...4)
-                    .focused($isInputFocused)
-                    .submitLabel(.send)
-                    .onSubmit {
-                        sendMessage()
-                    }
-                    .disabled(viewModel.isGenerating)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color(.secondarySystemBackground), in: Capsule())
-
-                Button {
-                    sendMessage()
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color(.onAccent))
-                        .frame(width: 40, height: 40)
-                        .background(.tint, in: Circle())
-                }
-                .opacity(canSendMessage ? 1 : 0.5)
-                .disabled(!canSendMessage)
-                .accessibilityLabel("Send message")
-            }
+            composer
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(Color.background)
@@ -316,9 +299,121 @@ struct ChatView: View {
             }
         }
         .background(Color.background)
+        .animation(.easeInOut(duration: 0.2), value: isComposerExpanded)
         .onChange(of: messageText) {
             viewModel.clearSendError()
         }
+    }
+
+    private var composer: some View {
+        VStack(alignment: .leading, spacing: isComposerExpanded ? 6 : 0) {
+            TextField("Ask brand assistant...", text: $messageText, axis: .vertical)
+                .font(.subheadline)
+                .lineLimit(1...4)
+                .focused($isInputFocused)
+                .submitLabel(.send)
+                .onSubmit {
+                    sendMessage()
+                }
+                .disabled(viewModel.isGenerating)
+                .padding(.leading, 8)
+                .padding(.trailing, isComposerExpanded ? 8 : 50)
+                .padding(.vertical, 10)
+
+            if isComposerExpanded {
+                HStack(spacing: 10) {
+                    if isModelControlVisible {
+                        modelButton
+                            .transition(.opacity)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    Color.clear
+                        .frame(width: 40, height: 40)
+                }
+                .transition(.move(edge: .bottom))
+            }
+        }
+        .padding(.leading, 8)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
+        .background(
+            Color(.secondarySystemBackground),
+            in: RoundedRectangle(cornerRadius: isComposerExpanded ? 26 : 24, style: .continuous)
+        )
+        .overlay(alignment: .bottomTrailing) {
+            sendButton
+                .padding(6)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: isComposerExpanded ? 26 : 24, style: .continuous)
+                .stroke(Color(.border), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .animation(.easeInOut(duration: 0.2), value: isComposerExpanded)
+        .task(id: isInputFocused) {
+            if isInputFocused {
+                isModelControlVisible = false
+                isComposerExpanded = true
+
+                try? await Task.sleep(for: .milliseconds(220))
+                guard !Task.isCancelled, isInputFocused else { return }
+
+                withAnimation(.easeOut(duration: 0.12)) {
+                    isModelControlVisible = true
+                }
+                return
+            }
+
+            withAnimation(.easeOut(duration: 0.1)) {
+                isModelControlVisible = false
+            }
+
+            try? await Task.sleep(for: .milliseconds(120))
+            guard !Task.isCancelled, !isInputFocused else { return }
+            isComposerExpanded = false
+        }
+    }
+
+    private var modelButton: some View {
+        Button {
+            isModelPickerPresented = true
+        } label: {
+            HStack(spacing: 5) {
+                Text(viewModel.selectedModel.title)
+                    .lineLimit(1)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 10)
+            .frame(height: 36)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Model, \(viewModel.selectedModel.title)")
+        .accessibilityHint("Opens model picker")
+    }
+
+    private var sendButton: some View {
+        Button {
+            sendMessage()
+        } label: {
+            Image(systemName: "arrow.up")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(canSendMessage ? Color(.onAccent) : Color(.secondaryLabel))
+                .frame(width: 40, height: 40)
+                .background(
+                    canSendMessage ? Color.accentColor : Color(.tertiarySystemFill),
+                    in: Circle()
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSendMessage)
+        .accessibilityLabel("Send message")
     }
 
     private var canSendMessage: Bool {

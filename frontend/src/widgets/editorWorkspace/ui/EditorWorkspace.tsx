@@ -1,5 +1,6 @@
 import { AppRoute } from '@app/providers/router/routes'
 import { type EditorDocument, EditorStore } from '@entities/editorDocument'
+import { useEditorChatGeneration } from '@features/editorChat'
 import { exportEditorDocument } from '@features/editorExport'
 import { VersionHistoryModal } from '@features/editorVersionHistory'
 import {
@@ -8,6 +9,7 @@ import {
   ImageExportModal,
   useToast,
 } from '@shared/ui'
+import { EditorChat } from '@widgets/editorChat'
 import {
   type CanvasTool,
   EditorScene,
@@ -31,6 +33,7 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 interface EditorWorkspaceProps {
   canEdit: boolean
   document: EditorDocument
+  isPublic: boolean
   projectId: string
   projectName: string
 }
@@ -40,9 +43,14 @@ const MIN_ZOOM = 0.5
 const ZOOM_STEP = 0.25
 const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
 
+interface RouterHistoryState {
+  idx?: number
+}
+
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
+  isPublic,
   projectId,
   projectName: initialProjectName,
 }: EditorWorkspaceProps) {
@@ -54,13 +62,16 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     () => new EditorStore(document),
   )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
-  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [activeTool, setActiveTool] = useState<CanvasTool>(
+    isMobileLayout ? 'hand' : 'select',
+  )
   const [zoom, setZoom] = useState(1)
   const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const [measuredRotationCenter, setMeasuredRotationCenter] = useState<{
     nodeId: string
     x: number
@@ -70,15 +81,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     createCopy,
     hasUnsavedChanges,
     isCreatingCopy,
+    isProjectPublic,
     isSavingVersion,
     markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,
     shouldBlockNavigation,
+    toggleProjectVisibility,
   } = useEditorProjectActions({
     canEdit,
     document: editorStore.document,
+    initialIsPublic: isPublic,
     initialProjectName,
     projectId,
   })
@@ -159,6 +173,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsMobileInspectorOpen(false)
   }
 
+  const {
+    isGenerationPending: isChatGenerationPending,
+    messages: chatMessages,
+    sendPrompt: sendChatPrompt,
+  } = useEditorChatGeneration({
+    canEdit,
+    hasUnsavedChanges,
+    onDocumentGenerated: handleRestoreDocument,
+    projectId,
+    saveVersion,
+  })
+
   async function handleImageExport(fileType: ImageExportFileType) {
     setIsImageExporting(true)
 
@@ -227,14 +253,36 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     }
   }
 
+  function handleBack() {
+    const historyIndex = (window.history.state as RouterHistoryState | null)
+      ?.idx
+
+    if (historyIndex && historyIndex > 0) {
+      navigate(-1)
+      return
+    }
+
+    navigate(AppRoute.EditorCreate)
+  }
+
   function handleConfirmExit() {
     if (navigationBlocker.state === 'blocked') {
       navigationBlocker.proceed()
     }
   }
 
+  async function handleSaveAndExit() {
+    const wasSaved = await saveVersion()
+
+    if (wasSaved && navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed()
+    }
+  }
+
   const inspectorProps = {
     definitions: editorStore.document.definitions,
+    onColorChangeEnd: editorStore.commitHistoryTransaction,
+    onColorChangeStart: editorStore.beginHistoryTransaction,
     measuredRotationCenter:
       measuredRotationCenter &&
       measuredRotationCenter.nodeId === editorStore.selectedNode?.id
@@ -306,9 +354,11 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           canRedo={editorStore.canRedo}
           canUndo={editorStore.canUndo}
           isCreatingProjectCopy={isCreatingCopy}
+          isProjectPublic={isProjectPublic}
           isSavingVersion={isSavingVersion}
+          isVisibilityUpdating={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
-          onBack={() => navigate(-1)}
+          onBack={handleBack}
           onCancelColorPicker={handleCancelMobileProperties}
           onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
@@ -316,10 +366,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onExport={handleExport}
           onDoneColorPicker={handleDoneMobileProperties}
           onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenChat={() => setIsMobileChatOpen(true)}
           onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onRedo={handleRedo}
           onSaveVersion={saveVersion}
+          onToggleProjectVisibility={toggleProjectVisibility}
           onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
           onUndo={handleUndo}
@@ -357,8 +409,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               canRedo={editorStore.canRedo}
               canUndo={editorStore.canUndo}
               isCreatingProjectCopy={isCreatingCopy}
+              isProjectPublic={isProjectPublic}
               isSavingVersion={isSavingVersion}
-              onBack={() => navigate(-1)}
+              onBack={handleBack}
               onCreateCopy={createCopy}
               onEditProjectName={renameProject}
               onExport={handleExport}
@@ -366,6 +419,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
               onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
+              onToggleProjectVisibility={toggleProjectVisibility}
               onToolChange={setActiveTool}
               onRedo={handleRedo}
               onSaveVersion={saveVersion}
@@ -378,10 +432,21 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           }
         />
       )}
+      {canEdit && (
+        <EditorChat
+          isOpen={isMobileLayout ? isMobileChatOpen : undefined}
+          isPending={isChatGenerationPending}
+          messages={chatMessages}
+          onOpenChange={isMobileLayout ? setIsMobileChatOpen : undefined}
+          onSendPrompt={(prompt) => void sendChatPrompt(prompt)}
+        />
+      )}
       <ConfirmUnsavedChangeModal
         isOpen={navigationBlocker.state === 'blocked'}
-        onCancel={handleCancelExit}
-        onConfirm={handleConfirmExit}
+        isSaving={isSavingVersion}
+        onDismiss={handleCancelExit}
+        onLeave={handleConfirmExit}
+        onSave={handleSaveAndExit}
       />
       <ImageExportModal
         isExporting={isImageExporting}

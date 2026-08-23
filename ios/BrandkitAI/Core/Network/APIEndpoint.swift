@@ -4,6 +4,10 @@ nonisolated enum APIEndpoint {
     // Auth
     case register
     case login
+    case yandexAuth
+
+    // Models
+    case models
 
     // Users
     case userProfile(id: UUID)
@@ -29,6 +33,12 @@ nonisolated enum APIEndpoint {
 
         case .login:
             "/auth/login"
+
+        case .yandexAuth:
+            "/auth/yandex"
+
+        case .models:
+            "/models"
 
         case .userProfile(let id):
             "/users/\(Self.pathID(id))"

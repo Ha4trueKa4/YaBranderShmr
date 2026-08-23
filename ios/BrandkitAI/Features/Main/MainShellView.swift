@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Главный флоу: по стеку навигации на раздел, таб-бар навешен на корневой
-/// экран **внутри** стека. Поэтому пушнутый экран перекрывает бар физически —
-/// с нативной анимацией и рабочим swipe-back, без флагов видимости.
 struct MainShellView: View {
     @Environment(SessionStore.self) private var session
     @State private var router = AppRouter()
@@ -18,6 +15,11 @@ struct MainShellView: View {
             }
         }
         .environment(router)
+        .onChange(of: session.state) { _, state in
+            if state == .signedOut {
+                router.paths.removeAll()
+            }
+        }
     }
 
     private func stack(for tab: MainTab) -> some View {
@@ -52,22 +54,75 @@ struct MainShellView: View {
                 onOpenChat: { item in
                     router.push(.chat(projectID: item.id, title: item.title), in: .create)
                 },
-                onNewProject: { router.push(.projectCreate, in: .create) }
+                onNewProject: {
+                    session.performAuthenticated {
+                        router.push(.projectCreate, in: .create)
+                    }
+                }
             )
 
         case .profile:
-            ProfileView(
-                session: session,
-                isCurrentUser: true,
-                onOpenSettings: { router.push(.settings, in: .profile) },
-                onOpenProject: { projectID, title, imageURL in
-                    router.push(.projectImage(projectID: projectID, title: title, imageURL: imageURL), in: .profile)
-                },
-                onOpenConnections: { userID, kind in
-                    router.push(.profileConnections(userID: userID, kind: kind), in: .profile)
-                }
-            )
+            if session.state == .signedIn {
+                ProfileView(
+                    session: session,
+                    isCurrentUser: true,
+                    onOpenSettings: { router.push(.settings, in: .profile) },
+                    onOpenProject: { projectID, title, imageURL in
+                        router.push(.projectImage(projectID: projectID, title: title, imageURL: imageURL), in: .profile)
+                    },
+                    onOpenConnections: { userID, kind in
+                        router.push(.profileConnections(userID: userID, kind: kind), in: .profile)
+                    }
+                )
+            } else {
+                guestProfilePlaceholder
+            }
         }
+    }
+
+    private var guestProfilePlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.crop.circle")
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 6) {
+                Text("Your profile")
+                    .font(.title3.bold())
+                Text("Log in to view your projects and account settings.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button("Log in") {
+                session.requireAuthentication()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+        .overlay(alignment: .top) {
+            guestSettingsHeader
+        }
+    }
+
+    private var guestSettingsHeader: some View {
+        GeometryReader { proxy in
+            let topBleed = max(0, proxy.frame(in: .global).origin.y)
+
+            Color.clear
+                .frame(height: 100 + topBleed)
+                .overlay(alignment: .trailing) {
+                    CoverSettingsButton {
+                        router.push(.settings, in: .profile)
+                    }
+                    .padding(.top, 48)
+                    .padding(.trailing, 12)
+                }
+                .offset(y: -topBleed)
+        }
+        .frame(height: 100)
     }
 }
 

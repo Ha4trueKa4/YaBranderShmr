@@ -47,9 +47,15 @@ for file in "$MIGRATIONS_DIR"/*.sql; do
 
   echo "Apply: $version"
 
-  # Для миграции с администратором устанавливаем параметры через SET
-  if [[ "$version" == "0004_add_admin.sql" ]]; then
+  # Для миграций с администратором устанавливаем параметры через SET
+  if [[ "$version" == "0004_add_admin.sql" ]] || [[ "$version" == "0005_admin_repeat.sql" ]]; then
     echo "Applying admin migration with ADMIN_EMAIL=${ADMIN_EMAIL:-not set}"
+
+    # Проверяем, что переменные установлены
+    if [[ -z "${ADMIN_EMAIL:-}" ]] || [[ -z "${ADMIN_PASSWORD_HASH:-}" ]]; then
+      echo "ERROR: ADMIN_EMAIL and ADMIN_PASSWORD_HASH must be set for admin migrations"
+      exit 1
+    fi
 
     # Устанавливаем параметры сессии через SET перед выполнением миграции
     psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 \

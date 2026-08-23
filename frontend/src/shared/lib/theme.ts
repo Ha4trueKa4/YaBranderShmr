@@ -1,10 +1,4 @@
-export const themeOptions = [
-  'yandex',
-  'system',
-  'dark',
-  'light',
-  'sephia',
-] as const
+export const themeOptions = ['system', 'dark', 'light'] as const
 export type Theme = (typeof themeOptions)[number]
 
 const themeStorageKey = 'brandkit-theme'
@@ -16,9 +10,7 @@ export function getInitialTheme(): Theme {
     if (
       storedTheme === 'system' ||
       storedTheme === 'dark' ||
-      storedTheme === 'light' ||
-      storedTheme === 'sephia' ||
-      storedTheme === 'yandex'
+      storedTheme === 'light'
     ) {
       return storedTheme
     }
@@ -26,7 +18,7 @@ export function getInitialTheme(): Theme {
     // The app still works when browser storage is unavailable.
   }
 
-  return 'yandex'
+  return 'system'
 }
 
 export function changeTheme(theme: Theme) {

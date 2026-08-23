@@ -1,8 +1,3 @@
-//
-//  SignUpView.swift
-//  BrandkitAI
-//
-
 import SwiftUI
 
 struct SignUpView: View {
@@ -60,11 +55,21 @@ struct SignUpView: View {
             PrimaryButton(
                 title: "Create account",
                 isEnabled: !viewModel.isLoading,
-                isLoading: viewModel.isLoading
+                isLoading: viewModel.isPasswordLoading,
+                fill: AnyShapeStyle(Color.accentColor),
+                cornerRadius: 20
             ) {
                 viewModel.register()
             }
             .padding(.top, 24)
+
+            YandexIDButton(
+                isEnabled: !viewModel.isLoading,
+                isLoading: viewModel.isYandexLoading
+            ) {
+                viewModel.signInWithYandex()
+            }
+            .padding(.top, 12)
 
             ScreenFooter(
                 question: "Already have an account?",
@@ -73,7 +78,7 @@ struct SignUpView: View {
                 viewModel.clearError()
                 onSignIn()
             }
-            .padding(.top, 32)
+            .padding(.top, 24)
         }
         .onChange(of: viewModel.fullName) { viewModel.clearError() }
         .onChange(of: viewModel.email) { viewModel.clearError() }

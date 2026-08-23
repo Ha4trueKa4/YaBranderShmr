@@ -3,12 +3,15 @@ package com.yandex.avatargenerator.feature.auth.di
 import com.yandex.avatargenerator.feature.auth.data.AuthRepositoryImpl
 import com.yandex.avatargenerator.feature.auth.data.AuthUserPreferencesStore
 import com.yandex.avatargenerator.feature.auth.data.AuthUserStore
+import com.yandex.avatargenerator.feature.auth.data.YandexAuthRequestFactoryImpl
 import com.yandex.avatargenerator.feature.auth.domain.AuthRepository
 import com.yandex.avatargenerator.feature.auth.domain.CurrentUserUseCase
 import com.yandex.avatargenerator.feature.auth.domain.IsAuthorizedUseCase
 import com.yandex.avatargenerator.feature.auth.domain.LoginUseCase
+import com.yandex.avatargenerator.feature.auth.domain.LoginWithYandexUseCase
 import com.yandex.avatargenerator.feature.auth.domain.LogoutUseCase
 import com.yandex.avatargenerator.feature.auth.domain.RegisterUseCase
+import com.yandex.avatargenerator.feature.auth.domain.YandexAuthRequestFactory
 import com.yandex.avatargenerator.feature.auth.ui.login.LoginViewModel
 import com.yandex.avatargenerator.feature.auth.ui.register.RegisterViewModel
 import org.koin.core.module.dsl.factoryOf
@@ -25,9 +28,11 @@ val authModule = module {
     single<AuthRepository> {
         AuthRepositoryImpl(client = get(), tokenStore = get(), userStore = get())
     }
+    single<YandexAuthRequestFactory> { YandexAuthRequestFactoryImpl() }
     factoryOf(::IsAuthorizedUseCase)
     factoryOf(::CurrentUserUseCase)
     factoryOf(::LoginUseCase)
+    factoryOf(::LoginWithYandexUseCase)
     factoryOf(::RegisterUseCase)
     factoryOf(::LogoutUseCase)
     viewModelOf(::LoginViewModel)

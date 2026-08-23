@@ -13,6 +13,7 @@ COPY requirements.txt ./
 
 # Исходники копируем ПОСЛЕДНИМИ — они меняются чаще всего.
 COPY src ./src
+COPY sql ./sql
 
 # Собираем Release-версию бинарника ya_brander
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
@@ -39,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libfmt8 \
         libcctz2 \
         libyaml-cpp0.7 \
+        libhiredis0.14 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

@@ -7,7 +7,8 @@ nonisolated protocol ProjectServiceProtocol: Sendable {
     func deleteProject(id: UUID) async throws
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
-    func generate(projectID: UUID, prompt: String) async throws -> URL?
+    func fetchModels() async throws -> [GenerationModel]
+    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL?
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL
 }
 
@@ -31,7 +32,7 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         let dto: ProjectDTO = try await client.request(
             .get,
             .project(id: id),
-            authorization: .required
+            authorization: .optional
         )
         return Project(dto: dto)
     }
@@ -73,12 +74,23 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         return response.messages
     }
 
-    func generate(projectID: UUID, prompt: String) async throws -> URL? {
+    func fetchModels() async throws -> [GenerationModel] {
+        let response: ModelsResponseDTO = try await client.request(
+            .get,
+            .models,
+            authorization: .none
+        )
+        return response.data.map {
+            GenerationModel(remoteID: $0.id, owner: $0.ownedBy)
+        }
+    }
+
+    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL? {
         let response: GenerateResponseDTO = try await client.request(
             .post,
             .generate(projectID: projectID),
             authorization: .required,
-            body: GenerateProjectRequest(prompt: prompt),
+            body: GenerateProjectRequest(prompt: prompt, model: modelID),
             timeout: 180
         )
         return response.url
@@ -137,6 +149,16 @@ private nonisolated struct UpdateVisibilityRequest: Encodable, Sendable {
 
 private nonisolated struct GenerateProjectRequest: Encodable, Sendable {
     let prompt: String
+    let model: String
+}
+
+private nonisolated struct ModelsResponseDTO: Decodable, Sendable {
+    let data: [ModelDTO]
+}
+
+private nonisolated struct ModelDTO: Decodable, Sendable {
+    let id: String
+    let ownedBy: String?
 }
 
 private nonisolated struct GenerateResponseDTO: Decodable, Sendable {

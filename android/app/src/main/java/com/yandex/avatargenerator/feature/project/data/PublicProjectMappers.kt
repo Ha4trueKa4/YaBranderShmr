@@ -1,8 +1,9 @@
 package com.yandex.avatargenerator.feature.project.data
 
+import com.yandex.avatargenerator.core.data.toInstantOrNull
 import com.yandex.avatargenerator.core.domain.NetworkException
+import com.yandex.avatargenerator.core.network.dto.ProjectDescriptionDto
 import com.yandex.avatargenerator.feature.profile.data.dto.UserProfileResponseDto
-import com.yandex.avatargenerator.feature.project.data.dto.ProjectDescriptionDto
 import com.yandex.avatargenerator.feature.project.data.dto.ProjectDto
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProject
 import com.yandex.avatargenerator.feature.project.domain.model.PublicProjectAuthor

@@ -12,6 +12,7 @@ export interface EditorToolbarProps {
   canUndo: boolean
   activeTool: CanvasTool
   isCreatingProjectCopy: boolean
+  isProjectPublic: boolean
   isSavingVersion: boolean
   onBack: () => void
   onCreateCopy: () => void
@@ -19,6 +20,7 @@ export interface EditorToolbarProps {
   onExport: () => void
   onOpenProfile: () => void
   onOpenVersionHistory: () => void
+  onToggleProjectVisibility: () => void
   onToolChange: (tool: CanvasTool) => void
   onRedo: () => void
   onSaveVersion: () => void
@@ -35,6 +37,7 @@ export function EditorToolbar({
   canUndo,
   activeTool,
   isCreatingProjectCopy,
+  isProjectPublic,
   isSavingVersion,
   onBack,
   onCreateCopy,
@@ -42,6 +45,7 @@ export function EditorToolbar({
   onExport,
   onOpenProfile,
   onOpenVersionHistory,
+  onToggleProjectVisibility,
   onToolChange,
   onRedo,
   onSaveVersion,
@@ -62,7 +66,10 @@ export function EditorToolbar({
       </IconButton>
       <ProjectTitle
         canEdit={canEdit}
+        isProjectPublic={isProjectPublic}
+        isVisibilityUpdating={isSavingVersion}
         onSubmit={onEditProjectName}
+        onToggleVisibility={onToggleProjectVisibility}
         title={projectName}
       />
       {canEdit && (

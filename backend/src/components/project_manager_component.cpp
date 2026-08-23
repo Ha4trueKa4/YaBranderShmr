@@ -4,8 +4,18 @@
 #include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/redis/client.hpp>
+#include <userver/storages/redis/component.hpp>
+#include <userver/engine/deadline.hpp>
+#include <userver/engine/sleep.hpp>
+#include <userver/utils/async.hpp>
 #include <userver/utils/uuid4.hpp>
 #include <shared_mutex>
+#include <cstdint>
+
+#include <ya_brander/sql_queries.hpp>
+
+#include "../utils/postgres_retry.hpp"
 
 namespace ya_brander::components {
 
@@ -16,8 +26,8 @@ namespace {
 // Сколько генераций может выполняться одновременно (SendPrompt к LLM +
 // SaveVersion) — защита bg-task-processor и внешних зависимостей (LLM API,
 // S3) от всплеска параллельных запросов.
-constexpr std::size_t kMaxConcurrentGenerations = 8;
-constexpr std::size_t kMaxGenerationOutputTokens = 20000;
+constexpr std::size_t kMaxConcurrentGenerations = 40;
+constexpr std::size_t kMaxGenerationOutputTokens = 40000;
 
 std::string EscapeXml(const std::string& input) {
     std::string output;
@@ -45,13 +55,14 @@ ProjectManagerComponent::ProjectManagerComponent(
       llm_client_(context.FindComponent<LLMClientComponent>()),
       prompt_constructor_(context.FindComponent<PromptConstructorComponent>()),
 	  prompt_polisher_(context.FindComponent<PromptPolisherComponent>()),
+      redis_client_(context.FindComponent<userver::components::Redis>("redis").GetClient("ya_brander_jobs")),
       generation_semaphore_(kMaxConcurrentGenerations),
       bts_(context.GetTaskProcessor("bg-task-processor")) {}
 
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
+        sql::kCreateProject,
         author_id, name, description
     );
 
@@ -66,11 +77,11 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
-        id
-    );
+    auto res = utils::ExecuteSelectWithRetry("select-project", [&] {
+      return pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kSlave,
+          sql::kSelectProject, id);
+    });
 
     if (res.IsEmpty()) return std::nullopt;
 
@@ -95,8 +106,7 @@ void ProjectManagerComponent::UpdateProject(
   if (name.has_value()) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET name = $2, updated_at = NOW() "
-        "WHERE id = $1::uuid",
+        sql::kUpdateProjectName,
         id, *name);
   }
   if (is_public.has_value()) {
@@ -104,14 +114,12 @@ void ProjectManagerComponent::UpdateProject(
       version_storage_.SetLatestAcl(id, true);
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=false, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kPublishProject,
           id);
     } else {
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=true, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kMakeProjectPrivate,
           id);
       version_storage_.SetLatestAcl(id, false);
     }
@@ -129,7 +137,7 @@ void ProjectManagerComponent::UpdateProject(
 
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "DELETE FROM projects WHERE id = $1::uuid", id
+        sql::kDeleteProject, id
     );
 }
 
@@ -140,21 +148,24 @@ constexpr std::size_t kMaxReferenceProjects = 2;
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
     const std::string& project_id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT chat_history FROM projects WHERE id = $1::uuid",
-        project_id);
+    auto res = utils::ExecuteSelectWithRetry(
+        "select-project-chat-history", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectProjectChatHistory, project_id);
+        });
     if (res.IsEmpty()) return userver::formats::json::MakeArray();
     return res[0]["chat_history"].As<userver::formats::json::Value>();
 }
 
 std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
-    const std::string& project_id, std::size_t limit) {
+    const std::string& project_id, std::size_t limit, const std::string& exclude_job_id) {
     auto history_json = FetchChatHistoryJson(project_id);
 
     std::vector<std::string> prompts;
     for (const auto& entry : history_json) {
-        if (entry["role"].As<std::string>("") == "user") {
+        if (entry["role"].As<std::string>("") == "user" &&
+            entry["job_id"].As<std::string>("") != exclude_job_id) {
             prompts.push_back(entry["text"].As<std::string>(""));
         }
     }
@@ -168,9 +179,7 @@ void ProjectManagerComponent::AppendUserMessage(const std::string& project_id, c
                                                  const std::string& user_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'user', 'text', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendUserMessage,
         project_id, user_message, job_id);
 }
 
@@ -178,9 +187,7 @@ void ProjectManagerComponent::AppendAssistantSuccess(const std::string& project_
                                                       const std::string& version_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'version_id', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantSuccess,
         project_id, version_id, job_id);
 }
 
@@ -188,65 +195,42 @@ void ProjectManagerComponent::AppendAssistantError(const std::string& project_id
                                                     const std::string& error_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'error', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantError,
         project_id, error_message, job_id);
 }
 
 void ProjectManagerComponent::AppendAssistantCancelled(const std::string& project_id, const std::string& job_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'status', 'cancelled', 'job_id', $2::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantCancelled,
         project_id, job_id);
 }
 
 userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
     auto history = FetchChatHistoryJson(project_id);
 
-    // Не больше одного активного job'а на проект (см. active_job_by_project_
-    // в StartGeneration), поэтому достаточно одного точечного lookup, а не
-    // перебора jobs_/батча по списку job_id.
-    std::shared_ptr<JobEntry> active_entry;
-    std::string active_job_id;
-    {
-        std::lock_guard lock(jobs_mutex_);
-        auto active_it = active_job_by_project_.find(project_id);
-        if (active_it != active_job_by_project_.end()) {
-            active_job_id = active_it->second;
-            auto job_it = jobs_.find(active_job_id);
-            if (job_it != jobs_.end()) {
-                active_entry = job_it->second;
-            }
-        }
-    }
-    if (!active_entry) {
+    // Не больше одного активного job'а на проект (см. active_job:{project_id}
+    // в StartGenerationJob), поэтому достаточно одного точечного lookup в Redis.
+    auto active_job_id = redis_client_->Get(ActiveJobKey(project_id), {}).Get();
+    if (!active_job_id) {
         return history;
     }
 
-    bool still_pending;
-    bool cancel_requested;
-    {
-        std::lock_guard job_lock(active_entry->mutex);
-        still_pending = active_entry->status == JobStatus::kPending;
-        cancel_requested = active_entry->cancel_requested;
-    }
-    if (!still_pending) {
+    auto snapshot = ReadJob(*active_job_id);
+    if (!snapshot || snapshot->status != JobStatus::kPending) {
         return history;
     }
 
     // Заглушка добавляется только в возвращаемый JSON, в БД ничего не пишем —
     // сообщение пользователя для этого job'а всегда последнее в chat_history
-    // (StartGeneration резервирует active_job_by_project_ и пишет
+    // (StartGenerationJob резервирует active_job:{project_id} и пишет
     // AppendUserMessage раньше, чем что-либо ещё может добавиться), поэтому
     // достаточно просто дописать заглушку в конец скопированного массива.
     userver::formats::json::ValueBuilder result{history};
     userver::formats::json::ValueBuilder pending;
     pending["role"] = "assistant";
-    pending["status"] = cancel_requested ? "cancelling" : "pending";
-    pending["job_id"] = active_job_id;
+    pending["status"] = snapshot->cancel_requested ? "cancelling" : "pending";
+    pending["job_id"] = *active_job_id;
     pending["created_at"] = userver::utils::datetime::Timestring(std::chrono::system_clock::now(), "UTC");;
     result.PushBack(std::move(pending));
     return result.ExtractValue();
@@ -271,84 +255,211 @@ std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
     return result;
 }
 
-std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt,
-                                                    const std::string& model, const std::string& caller_id,
-                                                    const std::vector<std::string>& reference_project_ids) {
-    std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
+std::string ProjectManagerComponent::RunInitialGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model,
+    const std::string& caller_id, const std::vector<std::string>& reference_project_ids) {
+    // Без истории: это первая генерация проекта, предыдущих запросов по
+    // определению нет. AppendUserMessage уже синхронно записал этот же prompt
+    // в chat_history до запуска этой корутины — GetRecentUserPrompts вернул
+    // бы его же как "историю", задвоив текущий запрос ещё раз (в сыром виде,
+    // рядом с уже отполированным блоком "ЗАПРОС ПОЛЬЗОВАТЕЛЯ" ниже).
+    std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
+    std::string safe_prompt = EscapeXml(polished_prompt_text);
+    auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
+    LlmPrompt full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, {}, reference_svgs);
 
-    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
+    auto new_data = llm_client_.SendPrompt(
+        full_prompt, kMaxGenerationOutputTokens, model, 0.1);
+    return version_storage_.SaveVersion(project_id, new_data);
+}
+
+std::string ProjectManagerComponent::RunEditGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model,
+    const std::string& job_id) {
+    std::string current_state = version_storage_.GetLatestVersionData(project_id);
+
+    // exclude_job_id=job_id: AppendUserMessage уже синхронно записал текущий
+    // prompt в chat_history под этим же job_id до запуска этой корутины —
+    // без исключения он попал бы в "историю" ещё раз, задвоив себя рядом с
+    // блоком "ЗАПРОС ПОЛЬЗОВАТЕЛЯ" ниже.
+    std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit, job_id);
     for (auto& past_message : history) {
         past_message = EscapeXml(past_message);
     }
 
-    LlmPrompt full_prompt;
-    if (current_state.empty() || current_state == kDefaultSvg) {
-		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
-		std::string safe_prompt = EscapeXml(polished_prompt_text);
-        auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history, reference_svgs);
-    }else {
-		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
-		std::string safe_prompt = EscapeXml(polished_prompt_text);
-        full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
-    }
+    std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
+    std::string safe_prompt = EscapeXml(polished_prompt_text);
+    LlmPrompt full_prompt = prompt_constructor_.BuildEditPrompt(current_state, safe_prompt, history);
+
     auto new_data = llm_client_.SendPrompt(
         full_prompt, kMaxGenerationOutputTokens, model, 0.1);
     return version_storage_.SaveVersion(project_id, new_data);
 }
 
 namespace {
-constexpr std::chrono::minutes kJobRetention{30};
+constexpr std::chrono::seconds kJobRetention{30 * 60};
 // Зависший kPending (задача не запустилась/не завершилась) переживает
 // обычный kJobRetention — иначе легитимные ещё выполняющиеся генерации
-// стирались бы из-под клиента. Чистим их только как страховку намного позже.
-constexpr std::chrono::minutes kStuckPendingRetention{60};
+// стирались бы из-под клиента. Redis сам вычищает такие записи по истечении
+// TTL, никакого отдельного скана-чистильщика больше не нужно.
+constexpr std::chrono::seconds kStuckPendingRetention{60 * 60};
+
+// Насколько часто WaitForGeneration перечитывает статус job'а из Redis и
+// насколько часто watcher-корутина в StartGeneration проверяет, не попросили
+// ли отменить job с ДРУГОГО инстанса — простой поллинг вместо Pub/Sub,
+// сознательно: генерация и так занимает секунды (сетевой вызов к LLM), так
+// что задержка реакции в пределах этих интервалов не заметна на практике, а
+// поллинг избавляет от гонок вида "подписался после того, как событие уже
+// произошло", свойственных Pub/Sub.
+constexpr std::chrono::milliseconds kWaitPollInterval{200};
+constexpr std::chrono::milliseconds kCancelPollInterval{300};
 }  // namespace
 
-void ProjectManagerComponent::PruneOldJobsLocked() {
-    const auto now = std::chrono::steady_clock::now();
-    for (auto it = jobs_.begin(); it != jobs_.end();) {
-        JobStatus status;
-        {
-            std::lock_guard job_lock(it->second->mutex);
-            status = it->second->status;
-        }
-        const auto age = now - it->second->created_at;
-        const bool expired = status == JobStatus::kPending ? age > kStuckPendingRetention : age > kJobRetention;
-        if (expired) {
-            auto active_it = active_job_by_project_.find(it->second->project_id);
-            if (active_it != active_job_by_project_.end() && active_it->second == it->first) {
-                active_job_by_project_.erase(active_it);
-            }
-            it = jobs_.erase(it);
-        } else {
-            ++it;
-        }
+std::string ProjectManagerComponent::JobKey(const std::string& job_id) { return "job:" + job_id; }
+std::string ProjectManagerComponent::ActiveJobKey(const std::string& project_id) { return "active_job:" + project_id; }
+
+std::string ProjectManagerComponent::JobStatusToString(JobStatus status) {
+    switch (status) {
+        case JobStatus::kPending: return "pending";
+        case JobStatus::kDone: return "done";
+        case JobStatus::kError: return "error";
+        case JobStatus::kCancelled: return "cancelled";
     }
+    return "pending";
 }
 
-std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt,
-                                                     const std::string& model, const std::string& caller_id,
-                                                     const std::vector<std::string>& reference_project_ids) {
-    std::string job_id = userver::utils::generators::GenerateUuid();
-    auto entry = std::make_shared<JobEntry>();
-    entry->project_id = project_id;
+ProjectManagerComponent::JobStatus ProjectManagerComponent::JobStatusFromString(const std::string& value) {
+    if (value == "done") return JobStatus::kDone;
+    if (value == "error") return JobStatus::kError;
+    if (value == "cancelled") return JobStatus::kCancelled;
+    return JobStatus::kPending;
+}
 
-    // Проверка "нет ли уже активной генерации для проекта" и резервирование
-    // слота под неё — одной атомарной операцией под jobs_mutex_. Если бы это
-    // были два отдельных захвата лока, два конкурентных StartGeneration для
-    // одного проекта могли бы оба проскочить проверку раньше, чем любой из
-    // них зарезервирует active_job_by_project_.
-    {
-        std::lock_guard lock(jobs_mutex_);
-        PruneOldJobsLocked();
-        auto active_it = active_job_by_project_.find(project_id);
-        if (active_it != active_job_by_project_.end()) {
-            throw GenerationInProgressError(project_id, active_it->second);
-        }
-        jobs_.emplace(job_id, entry);
-        active_job_by_project_.emplace(project_id, job_id);
+std::optional<ProjectManagerComponent::JobSnapshot> ProjectManagerComponent::ReadJob(const std::string& job_id) {
+    auto fields = redis_client_->Hgetall(JobKey(job_id), {}).Get();
+    if (fields.empty()) return std::nullopt;
+
+    auto field = [&](const char* name) -> std::string {
+        auto it = fields.find(name);
+        return it != fields.end() ? it->second : std::string{};
+    };
+
+    JobSnapshot snapshot;
+    snapshot.project_id = field("project_id");
+    snapshot.status = JobStatusFromString(field("status"));
+    snapshot.result_version_id = field("result_version_id");
+    snapshot.error_message = field("error_message");
+    snapshot.cancel_requested = field("cancel_requested") == "1";
+    return snapshot;
+}
+
+std::optional<std::string> ProjectManagerComponent::ReserveActiveJob(
+    const std::string& project_id, const std::string& job_id) {
+    bool reserved = redis_client_
+                        ->SetIfNotExist(
+                            ActiveJobKey(project_id), job_id,
+                            std::chrono::duration_cast<std::chrono::milliseconds>(kStuckPendingRetention), {})
+                        .Get();
+    if (reserved) return std::nullopt;
+    return redis_client_->Get(ActiveJobKey(project_id), {}).Get().value_or(std::string{});
+}
+
+void ProjectManagerComponent::ReleaseReservedJob(const std::string& project_id, const std::string& job_id) {
+    redis_client_->Del(std::vector<std::string>{ActiveJobKey(project_id), JobKey(job_id)}, {}).Get();
+}
+
+void ProjectManagerComponent::WriteInitialJob(const std::string& job_id, const std::string& project_id) {
+    const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count();
+    redis_client_
+        ->Hmset(
+            JobKey(job_id),
+            {
+                {"project_id", project_id},
+                {"status", JobStatusToString(JobStatus::kPending)},
+                {"result_version_id", ""},
+                {"error_message", ""},
+                {"cancel_requested", "0"},
+                {"created_at", std::to_string(now)},
+            },
+            {})
+        .Get();
+    redis_client_->Expire(JobKey(job_id), kStuckPendingRetention, {}).Get();
+}
+
+void ProjectManagerComponent::SetCancelRequested(const std::string& job_id) {
+    redis_client_->Hset(JobKey(job_id), "cancel_requested", "1", {}).Get();
+}
+
+bool ProjectManagerComponent::IsCancelRequested(const std::string& job_id) {
+    auto value = redis_client_->Hget(JobKey(job_id), "cancel_requested", {}).Get();
+    return value.has_value() && *value == "1";
+}
+
+void ProjectManagerComponent::WriteTerminalJob(
+    const std::string& job_id, const std::string& project_id, JobStatus status,
+    const std::string& result_version_id, const std::string& error_message) {
+    // Снятие active_job:{project_id} и запись финального статуса job:{job_id}
+    // должны быть одной атомарной операцией: клиент, получивший финальный
+    // статус из WaitForGeneration сразу после HSET, мог бы тут же словить
+    // спурьезный 409 на POST .../generate, если DEL слота на сервере ещё не
+    // применился — простого "сначала DEL, потом HSET" через сеть недостаточно.
+    static const std::string kScript = R"(
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    redis.call('DEL', KEYS[1])
+end
+redis.call('HSET', KEYS[2], 'status', ARGV[2], 'result_version_id', ARGV[3], 'error_message', ARGV[4])
+redis.call('EXPIRE', KEYS[2], ARGV[5])
+return 1
+)";
+    redis_client_
+        ->Eval<std::int64_t>(
+            kScript, {ActiveJobKey(project_id), JobKey(job_id)},
+            {job_id, JobStatusToString(status), result_version_id, error_message,
+             std::to_string(kJobRetention.count())},
+            {})
+        .Get();
+}
+
+models::GenerationJob ProjectManagerComponent::ToGenerationJob(
+    const std::string& job_id, const std::string& project_id, const JobSnapshot& snapshot) {
+    models::GenerationJob job;
+    job.id = job_id;
+    job.project_id = project_id;
+    switch (snapshot.status) {
+        case JobStatus::kPending:
+            // Отмену уже запросили (через CancelGeneration), но фоновая
+            // корутина (возможно, на другом инстансе) ещё не завершилась —
+            // без этой ветки клиент, опросивший ПОСЛЕ чужого cancel, видел бы
+            // просто "pending", будто отмены не было вовсе.
+            job.status = snapshot.cancel_requested ? "cancelling" : "pending";
+            break;
+        case JobStatus::kDone:
+            job.status = "done";
+            job.result_url = version_storage_.GetVersionUrl(project_id, snapshot.result_version_id);
+            break;
+        case JobStatus::kError:
+            job.status = "error";
+            job.error_message = snapshot.error_message;
+            break;
+        case JobStatus::kCancelled:
+            job.status = "cancelled";
+            break;
     }
+    return job;
+}
+
+std::string ProjectManagerComponent::StartGenerationJob(
+    const std::string& project_id, const std::string& prompt,
+    std::function<std::string(const std::string& job_id)> run_core_generation) {
+    std::string job_id = userver::utils::generators::GenerateUuid();
+
+    auto existing_job_id = ReserveActiveJob(project_id, job_id);
+    if (existing_job_id) {
+        throw GenerationInProgressError(project_id, *existing_job_id);
+    }
+    WriteInitialJob(job_id, project_id);
 
     try {
         // Сообщение пользователя пишем сразу: если это бросит исключение
@@ -356,45 +467,50 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         // проект не остался навсегда "занят" несостоявшимся job'ом.
         AppendUserMessage(project_id, job_id, prompt);
     } catch (...) {
-        std::lock_guard lock(jobs_mutex_);
-        jobs_.erase(job_id);
-        active_job_by_project_.erase(project_id);
+        ReleaseReservedJob(project_id, job_id);
         throw;
     }
 
-    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
-        // Токен для внешней отмены (CancelGeneration) регистрируем сразу же,
-        // в самом начале корутины — до захвата семафора, чтобы отмена
-        // работала, даже пока job ещё стоит в очереди на генерацию.
-        {
-            std::lock_guard job_lock(entry->mutex);
-            entry->cancel_token = userver::engine::current_task::GetCancellationToken();
-            if (entry->cancel_requested) {
-                entry->cancel_token->RequestCancel();
-            }
-        }
+    bts_.AsyncDetach("generation-job", [this, project_id, job_id,
+                                        run_core_generation = std::move(run_core_generation)] {
+        // Токен для внешней (в т.ч. с другого инстанса) отмены регистрируем
+        // сразу же, в самом начале корутины — до захвата семафора, чтобы
+        // отмена работала, даже пока job ещё стоит в очереди на генерацию.
+        auto cancel_token = userver::engine::current_task::GetCancellationToken();
 
+        // Опрашивает Redis на предмет cancel_requested и, если он выставлен
+        // (с любого инстанса — см. CancelGeneration), прерывает саму
+        // генерацию через cancel_token. Без этой watcher-корутины отмена,
+        // пришедшая на ДРУГОЙ инстанс, никогда не добралась бы до процесса,
+        // который реально выполняет RunGeneration.
+        auto cancel_watcher = userver::utils::Async(
+            "generation-cancel-watcher",
+            [this, job_id, cancel_token]() mutable {
+                while (!userver::engine::current_task::ShouldCancel()) {
+                    if (IsCancelRequested(job_id)) {
+                        cancel_token.RequestCancel();
+                        return;
+                    }
+                    userver::engine::InterruptibleSleepFor(kCancelPollInterval);
+                }
+            });
 
 		// Статус job'а зависит только от того, чем закончилась сама
-        // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
-        // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
-        // статус уже определён и разослан ожидающим в WaitForGeneration: её
-        // падение не должно превращать уже случившийся исход в другой —
-        // иначе клиент, опросивший чуть позже, увидел бы не то, что было.
+        // генерация (run_core_generation): успехом, ошибкой или отменой.
+        // Запись результата в chat_history — best-effort бухгалтерия ПОСЛЕ
+        // того, как статус уже определён и разослан ожидающим в
+        // WaitForGeneration: её падение не должно превращать уже случившийся
+        // исход в другой — иначе клиент, опросивший чуть позже, увидел бы не
+        // то, что было.
         std::string version_id;
         JobStatus outcome;
         std::string error_message;
         try {
             std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
+            version_id = run_core_generation(job_id);
             outcome = JobStatus::kDone;
         } catch (const std::exception& e) {
-            bool was_cancelled;
-            {
-                std::lock_guard job_lock(entry->mutex);
-                was_cancelled = entry->cancel_requested;
-            }
-            if (was_cancelled) {
+            if (IsCancelRequested(job_id)) {
                 outcome = JobStatus::kCancelled;
                 // cancel_requested — это флаг "отмену запросили", а не "именно
                 // это исключение вызвано отменой": если поймана НЕ связанная с
@@ -411,31 +527,16 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
             }
         }
 
-        // Слот active_job_by_project_ освобождаем ДО того, как исход станет
-        // видимым снаружи (entry->status + NotifyAll ниже) — иначе клиент,
-        // получивший "done"/"error"/"cancelled" из WaitForGeneration, мог бы
-        // тут же получить спурьезный 409 на новый POST .../generate: его
-        // StartGeneration успел бы проверить active_job_by_project_ раньше,
-        // чем эта же корутина (на отдельном bg-task-processor) дошла бы сюда.
-        // TODO(redis): в редис-версии это должно стать одной атомарной
-        // операцией (Lua-скрипт/MULTI-EXEC: снять active_job:{project_id} и
-        // записать финальный статус job:{job_id} одной транзакцией) — простого
-        // "поменять порядок двух критических секций" через сеть недостаточно.
-        {
-            std::lock_guard lock(jobs_mutex_);
-            auto active_it = active_job_by_project_.find(project_id);
-            if (active_it != active_job_by_project_.end() && active_it->second == job_id) {
-                active_job_by_project_.erase(active_it);
-            }
-        }
+        // Watcher больше не нужен — исход уже определён локально. Он либо
+        // сам заметит свою отмену на следующей проверке ShouldCancel() и
+        // выйдет, либо (если уже успел вызвать RequestCancel() из-за
+        // подтверждённой отмены) и так вот-вот завершится — Get() просто
+        // дожидается этого, не бросая исключение: лямбда watcher'а никогда
+        // не кидает.
+        cancel_watcher.RequestCancel();
+        cancel_watcher.Get();
 
-        {
-            std::lock_guard job_lock(entry->mutex);
-            entry->status = outcome;
-            if (outcome == JobStatus::kDone) entry->result_version_id = version_id;
-            if (outcome == JobStatus::kError) entry->error_message = error_message;
-        }
-        entry->cv.NotifyAll();
+        WriteTerminalJob(job_id, project_id, outcome, version_id, error_message);
 
         // Без ретраев: при падении реальный исход (версия сохранена / job
         // отменён) не меняется — просто не появится записью в chat_history.
@@ -473,109 +574,60 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
     return job_id;
 }
 
+std::string ProjectManagerComponent::StartInitialGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model,
+    const std::string& caller_id, const std::vector<std::string>& reference_project_ids) {
+    return StartGenerationJob(project_id, prompt,
+        [this, project_id, prompt, model, caller_id, reference_project_ids](const std::string&) {
+            return RunInitialGeneration(project_id, prompt, model, caller_id, reference_project_ids);
+        });
+}
+
+std::string ProjectManagerComponent::StartEditGeneration(
+    const std::string& project_id, const std::string& prompt, const std::string& model) {
+    return StartGenerationJob(project_id, prompt,
+        [this, project_id, prompt, model](const std::string& job_id) {
+            return RunEditGeneration(project_id, prompt, model, job_id);
+        });
+}
+
 std::optional<models::GenerationJob> ProjectManagerComponent::WaitForGeneration(
     const std::string& project_id, const std::string& job_id, std::chrono::milliseconds timeout) {
-    std::shared_ptr<JobEntry> entry;
-    {
-        std::lock_guard lock(jobs_mutex_);
-        auto it = jobs_.find(job_id);
-        if (it == jobs_.end() || it->second->project_id != project_id) {
+    auto deadline = userver::engine::Deadline::FromDuration(timeout);
+
+    while (true) {
+        auto snapshot = ReadJob(job_id);
+        if (!snapshot || snapshot->project_id != project_id) {
             return std::nullopt;
         }
-        entry = it->second;
+        if (snapshot->status != JobStatus::kPending || deadline.IsReached()) {
+            return ToGenerationJob(job_id, project_id, *snapshot);
+        }
+        userver::engine::InterruptibleSleepFor(kWaitPollInterval);
+        if (userver::engine::current_task::ShouldCancel()) {
+            // Клиент отвалился/запрос отменён — не тратим больше циклов на
+            // поллинг, отдаём последний известный (всё ещё pending) снимок.
+            return ToGenerationJob(job_id, project_id, *snapshot);
+        }
     }
-
-    JobStatus status;
-    bool cancel_requested;
-    std::string result_version_id;
-    std::string error_message;
-    {
-        std::unique_lock lock(entry->mutex);
-        entry->cv.WaitFor(lock, timeout, [&] { return entry->status != JobStatus::kPending; });
-        status = entry->status;
-        cancel_requested = entry->cancel_requested;
-        result_version_id = entry->result_version_id;
-        error_message = entry->error_message;
-    }
-
-    models::GenerationJob job;
-    job.id = job_id;
-    job.project_id = project_id;
-    switch (status) {
-        case JobStatus::kPending:
-            // Отмену уже запросили (через CancelGeneration), но фоновая
-            // корутина ещё не завершилась — тот же переходный статус, что
-            // CancelGeneration возвращает сама. Без этой ветки клиент,
-            // опросивший через long-poll ПОСЛЕ чужого cancel, видел бы просто
-            // "pending", будто отмены не было вовсе.
-            job.status = cancel_requested ? "cancelling" : "pending";
-            break;
-        case JobStatus::kDone:
-            job.status = "done";
-            job.result_url = version_storage_.GetVersionUrl(project_id, result_version_id);
-            break;
-        case JobStatus::kError:
-            job.status = "error";
-            job.error_message = error_message;
-            break;
-        case JobStatus::kCancelled:
-            job.status = "cancelled";
-            break;
-    }
-    return job;
 }
 
 std::optional<models::GenerationJob> ProjectManagerComponent::CancelGeneration(
     const std::string& project_id, const std::string& job_id) {
-    std::shared_ptr<JobEntry> entry;
-    {
-        std::lock_guard lock(jobs_mutex_);
-        auto it = jobs_.find(job_id);
-        if (it == jobs_.end() || it->second->project_id != project_id) {
-            return std::nullopt;
-        }
-        entry = it->second;
+    auto snapshot = ReadJob(job_id);
+    if (!snapshot || snapshot->project_id != project_id) {
+        return std::nullopt;
     }
 
-    JobStatus status;
-    std::string result_version_id;
-    std::string error_message;
-    {
-        std::lock_guard job_lock(entry->mutex);
-        status = entry->status;
-        if (status == JobStatus::kPending) {
-            entry->cancel_requested = true;
-            if (entry->cancel_token) {
-                entry->cancel_token->RequestCancel();
-            }
-        }
-        result_version_id = entry->result_version_id;
-        error_message = entry->error_message;
+    if (snapshot->status == JobStatus::kPending) {
+        // Отмена запрошена, но фоновая корутина (возможно, на другом
+        // инстансе — см. cancel_watcher в StartGenerationJob) ещё не успела её
+        // заметить/обработать — финальный статус "cancelled" появится чуть
+        // позже, см. WaitForGeneration.
+        SetCancelRequested(job_id);
+        snapshot->cancel_requested = true;
     }
-
-    models::GenerationJob job;
-    job.id = job_id;
-    job.project_id = project_id;
-    switch (status) {
-        case JobStatus::kPending:
-            // Отмена запрошена, но фоновая корутина ещё не успела её
-            // заметить/обработать — финальный статус "cancelled" появится
-            // чуть позже, см. WaitForGeneration.
-            job.status = "cancelling";
-            break;
-        case JobStatus::kDone:
-            job.status = "done";
-            job.result_url = version_storage_.GetVersionUrl(project_id, result_version_id);
-            break;
-        case JobStatus::kError:
-            job.status = "error";
-            job.error_message = error_message;
-            break;
-        case JobStatus::kCancelled:
-            job.status = "cancelled";
-            break;
-    }
-    return job;
+    return ToGenerationJob(job_id, project_id, *snapshot);
 }
 
 std::vector<models::Version> ProjectManagerComponent::ListVersions(

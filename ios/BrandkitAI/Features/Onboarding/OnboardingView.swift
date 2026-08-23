@@ -9,7 +9,7 @@ import SwiftUI
 import Observation
 
 struct OnboardingView: View {
-    var onSignUp: () -> Void = {}
+    var onGetStarted: () -> Void = {}
     var onSignIn: () -> Void = {}
     
     private let onboardingOpenAnimationDuration: Double = 1.5
@@ -41,7 +41,7 @@ struct OnboardingView: View {
                         page += 1
                     }
                 } else {
-                    onSignUp()
+                    onGetStarted()
                 }
             } label: {
                 Text(page < lastPage ? "Next" : "Get Started")
