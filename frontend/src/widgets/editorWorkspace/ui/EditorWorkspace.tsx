@@ -255,6 +255,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   const inspectorProps = {
     definitions: editorStore.document.definitions,
+    onColorChangeEnd: editorStore.commitHistoryTransaction,
+    onColorChangeStart: editorStore.beginHistoryTransaction,
     measuredRotationCenter:
       measuredRotationCenter &&
       measuredRotationCenter.nodeId === editorStore.selectedNode?.id

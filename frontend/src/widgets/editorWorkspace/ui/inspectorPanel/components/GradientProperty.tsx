@@ -6,6 +6,8 @@ import { FillProperty } from './FillProperty'
 
 interface GradientPropertyProps {
   gradient: GradientDefinition
+  onColorChangeEnd?: () => void
+  onColorChangeStart?: () => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
   onStopColorChange: (stopIndex: number, color: string) => void
@@ -13,6 +15,8 @@ interface GradientPropertyProps {
 
 export function GradientProperty({
   gradient,
+  onColorChangeEnd,
+  onColorChangeStart,
   onEyeDropperEnd,
   onEyeDropperStart,
   onStopColorChange,
@@ -30,6 +34,8 @@ export function GradientProperty({
         <FillProperty
           fill={stop.color}
           key={stop.offset}
+          onColorChangeEnd={onColorChangeEnd}
+          onColorChangeStart={onColorChangeStart}
           onFillChange={(color) => onStopColorChange(index, color)}
           onEyeDropperEnd={onEyeDropperEnd}
           onEyeDropperStart={onEyeDropperStart}
