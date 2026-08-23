@@ -32,11 +32,11 @@ export function useEditorProjectActions({
   const { t } = useTranslation()
   const [projectName, setProjectName] = useState(initialProjectName)
   const [isProjectPublic, setIsProjectPublic] = useState(initialIsPublic)
+  const [isCopyingProject, setIsCopyingProject] = useState(false)
+  const isLeavingAfterCopyReference = useRef(false)
   const [savedProjectSvg, setSavedProjectSvg] = useState(() =>
     serializeSvg(document),
   )
-  const [isCopyingProject, setIsCopyingProject] = useState(false)
-  const isLeavingAfterCopyReference = useRef(false)
   const { isPending: isSavingVersion, mutateAsync: saveProjectVersion } =
     useUpdateProjectMetadataMutation()
   const { isPending: isCreatingProjectCopy, mutateAsync: createProject } =
@@ -136,16 +136,15 @@ export function useEditorProjectActions({
     setIsCopyingProject(true)
 
     try {
-      const createdProject = await createProject({ name: projectName })
+      const createdProject = await createProject({
+        data: serializeSvg(document),
+        name: projectName,
+      })
 
       if (!createdProject.id) {
         throw new TypeError('Created project ID is missing')
       }
 
-      await saveProjectVersion({
-        data: serializeSvg(document),
-        projectId: createdProject.id,
-      })
       isLeavingAfterCopyReference.current = true
       navigate(`/projects/${createdProject.id}`, { viewTransition: true })
       toast.info(t('Project copy created.'))
@@ -154,15 +153,7 @@ export function useEditorProjectActions({
     } finally {
       setIsCopyingProject(false)
     }
-  }, [
-    createProject,
-    document,
-    navigate,
-    projectName,
-    saveProjectVersion,
-    t,
-    toast,
-  ])
+  }, [createProject, document, navigate, projectName, t, toast])
 
   return {
     createCopy,

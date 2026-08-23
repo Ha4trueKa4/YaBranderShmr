@@ -27,6 +27,7 @@ export {
   zPostAuthYandexResponse,
   zPostProjectsBody,
   zPostProjectsByIdGenerateBody,
+  zPostProjectsByIdGenerateByJobIdCancelResponse,
   zPostProjectsByIdGeneratePath,
   zPostProjectsByIdGenerateResponse,
   zPostProjectsResponse,
