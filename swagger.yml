@@ -210,6 +210,94 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
+  /auth/yandex/link:
+    post:
+      summary: Привязать Yandex ID к текущему аккаунту
+      description: >
+        Закрывает флоу, на который ссылается 409 в POST /auth/yandex: когда
+        Yandex-профиль пришёл с email, уже занятым обычным (email+пароль)
+        аккаунтом, пользователь логинится по паролю как обычно (POST
+        /auth/login), получает JWT, и уже этим JWT привязывает Yandex ID
+        сюда. Тело запроса — то же {code}/{access_token}, что и у
+        POST /auth/yandex (см. YandexAuthRequest). Повторный вызов с тем же
+        Yandex-аккаунтом идемпотентен (просто 200).
+      tags: [ Auth ]
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexAuthRequest'
+      responses:
+        '200':
+          description: Yandex ID привязан (или уже был привязан к этому же аккаунту)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                Linked:
+                  summary: Привязка выполнена
+                  value:
+                    message: "Yandex ID linked successfully"
+                AlreadyLinkedSame:
+                  summary: Повторный вызов с тем же Yandex-аккаунтом
+                  value:
+                    message: "Yandex ID is already linked to this account"
+        '400':
+          description: Не передано ни code, ни access_token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "INVALID_REQUEST"
+                message: "Either code or access_token is required"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "User not found"
+        '409':
+          description: >
+            Конфликт привязки: либо у текущего пользователя уже привязан
+            другой Yandex ID, либо этот Yandex-аккаунт уже привязан к
+            другому пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                AccountAlreadyLinked:
+                  summary: У текущего аккаунта уже есть другая привязка
+                  value:
+                    code: "ACCOUNT_ALREADY_LINKED"
+                    message: "This account is already linked to a different Yandex ID"
+                YandexAccountAlreadyLinked:
+                  summary: Этот Yandex-аккаунт привязан к другому пользователю
+                  value:
+                    code: "YANDEX_ACCOUNT_ALREADY_LINKED"
+                    message: "This Yandex ID is already linked to another account"
+        '502':
+          description: Yandex API недоступен, code/access_token невалиден, либо не удалось получить профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "YANDEX_OAUTH_FAILED"
+                message: "Yandex authentication is temporarily unavailable. Please try again."
+        '500':
+          description: Внутренняя ошибка сервера
+
   /auth/method:
     get:
       summary: Способ входа текущего пользователя
