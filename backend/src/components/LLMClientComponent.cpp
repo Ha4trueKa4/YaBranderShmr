@@ -461,7 +461,7 @@ namespace ya_brander::components {
     request_body["input"] = prompt.input;
     if (is_openai) {
       request_body["store"] = false;
-      request_body["reasoning"]["effort"] = "none";
+      request_body["reasoning"]["effort"] = "medium";
     }
 
     auto json_value = request_body.ExtractValue();
