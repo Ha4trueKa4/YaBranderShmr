@@ -478,6 +478,16 @@ namespace ya_brander::components {
 
     request.timeout(240000);  // 240 секунд
 
+    if (is_openai) {
+        const char* proxy_env = std::getenv("https_proxy");
+        if (!proxy_env) {
+            proxy_env = std::getenv("HTTPS_PROXY");  // на случай другого регистра в окружении
+        }
+        if (proxy_env && *proxy_env != '\0') {
+            request.proxy(proxy_env);
+        }
+    }
+
     request.data(json_data);
 
     auto response = request.perform();

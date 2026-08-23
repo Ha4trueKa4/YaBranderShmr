@@ -1,6 +1,5 @@
 #include "register_handler.hpp"
 
-#include <cctype>
 #include <regex>
 
 #include <userver/components/component.hpp>
@@ -8,6 +7,8 @@
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
+
+#include <ya_brander/sql_queries.hpp>
 
 #include "password_hasher.hpp"
 #include "../../utils/errors.hpp"
@@ -22,17 +23,6 @@ const std::regex kEmailRegex(R"(^[^@\s]+@[^@\s]+\.[^@\s]+$)");
 
 bool IsValidEmail(const std::string& email) {
     return email.size() <= 128 && std::regex_match(email, kEmailRegex);
-}
-
-bool IsValidPassword(const std::string& password) {
-    if (password.size() < 8 || password.size() > 128) return false;
-    bool has_letter = false;
-    bool has_digit = false;
-    for (unsigned char c : password) {
-        if (std::isalpha(c)) has_letter = true;
-        if (std::isdigit(c)) has_digit = true;
-    }
-    return has_letter && has_digit;
 }
 
 bool IsValidNickname(const std::string& nickname) {
@@ -60,7 +50,7 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
         return MakeError("INVALID_EMAIL", "Email is invalid", "email");
     }
-    if (!IsValidPassword(password)) {
+    if (!PasswordHasher::IsValidPassword(password)) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest);
         return MakeError("INVALID_PASSWORD", "Password must be 8-128 chars and contain letters and digits", "password");
     }
@@ -74,7 +64,7 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
     try {
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "INSERT INTO users(login, email, password_hash) VALUES($1, $2, $3) RETURNING id::text",
+            sql::kRegisterUser,
             nickname, email, password_hash);
 
         const auto user_id = result.Front()[0].As<std::string>();

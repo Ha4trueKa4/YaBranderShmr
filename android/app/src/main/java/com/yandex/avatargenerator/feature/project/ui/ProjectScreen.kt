@@ -50,6 +50,8 @@ internal fun ProjectScreen(
         onRetry = viewModel::retry,
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::send,
+        onPreviewNeeded = viewModel::onPreviewNeeded,
+        onRetryGeneration = viewModel::retryGeneration,
         modifier = modifier,
     )
 }
@@ -70,6 +72,8 @@ private fun ProjectContent(
     onRetry: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onPreviewNeeded: (String) -> Unit,
+    onRetryGeneration: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -109,6 +113,8 @@ private fun ProjectContent(
             is ProjectUiState.Content -> {
                 ChatTimeline(
                     messages = uiState.messages,
+                    onPreviewNeeded = onPreviewNeeded,
+                    onRetry = onRetryGeneration,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -117,6 +123,7 @@ private fun ProjectContent(
                     draft = uiState.draft,
                     onDraftChange = onDraftChange,
                     onSendClick = onSendClick,
+                    isSending = uiState.isSending,
                 )
             }
         }
@@ -139,7 +146,7 @@ private fun ProjectCenteredBox(content: @Composable () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenContentPreview() {
     AvatarGeneratorTheme {
@@ -154,11 +161,13 @@ private fun ProjectScreenContentPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenEmptyChatPreview() {
     AvatarGeneratorTheme {
@@ -167,17 +176,19 @@ private fun ProjectScreenEmptyChatPreview() {
                 title = "New project",
                 isPublic = false,
                 messages = emptyList(),
-                draft = "Violet logo for an AI startup",
+                draft = "Coral logo for an AI startup",
             ),
             onBackClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenLoadingPreview() {
     AvatarGeneratorTheme {
@@ -187,11 +198,56 @@ private fun ProjectScreenLoadingPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ProjectScreenGeneratingPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.generatingMessages(),
+                draft = "",
+                isSending = true,
+            ),
+            onBackClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ProjectScreenFailedGenerationPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.failedMessages(),
+                draft = "",
+            ),
+            onBackClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenErrorPreview() {
     AvatarGeneratorTheme {
@@ -201,6 +257,8 @@ private fun ProjectScreenErrorPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
         )
     }
 }

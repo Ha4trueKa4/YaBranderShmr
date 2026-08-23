@@ -35,7 +35,7 @@ internal fun ChatVersionDivider(text: String, modifier: Modifier = Modifier) {
         Text(
             text = text.uppercase(),
             style = AppTypography.caption.copy(
-                color = AppColors.AccentCyan,
+                color = AppColors.AccentText,
                 fontWeight = FontWeight.SemiBold,
             ),
         )
@@ -43,7 +43,7 @@ internal fun ChatVersionDivider(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatVersionDividerPreview() {
     AvatarGeneratorTheme {

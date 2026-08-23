@@ -7,10 +7,14 @@ import { z } from 'zod'
 type GenerationFormValues = { description: string; model: string }
 
 interface UseGenerationFormOptions {
+  initialValues?: Partial<GenerationFormValues>
   onSubmit: (values: GenerationFormValues) => void
 }
 
-export function useGenerationForm({ onSubmit }: UseGenerationFormOptions) {
+export function useGenerationForm({
+  initialValues,
+  onSubmit,
+}: UseGenerationFormOptions) {
   const { t } = useTranslation()
   const generationFormSchema = z.object({
     description: z
@@ -21,7 +25,10 @@ export function useGenerationForm({ onSubmit }: UseGenerationFormOptions) {
     model: z.string(),
   })
   const form = useForm<GenerationFormValues>({
-    defaultValues: { description: '', model: DEFAULT_GENERATION_MODEL },
+    defaultValues: {
+      description: initialValues?.description ?? '',
+      model: initialValues?.model ?? DEFAULT_GENERATION_MODEL,
+    },
     mode: 'onSubmit',
     resolver: zodResolver(generationFormSchema),
   })

@@ -9,6 +9,7 @@ struct RootView: View {
     }
 
     @AppStorage("hasFinishedOnboarding") private var hasFinishedOnboarding = false
+    @AppStorage(AppTheme.storageKey) private var themeRawValue = AppTheme.system.rawValue
 
     @State private var session = SessionStore()
     @State private var coverFlow: CoverFlow = .none
@@ -61,6 +62,7 @@ struct RootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(coverFlow == .onboarding ? .clear : .background).ignoresSafeArea())
+        .preferredColorScheme((AppTheme(rawValue: themeRawValue) ?? .system).colorScheme)
         .environment(session)
         .task {
             session.restore()

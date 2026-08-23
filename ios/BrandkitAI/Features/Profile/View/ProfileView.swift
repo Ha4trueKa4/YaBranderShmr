@@ -7,6 +7,7 @@ struct ProfileView: View {
     var isCurrentUser: Bool
     var onBack: (() -> Void)?
     var onEditProfile: () -> Void
+    var onOpenSettings: () -> Void
     var onOpenProject: (UUID, String, URL?) -> Void
     var onOpenConnections: (UUID, ProfileConnectionsKind) -> Void
 
@@ -16,6 +17,7 @@ struct ProfileView: View {
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
+        onOpenSettings: @escaping () -> Void = {},
         onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in },
         onOpenConnections: @escaping (UUID, ProfileConnectionsKind) -> Void = { _, _ in }
     ) {
@@ -23,6 +25,7 @@ struct ProfileView: View {
         self.isCurrentUser = isCurrentUser
         self.onBack = onBack
         self.onEditProfile = onEditProfile
+        self.onOpenSettings = onOpenSettings
         self.onOpenProject = onOpenProject
         self.onOpenConnections = onOpenConnections
         _viewModel = State(initialValue: ProfileViewModel(
@@ -35,38 +38,31 @@ struct ProfileView: View {
     @ViewBuilder
     var body: some View {
         if let onBack {
-            GeometryReader { proxy in
-                profileContent(topInset: proxy.safeAreaInsets.top, onBack: onBack)
-                    .ignoresSafeArea(edges: .top)
-            }
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationBarBackButtonHidden()
+            profileContent
+                .customNavigationBar(title: "", onBack: onBack)
+                .toolbarBackground(Color.background, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
         } else {
-            profileContent()
+            profileContent
         }
     }
 
-    private func profileContent(
-        topInset: CGFloat = 0,
-        onBack: (() -> Void)? = nil
-    ) -> some View {
-        ScrollView(.vertical, showsIndicators: false) {
+    private var profileContent: some View {
+        ScrollView {
             LazyVStack(spacing: 0) {
-                profileHeader(topInset: topInset, onBack: onBack)
+                profileHeader
                 
                 projectsSection
             }
         }
-        .brandRefresher { await viewModel.load() }
+        .scrollIndicators(.hidden)
         .task { await viewModel.load() }
+        .refreshable { await viewModel.load() }
     }
 
-    private func profileHeader(
-        topInset: CGFloat,
-        onBack: (() -> Void)?
-    ) -> some View {
+    private var profileHeader: some View {
         VStack(spacing: 0) {
-            cover(topInset: topInset, onBack: onBack)
+            cover
             
             VStack(spacing: 12) {
                 avatar
@@ -113,11 +109,8 @@ struct ProfileView: View {
         .overlay(alignment: .bottom) { separator }
     }
 
-    private func cover(
-        topInset: CGFloat,
-        onBack: (() -> Void)?
-    ) -> some View {
-        let baseHeight = CGFloat(100) + topInset
+    private var cover: some View {
+        let baseHeight = CGFloat(100)
         
         return GeometryReader { proxy in
             LinearGradient(
@@ -127,7 +120,7 @@ struct ProfileView: View {
             )
             .mask {
                 LinearGradient(
-                    colors: [Color(.black).opacity(viewModel.isLoading ? 0.3 : max(0.3, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
+                    colors: [Color(.black).opacity(viewModel.isLoading ? 0 : max(0, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -136,16 +129,9 @@ struct ProfileView: View {
             .accessibilityHidden(true)
             .overlay(alignment: .trailing) {
                 if isCurrentUser {
-                    signOutButton
+                    settingsButton
                         .padding(.top, 48)
                         .padding(.trailing, 12)
-                }
-            }
-            .overlay(alignment: .topLeading) {
-                if let onBack {
-                    NavigationBackButton(action: onBack, foregroundColor: Color(.onAccent))
-                        .padding(.top, topInset + 4)
-                        .padding(.leading, 8)
                 }
             }
             .offset(y: -max(0, onBack == nil ? proxy.frame(in: .global).origin.y : proxy.frame(in: .scrollView).origin.y))
@@ -153,17 +139,20 @@ struct ProfileView: View {
         .frame(minHeight: baseHeight)
     }
 
-    private var signOutButton: some View {
-        Button(role: .destructive) {
-            session.signOut()
-        } label: {
-            Image(systemName: "rectangle.portrait.and.arrow.right")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+    private var settingsButton: some View {
+        Button(action: onOpenSettings) {
+            ZStack {
+                Circle()
+                    .fill(Color(.onAccent).opacity(0.25))
+                    .stroke(Color(.onAccent).opacity(0.35), lineWidth: 1)
+                    .frame(width: 38, height: 38)
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: 44, height: 44)
+            }
         }
-        .buttonStyle(.plain)
         .foregroundStyle(Color(.onAccent))
-        .accessibilityLabel("Sign out")
+        .accessibilityLabel("Settings")
     }
 
     private var avatar: some View {

@@ -1,12 +1,17 @@
 #include "login_handler.hpp"
 
+#include <optional>
+
 #include <userver/components/component.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/server/http/http_status.hpp>
 #include <userver/storages/postgres/component.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "password_hasher.hpp"
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::auth {
 
@@ -32,9 +37,12 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
         return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }
 
-    auto result = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, login, password_hash FROM users WHERE email = $1", email);
+    auto result = utils::ExecuteSelectWithRetry(
+        "select-user-credentials-by-email", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectUserCredentialsByEmail, email);
+        });
 
     if (result.Size() == 0) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
@@ -44,9 +52,16 @@ userver::formats::json::Value LoginHandler::HandleRequestJsonThrow(
     const auto row = result.Front();
     const auto user_id = row[0].As<std::string>();
     const auto nickname = row[1].As<std::string>();
-    const auto password_hash = row[2].As<std::string>();
+    const auto password_hash = row[2].As<std::optional<std::string>>();
 
-    if (!PasswordHasher::Verify(password, password_hash)) {
+    if (!password_hash.has_value()) {
+        request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return MakeError("NO_PASSWORD_SET",
+                          "This account has no password. Sign in with Yandex ID, "
+                          "or set a password from account settings after signing in.");
+    }
+
+    if (!PasswordHasher::Verify(password, *password_hash)) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kUnauthorized);
         return MakeError("INVALID_CREDENTIALS", "Invalid email or password");
     }

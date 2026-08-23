@@ -106,6 +106,9 @@ struct AppRouteView: View {
                 onBack: { router.pop() },
                 onOpenProfile: { router.push(.profile(userID: $0)) }
             )
+
+        case .settings:
+            SettingsView(session: session, onBack: { router.pop() })
         }
     }
 }

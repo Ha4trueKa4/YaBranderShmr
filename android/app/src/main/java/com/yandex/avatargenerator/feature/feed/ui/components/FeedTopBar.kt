@@ -60,7 +60,7 @@ fun FeedTopBar(
                 text = buildAnnotatedString {
                     append(stringResource(R.string.feed_brand_name))
                     append(" ")
-                    withStyle(SpanStyle(color = AppColors.AccentCyan)) {
+                    withStyle(SpanStyle(color = AppColors.AccentText)) {
                         append(stringResource(R.string.feed_brand_name_accent))
                     }
                 },

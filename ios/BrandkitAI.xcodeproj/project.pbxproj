@@ -110,6 +110,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ru,
 			);
 			mainGroup = 934BA48A30271DF100E90FD1;
 			minimizedProjectReferenceProxies = 1;
@@ -145,25 +146,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gh123man/SwiftUI-Refresher.git";
-			requirement = {
-				kind = revision;
-				revision = 235468a4f7296ccb8307f400b775aee0b8c5849f;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		B4A7D00233C9A00100F0B001 /* Refresher */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */;
-			productName = Refresher;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		934BA49C30271DF300E90FD1 /* Debug */ = {
@@ -383,6 +365,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gh123man/SwiftUI-Refresher.git";
+			requirement = {
+				kind = revision;
+				revision = 235468a4f7296ccb8307f400b775aee0b8c5849f;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B4A7D00233C9A00100F0B001 /* Refresher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4A7D00133C9A00100F0B001 /* XCRemoteSwiftPackageReference "SwiftUI-Refresher" */;
+			productName = Refresher;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 934BA48B30271DF100E90FD1 /* Project object */;
 }

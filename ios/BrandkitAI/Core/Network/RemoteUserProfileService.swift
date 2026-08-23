@@ -41,6 +41,16 @@ nonisolated final class RemoteUserProfileService: UserProfileService {
         try await networkClient.request(.delete, .subscribe(userID: userID), authorization: .required)
     }
 
+    func updateName(_ name: String, for id: UUID) async throws -> String {
+        let dto: UpdateUserProfileDTO = try await networkClient.request(
+            .patch,
+            .userProfile(id: id),
+            authorization: .required,
+            body: UpdateUserProfileRequest(nickname: name)
+        )
+        return dto.nickname
+    }
+
     private func connections(from endpoint: APIEndpoint) async throws -> [ProfileConnection] {
         let dto: [ProfileConnectionDTO] = try await networkClient.request(
             .get,
@@ -51,6 +61,21 @@ nonisolated final class RemoteUserProfileService: UserProfileService {
             ProfileConnection(id: $0.id, name: $0.name, isSubscribed: $0.isSubscribed)
         }
     }
+}
+
+private nonisolated struct ProfileConnectionDTO: Decodable, Sendable {
+    let id: UUID
+    let name: String
+    let isSubscribed: Bool?
+}
+
+private nonisolated struct UpdateUserProfileRequest: Encodable, Sendable {
+    let nickname: String
+}
+
+private nonisolated struct UpdateUserProfileDTO: Decodable, Sendable {
+    let id: UUID
+    let nickname: String
 }
 
 private nonisolated struct UserProfileDTO: Decodable, Sendable {
@@ -66,10 +91,4 @@ private nonisolated struct UserProjectDTO: Decodable, Sendable {
     let id: UUID
     let name: String
     let url: URL?
-}
-
-private nonisolated struct ProfileConnectionDTO: Decodable, Sendable {
-    let id: UUID
-    let name: String
-    let isSubscribed: Bool?
 }

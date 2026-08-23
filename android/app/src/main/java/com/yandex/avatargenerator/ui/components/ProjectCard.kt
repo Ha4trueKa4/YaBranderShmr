@@ -34,9 +34,11 @@ import kotlin.math.abs
  * Карточка проекта для masonry-сеток (лента, профиль): превью переменной высоты +
  * название + опциональная кликабельная строка автора (аватар + имя).
  *
- * Домен-агностична — принимает примитивы, каждый экран мапит свою модель. Оболочка
- * оформлена как у [BrandCard], но с переменной высотой превью и интерактивной строкой
- * автора (отдельный [onAuthorClick]), которых у BrandCard нет.
+ * Домен-агностична — принимает примитивы, каждый экран мапит свою модель. В отличие
+ * от [BrandCard] идёт без обводки: в masonry-сетке карточки стоят вплотную, и рамка
+ * у каждой превращает ленту в решётку. Форму задаёт само превью.
+ * Ещё отличия — переменная высота превью и интерактивная строка автора
+ * (отдельный [onAuthorClick]), которых у BrandCard нет.
  *
  * @param previewUrl превью проекта; null — плашка-заглушка [AppColors.SurfaceVariant].
  * @param authorName имя автора; null — строка автора не показывается (на профиле
@@ -74,7 +76,8 @@ fun ProjectCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .brandSurface(RoundedCornerShape(AppShape.l))
+            .clip(RoundedCornerShape(AppShape.l))
+            .background(AppColors.Surface)
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
@@ -118,7 +121,7 @@ fun ProjectCard(
                     BrandAvatar(
                         size = 24.dp,
                         imageUrl = authorAvatarUrl,
-                        initials = authorInitials(authorName),
+                        initials = avatarInitials(authorName),
                     )
                     Text(
                         text = authorName,
@@ -137,16 +140,3 @@ fun ProjectCard(
  * размеры. Детерминировано по [seed] (обычно id проекта), диапазон ~1.0..1.9.
  */
 fun masonryAspectRatio(seed: String): Float = 1.0f + (abs(seed.hashCode()) % 90) / 100f
-
-/**
- * Инициалы автора для плейсхолдера аватара (когда нет avatarUrl): первые буквы
- * 1–2 слов имени — «Alice Cooper» → «AC», «Brandkit» → «B». Пустое/пробельное
- * имя → null, чтобы [BrandAvatar] показал декоративную заглушку, а не пустой круг.
- */
-private fun authorInitials(name: String): String? =
-    name.trim()
-        .split(Regex("\\s+"))
-        .filter { it.isNotEmpty() }
-        .take(2)
-        .joinToString("") { it.first().uppercase() }
-        .takeIf { it.isNotEmpty() }

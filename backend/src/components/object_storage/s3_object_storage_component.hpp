@@ -28,9 +28,9 @@ class S3ObjectStorageComponent final : public ObjectStorageComponent {
   std::string Get(const std::string& key) override;
   std::string GetUrl(const std::string& key, bool is_public) override;
   void SetAcl(const std::string& key, bool make_public) override;
-  void Delete(const std::string& key) override;
-  void DeleteMany(const std::vector<std::string>& keys) override;
-
+  bool Delete(const std::string& key) override;
+  std::size_t DeleteMany(const std::vector<std::string>& keys) override;
+  std::vector<ObjectKey> ListKeys(const std::string& prefix) override;
   static userver::yaml_config::Schema GetStaticConfigSchema();
 
  private:

@@ -2,8 +2,15 @@ package com.yandex.avatargenerator.feature.onboarding.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RadialGradientShader
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -11,6 +18,8 @@ import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppShape
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
+import kotlin.math.hypot
+import kotlin.math.max
 
 /**
  * Размеры, цвета и типографика онбординга — ровно из макета
@@ -51,23 +60,67 @@ internal object OnboardingDefaults {
     val LogoTileBorderWidth = 2.5.dp
     val LogoGlyphSize = 48.dp
 
-    // Плитка лого лежит поверх насыщенного WelcomeGradient — белая в обеих темах.
-    val LogoTileFill = Color.White.copy(alpha = 0.13f)
-    val LogoTileBorder = Color.White.copy(alpha = 0.25f)
+    // Плитка лого — полупрозрачная подложка цветом текста, поэтому читается в обеих темах.
+    val LogoTileFill: Color
+        @Composable @ReadOnlyComposable get() = AppColors.TextPrimary.copy(alpha = 0.13f)
+    val LogoTileBorder: Color
+        @Composable @ReadOnlyComposable get() = AppColors.TextPrimary.copy(alpha = 0.25f)
 
-    val WelcomeGradient: Brush
-        @Composable @ReadOnlyComposable
-        get() = Brush.horizontalGradient(listOf(AppColors.Accent, AppColors.AccentCyan))
+    /** Центр свечения по вертикали в долях высоты экрана — из макета (840 / 1704). */
+    private const val WelcomeGlowCenterY = 0.493f
+
+    /**
+     * «Доля радиуса → альфа акцента», снято с макета: прозрачный центр,
+     * пик кольца на ~0.37 радиуса, дальше плавное затухание к краям экрана.
+     */
+    private val WelcomeGlowRing = listOf(
+        0f to 0f, 0.06f to 0.02f, 0.13f to 0.10f, 0.19f to 0.24f,
+        0.25f to 0.45f, 0.32f to 0.72f, 0.37f to 0.97f, 0.53f to 0.57f,
+        0.63f to 0.35f, 0.74f to 0.19f, 0.84f to 0.07f, 1f to 0.02f,
+    )
+
+    /**
+     * На тёмном фоне акцент светлее базы и работает как свечение; на светлом он
+     * темнее базы, и в полную силу кольцо читается грязным — там приглушаем.
+     */
+    private const val WelcomeGlowLightIntensity = 0.45f
+
+    /**
+     * Кольцевое свечение вокруг логотипа (Figma `WI48deZbDftp1OunCXlj5r`, нода 2011:9).
+     * Радиус — расстояние до дальнего угла, поэтому свечение тянется на любой экран.
+     */
+    val WelcomeGlow: Brush
+        @Composable get() {
+            val accent = AppColors.Accent
+            val intensity =
+                if (AppColors.Background.luminance() < 0.5f) 1f else WelcomeGlowLightIntensity
+            return remember(accent, intensity) {
+                object : ShaderBrush() {
+                    private val positions = WelcomeGlowRing.map { it.first }
+                    private val colors =
+                        WelcomeGlowRing.map { accent.copy(alpha = it.second * intensity) }
+
+                    override fun createShader(size: Size): Shader {
+                        val center = Offset(size.width / 2f, size.height * WelcomeGlowCenterY)
+                        val radius = hypot(
+                            max(center.x, size.width - center.x),
+                            max(center.y, size.height - center.y),
+                        )
+                        return RadialGradientShader(center, radius, colors, positions)
+                    }
+                }
+            }
+        }
 
     val BrandTitleStyle: TextStyle
         // В макете ExtraBold, но такого начертания Inter в res/font нет — см. AppFont.
         @Composable @ReadOnlyComposable get() = AppTypography.heading1.copy(
             fontWeight = FontWeight.Bold,
-            color = AppColors.OnAccent,
+            color = AppColors.TextPrimary,
         )
     val BrandSubtitleStyle: TextStyle
         @Composable @ReadOnlyComposable
-        get() = AppTypography.body.copy(color = AppColors.OnAccent.copy(alpha = 0.8f))
+        get() = AppTypography.body.copy(color = AppColors.TextSecondary)
 
     // --- страница 2: how it works ---
     val PageTitleSpacing = 40.dp
@@ -79,7 +132,7 @@ internal object OnboardingDefaults {
     val StepIconSize = 20.dp
 
     val StepIconTint: Color
-        @Composable @ReadOnlyComposable get() = AppColors.AccentCyan
+        @Composable @ReadOnlyComposable get() = AppColors.AccentSoft
 
     val PageTitleStyle: TextStyle
         @Composable @ReadOnlyComposable get() = AppTypography.heading2
@@ -106,12 +159,12 @@ internal object OnboardingDefaults {
     val CtaGroupSpacing = 20.dp
 
     /**
-     * Cyan в центре → violet по краю. Промежуточные стопы из макета лежат ровно
+     * Мягкий коралл в центре → коралл по краю. Промежуточные стопы из макета лежат ровно
      * на линейной интерполяции краёв, которую Compose делает сам.
      */
     val GlowBrush: Brush
         @Composable @ReadOnlyComposable
-        get() = Brush.radialGradient(listOf(AppColors.AccentCyan, AppColors.Accent))
+        get() = Brush.radialGradient(listOf(AppColors.AccentSoft, AppColors.Accent))
 
     val MockupBrandNameStyle: TextStyle
         @Composable @ReadOnlyComposable

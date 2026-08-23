@@ -1,10 +1,15 @@
 #include "project_manager_component.h"
 #include <userver/formats/json/inline.hpp>
+#include <userver/formats/json/value_builder.hpp>
 #include "svg_validator.hpp"
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/uuid4.hpp>
 #include <shared_mutex>
+
+#include <ya_brander/sql_queries.hpp>
+
+#include "../utils/postgres_retry.hpp"
 
 namespace ya_brander::components {
 
@@ -50,7 +55,7 @@ ProjectManagerComponent::ProjectManagerComponent(
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
+        sql::kCreateProject,
         author_id, name, description
     );
 
@@ -65,11 +70,11 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
-        id
-    );
+    auto res = utils::ExecuteSelectWithRetry("select-project", [&] {
+      return pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kSlave,
+          sql::kSelectProject, id);
+    });
 
     if (res.IsEmpty()) return std::nullopt;
 
@@ -94,8 +99,7 @@ void ProjectManagerComponent::UpdateProject(
   if (name.has_value()) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET name = $2, updated_at = NOW() "
-        "WHERE id = $1::uuid",
+        sql::kUpdateProjectName,
         id, *name);
   }
   if (is_public.has_value()) {
@@ -103,14 +107,12 @@ void ProjectManagerComponent::UpdateProject(
       version_storage_.SetLatestAcl(id, true);
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=false, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kPublishProject,
           id);
     } else {
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=true, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kMakeProjectPrivate,
           id);
       version_storage_.SetLatestAcl(id, false);
     }
@@ -128,20 +130,23 @@ void ProjectManagerComponent::UpdateProject(
 
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "DELETE FROM projects WHERE id = $1::uuid", id
+        sql::kDeleteProject, id
     );
 }
 
 namespace {
 constexpr std::size_t kHistoryPromptLimit = 10;
+constexpr std::size_t kMaxReferenceProjects = 2;
 }  // namespace
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
     const std::string& project_id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT chat_history FROM projects WHERE id = $1::uuid",
-        project_id);
+    auto res = utils::ExecuteSelectWithRetry(
+        "select-project-chat-history", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectProjectChatHistory, project_id);
+        });
     if (res.IsEmpty()) return userver::formats::json::MakeArray();
     return res[0]["chat_history"].As<userver::formats::json::Value>();
 }
@@ -166,9 +171,7 @@ void ProjectManagerComponent::AppendUserMessage(const std::string& project_id, c
                                                  const std::string& user_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'user', 'text', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendUserMessage,
         project_id, user_message, job_id);
 }
 
@@ -176,9 +179,7 @@ void ProjectManagerComponent::AppendAssistantSuccess(const std::string& project_
                                                       const std::string& version_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'version_id', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantSuccess,
         project_id, version_id, job_id);
 }
 
@@ -186,26 +187,88 @@ void ProjectManagerComponent::AppendAssistantError(const std::string& project_id
                                                     const std::string& error_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'error', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantError,
         project_id, error_message, job_id);
 }
 
 void ProjectManagerComponent::AppendAssistantCancelled(const std::string& project_id, const std::string& job_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'status', 'cancelled', 'job_id', $2::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantCancelled,
         project_id, job_id);
 }
 
 userver::formats::json::Value ProjectManagerComponent::GetChatHistory(const std::string& project_id) {
-    return FetchChatHistoryJson(project_id);
+    auto history = FetchChatHistoryJson(project_id);
+
+    // Не больше одного активного job'а на проект (см. active_job_by_project_
+    // в StartGeneration), поэтому достаточно одного точечного lookup, а не
+    // перебора jobs_/батча по списку job_id.
+    std::shared_ptr<JobEntry> active_entry;
+    std::string active_job_id;
+    {
+        std::lock_guard lock(jobs_mutex_);
+        auto active_it = active_job_by_project_.find(project_id);
+        if (active_it != active_job_by_project_.end()) {
+            active_job_id = active_it->second;
+            auto job_it = jobs_.find(active_job_id);
+            if (job_it != jobs_.end()) {
+                active_entry = job_it->second;
+            }
+        }
+    }
+    if (!active_entry) {
+        return history;
+    }
+
+    bool still_pending;
+    bool cancel_requested;
+    {
+        std::lock_guard job_lock(active_entry->mutex);
+        still_pending = active_entry->status == JobStatus::kPending;
+        cancel_requested = active_entry->cancel_requested;
+    }
+    if (!still_pending) {
+        return history;
+    }
+
+    // Заглушка добавляется только в возвращаемый JSON, в БД ничего не пишем —
+    // сообщение пользователя для этого job'а всегда последнее в chat_history
+    // (StartGeneration резервирует active_job_by_project_ и пишет
+    // AppendUserMessage раньше, чем что-либо ещё может добавиться), поэтому
+    // достаточно просто дописать заглушку в конец скопированного массива.
+    userver::formats::json::ValueBuilder result{history};
+    userver::formats::json::ValueBuilder pending;
+    pending["role"] = "assistant";
+    pending["status"] = cancel_requested ? "cancelling" : "pending";
+    pending["job_id"] = active_job_id;
+    pending["created_at"] = userver::utils::datetime::Timestring(std::chrono::system_clock::now(), "UTC");;
+    result.PushBack(std::move(pending));
+    return result.ExtractValue();
 }
 
-std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
+    const std::string& caller_id,
+    const std::vector<std::string>& reference_project_ids) {
+    std::vector<std::string> result;
+    for (const auto& ref_id : reference_project_ids) {
+        if (result.size() >= kMaxReferenceProjects) break;
+
+        auto ref_project = GetProject(ref_id);
+        if (!ref_project) continue;  // не существует
+        if (!ref_project->is_public && ref_project->author_id != caller_id) continue;  // нет доступа
+
+        std::string svg = version_storage_.GetLatestVersionData(ref_id);
+        if (svg.empty() || svg == kDefaultSvg) continue;  // у референса нет реального контента
+
+        result.push_back(std::move(svg));
+    }
+    return result;
+}
+
+std::string ProjectManagerComponent::RunGeneration(const std::string& project_id, const std::string& prompt,
+                                                    const std::string& model, const std::string& caller_id,
+                                                    const std::vector<std::string>& reference_project_ids) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id); // ЗАГЛУШКА
 
     std::vector<std::string> history = GetRecentUserPrompts(project_id, kHistoryPromptLimit);
@@ -217,7 +280,8 @@ std::string ProjectManagerComponent::RunGeneration(const std::string& project_id
     if (current_state.empty() || current_state == kDefaultSvg) {
 		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
 		std::string safe_prompt = EscapeXml(polished_prompt_text);
-        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history);
+        auto reference_svgs = ResolveReferenceSvgs(caller_id, reference_project_ids);
+        full_prompt = prompt_constructor_.BuildGenerationPrompt(safe_prompt, history, reference_svgs);
     }else {
 		std::string polished_prompt_text = prompt_polisher_.PolishEdit(prompt);
 		std::string safe_prompt = EscapeXml(polished_prompt_text);
@@ -258,7 +322,9 @@ void ProjectManagerComponent::PruneOldJobsLocked() {
     }
 }
 
-std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model) {
+std::string ProjectManagerComponent::StartGeneration(const std::string& project_id, const std::string& prompt,
+                                                     const std::string& model, const std::string& caller_id,
+                                                     const std::vector<std::string>& reference_project_ids) {
     std::string job_id = userver::utils::generators::GenerateUuid();
     auto entry = std::make_shared<JobEntry>();
     entry->project_id = project_id;
@@ -291,7 +357,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         throw;
     }
 
-    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, job_id, entry] {
+    bts_.AsyncDetach("generation-job", [this, project_id, prompt, model, caller_id, reference_project_ids, job_id, entry] {
         // Токен для внешней отмены (CancelGeneration) регистрируем сразу же,
         // в самом начале корутины — до захвата семафора, чтобы отмена
         // работала, даже пока job ещё стоит в очереди на генерацию.
@@ -303,7 +369,8 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
             }
         }
 
-        // Статус job'а зависит только от того, чем закончилась сама
+
+		// Статус job'а зависит только от того, чем закончилась сама
         // генерация (RunGeneration): успехом, ошибкой или отменой. Запись
         // результата в chat_history — best-effort бухгалтерия ПОСЛЕ того, как
         // статус уже определён и разослан ожидающим в WaitForGeneration: её
@@ -314,7 +381,7 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         std::string error_message;
         try {
             std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
-            version_id = RunGeneration(project_id, prompt, model);
+            version_id = RunGeneration(project_id, prompt, model, caller_id, reference_project_ids);
             outcome = JobStatus::kDone;
         } catch (const std::exception& e) {
             bool was_cancelled;
@@ -368,6 +435,16 @@ std::string ProjectManagerComponent::StartGeneration(const std::string& project_
         // Без ретраев: при падении реальный исход (версия сохранена / job
         // отменён) не меняется — просто не появится записью в chat_history.
         // Громко логируем, чтобы это было видно в мониторинге.
+        //
+        // TaskCancellationBlocker обязателен именно здесь: если outcome ==
+        // kCancelled, значит RequestCancel() уже вызван на ЭТОЙ же корутине, а
+        // отмена в userver не одноразовая — она продолжает действовать на
+        // все последующие точки ожидания той же задачи. Без блокировки
+        // следующий же поход в Postgres (сам этот AppendAssistant*) тут же
+        // прервался бы с "Task was cancelled before trying to get a
+        // connection", и запись в chat_history так и не появлялась бы —
+        // проверено вживую curl'ом, именно так и происходило.
+        userver::engine::TaskCancellationBlocker cancellation_blocker;
         try {
             switch (outcome) {
                 case JobStatus::kDone:

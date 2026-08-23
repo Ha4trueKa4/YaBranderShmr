@@ -11,14 +11,25 @@ export class GenerationPollingTimeoutError extends Error {
   }
 }
 
+export class GenerationPollingCancelledError extends Error {
+  constructor() {
+    super('Generation polling was cancelled')
+    this.name = 'GenerationPollingCancelledError'
+  }
+}
+
 export async function pollGenerationStatus(
   queryClient: QueryClient,
   projectId: string,
   jobId: string,
   timeoutMs = GENERATION_POLL_TIMEOUT_MS,
+  signal?: AbortSignal,
 ) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const abortPolling = () => controller.abort()
+
+  signal?.addEventListener('abort', abortPolling, { once: true })
 
   try {
     while (true) {
@@ -31,6 +42,10 @@ export async function pollGenerationStatus(
       }
     }
   } catch (error) {
+    if (signal?.aborted) {
+      throw new GenerationPollingCancelledError()
+    }
+
     if (controller.signal.aborted) {
       throw new GenerationPollingTimeoutError()
     }
@@ -38,5 +53,6 @@ export async function pollGenerationStatus(
     throw error
   } finally {
     clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', abortPolling)
   }
 }

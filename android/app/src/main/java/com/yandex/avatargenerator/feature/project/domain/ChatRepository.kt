@@ -1,6 +1,6 @@
 package com.yandex.avatargenerator.feature.project.domain
 
-import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 
 /**
@@ -28,10 +28,43 @@ interface ChatRepository {
     suspend fun getChat(projectId: String): Result<ProjectChat>
 
     /**
-     * Отправляет сообщение пользователя.
+     * Ставит промпт в очередь на генерацию (`POST /projects/{id}/generate`).
      *
-     * @return созданное сообщение — а не `Unit`: серверный `id` и время
-     *  проставляет источник данных, и UI из-за этого менять не придётся.
+     * Отвечает сразу, за миллисекунды: сама генерация уходит в фон, результат
+     * забирает [awaitGeneration]. К моменту успешного возврата сервер **уже
+     * дописал промпт в историю чата** — поэтому «осиротевший» промпт без ответа
+     * в ленте нормален, пока генерация идёт, и убирать его с экрана после
+     * неудачи нельзя: при следующем открытии он всё равно придёт с сервера.
+     *
+     * Ретраев у вызова нет и быть не должно: повтор создал бы вторую задачу и
+     * вторую пару сообщений в истории.
+     *
+     * @return `job_id` фоновой задачи. `Result.failure` с
+     *  [com.yandex.avatargenerator.core.domain.NetworkException]: 400 — промпт
+     *  пуст или длиннее 1500 байт, 403 — чужой проект либо просроченный токен,
+     *  404 — проекта нет, `Serialization` — сервер не прислал `job_id`. Только в
+     *  этом случае промпт до сервера не дошёл.
      */
-    suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage>
+    suspend fun startGeneration(projectId: String, prompt: String): Result<String>
+
+    /**
+     * Дожидается результата задачи [jobId] опросом статус-ручки
+     * (`GET /projects/{id}/generate/{job_id}`, long polling до 25 секунд на
+     * запрос) и возвращает исход — см. [GenerationOutcome].
+     *
+     * Вызов долгий: ждёт до общего дедлайна (минуты). Обрыв сети между опросами
+     * ожидание не прерывает — задача на сервере от этого никуда не девается.
+     *
+     * Отдельно от [startGeneration], потому что экран должен показать скелетон
+     * ответа сразу по `job_id`, не дожидаясь результата, и различить «промпт не
+     * ушёл» (ошибка отправки — текст можно вернуть в поле ввода) от «промпт ушёл,
+     * генерация провалилась» (текст уже на сервере, возвращать его нельзя).
+     *
+     * @return исход ожидания. `Result.failure` — о судьбе генерации ничего не
+     *  известно и записи о ней на сервере нет: опрос сорвался (403,
+     *  неразобранный ответ) либо задача потеряна, а ответа с её `job_id` в
+     *  истории не нашлось. Перечитывать ленту в этом случае бессмысленно —
+     *  экран показывает свой пузырь ошибки.
+     */
+    suspend fun awaitGeneration(projectId: String, jobId: String): Result<GenerationOutcome>
 }

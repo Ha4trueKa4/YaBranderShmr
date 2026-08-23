@@ -1,10 +1,22 @@
 #pragma once
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <chrono>
 #include <userver/components/loggable_component_base.hpp>
 
+
 namespace ya_brander::components {
+
+
+/// @brief Ключ объекта в хранилище вместе с временем последней модификации.
+/// last_modified нужен orphan-GC: свежие объекты (только что загруженные, но чья
+/// строка ещё не закоммичена) нельзя считать мусором.
+struct ObjectKey {
+    std::string key;
+    std::chrono::system_clock::time_point last_modified;
+};
 
 /// @brief Интерфейс объектного хранилища (blob storage).
 /// @details Хранит и отдаёт произвольные данные по ключу. Компонент не знает о
@@ -20,7 +32,7 @@ public:
                            const userver::components::ComponentContext& context)
         : LoggableComponentBase(config, context) {}
 
-    ~ObjectStorageComponent() override = default;
+    virtual ~ObjectStorageComponent() = default;
 
     /// @brief Сохраняет данные под ключом и сразу задаёт ACL объекта.
     /// @param make_public true -> public-read (объект публичного проекта),
@@ -50,10 +62,23 @@ public:
     virtual void SetAcl(const std::string& key, bool make_public) = 0;
 
     /// @brief Удаляет объект. Удаление несуществующего ключа — no-op.
-    virtual void Delete(const std::string& key) = 0;
+    /// @return true, если объект реально был удалён (200/204); false, если
+    ///         его уже не было (404) — вызов всё равно считается успешным.
+    virtual bool Delete(const std::string& key) = 0;
 
-    /// @brief Удаляет набор объектов (например, все версии проекта при удалении).
-    virtual void DeleteMany(const std::vector<std::string>& keys) = 0;
+    /// @brief Удаляет набор объектов (best-effort). Ошибки по отдельным ключам
+    ///        не прерывают остальные; лишь пропускаются.
+    /// @return Сколько объектов реально удалено.
+    virtual std::size_t DeleteMany(const std::vector<std::string>& keys) = 0;
+
+    /// @brief Перечисляет объекты в бакете по префиксу (с пагинацией внутри).
+    /// @details Возвращает ключ и время последней модификации каждого объекта.
+    ///          Используется orphan-GC для сверки бакета с БД. Список авторизован
+    ///          (доступен только сервису), наружу не выставляется.
+    /// @param prefix Префикс ключей (например "projects/").
+    /// @return Список объектов под префиксом.
+    virtual std::vector<ObjectKey> ListKeys(const std::string& prefix) = 0;
+
 };
 
 }  // namespace ya_brander::components

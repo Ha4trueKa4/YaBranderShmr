@@ -19,3 +19,4 @@ Makefile.local
 *.bak
 .env
 mock_s3/
+CLAUDE.md

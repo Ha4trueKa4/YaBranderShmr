@@ -23,4 +23,5 @@ enum AppRoute: Hashable {
     case publicProject(projectID: UUID)
     case profile(userID: UUID)
     case profileConnections(userID: UUID, kind: ProfileConnectionsKind)
+    case settings
 }

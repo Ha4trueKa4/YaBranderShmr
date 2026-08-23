@@ -32,7 +32,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
-find_package(userver COMPONENTS core postgresql QUIET)
+find_package(userver COMPONENTS core postgresql otlp QUIET)
 if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
@@ -52,6 +52,13 @@ endif ()
 
 userver_setup_environment()
 
+userver_add_sql_library(${PROJECT_NAME}_sql
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sql/queries
+        OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/sql
+        NAMESPACE ya_brander
+        SQL_FILES *.sql
+)
+
 
 # Common sources
 add_library(${PROJECT_NAME}_objs OBJECT
@@ -67,6 +74,10 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/password_hasher.cpp
         src/handlers/auth/yandex_oauth_handler.hpp
         src/handlers/auth/yandex_oauth_handler.cpp
+        src/handlers/auth/auth_method_handler.hpp
+        src/handlers/auth/auth_method_handler.cpp
+        src/handlers/auth/set_password_handler.hpp
+        src/handlers/auth/set_password_handler.cpp
         src/components/auth_checker.hpp
         src/components/auth_checker.cpp
         src/components/project_manager_component.cpp
@@ -118,10 +129,14 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/test_llm_handler/test_polisher_handler.cpp
         src/utils/errors.hpp
         src/utils/errors.cpp
+        src/components/garbage_collector/garbage_collector_component.cpp
+        src/utils/postgres_retry.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
+        ${PROJECT_NAME}_sql
+        userver::otlp
         nlohmann_json::nlohmann_json
         jwt-cpp
         pugixml

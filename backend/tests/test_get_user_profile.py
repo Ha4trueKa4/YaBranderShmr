@@ -125,7 +125,7 @@ async def test_get_profile_projects_visibility_for_owner(service_client):
         assert "is_public" in proj
         assert "created_at" in proj
 
-        # Проверяем опциональное поле url (оно появляется, если у проекта есть s3-версия)
+        # Проверяем опциональное поле url (появляется, если есть s3-версия)
         if "url" in proj:
             assert isinstance(proj["url"], str)
             assert len(proj["url"]) > 0

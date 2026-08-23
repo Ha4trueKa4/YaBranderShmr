@@ -38,7 +38,7 @@ fun BrandTextLink(
         text = buildAnnotatedString {
             append(text)
             append(" ")
-            withStyle(SpanStyle(color = AppColors.Accent, fontWeight = FontWeight.SemiBold)) {
+            withStyle(SpanStyle(color = AppColors.AccentText, fontWeight = FontWeight.SemiBold)) {
                 append(actionText)
             }
         },
@@ -52,7 +52,7 @@ fun BrandTextLink(
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun BrandTextLinkPreview() {
     AvatarGeneratorTheme {

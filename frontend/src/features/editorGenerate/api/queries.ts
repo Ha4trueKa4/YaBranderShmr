@@ -9,6 +9,7 @@ interface GenerateProjectInput {
   model: PostProjectsByIdGenerateData['body']['model']
   projectId: string
   prompt: PostProjectsByIdGenerateData['body']['prompt']
+  signal?: AbortSignal
 }
 
 export const modelsQueryKey = ['models'] as const
@@ -40,7 +41,7 @@ export function useModelsQuery() {
 export function useGenerateProjectMutation() {
   return useMutation({
     mutationKey: ['project', 'generate'],
-    mutationFn: ({ model, projectId, prompt }: GenerateProjectInput) =>
-      generateProject(projectId, { model, prompt }),
+    mutationFn: ({ model, projectId, prompt, signal }: GenerateProjectInput) =>
+      generateProject(projectId, { model, prompt }, signal),
   })
 }

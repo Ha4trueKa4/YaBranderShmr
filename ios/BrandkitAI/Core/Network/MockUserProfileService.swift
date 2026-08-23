@@ -24,6 +24,10 @@ nonisolated struct MockUserProfileService: UserProfileService {
     func subscribe(to userID: UUID) async throws {}
     func unsubscribe(from userID: UUID) async throws {}
 
+    func updateName(_ name: String, for id: UUID) async throws -> String {
+        name
+    }
+
     private static let sampleConnections = [
         ProfileConnection(id: UUID(), name: "Ivan Petrov", isSubscribed: false),
         ProfileConnection(id: UUID(), name: "Petr Ivanov", isSubscribed: true),
