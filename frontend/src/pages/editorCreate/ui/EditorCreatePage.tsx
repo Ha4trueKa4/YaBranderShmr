@@ -60,6 +60,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       setCancelledDraft(null)
       generationProcessStore.begin(draft)
       let pollingController: AbortController | null = null
+      let createdProjectId: string | undefined
 
       const deleteCancelledProject = async (projectId: string | undefined) => {
         if (!projectId) {
@@ -97,6 +98,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
+        createdProjectId = project.id
         const jobId = project.job_id
 
         // Не прерываем запрос создания проекта по AbortSignal: сервер мог уже
@@ -108,6 +110,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         }
 
         if (!jobId) {
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -127,6 +130,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         )
 
         if (generatedProject.status === 'error') {
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -136,6 +140,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -154,11 +159,14 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       } catch (error) {
         if (error instanceof GenerationPollingCancelledError) {
           await deleteCancelledProject(
-            generationProcessStore.projectId ?? undefined,
+            createdProjectId ?? generationProcessStore.projectId ?? undefined,
           )
           return
         }
 
+        await deleteCancelledProject(
+          createdProjectId ?? generationProcessStore.projectId ?? undefined,
+        )
         toast.error(
           error instanceof GenerationPollingTimeoutError
             ? t('Generation is taking too long. Please try again.')
