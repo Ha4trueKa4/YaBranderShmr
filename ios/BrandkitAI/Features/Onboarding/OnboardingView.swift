@@ -90,7 +90,7 @@ struct OnboardingView: View {
     
     var brandIdentity: some View {
         var logo: some View {
-            Image("Logo")
+            Image(.appLogoM)
                 .resizable()
                 .frame(width: 88, height: 88)
         }
