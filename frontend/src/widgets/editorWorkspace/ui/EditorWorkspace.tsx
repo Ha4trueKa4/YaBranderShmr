@@ -54,7 +54,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     () => new EditorStore(document),
   )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
-  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [activeTool, setActiveTool] = useState<CanvasTool>(
+    isMobileLayout ? 'hand' : 'select',
+  )
   const [zoom, setZoom] = useState(1)
   const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
