@@ -53,7 +53,7 @@ export function MobileEditorHeader({
         <ArrowLeft className={styles.backIcon} />
       </IconButton>
       <div className={styles.title}>
-        <strong>{projectName}</strong>
+        <strong title={projectName}>{projectName}</strong>
         {canEdit && (
           <ProjectVisibilityToggle
             compact
