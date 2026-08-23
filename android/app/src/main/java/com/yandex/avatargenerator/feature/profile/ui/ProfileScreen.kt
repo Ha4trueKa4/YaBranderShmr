@@ -30,6 +30,7 @@ import com.yandex.avatargenerator.ui.components.masonryAspectRatio
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
+import com.yandex.avatargenerator.ui.util.RefreshOnResume
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -67,6 +68,10 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = koinViewModel { parametersOf(userId, isOwnProfile) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Пока ходили создавать проект / подписываться в другом месте, свой профиль
+    // мог устареть — перечитываем при возврате.
+    RefreshOnResume(userId) { viewModel.refresh() }
 
     Column(
         modifier = modifier

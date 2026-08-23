@@ -45,6 +45,24 @@ internal class PublicProjectViewModel(
 
     private var followJob: Job? = null
     private var exportJob: Job? = null
+    private var loadJob: Job? = null
+
+    /**
+     * Тихая перезагрузка при возврате на экран: скелетон не показываем, при ошибке
+     * оставляем текущее содержимое. Пока экран грузится впервые или лежит в ошибке
+     * — обновлять нечего ([load]); а с подпиской в полёте не лезем, чтобы не
+     * затереть оптимистичное состояние кнопки ответом сервера.
+     */
+    fun refresh() {
+        if (_uiState.value !is PublicProjectUiState.Content) return
+        if (followJob?.isActive == true) return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            repository.getPublicProject(projectId).onSuccess {
+                _uiState.value = PublicProjectUiState.Content(it)
+            }
+        }
+    }
 
     /**
      * Сохраняет превью проекта в «Загрузки» в выбранном [format]. Пока файл
@@ -84,6 +102,9 @@ internal class PublicProjectViewModel(
         if (followJob?.isActive == true) return
 
         val following = !current.project.author.isFollowing
+        // Сбрасываем тихую перезагрузку, если она в полёте: её ответ мог быть собран
+        // до подписки и, придя позже, откатил бы оптимистичное состояние кнопки.
+        loadJob?.cancel()
         _uiState.update { applyFollow(it, following) }
 
         followJob = viewModelScope.launch {
@@ -106,7 +127,8 @@ internal class PublicProjectViewModel(
 
     private fun load() {
         _uiState.value = PublicProjectUiState.Loading
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.value = repository.getPublicProject(projectId).fold(
                 onSuccess = { PublicProjectUiState.Content(it) },
                 onFailure = { PublicProjectUiState.Error },

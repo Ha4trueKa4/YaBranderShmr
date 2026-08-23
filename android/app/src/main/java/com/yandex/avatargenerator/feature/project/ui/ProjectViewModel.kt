@@ -8,6 +8,7 @@ import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,12 +62,29 @@ internal class ProjectViewModel(
      */
     private val requestedVersions = mutableSetOf<String>()
 
+    private var loadJob: Job? = null
+
     init {
         load()
     }
 
     /** Повтор после ошибки. */
     fun retry() = load()
+
+    /**
+     * Тихая перезагрузка ленты при возврате на экран: скелетон не показываем, при
+     * ошибке оставляем текущую ленту. Пока идёт генерация ([ProjectUiState.Content.isSending])
+     * не лезем — серверная лента затёрла бы оптимистичный промпт и скелетон ответа;
+     * а до первой загрузки или в состоянии ошибки обновлять нечего ([load]).
+     */
+    fun refresh() {
+        val state = _uiState.value
+        if (state !is ProjectUiState.Content || state.isSending) return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            chatRepository.getChat(projectId).onSuccess { applyChat(it) }
+        }
+    }
 
     /**
      * Переключает видимость проекта (`PATCH /projects/{id}`).
@@ -132,6 +150,10 @@ internal class ProjectViewModel(
      * экран не должен выглядеть так, будто нажатие пропало.
      */
     private fun generate(text: String) {
+        // Отменяем тихую перезагрузку, если она в полёте: её поздний ответ иначе
+        // заменил бы ленту серверной и снёс только что добавленный промпт и скелетон.
+        loadJob?.cancel()
+
         val prompt = ChatMessage.Outgoing(
             id = UUID.randomUUID().toString(),
             text = text,
@@ -362,7 +384,8 @@ internal class ProjectViewModel(
      */
     private fun load() {
         _uiState.value = ProjectUiState.Loading
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.value = chatRepository.getChat(projectId).fold(
                 onSuccess = { chat ->
                     rememberPreviews(chat.messages)

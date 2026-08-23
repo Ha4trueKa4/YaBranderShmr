@@ -65,6 +65,7 @@ import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
+import com.yandex.avatargenerator.ui.util.RefreshOnResume
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -117,6 +118,10 @@ internal fun PublicProjectScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Пока ходили в профиль автора, могли на него подписаться/отписаться —
+    // перечитываем проект при возврате, чтобы кнопка подписки не врала.
+    RefreshOnResume(projectId) { viewModel.refresh() }
 
     // Тост с результатом выгрузки. Событие одноразовое (Channel во ViewModel).
     // Собираем только пока экран STARTED — событие, пришедшее в фоне, буфер

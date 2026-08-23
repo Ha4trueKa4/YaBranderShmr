@@ -34,6 +34,7 @@ import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
+import com.yandex.avatargenerator.ui.util.RefreshOnResume
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -57,6 +58,10 @@ internal fun ChatsScreen(
     viewModel: ChatsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Список мог пополниться, пока создавали проект в другом экране — перечитываем
+    // при возврате на вкладку.
+    RefreshOnResume(Unit) { viewModel.refresh() }
 
     ChatsContent(
         uiState = uiState,

@@ -31,6 +31,7 @@ import com.yandex.avatargenerator.ui.components.ProjectCard
 import com.yandex.avatargenerator.ui.components.ProjectMasonryGrid
 import com.yandex.avatargenerator.ui.components.masonryAspectRatio
 import com.yandex.avatargenerator.ui.theme.AppColors
+import com.yandex.avatargenerator.ui.util.RefreshOnResume
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -52,6 +53,10 @@ fun FeedScreen(
 ) {
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
     val projects = viewModel.pagingData.collectAsLazyPagingItems()
+
+    // Пока ходили в проект/профиль, в ленте могли появиться новые проекты или
+    // измениться подписки — перечитываем при возврате на вкладку.
+    RefreshOnResume(Unit) { projects.refresh() }
 
     Column(
         modifier = modifier

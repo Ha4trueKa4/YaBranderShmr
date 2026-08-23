@@ -25,6 +25,7 @@ import com.yandex.avatargenerator.feature.project.ui.components.ProjectVisibilit
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
+import com.yandex.avatargenerator.ui.util.RefreshOnResume
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -47,6 +48,10 @@ internal fun ProjectScreen(
     viewModel: ProjectViewModel = koinViewModel { parametersOf(projectId) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Пока ходили в редактор/историю, лента и метаданные проекта могли измениться
+    // — перечитываем при возврате (кроме момента активной генерации).
+    RefreshOnResume(projectId) { viewModel.refresh() }
 
     ProjectContent(
         uiState = uiState,

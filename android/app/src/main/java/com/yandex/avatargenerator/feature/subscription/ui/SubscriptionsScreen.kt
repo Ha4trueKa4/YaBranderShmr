@@ -12,14 +12,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.subscription.ui.components.SubscriptionUserRow
@@ -29,6 +24,7 @@ import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.BrandListItemSkeleton
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
+import com.yandex.avatargenerator.ui.util.RefreshOnResume
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -59,12 +55,9 @@ fun SubscriptionsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Перезагружаем список при возврате на экран (кроме первого входа — там уже
-    // грузит init): пока ходили в чужой профиль, там могли подписаться/отписаться.
-    var isFirstResume by remember { mutableStateOf(true) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (isFirstResume) isFirstResume = false else viewModel.refresh()
-    }
+    // Перезагружаем список при возврате на экран: пока ходили в чужой профиль, там
+    // могли подписаться/отписаться.
+    RefreshOnResume(userId) { viewModel.refresh() }
 
     Column(
         modifier = modifier

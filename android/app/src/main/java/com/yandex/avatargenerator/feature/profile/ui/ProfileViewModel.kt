@@ -25,17 +25,39 @@ class ProfileViewModel(
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
         load()
     }
 
     fun load() {
         _uiState.value = ProfileUiState.Loading
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.value = runCatching {
                 val details = repository.getProfile(userId)
                 ProfileUiState.Content(details.profile, details.projects, isOwnProfile)
             }.getOrElse { ProfileUiState.Error }
+        }
+    }
+
+    /**
+     * Тихая перезагрузка при возврате на экран: скелетон не показываем, при ошибке
+     * оставляем текущее содержимое — сеть моргнула, а «профиль не открылся» врать
+     * не надо. Пока экран ещё грузится впервые или лежит в ошибке, обновлять
+     * нечего — этим занимается [load].
+     */
+    fun refresh() {
+        if (_uiState.value !is ProfileUiState.Content) return
+        // Пока подписка в полёте, не читаем профиль: сервер мог ещё не закоммитить её,
+        // и ответ затёр бы оптимистичное состояние кнопки Follow.
+        if (followJob?.isActive == true) return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            runCatching { repository.getProfile(userId) }.onSuccess { details ->
+                _uiState.value = ProfileUiState.Content(details.profile, details.projects, isOwnProfile)
+            }
         }
     }
 
@@ -56,6 +78,9 @@ class ProfileViewModel(
         if (followJob?.isActive == true) return
 
         val following = !current.profile.isFollowing
+        // Сбрасываем тихую перезагрузку, если она в полёте: её ответ мог быть собран
+        // до подписки и, придя позже, откатил бы оптимистичное состояние кнопки.
+        loadJob?.cancel()
         _uiState.update { applyFollow(it, following) }
 
         followJob = viewModelScope.launch {
