@@ -101,6 +101,7 @@ deploy:
         docker run -d --name otel-collector --restart unless-stopped --network ya-brander-net \
           --env-file ~/$REMOTE_APP_DIR/backend/.env \
           -e YA_BRANDER_HOST=ya-brander \
+          -e OTEL_SERVICE_NAME=ya-brander \
           -v ~/$REMOTE_APP_DIR/backend/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro \
           otel/opentelemetry-collector-contrib:0.159.0
         for i in \$(seq 1 30); do
