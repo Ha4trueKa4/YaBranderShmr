@@ -4,6 +4,9 @@
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>
 
+    <!-- Навигация -->
+    <string name="nav_back">Back</string>
+
     <!-- Вкладки нижней навигации -->
     <string name="nav_feed">Feed</string>
     <string name="nav_create">Create</string>
@@ -138,6 +141,17 @@
     <string name="project_back_description">Back</string>
     <string name="project_history_description">Version history</string>
     <string name="project_share_description">Share project</string>
+
+    <!-- Приватность проекта: чип в шапке и шторка выбора видимости -->
+    <string name="project_visibility_private_badge">Private</string>
+    <string name="project_visibility_public_badge">Public</string>
+    <string name="project_visibility_open_description">Change project visibility</string>
+    <string name="project_visibility_title">Project visibility</string>
+    <string name="project_visibility_subtitle">Manage who can view and copy your brandkit.</string>
+    <string name="project_visibility_private_title">Private project</string>
+    <string name="project_visibility_private_subtitle">Only you can view and edit it</string>
+    <string name="project_visibility_public_title">Public project</string>
+    <string name="project_visibility_public_subtitle">Anyone with the link can view it</string>
     <string name="project_input_placeholder">Describe what to change…</string>
     <string name="project_send_description">Send message</string>
 

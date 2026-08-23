@@ -3,25 +3,32 @@ import { ConfirmationModal } from '../ConfirmationModal'
 
 export interface ConfirmUnsavedChangeModalProps {
   isOpen: boolean
-  onCancel: () => void
-  onConfirm: () => void
+  isSaving: boolean
+  onDismiss: () => void
+  onLeave: () => void
+  onSave: () => void
 }
 
 export function ConfirmUnsavedChangeModal({
   isOpen,
-  onCancel,
-  onConfirm,
+  isSaving,
+  onDismiss,
+  onLeave,
+  onSave,
 }: ConfirmUnsavedChangeModalProps) {
   const { t } = useTranslation()
 
   return (
     <ConfirmationModal
-      cancelLabel={t('Stay')}
-      confirmLabel={t('Leave without saving')}
+      cancelLabel={t('Save')}
+      cancelVariant="primary"
+      confirmLabel={t('Leave')}
       description={t('Your unsaved changes will be lost.')}
+      isCancelling={isSaving}
       isOpen={isOpen}
-      onCancel={onCancel}
-      onConfirm={onConfirm}
+      onCancel={onSave}
+      onConfirm={onLeave}
+      onDismiss={onDismiss}
       title={t('Leave without saving?')}
     />
   )

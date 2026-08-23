@@ -91,6 +91,9 @@ workflows:
               GC_ENABLED: ${{ secrets.GC_ENABLED }}
               REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
               OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+              MONIUM_PROJECT: ${{ secrets.MONIUM_PROJECT }}
+              MONIUM_API_KEY: ${{ secrets.MONIUM_API_KEY }}
+              ADMIN_ID: ${{ secrets.ADMIN_ID }}
 
   deploy-frontend-dev:
     tasks:

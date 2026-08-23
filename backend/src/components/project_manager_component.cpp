@@ -7,6 +7,10 @@
 #include <userver/utils/uuid4.hpp>
 #include <shared_mutex>
 
+#include <ya_brander/sql_queries.hpp>
+
+#include "../utils/postgres_retry.hpp"
+
 namespace ya_brander::components {
 
 const std::string kDefaultSvg = R"SVG(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
@@ -51,7 +55,7 @@ ProjectManagerComponent::ProjectManagerComponent(
 models::Project ProjectManagerComponent::CreateProject(const std::string& author_id, const std::string& name, const std::string& description) {
     auto res = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO projects (author_id, name, description, is_private) VALUES ($1::uuid, $2, $3, true) RETURNING id::text, created_at",
+        sql::kCreateProject,
         author_id, name, description
     );
 
@@ -66,11 +70,11 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
 }
 
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, author_id::text, name, COALESCE(description, '') AS description, is_private, created_at FROM projects WHERE id = $1::uuid",
-        id
-    );
+    auto res = utils::ExecuteSelectWithRetry("select-project", [&] {
+      return pg_cluster_->Execute(
+          userver::storages::postgres::ClusterHostType::kSlave,
+          sql::kSelectProject, id);
+    });
 
     if (res.IsEmpty()) return std::nullopt;
 
@@ -95,8 +99,7 @@ void ProjectManagerComponent::UpdateProject(
   if (name.has_value()) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET name = $2, updated_at = NOW() "
-        "WHERE id = $1::uuid",
+        sql::kUpdateProjectName,
         id, *name);
   }
   if (is_public.has_value()) {
@@ -104,14 +107,12 @@ void ProjectManagerComponent::UpdateProject(
       version_storage_.SetLatestAcl(id, true);
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=false, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kPublishProject,
           id);
     } else {
       pg_cluster_->Execute(
           userver::storages::postgres::ClusterHostType::kMaster,
-          "UPDATE projects SET is_private=true, updated_at=NOW() "
-          "WHERE id=$1::uuid",
+          sql::kMakeProjectPrivate,
           id);
       version_storage_.SetLatestAcl(id, false);
     }
@@ -129,7 +130,7 @@ void ProjectManagerComponent::UpdateProject(
 
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "DELETE FROM projects WHERE id = $1::uuid", id
+        sql::kDeleteProject, id
     );
 }
 
@@ -140,10 +141,12 @@ constexpr std::size_t kMaxReferenceProjects = 2;
 
 userver::formats::json::Value ProjectManagerComponent::FetchChatHistoryJson(
     const std::string& project_id) {
-    auto res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT chat_history FROM projects WHERE id = $1::uuid",
-        project_id);
+    auto res = utils::ExecuteSelectWithRetry(
+        "select-project-chat-history", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectProjectChatHistory, project_id);
+        });
     if (res.IsEmpty()) return userver::formats::json::MakeArray();
     return res[0]["chat_history"].As<userver::formats::json::Value>();
 }
@@ -168,9 +171,7 @@ void ProjectManagerComponent::AppendUserMessage(const std::string& project_id, c
                                                  const std::string& user_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'user', 'text', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendUserMessage,
         project_id, user_message, job_id);
 }
 
@@ -178,9 +179,7 @@ void ProjectManagerComponent::AppendAssistantSuccess(const std::string& project_
                                                       const std::string& version_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'version_id', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantSuccess,
         project_id, version_id, job_id);
 }
 
@@ -188,18 +187,14 @@ void ProjectManagerComponent::AppendAssistantError(const std::string& project_id
                                                     const std::string& error_message) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'error', $2::text, 'job_id', $3::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantError,
         project_id, error_message, job_id);
 }
 
 void ProjectManagerComponent::AppendAssistantCancelled(const std::string& project_id, const std::string& job_id) {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "UPDATE projects SET chat_history = chat_history || jsonb_build_array("
-        "  jsonb_build_object('role', 'assistant', 'status', 'cancelled', 'job_id', $2::text, 'created_at', NOW())"
-        "), updated_at = NOW() WHERE id = $1::uuid",
+        sql::kAppendAssistantCancelled,
         project_id, job_id);
 }
 

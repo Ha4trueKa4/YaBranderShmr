@@ -184,6 +184,7 @@ export function SceneFrame({
   const canvasPanHandlers = useCanvasPan({
     activeTool,
     constrainOffset,
+    isNativeGestureActiveReference,
     offset: viewportOffset,
     onOffsetChange: onViewportOffsetChange,
   })
@@ -201,6 +202,7 @@ export function SceneFrame({
     constrainOffset,
     isNativeGestureActiveReference,
     offset: viewportOffset,
+    onPinchStart: canvasPanHandlers.cancelPan,
     onOffsetChange: onViewportOffsetChange,
     onZoomChange,
     viewportReference,

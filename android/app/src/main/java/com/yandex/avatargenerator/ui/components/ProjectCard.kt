@@ -34,9 +34,11 @@ import kotlin.math.abs
  * Карточка проекта для masonry-сеток (лента, профиль): превью переменной высоты +
  * название + опциональная кликабельная строка автора (аватар + имя).
  *
- * Домен-агностична — принимает примитивы, каждый экран мапит свою модель. Оболочка
- * оформлена как у [BrandCard], но с переменной высотой превью и интерактивной строкой
- * автора (отдельный [onAuthorClick]), которых у BrandCard нет.
+ * Домен-агностична — принимает примитивы, каждый экран мапит свою модель. В отличие
+ * от [BrandCard] идёт без обводки: в masonry-сетке карточки стоят вплотную, и рамка
+ * у каждой превращает ленту в решётку. Форму задаёт само превью.
+ * Ещё отличия — переменная высота превью и интерактивная строка автора
+ * (отдельный [onAuthorClick]), которых у BrandCard нет.
  *
  * @param previewUrl превью проекта; null — плашка-заглушка [AppColors.SurfaceVariant].
  * @param authorName имя автора; null — строка автора не показывается (на профиле
@@ -74,7 +76,8 @@ fun ProjectCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .brandSurface(RoundedCornerShape(AppShape.l))
+            .clip(RoundedCornerShape(AppShape.l))
+            .background(AppColors.Surface)
             .clickable(onClick = onClick),
     ) {
         AsyncImage(

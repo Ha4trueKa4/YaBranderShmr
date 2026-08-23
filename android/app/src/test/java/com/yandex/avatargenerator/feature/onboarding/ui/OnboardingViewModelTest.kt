@@ -44,20 +44,20 @@ internal class OnboardingViewModelTest {
     }
 
     @Test
-    fun `starts on the first of four slides`() {
+    fun `starts on the first of three slides`() {
         val state = viewModel.state.value
 
         assertEquals(0, state.currentPage)
-        assertEquals(4, state.slides.size)
+        assertEquals(3, state.slides.size)
         assertFalse(state.isLastPage)
     }
 
     @Test
     fun `OnPageChange moves to the requested slide`() = runTest(dispatcher) {
-        viewModel.onIntent(OnboardingIntent.OnPageChange(3))
+        viewModel.onIntent(OnboardingIntent.OnPageChange(2))
         advanceUntilIdle()
 
-        assertEquals(3, viewModel.state.value.currentPage)
+        assertEquals(2, viewModel.state.value.currentPage)
         assertTrue(viewModel.state.value.isLastPage)
     }
 
@@ -94,7 +94,7 @@ internal class OnboardingViewModelTest {
             val effects = mutableListOf<OnboardingEffect>()
             val collector = launch { viewModel.effect.toList(effects) }
 
-            viewModel.onIntent(OnboardingIntent.OnPageChange(3))
+            viewModel.onIntent(OnboardingIntent.OnPageChange(2))
             viewModel.onIntent(OnboardingIntent.OnPrimaryClick)
             advanceUntilIdle()
 

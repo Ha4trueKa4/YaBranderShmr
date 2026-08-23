@@ -142,7 +142,7 @@ private fun CreatorRow(modifier: Modifier = Modifier) {
         }
         BrandBadge(
             text = stringResource(R.string.onboarding_mock_follow),
-            variant = BrandBadgeVariant.Violet
+            variant = BrandBadgeVariant.Accent
         )
     }
 }

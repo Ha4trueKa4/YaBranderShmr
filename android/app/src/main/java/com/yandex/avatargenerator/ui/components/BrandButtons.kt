@@ -139,15 +139,15 @@ fun BrandSecondaryButton(
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
             .height(if (compact) BrandButtonDefaults.CompactHeight else BrandButtonDefaults.Height),
         shape = RoundedCornerShape(if (compact) AppShape.s else AppShape.l),
-        border = BorderStroke(1.5.dp, AppColors.Accent),
+        border = BorderStroke(1.5.dp, AppColors.AccentText),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = AppColors.Accent
+            contentColor = AppColors.AccentText
         ),
         contentPadding = PaddingValues(horizontal = if (compact) AppSpacing.m else AppSpacing.l)
     ) {
         Text(
             text = text,
-            color = AppColors.Accent,
+            color = AppColors.AccentText,
             fontSize = if (compact) 14.sp else 15.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -191,7 +191,7 @@ fun BrandDestructiveButton(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun BrandButtonsPreview() {
     AvatarGeneratorTheme {

@@ -18,6 +18,8 @@ final class ProfileViewModel {
     private(set) var projects: [Project] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    /// Идентификатор показываемого профиля: нужен экранам подписчиков/подписок.
+    private(set) var profileID: UUID?
 
     private(set) var isSubscribed = false
     private(set) var isFollowBusy = false
@@ -41,6 +43,7 @@ final class ProfileViewModel {
         self.currentUserService = currentUserService
         self.userProfileService = userProfileService
         self.userID = userID
+        self.profileID = userID ?? currentUserService.id
     }
 
     var name: String {
@@ -79,6 +82,7 @@ final class ProfileViewModel {
         }
 
         guard let id = userID ?? currentUserService.id else { return }
+        profileID = id
 
         if userID != nil {
             let viewerID = currentUserService.id

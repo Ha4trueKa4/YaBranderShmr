@@ -25,6 +25,14 @@ nonisolated final class RemoteUserProfileService: UserProfileService {
         )
     }
 
+    func subscribers(for userID: UUID) async throws -> [ProfileConnection] {
+        try await connections(from: .subscribers(userID: userID))
+    }
+
+    func subscriptions(for userID: UUID) async throws -> [ProfileConnection] {
+        try await connections(from: .subscriptions(userID: userID))
+    }
+
     func subscribe(to userID: UUID) async throws {
         try await networkClient.request(.post, .subscribe(userID: userID), authorization: .required)
     }
@@ -42,6 +50,23 @@ nonisolated final class RemoteUserProfileService: UserProfileService {
         )
         return dto.nickname
     }
+
+    private func connections(from endpoint: APIEndpoint) async throws -> [ProfileConnection] {
+        let dto: [ProfileConnectionDTO] = try await networkClient.request(
+            .get,
+            endpoint,
+            authorization: .optional
+        )
+        return dto.map {
+            ProfileConnection(id: $0.id, name: $0.name, isSubscribed: $0.isSubscribed)
+        }
+    }
+}
+
+private nonisolated struct ProfileConnectionDTO: Decodable, Sendable {
+    let id: UUID
+    let name: String
+    let isSubscribed: Bool?
 }
 
 private nonisolated struct UpdateUserProfileRequest: Encodable, Sendable {

@@ -4,7 +4,7 @@
 
 ## Путь данных
 
-Бэкенд сервис (userver) хранит счётчики и датчики в памяти и отдаёт их по адресу `GET /service/monitor?format=prometheus` на порту 1188. Контейнер Prometheus, описанный в конфигурации Docker Compose, опрашивает этот адрес каждые 15 секунд и сохраняет значения как временной ряд. Grafana затем читает данные из Prometheus и рисует панели ниже. Сервис сам ничего не отправляет; Prometheus всегда сам забирает данные.
+Бэкенд сервис (userver) хранит счётчики и датчики в памяти и отдаёт их по адресу `GET /service/monitor?format=prometheus` на порту 8085. Контейнер Prometheus, описанный в конфигурации Docker Compose, опрашивает этот адрес каждые 15 секунд и сохраняет значения как временной ряд. Grafana затем читает данные из Prometheus и рисует панели ниже. Сервис сам ничего не отправляет; Prometheus всегда сам забирает данные.
 
 ## 1. Request rate (RPS), частота запросов
 
@@ -68,7 +68,7 @@ This document explains the five panels of the `ya_brander Overview` Grafana dash
 
 ## Pipeline
 
-The backend service (userver) keeps counters and gauges in memory and exposes them at `GET /service/monitor?format=prometheus` on port 1188. The Prometheus container described in the Docker Compose configuration polls that address every 15 seconds and stores the values as a time series. Grafana then reads from Prometheus and draws the panels below. The service never pushes anything on its own; Prometheus always pulls the data.
+The backend service (userver) keeps counters and gauges in memory and exposes them at `GET /service/monitor?format=prometheus` on port 8085. The Prometheus container described in the Docker Compose configuration polls that address every 15 seconds and stores the values as a time series. Grafana then reads from Prometheus and draws the panels below. The service never pushes anything on its own; Prometheus always pulls the data.
 
 ## 1. Request rate (RPS)
 
