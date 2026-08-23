@@ -31,6 +31,7 @@ import { EditorGeneratingState } from './components/EditorGeneratingState'
 import styles from './EditorCreatePage.module.css'
 
 interface ProjectDraft {
+  data?: string
   description: string
   model: string
   name: string
@@ -72,7 +73,9 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
       try {
         const project = await createProject({
-          body: { ...draft, prompt: draft.description },
+          body: draft.data
+            ? { data: draft.data, name: draft.name }
+            : { ...draft, prompt: draft.description },
         })
 
         if (!project.id) {
@@ -175,6 +178,15 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     void startGeneration(draft)
   }
 
+  function handleUpload(data: string) {
+    handleGenerate({
+      data,
+      description: '',
+      model: DEFAULT_GENERATION_MODEL,
+      name: t('Untitled project'),
+    })
+  }
+
   function handleCancelGeneration() {
     generationProcessStore.cancel()
     generationAbortControllerRef.current?.abort()
@@ -204,6 +216,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
             }
             initialModel={cancelledDraft?.model}
             onGenerate={handleGenerate}
+            onUpload={handleUpload}
             onUnauthorizedModelSelect={
               isAuthorized ? undefined : handleUnauthorizedModelSelect
             }
