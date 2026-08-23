@@ -37,11 +37,6 @@ export function ProjectTitle({
       <strong className={styles.projectName}>{title}</strong>
       {canEdit && (
         <>
-          <ProjectVisibilityToggle
-            disabled={isVisibilityUpdating}
-            isPublic={isProjectPublic}
-            onToggle={onToggleVisibility}
-          />
           <button
             className={styles.editProjectName}
             onClick={() => setRenameModalOpen(true)}
@@ -49,6 +44,11 @@ export function ProjectTitle({
           >
             <img alt="" src={iconPencil} />
           </button>
+          <ProjectVisibilityToggle
+            disabled={isVisibilityUpdating}
+            isPublic={isProjectPublic}
+            onToggle={onToggleVisibility}
+          />
           <ProjectRenameModal
             isOpen={isRenameModalOpen}
             onClose={() => setRenameModalOpen(false)}

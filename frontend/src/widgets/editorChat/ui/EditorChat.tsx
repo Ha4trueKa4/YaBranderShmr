@@ -113,7 +113,8 @@ export function EditorChat({
     return (
       <aside className={styles.collapsed}>
         <ChatCollapsedBar
-          disabled={disabled || isPending}
+          disabled={disabled}
+          isPending={isPending}
           onDraftChange={setDraft}
           onExpand={() => setIsExpanded(true)}
           onSubmit={submitPrompt}
@@ -138,7 +139,8 @@ export function EditorChat({
       <ChatMessageList messages={messages} />
       <div className={styles.composer}>
         <ChatComposer
-          disabled={disabled || isPending}
+          disabled={disabled}
+          isPending={isPending}
           onChange={setDraft}
           onSubmit={submitPrompt}
           placeholder={t('Ask AI to change the design…')}

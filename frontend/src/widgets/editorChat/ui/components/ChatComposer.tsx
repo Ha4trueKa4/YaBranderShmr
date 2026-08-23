@@ -1,4 +1,4 @@
-import { IconButton, Input } from '@shared/ui'
+import { IconButton, Input, Spinner } from '@shared/ui'
 import { Send } from 'lucide-react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import styles from './ChatComposer.module.css'
 
 interface ChatComposerProps {
   disabled?: boolean
+  isPending?: boolean
   onChange: (nextValue: string) => void
   onSubmit: () => void
   placeholder: string
@@ -14,13 +15,15 @@ interface ChatComposerProps {
 
 export function ChatComposer({
   disabled = false,
+  isPending = false,
   onChange,
   onSubmit,
   placeholder,
   value,
 }: ChatComposerProps) {
   const { t } = useTranslation()
-  const isSubmitDisabled = disabled || !value.trim()
+  const isInputDisabled = disabled || isPending
+  const isSubmitDisabled = isInputDisabled || !value.trim()
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -43,10 +46,11 @@ export function ChatComposer({
   return (
     <form className={styles.composer} onSubmit={handleSubmit}>
       <Input
-        disabled={disabled}
+        disabled={isInputDisabled}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={isPending ? t('AI is updating the design…') : placeholder}
+        trailingContent={isPending ? <Spinner size="sm" /> : undefined}
         value={value}
       />
       <IconButton

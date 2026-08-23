@@ -6,6 +6,7 @@ import { ChatComposer } from './ChatComposer'
 
 interface ChatCollapsedBarProps {
   disabled?: boolean
+  isPending?: boolean
   onDraftChange: (nextValue: string) => void
   onExpand: () => void
   onSubmit: () => void
@@ -14,6 +15,7 @@ interface ChatCollapsedBarProps {
 
 export function ChatCollapsedBar({
   disabled = false,
+  isPending = false,
   onDraftChange,
   onExpand,
   onSubmit,
@@ -26,6 +28,7 @@ export function ChatCollapsedBar({
       <MessageCircle className={styles.icon} size={19} />
       <ChatComposer
         disabled={disabled}
+        isPending={isPending}
         onChange={onDraftChange}
         onSubmit={onSubmit}
         placeholder={t('Ask AI to change the design…')}
