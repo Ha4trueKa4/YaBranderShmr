@@ -32,7 +32,7 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         let dto: ProjectDTO = try await client.request(
             .get,
             .project(id: id),
-            authorization: .required
+            authorization: .optional
         )
         return Project(dto: dto)
     }

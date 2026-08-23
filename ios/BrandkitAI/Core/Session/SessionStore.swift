@@ -3,8 +3,8 @@ import Foundation
 /// Состояние авторизации приложения.
 ///
 /// Источник правды — токен в Keychain, а не отдельный флаг: «залогинен»
-/// означает ровно «токен есть». Экраны состояние не проверяют, они только
-/// вызывают методы ниже, а корневой вью реагирует на изменение.
+/// означает ровно «токен есть». Гостевые экраны читают `state`, а защищённые
+/// действия вызывают `requireAuthentication()` вместо прямой проверки токена.
 @MainActor
 @Observable
 final class SessionStore {
@@ -31,6 +31,7 @@ final class SessionStore {
     private(set) var errorMessage: String?
     private(set) var errorField: AuthField?
     private(set) var lastSuccessfulOperation: AuthOperation?
+    private(set) var signInPresentationRequestID = UUID()
 
     private let tokenStore: TokenStore
     private let networkClient: NetworkClient
@@ -90,6 +91,19 @@ final class SessionStore {
     func clearError() {
         errorMessage = nil
         errorField = nil
+    }
+
+    /// Возвращает `true`, если защищённое действие можно выполнить сейчас.
+    /// Для гостя просит корневой экран показать авторизацию и возвращает `false`.
+    @discardableResult
+    func requireAuthentication() -> Bool {
+        guard state == .signedIn else {
+            if state == .signedOut {
+                signInPresentationRequestID = UUID()
+            }
+            return false
+        }
+        return true
     }
 
     private func authenticate<Request: Encodable & Sendable>(

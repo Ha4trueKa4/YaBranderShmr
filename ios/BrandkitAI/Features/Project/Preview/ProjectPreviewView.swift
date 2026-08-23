@@ -15,6 +15,7 @@ struct ProjectPreviewView: View {
     @State private var activeExport: ExportKind?
     @State private var exportedFile: ExportedFile?
     @State private var exportFailed = false
+    @Environment(SessionStore.self) private var session
 
     var onBack: (() -> Void)?
     var onOpenAuthor: (UUID) -> Void = { _ in }
@@ -43,7 +44,7 @@ struct ProjectPreviewView: View {
         .customNavigationBar(onBack: onBack)
         .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .task { await viewModel.load() }
+        .task(id: session.state) { await viewModel.load() }
         .sheet(item: $exportedFile) { file in
             ShareSheet(items: [file.url])
         }
@@ -55,12 +56,14 @@ struct ProjectPreviewView: View {
     // MARK: - Экспорт
 
     private func exportSVG() {
+        guard session.requireAuthentication() else { return }
         export(.svg) { data in
             try SVGExporter.writeSVGFile(data, named: viewModel.title)
         }
     }
 
     private func exportPNG() {
+        guard session.requireAuthentication() else { return }
         export(.png) { data in
             guard let svgText = String(data: data, encoding: .utf8) else {
                 throw SVGRasterizer.RasterizationError.renderingFailed
@@ -228,7 +231,7 @@ struct ProjectPreviewView: View {
 
                 Spacer()
 
-                if viewModel.canFollow {
+                if viewModel.showsFollowButton {
                     followButton
                 }
             }
@@ -257,7 +260,10 @@ struct ProjectPreviewView: View {
         FollowButton(
             isSubscribed: viewModel.isSubscribed,
             isBusy: viewModel.isFollowBusy,
-            action: viewModel.toggleFollowing
+            action: {
+                guard session.requireAuthentication() else { return }
+                viewModel.toggleFollowing()
+            }
         )
     }
 
@@ -330,4 +336,8 @@ private nonisolated final class PreviewProjectService: ProjectServiceProtocol {
         .brandBackground()
         .preferredColorScheme(.dark)
     }
+    .environment(SessionStore(
+        currentUserService: MockCurrentUserService(),
+        userProfileService: MockUserProfileService()
+    ))
 }

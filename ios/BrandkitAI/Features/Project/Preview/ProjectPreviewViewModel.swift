@@ -82,6 +82,11 @@ final class ProjectPreviewViewModel {
         return !isCurrentUser
     }
 
+    var showsFollowButton: Bool {
+        guard case .publicProject = mode, authorID != nil else { return false }
+        return !isCurrentUser
+    }
+
     var authorInitials: String { authorName.initials }
 
     var dateText: String {

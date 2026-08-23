@@ -70,6 +70,10 @@ final class ProfileViewModel {
         return !isCurrentUser
     }
 
+    var showsFollowButton: Bool {
+        userID != nil && !isCurrentUser
+    }
+
     func load() async {
         guard !isLoading else { return }
         defer { isLoading = false }

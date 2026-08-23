@@ -56,7 +56,7 @@ struct ProfileView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .task { await viewModel.load() }
+        .task(id: session.state) { await viewModel.load() }
         .refreshable { await viewModel.load() }
     }
 
@@ -99,7 +99,7 @@ struct ProfileView: View {
                                     .stroke(Color.accentColor, lineWidth: 1)
                             }
                     }
-                } else if viewModel.canFollow {
+                } else if viewModel.showsFollowButton {
                     followButton
                 }
             }
@@ -164,7 +164,10 @@ struct ProfileView: View {
         FollowButton(
             isSubscribed: viewModel.isSubscribed,
             isBusy: viewModel.isFollowBusy,
-            action: viewModel.toggleFollowing
+            action: {
+                guard session.requireAuthentication() else { return }
+                viewModel.toggleFollowing()
+            }
         )
     }
 

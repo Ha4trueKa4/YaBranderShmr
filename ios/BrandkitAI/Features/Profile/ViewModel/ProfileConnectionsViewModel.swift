@@ -54,6 +54,10 @@ final class ProfileConnectionsViewModel {
         currentUserID != nil && user.id != currentUserID && user.isSubscribed != nil
     }
 
+    func showsFollowButton(for user: ProfileConnection) -> Bool {
+        user.id != currentUserID
+    }
+
     func toggleFollowing(userID: UUID) {
         guard !busyUserIDs.contains(userID),
               let index = users.firstIndex(where: { $0.id == userID }),

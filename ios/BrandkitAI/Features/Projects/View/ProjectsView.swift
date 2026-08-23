@@ -26,7 +26,11 @@ struct ProjectsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            content
+            if session.state == .signedIn {
+                content
+            } else {
+                guestContent
+            }
         }
         .brandBackground()
         .overlay(alignment: .bottomTrailing) {
@@ -36,14 +40,33 @@ struct ProjectsView: View {
             .padding(16)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .task {
+        .task(id: session.state) {
+            guard session.state == .signedIn else { return }
             await viewModel.load()
         }
         .onChange(of: router.paths[.create]?.count ?? 0) { _, count in
-            if count == 0 {
+            if count == 0, session.state == .signedIn {
                 Task { await viewModel.load() }
             }
         }
+    }
+
+    private var guestContent: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "wand.and.sparkles")
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(.secondary)
+
+            Text("Create your first project")
+                .font(.headline)
+
+            Text("Tap the new project button to get started.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
     }
 
     @ViewBuilder
