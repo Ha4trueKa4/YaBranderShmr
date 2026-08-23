@@ -18,7 +18,7 @@ struct FeedHeaderView: View {
 
     private var logo: some View {
         HStack(spacing: 8) {
-            Image(.appLogo)
+            Image(.appLogoXS)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 28, height: 28)
