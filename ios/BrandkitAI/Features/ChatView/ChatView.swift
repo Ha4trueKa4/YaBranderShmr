@@ -18,6 +18,8 @@ struct ChatView: View {
     @State private var didFinishInitialLoad = false
     @State private var isPrivacyPickerPresented = false
     @State private var selectedPrivacy = ChatViewModel.ProjectPrivacy.privateProject
+    @State private var sendTask: Task<Void, Never>?
+    @State private var isRestoringText = false
     @FocusState private var isInputFocused: Bool
 
     init(
@@ -141,6 +143,15 @@ struct ChatView: View {
                 await Task.yield()
                 scrollToBottom(using: proxy, animated: false)
                 didFinishInitialLoad = true
+            }
+            .onDisappear {
+                sendTask?.cancel()
+            }
+            .onChange(of: viewModel.restorePrompt) { _, prompt in
+                guard let prompt else { return }
+                isRestoringText = true
+                messageText = prompt
+                viewModel.consumeRestorePrompt()
             }
             .onChange(of: viewModel.lastMessageID) { _, newMessageID in
                 guard didFinishInitialLoad, newMessageID != nil else { return }
@@ -325,7 +336,11 @@ struct ChatView: View {
         }
         .background(Color.background)
         .onChange(of: messageText) {
-            viewModel.clearSendError()
+            if isRestoringText {
+                isRestoringText = false
+            } else {
+                viewModel.clearSendError()
+            }
         }
     }
 
@@ -349,7 +364,7 @@ struct ChatView: View {
 
         let text = messageText
         messageText = ""
-        Task {
+        sendTask = Task {
             await viewModel.sendMessage(text)
         }
     }

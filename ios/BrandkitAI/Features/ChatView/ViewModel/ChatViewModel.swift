@@ -71,6 +71,7 @@ final class ChatViewModel {
     private(set) var loadFailed = false
     private(set) var pendingCount = 0
     private(set) var sendErrorMessage: String?
+    private(set) var restorePrompt: String?
     private(set) var activeJobID: String?
     var privacy = ProjectPrivacy.privateProject
 
@@ -138,9 +139,10 @@ final class ChatViewModel {
             jobID = try await service.generate(projectID: projectID, prompt: text)
         } catch NetworkError.generationInProgress(let existingJobID) {
             removeMessage(id: chatMessage.id)
+            restorePrompt = text
+            sendErrorMessage = "Another generation is in progress. Your message was not sent."
             activeJobID = existingJobID
             isCancelling = false
-            sendErrorMessage = nil
             await pollAndRefresh(jobID: existingJobID)
             isGenerating = false
             activeJobID = nil
@@ -242,6 +244,10 @@ final class ChatViewModel {
 
     func clearSendError() {
         sendErrorMessage = nil
+    }
+
+    func consumeRestorePrompt() {
+        restorePrompt = nil
     }
 
     func cancelGeneration() async {
@@ -351,7 +357,12 @@ final class ChatViewModel {
         } catch is CancellationError {
             // Таска отменена — не показываем ошибку.
         } catch {
-            sendErrorMessage = failureMessage(for: error)
+            if Self.isJobLost(error) {
+                // job_id живёт в памяти бэкенда и не переживает его перезапуск.
+                sendErrorMessage = "Generation status is unavailable. Please refresh the chat."
+            } else {
+                sendErrorMessage = failureMessage(for: error)
+            }
             try? await refreshChatAfterGenerate(generatedURL: nil)
         }
     }
@@ -510,11 +521,13 @@ final class ChatViewModel {
         isOffline = false
         loadFailed = false
 
+        var activeGeneration: (jobID: String, cancelling: Bool)?
         do {
             async let project = service.fetchProject(id: projectID)
             async let remoteMessages = service.fetchChat(projectID: projectID)
             let (fetchedProject, fetchedMessages) = try await (project, remoteMessages)
             privacy = ProjectPrivacy(isPublic: fetchedProject.isPublic)
+            activeGeneration = findActiveGeneration(in: fetchedMessages)
             applyRemoteMessages(fetchedMessages)
             didLoad = true
             await ChatCache.shared.save(
@@ -533,31 +546,31 @@ final class ChatViewModel {
 
         if !pendingMessages.isEmpty {
             await flushPendingMessages()
-        } else if let jobID = findUnfinishedJobID() {
-            await resumeGeneration(jobID: jobID)
+        } else if let active = activeGeneration {
+            await resumeGeneration(jobID: active.jobID, cancelling: active.cancelling)
         }
     }
 
-    /// Находит `job_id` последнего пользовательского сообщения, у которого
-    /// ещё нет ответа ассистента с тем же `job_id` (ни version_id, ни error,
-    /// ни status=cancelled) — т.е. генерация ещё в процессе.
-    private func findUnfinishedJobID() -> String? {
-        let remoteMessages = messages
-        let assistantJobIDs = Set(
-            remoteMessages
-                .filter { $0.type == .assistant }
-                .compactMap { $0.jobID }
-        )
-        return remoteMessages
-            .reversed()
-            .first { $0.type == .user && $0.jobID != nil && !assistantJobIDs.contains($0.jobID!) }?
-            .jobID
+    /// Находит активную генерацию по виртуальному assistant-placeholder'у
+    /// (status "pending"/"cancelling"), который бэкенд дописывает в историю
+    /// чата на время выполнения job'ы. Возвращает job_id и признак отмены.
+    private func findActiveGeneration(
+        in remoteMessages: [RemoteChatMessage]
+    ) -> (jobID: String, cancelling: Bool)? {
+        for message in remoteMessages.reversed() {
+            guard message.role.lowercased() == "assistant", let jobID = message.jobID else {
+                continue
+            }
+            if message.status == "pending" { return (jobID, false) }
+            if message.status == "cancelling" { return (jobID, true) }
+        }
+        return nil
     }
 
-    private func resumeGeneration(jobID: String) async {
+    private func resumeGeneration(jobID: String, cancelling: Bool) async {
         isGenerating = true
         activeJobID = jobID
-        isCancelling = false
+        isCancelling = cancelling
         await pollAndRefresh(jobID: jobID)
         isGenerating = false
         activeJobID = nil
@@ -585,8 +598,18 @@ final class ChatViewModel {
     }
 
     private func replaceMessages(_ remoteMessages: [RemoteChatMessage]) {
-        let mapped = remoteMessages.map { remoteMessage in
+        let mapped = remoteMessages.compactMap { remoteMessage -> ChatMessage? in
             let isAssistant = remoteMessage.role.lowercased() == "assistant"
+
+            // Бэкенд дописывает в историю виртуальный assistant-placeholder
+            // (status "pending"/"cancelling") на время активной генерации —
+            // в БД он не хранится. Индикатором служит баббл «Generating…»,
+            // поэтому placeholder не рендерим.
+            if isAssistant,
+               remoteMessage.status == "pending" || remoteMessage.status == "cancelling" {
+                return nil
+            }
+
             let attachment: ChatMessageAttachment
             let text: String
 
