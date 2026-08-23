@@ -126,7 +126,7 @@ fun BrandChatBubble(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun BrandChatBubblePreview() {
     AvatarGeneratorTheme {
@@ -135,7 +135,7 @@ private fun BrandChatBubblePreview() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             BrandChatBubble(
-                text = "Can you generate a modern violet branding kit for my AI startup?",
+                text = "Can you generate a modern coral branding kit for my AI startup?",
                 isOutgoing = true,
                 timeLabel = "11:32"
             )

@@ -46,7 +46,7 @@ internal fun ProjectTopBar(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF1A1A24)
+@Preview(showBackground = true, backgroundColor = 0xFF2B3446)
 @Composable
 private fun ProjectTopBarPreview() {
     AvatarGeneratorTheme {
