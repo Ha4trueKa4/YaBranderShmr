@@ -85,7 +85,7 @@ export function useEditorProjectActions({
     if (projectSvg === savedProjectSvg) {
       toast.error(t('There are no changes to save.'))
 
-      return
+      return false
     }
 
     try {
@@ -96,8 +96,10 @@ export function useEditorProjectActions({
         refetchType: 'none',
       })
       toast.info(t('Project version saved.'))
+      return true
     } catch (error) {
       toast.error(getApiErrorMessage(error))
+      return false
     }
   }, [
     document,

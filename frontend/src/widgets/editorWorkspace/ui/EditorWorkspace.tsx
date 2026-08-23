@@ -1,5 +1,6 @@
 import { AppRoute } from '@app/providers/router/routes'
 import { type EditorDocument, EditorStore } from '@entities/editorDocument'
+import { useEditorChatGeneration } from '@features/editorChat'
 import { exportEditorDocument } from '@features/editorExport'
 import { VersionHistoryModal } from '@features/editorVersionHistory'
 import {
@@ -8,6 +9,7 @@ import {
   ImageExportModal,
   useToast,
 } from '@shared/ui'
+import { EditorChat } from '@widgets/editorChat'
 import {
   type CanvasTool,
   EditorScene,
@@ -158,6 +160,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setSceneRenderVersion((version) => version + 1)
     setIsMobileInspectorOpen(false)
   }
+
+  const {
+    isGenerationPending: isChatGenerationPending,
+    messages: chatMessages,
+    sendPrompt: sendChatPrompt,
+  } = useEditorChatGeneration({
+    canEdit,
+    hasUnsavedChanges,
+    onDocumentGenerated: handleRestoreDocument,
+    projectId,
+    saveVersion,
+  })
 
   async function handleImageExport(fileType: ImageExportFileType) {
     setIsImageExporting(true)
@@ -376,6 +390,13 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               zoom={zoom}
             />
           }
+        />
+      )}
+      {canEdit && (
+        <EditorChat
+          isPending={isChatGenerationPending}
+          messages={chatMessages}
+          onSendPrompt={(prompt) => void sendChatPrompt(prompt)}
         />
       )}
       <ConfirmUnsavedChangeModal
