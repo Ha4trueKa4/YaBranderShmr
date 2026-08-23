@@ -163,8 +163,10 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
           description: >
-            Не передано ни code, ни access_token, либо Yandex-приложение не
-            запросило скоуп login:email и профиль пришёл без email.
+            Не передано ни code, ни access_token; Yandex-приложение не
+            запросило скоуп login:email и профиль пришёл без email; либо сам
+            code/access_token невалиден, просрочен или (для access_token)
+            не проходит проверку подписи JWT-профиля.
           content:
             application/json:
               schema:
@@ -180,6 +182,11 @@ paths:
                   value:
                     code: "YANDEX_EMAIL_SCOPE_REQUIRED"
                     message: "Yandex ID app must request the login:email scope"
+                InvalidYandexCredential:
+                  summary: code/access_token невалиден, просрочен или подпись не сходится
+                  value:
+                    code: "INVALID_YANDEX_CREDENTIAL"
+                    message: "The provided Yandex code/access_token is invalid or expired"
         '409':
           description: >
             Email из профиля Yandex уже принадлежит существующему аккаунту без
@@ -187,7 +194,7 @@ paths:
             Автоматическая привязка намеренно не выполняется — иначе аккаунт
             можно угнать, заранее зарегистрировав чужой email своим паролем.
             Пользователю нужно войти по паролю и привязать Yandex ID явно
-            (отдельный флоу, пока не реализован).
+            через POST /auth/yandex/link.
           content:
             application/json:
               schema:
@@ -197,9 +204,111 @@ paths:
                 message: "This email is already registered with a password. Log in with your password and link Yandex ID from account settings."
         '502':
           description: >
-            Yandex API недоступен, code невалиден/просрочен, access_token
-            невалиден/просрочен/подпись JWT не сходится, либо не удалось
-            получить профиль.
+            Yandex API недоступен (сетевой сбой, 5xx) — в отличие от 400,
+            здесь сам code/access_token мог быть валиден, просто Яндекс не
+            ответил.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "YANDEX_OAUTH_FAILED"
+                message: "Yandex authentication is temporarily unavailable. Please try again."
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /auth/yandex/link:
+    post:
+      summary: Привязать Yandex ID к текущему аккаунту
+      description: >
+        Закрывает флоу, на который ссылается 409 в POST /auth/yandex: когда
+        Yandex-профиль пришёл с email, уже занятым обычным (email+пароль)
+        аккаунтом, пользователь логинится по паролю как обычно (POST
+        /auth/login), получает JWT, и уже этим JWT привязывает Yandex ID
+        сюда. Тело запроса — то же {code}/{access_token}, что и у
+        POST /auth/yandex (см. YandexAuthRequest). Повторный вызов с тем же
+        Yandex-аккаунтом идемпотентен (просто 200).
+      tags: [ Auth ]
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexAuthRequest'
+      responses:
+        '200':
+          description: Yandex ID привязан (или уже был привязан к этому же аккаунту)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                Linked:
+                  summary: Привязка выполнена
+                  value:
+                    message: "Yandex ID linked successfully"
+                AlreadyLinkedSame:
+                  summary: Повторный вызов с тем же Yandex-аккаунтом
+                  value:
+                    message: "Yandex ID is already linked to this account"
+        '400':
+          description: >
+            Не передано ни code, ни access_token, либо сам code/access_token
+            невалиден, просрочен или (для access_token) не проходит проверку
+            подписи JWT-профиля.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                MissingCredential:
+                  summary: Не передан ни code, ни access_token
+                  value:
+                    code: "INVALID_REQUEST"
+                    message: "Either code or access_token is required"
+                InvalidYandexCredential:
+                  summary: code/access_token невалиден, просрочен или подпись не сходится
+                  value:
+                    code: "INVALID_YANDEX_CREDENTIAL"
+                    message: "The provided Yandex code/access_token is invalid or expired"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "User not found"
+        '409':
+          description: >
+            Конфликт привязки: либо у текущего пользователя уже привязан
+            другой Yandex ID, либо этот Yandex-аккаунт уже привязан к
+            другому пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                AccountAlreadyLinked:
+                  summary: У текущего аккаунта уже есть другая привязка
+                  value:
+                    code: "ACCOUNT_ALREADY_LINKED"
+                    message: "This account is already linked to a different Yandex ID"
+                YandexAccountAlreadyLinked:
+                  summary: Этот Yandex-аккаунт привязан к другому пользователю
+                  value:
+                    code: "YANDEX_ACCOUNT_ALREADY_LINKED"
+                    message: "This Yandex ID is already linked to another account"
+        '502':
+          description: >
+            Yandex API недоступен (сетевой сбой, 5xx) — в отличие от 400,
+            здесь сам code/access_token мог быть валиден, просто Яндекс не
+            ответил.
           content:
             application/json:
               schema:
