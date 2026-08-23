@@ -1,11 +1,11 @@
 import { authStore } from '@app/providers/auth'
 import {
+  deleteProject,
   getProjectSvg,
   projectQueryKey,
   projectSvgQueryKey,
 } from '@entities/project'
 import {
-  cancelGeneration,
   DEFAULT_GENERATION_MODEL,
   GenerationPollingCancelledError,
   GenerationPollingTimeoutError,
@@ -54,18 +54,15 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       pendingGenerationStore.save(draft)
       let pollingController: AbortController | null = null
 
-      const cancelUnfinishedGeneration = async (
-        projectId: string | undefined,
-        jobId: string | undefined,
-      ) => {
-        if (!projectId || !jobId) {
+      const deleteCancelledProject = async (projectId: string | undefined) => {
+        if (!projectId) {
           return
         }
 
         try {
-          await cancelGeneration(projectId, jobId)
+          await deleteProject(projectId)
         } catch (error) {
-          console.error('Unable to cancel generation', error)
+          console.error('Unable to delete cancelled project', error)
         }
       }
 
@@ -82,10 +79,10 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const jobId = project.job_id
 
         // Не прерываем запрос создания проекта по AbortSignal: сервер мог уже
-        // создать job, но клиент ещё не получил его id. В этом случае отменить
-        // fetch означало бы потерять единственную возможность вызвать cancel.
+        // создать проект, но клиент ещё не получил его id. В этом случае
+        // отменить fetch означало бы потерять возможность удалить проект.
         if (generationProcessStore.isCancelling) {
-          await cancelUnfinishedGeneration(project.id, jobId)
+          await deleteCancelledProject(project.id)
           return
         }
 
@@ -139,9 +136,8 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
         if (error instanceof GenerationPollingCancelledError) {
-          await cancelUnfinishedGeneration(
+          await deleteCancelledProject(
             generationProcessStore.projectId ?? undefined,
-            generationProcessStore.jobId ?? undefined,
           )
           return
         }
