@@ -9,6 +9,9 @@
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/server/middlewares/cors.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/redis/component.hpp>
+#include <userver/storages/secdist/component.hpp>
+#include <userver/storages/secdist/provider_component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
@@ -61,6 +64,9 @@ int main(int argc, char* argv[]) {
             // --- shared infrastructure: used by all feature modules ---
             .Append<userver::components::Postgres>("postgres-vector-db")
             .Append<userver::components::Postgres>("postgres-db-1")
+            .Append<userver::components::DefaultSecdistProvider>()
+            .Append<userver::components::Secdist>()
+            .Append<userver::components::Redis>("redis")
             .Append<userver::clients::dns::Component>()
             .Append<userver::server::middlewares::CorsFactory>()
             // --- Monium telemetry (OTLP логи + трейсы) ---

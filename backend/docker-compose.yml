@@ -83,6 +83,21 @@ services:
     networks:
       - postgres
 
+  redis:
+    container_name: service-redis
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    # Порт на хост не публикуется: ya_brander-container достаёт service-redis
+    # по имени внутри docker-сети postgres, доступ с хоста не нужен. С пустым
+    # паролем (см. .env.example) публиковать порт на всех интерфейсах было бы
+    # небезопасно.
+    networks:
+      - postgres
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.159.0
     container_name: service-otel-collector
@@ -137,6 +152,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}
       - YANDEX_OAUTH_CLIENT_SECRET=${YANDEX_OAUTH_CLIENT_SECRET}
+      - SECDIST_CONFIG=${SECDIST_CONFIG}
       - GC_ENABLED=${GC_ENABLED}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - MONIUM_PROJECT=${MONIUM_PROJECT}
@@ -154,6 +170,8 @@ services:
         condition: service_completed_successfully
       migrate-vector:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
       otel-collector-healthcheck:
         condition: service_completed_successfully
     networks:

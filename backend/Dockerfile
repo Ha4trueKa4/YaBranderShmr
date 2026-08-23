@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libfmt8 \
         libcctz2 \
         libyaml-cpp0.7 \
+        libhiredis0.14 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
