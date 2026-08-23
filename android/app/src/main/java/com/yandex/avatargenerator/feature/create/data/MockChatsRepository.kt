@@ -7,21 +7,22 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 /**
- * Временный мок списка чатов для разработки UI до готовности бэкенда:
- * отдаёт три чата из макета и имитирует сетевую задержку.
+ * Мок списка чатов: три чата из макета плюс имитация сетевой задержки.
+ * В графе Koin его больше нет (там боевой [ChatsRepositoryImpl]) — остаётся
+ * для `@Preview` и ручной проверки состояний экрана.
  *
  * @param networkDelayMillis имитация сетевой задержки — чтобы видеть скелетон.
- * @param chats что вернуть; параметр вынесен наружу, чтобы в `@Preview` и при
- *  ручной проверке можно было подсунуть `emptyList()` и посмотреть empty-состояние.
+ * @param chats что вернуть; параметр вынесен наружу, чтобы можно было подсунуть
+ *  `emptyList()` и посмотреть empty-состояние.
  */
 class MockChatsRepository(
     private val networkDelayMillis: Long = 700L,
     private val chats: List<Chat> = defaultChats(),
 ) : ChatsRepository {
 
-    override suspend fun getChats(): List<Chat> {
+    override suspend fun getChats(): Result<List<Chat>> {
         delay(networkDelayMillis)
-        return chats
+        return Result.success(chats)
     }
 
     companion object {

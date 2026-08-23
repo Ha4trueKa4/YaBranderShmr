@@ -19,11 +19,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.create.data.MockChatsRepository
 import com.yandex.avatargenerator.feature.create.domain.model.Chat
 import com.yandex.avatargenerator.feature.create.ui.components.ChatRow
+import com.yandex.avatargenerator.feature.create.ui.components.ChatsRefreshErrorBanner
 import com.yandex.avatargenerator.feature.create.ui.components.ChatsSkeleton
 import com.yandex.avatargenerator.feature.create.ui.components.ChatsTopBar
 import com.yandex.avatargenerator.feature.create.ui.util.rememberRelativeTimeLabel
@@ -58,6 +61,10 @@ internal fun ChatsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Перечитываем список при возврате на вкладку: пока пользователь был в чате,
+    // он мог создать проект. Частые ON_RESUME гасит троттлинг во ViewModel.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+
     ChatsContent(
         uiState = uiState,
         onChatClick = onChatClick,
@@ -85,6 +92,10 @@ private fun ChatsContent(
             .background(AppColors.Background),
     ) {
         ChatsTopBar()
+
+        if (uiState is ChatsUiState.Content && uiState.isRefreshFailed) {
+            ChatsRefreshErrorBanner(onRetry = onRetry)
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             when (uiState) {
@@ -145,7 +156,7 @@ private fun ChatsList(
         items(items = chats, key = { chat -> chat.id }) { chat ->
             ChatRow(
                 chat = chat,
-                timeLabel = rememberRelativeTimeLabel(chat.updatedAt),
+                timeLabel = chat.updatedAt?.let { rememberRelativeTimeLabel(it) },
                 onClick = { onChatClick(chat.id) },
             )
         }
@@ -158,6 +169,22 @@ private fun ChatsScreenContentPreview() {
     AvatarGeneratorTheme {
         ChatsContent(
             uiState = ChatsUiState.Content(MockChatsRepository.defaultChats()),
+            onChatClick = {},
+            onNewProject = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ChatsScreenRefreshFailedPreview() {
+    AvatarGeneratorTheme {
+        ChatsContent(
+            uiState = ChatsUiState.Content(
+                chats = MockChatsRepository.defaultChats(),
+                isRefreshFailed = true,
+            ),
             onChatClick = {},
             onNewProject = {},
             onRetry = {},

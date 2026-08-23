@@ -25,6 +25,11 @@ internal class FakeAuthRepository : AuthRepository {
     private val _currentUser = MutableStateFlow<AuthUser?>(null)
     override val currentUser: Flow<AuthUser?> = _currentUser.asStateFlow()
 
+    /** Подставить пользователя без входа — для тестов, которым нужна готовая сессия. */
+    fun setCurrentUser(user: AuthUser?) {
+        _currentUser.value = user
+    }
+
     /** Если задано — [login] и [register] бросают это вместо успешного ответа. */
     var failure: Exception? = null
 

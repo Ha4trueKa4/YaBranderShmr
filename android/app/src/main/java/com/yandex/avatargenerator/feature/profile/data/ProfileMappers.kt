@@ -1,10 +1,10 @@
 package com.yandex.avatargenerator.feature.profile.data
 
+import com.yandex.avatargenerator.core.data.toInstantOrNull
+import com.yandex.avatargenerator.core.network.dto.ProjectDescriptionDto
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedAuthor
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.profile.data.dto.UserProfileResponseDto
-import com.yandex.avatargenerator.feature.project.data.toInstantOrNull
-import com.yandex.avatargenerator.feature.project.data.dto.ProjectDescriptionDto
 import com.yandex.avatargenerator.feature.profile.domain.model.ProfileDetails
 import com.yandex.avatargenerator.feature.profile.domain.model.UserProfile
 

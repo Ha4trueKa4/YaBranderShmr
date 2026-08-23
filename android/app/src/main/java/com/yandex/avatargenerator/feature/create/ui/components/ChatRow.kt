@@ -33,13 +33,14 @@ import com.yandex.avatargenerator.ui.theme.AppTypography
  * @param chat что показываем.
  * @param timeLabel готовая подпись времени («15 min ago») — считается снаружи
  *  ([com.yandex.avatargenerator.feature.create.ui.util.rememberRelativeTimeLabel]),
- *  чтобы строка оставалась «глупым» компонентом.
+ *  чтобы строка оставалась «глупым» компонентом. `null` — времени нет,
+ *  подпись не рисуем.
  * @param onClick открыть чат.
  */
 @Composable
 internal fun ChatRow(
     chat: Chat,
-    timeLabel: String,
+    timeLabel: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -56,7 +57,11 @@ internal fun ChatRow(
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ChatThumbnail(chatId = chat.id, modifier = Modifier.size(56.dp))
+        ChatThumbnail(
+            chatId = chat.id,
+            previewUrl = chat.previewUrl,
+            modifier = Modifier.size(56.dp),
+        )
 
         Column(
             modifier = Modifier.weight(1f),
@@ -68,11 +73,13 @@ internal fun ChatRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = timeLabel,
-                style = AppTypography.caption.copy(color = AppColors.TextMuted),
-                maxLines = 1,
-            )
+            if (timeLabel != null) {
+                Text(
+                    text = timeLabel,
+                    style = AppTypography.caption.copy(color = AppColors.TextMuted),
+                    maxLines = 1,
+                )
+            }
         }
 
         Icon(
