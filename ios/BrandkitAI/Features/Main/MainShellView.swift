@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Главный флоу: по стеку навигации на раздел, таб-бар навешен на корневой
-/// экран **внутри** стека. Поэтому пушнутый экран перекрывает бар физически —
-/// с нативной анимацией и рабочим swipe-back, без флагов видимости.
 struct MainShellView: View {
     @Environment(SessionStore.self) private var session
     @State private var router = AppRouter()
@@ -105,13 +102,27 @@ struct MainShellView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
-        .overlay(alignment: .topTrailing) {
-            // Та же кнопка, что и у залогиненного профиля (`CoverSettingsButton`).
-            CoverSettingsButton {
-                router.push(.settings, in: .profile)
-            }
-            .padding(.trailing, 12)
+        .overlay(alignment: .top) {
+            guestSettingsHeader
         }
+    }
+
+    private var guestSettingsHeader: some View {
+        GeometryReader { proxy in
+            let topBleed = max(0, proxy.frame(in: .global).origin.y)
+
+            Color.clear
+                .frame(height: 100 + topBleed)
+                .overlay(alignment: .trailing) {
+                    CoverSettingsButton {
+                        router.push(.settings, in: .profile)
+                    }
+                    .padding(.top, 48)
+                    .padding(.trailing, 12)
+                }
+                .offset(y: -topBleed)
+        }
+        .frame(height: 100)
     }
 }
 
