@@ -24,7 +24,11 @@ function isAuthSession(value: unknown): value is AuthSession {
 }
 
 export function getStoredSession(): AuthSession | null {
-  const rawSession = sessionStorage.getItem(sessionStorageKey)
+  return getSessionFromStorage(localStorage)
+}
+
+function getSessionFromStorage(storage: Storage): AuthSession | null {
+  const rawSession = storage.getItem(sessionStorageKey)
 
   if (!rawSession) {
     return null
@@ -40,15 +44,15 @@ export function getStoredSession(): AuthSession | null {
     // Invalid storage data is cleared below.
   }
 
-  sessionStorage.removeItem(sessionStorageKey)
+  storage.removeItem(sessionStorageKey)
 
   return null
 }
 
 export function removeStoredSession() {
-  sessionStorage.removeItem(sessionStorageKey)
+  localStorage.removeItem(sessionStorageKey)
 }
 
 export function setStoredSession(session: AuthSession) {
-  sessionStorage.setItem(sessionStorageKey, JSON.stringify(session))
+  localStorage.setItem(sessionStorageKey, JSON.stringify(session))
 }

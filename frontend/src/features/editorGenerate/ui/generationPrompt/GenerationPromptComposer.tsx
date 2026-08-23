@@ -56,10 +56,38 @@ export function GenerationPromptComposer({
           disabled={isGenerating}
           onChange={(event) => onDescriptionChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            const isNewLineShortcut = event.metaKey || event.ctrlKey
+
+            if (event.key === 'Enter' && isNewLineShortcut) {
+              const { selectionEnd, selectionStart } = event.currentTarget
+              const nextDescription = `${description.slice(0, selectionStart)}\n${description.slice(selectionEnd)}`
+
               event.preventDefault()
-              onGenerate()
+
+              if (nextDescription.length > MAX_PROMPT_LENGTH) {
+                return
+              }
+
+              onDescriptionChange(nextDescription)
+              requestAnimationFrame(() => {
+                textareaRef.current?.setSelectionRange(
+                  selectionStart + 1,
+                  selectionStart + 1,
+                )
+              })
+              return
             }
+
+            if (
+              event.key !== 'Enter' ||
+              event.shiftKey ||
+              event.nativeEvent.isComposing
+            ) {
+              return
+            }
+
+            event.preventDefault()
+            onGenerate()
           }}
           maxLength={MAX_PROMPT_LENGTH}
           placeholder={t(

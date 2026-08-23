@@ -43,6 +43,10 @@ const MIN_ZOOM = 0.5
 const ZOOM_STEP = 0.25
 const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
 
+interface RouterHistoryState {
+  idx?: number
+}
+
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
@@ -249,6 +253,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     }
   }
 
+  function handleBack() {
+    const historyIndex = (window.history.state as RouterHistoryState | null)
+      ?.idx
+
+    if (historyIndex && historyIndex > 0) {
+      navigate(-1)
+      return
+    }
+
+    navigate(AppRoute.EditorCreate)
+  }
+
   function handleConfirmExit() {
     if (navigationBlocker.state === 'blocked') {
       navigationBlocker.proceed()
@@ -342,7 +358,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           isSavingVersion={isSavingVersion}
           isVisibilityUpdating={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
-          onBack={() => navigate(-1)}
+          onBack={handleBack}
           onCancelColorPicker={handleCancelMobileProperties}
           onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
@@ -395,7 +411,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               isCreatingProjectCopy={isCreatingCopy}
               isProjectPublic={isProjectPublic}
               isSavingVersion={isSavingVersion}
-              onBack={() => navigate(-1)}
+              onBack={handleBack}
               onCreateCopy={createCopy}
               onEditProjectName={renameProject}
               onExport={handleExport}
