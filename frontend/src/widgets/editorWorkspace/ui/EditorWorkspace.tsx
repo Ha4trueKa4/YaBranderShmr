@@ -235,6 +235,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     }
   }
 
+  async function handleSaveAndExit() {
+    const wasSaved = await saveVersion()
+
+    if (wasSaved && navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed()
+    }
+  }
+
   const inspectorProps = {
     definitions: editorStore.document.definitions,
     measuredRotationCenter:
@@ -382,8 +390,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       )}
       <ConfirmUnsavedChangeModal
         isOpen={navigationBlocker.state === 'blocked'}
-        onCancel={handleCancelExit}
-        onConfirm={handleConfirmExit}
+        isSaving={isSavingVersion}
+        onDismiss={handleCancelExit}
+        onLeave={handleConfirmExit}
+        onSave={handleSaveAndExit}
       />
       <ImageExportModal
         isExporting={isImageExporting}
