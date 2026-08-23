@@ -10,9 +10,10 @@ import {
   useProjectChatQuery,
 } from '@entities/projectChat'
 import {
-  DEFAULT_GENERATION_MODEL,
+  getDefaultGenerationModel,
   pollGenerationStatus,
   useGenerateProjectMutation,
+  useModelsQuery,
 } from '@features/editorGenerate'
 import { getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
@@ -56,6 +57,7 @@ export function useEditorChatGeneration({
   const [isPolling, setIsPolling] = useState(false)
   const { isPending: isStartingGeneration, mutateAsync: generateProject } =
     useGenerateProjectMutation()
+  const { data: models = [] } = useModelsQuery()
   const chatQuery = useProjectChatQuery(projectId, canEdit)
   const messages = chatQuery.data ?? []
   const hasPendingChatMessage = messages.some(
@@ -88,7 +90,7 @@ export function useEditorChatGeneration({
 
       try {
         const generation = await generateProject({
-          model: DEFAULT_GENERATION_MODEL,
+          model: getDefaultGenerationModel(models),
           projectId,
           prompt,
         })
@@ -156,6 +158,7 @@ export function useEditorChatGeneration({
       saveVersion,
       t,
       toast,
+      models,
     ],
   )
 
