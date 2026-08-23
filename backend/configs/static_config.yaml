@@ -127,6 +127,7 @@ components_manager:
     vector-search:
       embedding-url: $yandex-embedding-url
       pg-component-name: postgres-vector-db
+      db-table: vector_examples
       embedding-model: text-embeddings-v2-query
 
     object-storage:

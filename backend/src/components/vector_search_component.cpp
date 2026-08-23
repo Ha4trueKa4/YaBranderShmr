@@ -120,6 +120,9 @@ properties:
     pg-component-name:
         type: string
         description: Name of the postgres component
+    db-table:
+        type: string
+        description: Table with vector examples
     embedding-model:
         type: string
         description: Embedding model name
