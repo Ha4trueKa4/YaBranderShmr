@@ -4,6 +4,7 @@ nonisolated enum APIEndpoint {
     // Auth
     case register
     case login
+    case yandexAuth
 
     // Models
     case models
@@ -32,6 +33,9 @@ nonisolated enum APIEndpoint {
 
         case .login:
             "/auth/login"
+
+        case .yandexAuth:
+            "/auth/yandex"
 
         case .models:
             "/models"

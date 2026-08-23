@@ -39,7 +39,7 @@ struct FeedHeaderView: View {
             .lineLimit(1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Brandkit AI")
+        .accessibilityLabel("Ya Brander")
     }
 
     private var searchButton: some View {

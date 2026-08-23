@@ -21,9 +21,13 @@ final class SignUpViewModel {
     }
 
     var isLoading: Bool { session.isLoading }
+    var isPasswordLoading: Bool { session.isLoading && session.activeOperation == .register }
+    var isYandexLoading: Bool { session.isLoading && session.activeOperation == .yandexSignIn }
     var errorMessage: String? { session.errorMessage }
     var errorField: SessionStore.AuthField? { session.errorField }
-    var didSucceed: Bool { session.lastSuccessfulOperation == .register }
+    var didSucceed: Bool {
+        session.lastSuccessfulOperation == .register || session.lastSuccessfulOperation == .yandexSignIn
+    }
 
     var fullNameError: String? {
         let localError = didAttemptSubmit ? AuthValidation.fullName(fullName) : nil
@@ -55,6 +59,10 @@ final class SignUpViewModel {
             password: password,
             nickname: fullName.trimmingCharacters(in: .whitespacesAndNewlines)
         )
+    }
+
+    func signInWithYandex() {
+        session.signInWithYandex()
     }
 
     func clearError() {
