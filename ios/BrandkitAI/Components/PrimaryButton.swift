@@ -1,8 +1,3 @@
-//
-//  PrimaryButton.swift
-//  BrandkitAI
-//
-
 import SwiftUI
 
 struct PrimaryButton: View {
@@ -10,6 +5,7 @@ struct PrimaryButton: View {
     var isEnabled: Bool = true
     var isLoading = false
     var fill: AnyShapeStyle = AnyShapeStyle(.tint)
+    var cornerRadius: CGFloat = 12
     let action: () -> Void
 
     @State private var feedbackTrigger = 0
@@ -32,7 +28,7 @@ struct PrimaryButton: View {
             .frame(maxWidth: .infinity)
             .frame(height: 52)
         }
-        .buttonStyle(PrimaryButtonStyle(fill: fill))
+        .buttonStyle(PrimaryButtonStyle(fill: fill, cornerRadius: cornerRadius))
         .disabled(!isEnabled || isLoading)
         .opacity(isEnabled || isLoading ? 1 : 0.5)
         .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)
@@ -42,10 +38,11 @@ struct PrimaryButton: View {
 
 private struct PrimaryButtonStyle: ButtonStyle {
     let fill: AnyShapeStyle
+    let cornerRadius: CGFloat
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(fill, in: .rect(cornerRadius: 12))
+            .background(fill, in: .rect(cornerRadius: cornerRadius))
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)

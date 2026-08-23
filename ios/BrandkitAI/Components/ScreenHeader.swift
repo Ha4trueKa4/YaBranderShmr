@@ -1,21 +1,16 @@
-//
-//  ScreenHeader.swift
-//  BrandkitAI
-//
-
 import SwiftUI
-
 
 struct ScreenHeader: View {
     let title: String
 
     var body: some View {
-        VStack(spacing: 20) {
-            LogoBadge()
-
+        VStack(alignment: .leading, spacing: 20) {
+            // TODO: add logo if need
+            
             Text(title)
                 .font(.title.bold())
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

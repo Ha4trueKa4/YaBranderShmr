@@ -1,8 +1,3 @@
-//
-//  SignInView.swift
-//  BrandkitAI
-//
-
 import SwiftUI
 
 struct SignInView: View {
@@ -51,14 +46,14 @@ struct SignInView: View {
             PrimaryButton(
                 title: "Sign in",
                 isEnabled: !viewModel.isLoading,
-                isLoading: viewModel.isPasswordLoading
+                isLoading: viewModel.isPasswordLoading,
+                fill: AnyShapeStyle(Color.accentColor),
+                cornerRadius: 20
             ) {
                 viewModel.signIn()
             }
+            
             .padding(.top, 24)
-
-            AuthDivider()
-                .padding(.top, 16)
 
             YandexIDButton(
                 isEnabled: !viewModel.isLoading,
@@ -66,13 +61,13 @@ struct SignInView: View {
             ) {
                 viewModel.signInWithYandex()
             }
-            .padding(.top, 16)
+            .padding(.top, 12)
 
             ScreenFooter(question: "No account?", actionTitle: "Register") {
                 viewModel.clearError()
                 onSignUp()
             }
-            .padding(.top, 32)
+            .padding(.top, 24)
         }
         .onChange(of: viewModel.email) { viewModel.clearError() }
         .onChange(of: viewModel.password) { viewModel.clearError() }
