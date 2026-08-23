@@ -21,7 +21,6 @@ struct ChatView: View {
     @State private var isModelControlVisible = false
     @State private var isComposerExpanded = false
     @State private var selectedPrivacy = ChatViewModel.ProjectPrivacy.privateProject
-    @State private var sendTask: Task<Void, Never>?
     @State private var isRestoringText = false
     @FocusState private var isInputFocused: Bool
 
@@ -56,10 +55,6 @@ struct ChatView: View {
                                     .frame(maxWidth: .infinity)
                             }
 
-                            if viewModel.isOffline {
-                                offlinePill
-                            }
-
                     ForEach(viewModel.sections) { section in
                         VStack(alignment: .leading, spacing: 12) {
                             Text(viewModel.dateTitle(for: section.date))
@@ -70,7 +65,12 @@ struct ChatView: View {
                             ForEach(section.messages) { message in
                                 ChatMessageView(
                                     message: message,
-                                    timeTitle: viewModel.timeTitle(for: message.date)
+                                    timeTitle: viewModel.timeTitle(for: message.date),
+                                    onRetry: {
+                                        Task {
+                                            await viewModel.retryFailedMessage(id: message.id)
+                                        }
+                                    }
                                 ) {
                                     switch message.attachment {
                                     case .version(let versionID, let url):
@@ -147,9 +147,6 @@ struct ChatView: View {
                 scrollToBottom(using: proxy, animated: false)
                 didFinishInitialLoad = true
             }
-            .onDisappear {
-                sendTask?.cancel()
-            }
             .onChange(of: viewModel.restorePrompt) { _, prompt in
                 guard let prompt else { return }
                 isRestoringText = true
@@ -179,14 +176,23 @@ struct ChatView: View {
             }
         }
             .customNavigationBar(title: title, onBack: onBack)
+            .toolbarBackground(Color.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 privacyToolbarItem
             }
             .safeAreaInset(edge: .top) {
-                Rectangle()
-                    .foregroundStyle(.border)
-                    .frame(height: 1)
-                    .background(Color.background)
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .foregroundStyle(.border)
+                        .frame(height: 1)
+
+                    if viewModel.isOffline {
+                        offlinePill
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                    }
+                }
             }
             .sheet(isPresented: $isPrivacyPickerPresented) {
                 PrivacyPicker(selection: $selectedPrivacy) { newPrivacy in
@@ -294,46 +300,7 @@ struct ChatView: View {
                 .padding(.horizontal, 16)
             }
 
-            HStack(spacing: 12) {
-                TextField("Ask brand assistant...", text: $messageText, axis: .vertical)
-                    .font(.subheadline)
-                    .lineLimit(1...4)
-                    .focused($isInputFocused)
-                    .submitLabel(.send)
-                    .onSubmit {
-                        sendMessage()
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color(.secondarySystemBackground), in: Capsule())
-
-                Button {
-                    if viewModel.isGenerating {
-                        Task { await viewModel.cancelGeneration() }
-                    } else {
-                        sendMessage()
-                    }
-                } label: {
-                    Group {
-                        if viewModel.isCancelling {
-                            ProgressView()
-                                .tint(Color(.onAccent))
-                        } else if viewModel.isGenerating {
-                            Image(systemName: "stop.fill")
-                                .font(.system(size: 17, weight: .semibold))
-                        } else {
-                            Image(systemName: "arrow.up")
-                                .font(.system(size: 17, weight: .semibold))
-                        }
-                    }
-                    .foregroundStyle(Color(.onAccent))
-                    .frame(width: 40, height: 40)
-                    .background(.tint, in: Circle())
-                }
-                .opacity(viewModel.isGenerating ? 1 : (canSendMessage ? 1 : 0.5))
-                .disabled(viewModel.isCancelling || (!viewModel.isGenerating && !canSendMessage))
-                .accessibilityLabel(viewModel.isGenerating ? "Cancel generation" : "Send message")
-            }
+            composer
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(Color.background)
@@ -449,20 +416,53 @@ struct ChatView: View {
 
     private var sendButton: some View {
         Button {
-            sendMessage()
+            if viewModel.isGenerating {
+                Task { await viewModel.cancelGeneration() }
+            } else if viewModel.hasUnsentMessage {
+                isInputFocused = false
+                Task { await viewModel.restoreUnsentMessage() }
+            } else {
+                sendMessage()
+            }
         } label: {
-            Image(systemName: "arrow.up")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(canSendMessage ? Color(.onAccent) : Color(.secondaryLabel))
-                .frame(width: 40, height: 40)
-                .background(
-                    canSendMessage ? Color.accentColor : Color(.tertiarySystemFill),
-                    in: Circle()
-                )
+            Group {
+                if viewModel.isCancelling {
+                    ProgressView()
+                        .tint(Color(.onAccent))
+                } else if viewModel.isGenerating || viewModel.hasUnsentMessage {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+            }
+            .foregroundStyle(
+                hasStopAction || canSendMessage
+                    ? Color(.onAccent)
+                    : Color(.secondaryLabel)
+            )
+            .frame(width: 40, height: 40)
+            .background(
+                hasStopAction || canSendMessage
+                    ? Color.accentColor
+                    : Color(.tertiarySystemFill),
+                in: Circle()
+            )
         }
         .buttonStyle(.plain)
-        .disabled(!canSendMessage)
-        .accessibilityLabel("Send message")
+        .disabled(viewModel.isCancelling || (!hasStopAction && !canSendMessage))
+        .accessibilityLabel(sendButtonAccessibilityLabel)
+    }
+
+    private var hasStopAction: Bool {
+        viewModel.isGenerating || viewModel.hasUnsentMessage
+    }
+
+    private var sendButtonAccessibilityLabel: String {
+        if viewModel.isGenerating { return "Cancel generation" }
+        if viewModel.hasUnsentMessage { return "Edit unsent message" }
+        return "Send message"
     }
 
     private var canSendMessage: Bool {
@@ -485,7 +485,7 @@ struct ChatView: View {
 
         let text = messageText
         messageText = ""
-        sendTask = Task {
+        Task {
             await viewModel.sendMessage(text)
         }
     }

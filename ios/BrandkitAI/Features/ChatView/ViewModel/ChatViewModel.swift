@@ -102,7 +102,9 @@ final class ChatViewModel {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                await self?.flushPendingMessages()
+                guard let self else { return }
+                self.isOffline = false
+                await self.flushPendingMessages()
             }
         }
     }
@@ -110,6 +112,10 @@ final class ChatViewModel {
     var selectedModel: GenerationModel {
         availableModels.first(where: { $0.id == selectedModelID })
             ?? GenerationModel(remoteID: selectedModelID, owner: nil)
+    }
+
+    var hasUnsentMessage: Bool {
+        !pendingMessages.isEmpty
     }
 
     func loadModels(force: Bool = false) async {
@@ -163,6 +169,25 @@ final class ChatViewModel {
         await reload()
     }
 
+    func retryFailedMessage(id: ChatMessage.ID) async {
+        guard !isGenerating,
+              let message = messages.first(where: { $0.id == id && $0.isFailed })
+        else { return }
+
+        let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        guard text.count <= Self.maxPromptLength else {
+            sendErrorMessage = "Message is too long (maximum 5000 characters)."
+            return
+        }
+
+        pendingMessages.removeAll { $0.id == id }
+        updatePendingCount()
+        await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+        removeMessage(id: id)
+        await sendMessage(text)
+    }
+
     func sendMessage(_ text: String) async {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isGenerating else { return }
@@ -175,11 +200,31 @@ final class ChatViewModel {
         let chatMessage = ChatMessage(type: .user, text: text, date: Date())
         let modelID = selectedModel.id
         appendMessage(chatMessage)
+
+        // If the network is already known to be unavailable, persist the
+        // message before starting a request so it survives closing the chat.
+        guard NetworkMonitor.shared.isConnected else {
+            isOffline = true
+            markMessagePending(id: chatMessage.id)
+            await queuePendingMessage(
+                id: chatMessage.id,
+                text: text,
+                createdAt: chatMessage.date,
+                modelID: modelID
+            )
+            sendErrorMessage = "Message is pending and will be sent when the connection recovers."
+            return
+        }
+
         isGenerating = true
 
         let jobID: String
         do {
-            jobID = try await service.generate(projectID: projectID, prompt: text)
+            jobID = try await service.generate(
+                projectID: projectID,
+                prompt: text,
+                modelID: modelID
+            )
         } catch NetworkError.generationInProgress(let existingJobID) {
             removeMessage(id: chatMessage.id)
             restorePrompt = text
@@ -195,6 +240,9 @@ final class ChatViewModel {
             return
         } catch {
             isGenerating = false
+            if indicatesOffline(error) {
+                isOffline = true
+            }
             if shouldKeepPending(after: error) {
                 markMessagePending(id: chatMessage.id)
                 await queuePendingMessage(
@@ -206,6 +254,13 @@ final class ChatViewModel {
                 sendErrorMessage = "Message is pending and will be sent when the connection recovers."
             } else {
                 markMessageFailed(id: chatMessage.id)
+                await queuePendingMessage(
+                    id: chatMessage.id,
+                    text: text,
+                    createdAt: chatMessage.date,
+                    modelID: modelID,
+                    deliveryState: .failed
+                )
                 sendErrorMessage = failureMessage(for: error)
             }
             return
@@ -222,23 +277,31 @@ final class ChatViewModel {
     }
 
     func flushPendingMessages() async {
-        guard !isGenerating, !pendingMessages.isEmpty else { return }
+        guard !isGenerating,
+              pendingMessages.contains(where: { $0.deliveryState == .pending })
+        else { return }
         isGenerating = true
         defer { isGenerating = false }
 
-        while !pendingMessages.isEmpty {
+        while let pendingIndex = pendingMessages.firstIndex(where: {
+            $0.deliveryState == .pending
+        }) {
             if Task.isCancelled { break }
-            let prompt = pendingMessages[0]
+            let prompt = pendingMessages[pendingIndex]
             guard prompt.text.count <= Self.maxPromptLength else {
-                pendingMessages.removeFirst()
-                pendingCount = pendingMessages.count
+                pendingMessages[pendingIndex].deliveryState = .failed
+                updatePendingCount()
                 markPendingMessageFailed(prompt)
                 continue
             }
 
             let jobID: String
             do {
-                jobID = try await service.generate(projectID: projectID, prompt: prompt.text)
+                jobID = try await service.generate(
+                    projectID: projectID,
+                    prompt: prompt.text,
+                    modelID: prompt.modelID
+                )
             } catch NetworkError.generationInProgress(let existingJobID) {
                 activeJobID = existingJobID
                 isCancelling = false
@@ -250,15 +313,15 @@ final class ChatViewModel {
                 if shouldKeepPending(after: error) {
                     break
                 }
-                pendingMessages.removeFirst()
-                pendingCount = pendingMessages.count
+                pendingMessages[pendingIndex].deliveryState = .failed
+                updatePendingCount()
                 markPendingMessageFailed(prompt)
                 sendErrorMessage = failureMessage(for: error)
                 continue
             }
 
-            pendingMessages.removeFirst()
-            pendingCount = pendingMessages.count
+            pendingMessages.remove(at: pendingIndex)
+            updatePendingCount()
             sendErrorMessage = nil
             activeJobID = jobID
             isCancelling = false
@@ -292,6 +355,17 @@ final class ChatViewModel {
 
     func consumeRestorePrompt() {
         restorePrompt = nil
+    }
+
+    func restoreUnsentMessage() async {
+        guard !isGenerating, let pending = pendingMessages.last else { return }
+
+        pendingMessages.removeAll { $0.id == pending.id }
+        updatePendingCount()
+        await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+        removeMessage(id: pending.id)
+        sendErrorMessage = nil
+        restorePrompt = pending.text
     }
 
     func cancelGeneration() async {
@@ -350,6 +424,7 @@ final class ChatViewModel {
 
             do {
                 let status = try await service.generateStatus(projectID: projectID, jobID: jobID)
+                isOffline = false
                 switch status {
                 case .pending, .cancelling:
                     attempt = 0
@@ -471,14 +546,15 @@ final class ChatViewModel {
 
     private func restorePendingMessages(_ messages: [ChatCache.PendingMessage]) {
         pendingMessages = messages
-        pendingCount = messages.count
+        updatePendingCount()
         for pending in messages {
             appendMessage(ChatMessage(
                 id: pending.id,
                 type: .user,
                 text: pending.text,
                 date: pending.createdAt,
-                isPending: true
+                isPending: pending.deliveryState == .pending,
+                isFailed: pending.deliveryState == .failed
             ))
         }
     }
@@ -529,16 +605,22 @@ final class ChatViewModel {
         id: ChatMessage.ID,
         text: String,
         createdAt: Date,
-        modelID: String
+        modelID: String,
+        deliveryState: ChatCache.PendingMessage.DeliveryState = .pending
     ) async {
         pendingMessages.append(ChatCache.PendingMessage(
             id: id,
             text: text,
             createdAt: createdAt,
-            modelID: modelID
+            modelID: modelID,
+            deliveryState: deliveryState
         ))
-        pendingCount = pendingMessages.count
+        updatePendingCount()
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+    }
+
+    private func updatePendingCount() {
+        pendingCount = pendingMessages.count { $0.deliveryState == .pending }
     }
 
     private func persistSelectedModel() {
@@ -560,7 +642,21 @@ final class ChatViewModel {
         ].contains(urlError.code)
     }
 
-    private func failureMessage(for error: Error) -> String {
+    private func indicatesOffline(_ error: Error) -> Bool {
+        guard !NetworkMonitor.shared.isConnected else { return false }
+
+        guard let urlError = error as? URLError else { return false }
+        return [
+            .notConnectedToInternet,
+            .cannotFindHost,
+            .cannotConnectToHost,
+            .dnsLookupFailed,
+            .dataNotAllowed,
+            .networkConnectionLost
+        ].contains(urlError.code)
+    }
+
+    private func failureMessage(for error: Error) -> String? {
         if case NetworkError.httpError(let statusCode) = error {
             return "Unable to send message (server error \(statusCode))."
         }
@@ -569,7 +665,7 @@ final class ChatViewModel {
         }
         if let urlError = error as? URLError,
            [.timedOut, .networkConnectionLost].contains(urlError.code) {
-            return "The result is uncertain. Refresh the chat before sending again."
+            return nil
         }
         return "Unable to send message."
     }
@@ -602,7 +698,7 @@ final class ChatViewModel {
         }
         isLoading = false
 
-        if !pendingMessages.isEmpty {
+        if pendingMessages.contains(where: { $0.deliveryState == .pending }) {
             await flushPendingMessages()
         } else if let active = activeGeneration {
             await resumeGeneration(jobID: active.jobID, cancelling: active.cancelling)
@@ -649,7 +745,8 @@ final class ChatViewModel {
                     type: .user,
                     text: pending.text,
                     date: pending.createdAt,
-                    isPending: true
+                    isPending: pending.deliveryState == .pending,
+                    isFailed: pending.deliveryState == .failed
                 ))
             }
         }

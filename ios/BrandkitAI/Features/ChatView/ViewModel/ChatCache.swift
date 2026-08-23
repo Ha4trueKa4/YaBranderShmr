@@ -4,16 +4,29 @@ actor ChatCache {
     static let shared = ChatCache()
 
     struct PendingMessage: Codable, Equatable {
+        enum DeliveryState: String, Codable {
+            case pending
+            case failed
+        }
+
         let id: UUID
         let text: String
         let createdAt: Date
         let modelID: String
+        var deliveryState: DeliveryState
 
-        init(id: UUID, text: String, createdAt: Date, modelID: String) {
+        init(
+            id: UUID,
+            text: String,
+            createdAt: Date,
+            modelID: String,
+            deliveryState: DeliveryState = .pending
+        ) {
             self.id = id
             self.text = text
             self.createdAt = createdAt
             self.modelID = modelID
+            self.deliveryState = deliveryState
         }
 
         init(from decoder: Decoder) throws {
@@ -23,6 +36,10 @@ actor ChatCache {
             createdAt = try container.decode(Date.self, forKey: .createdAt)
             modelID = try container.decodeIfPresent(String.self, forKey: .modelID)
                 ?? GenerationModel.defaultID
+            deliveryState = try container.decodeIfPresent(
+                DeliveryState.self,
+                forKey: .deliveryState
+            ) ?? .pending
         }
     }
 
