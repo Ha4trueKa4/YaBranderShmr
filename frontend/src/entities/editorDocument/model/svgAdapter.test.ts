@@ -9,6 +9,24 @@ describe('parseSvg', () => {
     )
   })
 
+  it('keeps the first duplicate attribute so the SVG can be imported', () => {
+    const result = importSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <path id="background" data-name="First name" data-name="Ignored name" d="M0 0H100V100H0Z" />
+      </svg>
+    `)
+
+    expect(result.document.layers[0]).toMatchObject({
+      name: 'First name',
+      type: 'shape',
+    })
+    expect(result.warnings).toContainEqual({
+      attributeName: 'data-name',
+      code: 'ignored-duplicate-attribute',
+      elementName: 'path',
+    })
+  })
+
   it('adds a fallback viewBox when it is missing', () => {
     const result = importSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>')
 

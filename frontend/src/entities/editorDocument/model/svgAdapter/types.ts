@@ -21,6 +21,11 @@ export type SvgImportWarning =
       elementName: string
     }
   | {
+      attributeName: string
+      code: 'ignored-duplicate-attribute'
+      elementName: string
+    }
+  | {
       code: 'locked-raw-node'
       editorId: string
       elementName: string
