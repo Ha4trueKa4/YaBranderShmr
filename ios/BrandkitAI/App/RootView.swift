@@ -29,7 +29,7 @@ struct RootView: View {
 
     private var isSignInPresented: Binding<Bool> {
         Binding(
-            get: { coverFlow == .signIn && session.state == .signedOut },
+            get: { coverFlow == .signIn && session.state != .signedIn },
             set: { isPresented in
                 guard !isPresented, coverFlow == .signIn else { return }
                 coverFlow = .none
@@ -39,7 +39,7 @@ struct RootView: View {
 
     private var isSignUpPresented: Binding<Bool> {
         Binding(
-            get: { coverFlow == .signUp && session.state == .signedOut },
+            get: { coverFlow == .signUp && session.state != .signedIn },
             set: { isPresented in
                 guard !isPresented, coverFlow == .signUp else { return }
                 coverFlow = .none
@@ -53,10 +53,7 @@ struct RootView: View {
             case .unknown:
                 ProgressView()
 
-            case .signedOut:
-                Color.clear
-
-            case .signedIn:
+            case .signedOut, .signedIn:
                 MainShellView()
             }
         }
@@ -69,9 +66,7 @@ struct RootView: View {
 
             if session.state == .signedIn {
                 hasFinishedOnboarding = true
-            } else if hasFinishedOnboarding {
-                present(.signIn)
-            } else {
+            } else if !hasFinishedOnboarding {
                 presentOnboarding()
             }
         }
@@ -82,12 +77,12 @@ struct RootView: View {
             }
         ) {
             OnboardingView(
-                onSignUp: { finishOnboarding(to: .signUp) },
+                onGetStarted: finishOnboarding,
                 onSignIn: { finishOnboarding(to: .signIn) }
             )
                 .interactiveDismissDisabled()
         }
-        .fullScreenCover(
+        .sheet(
             isPresented: isSignInPresented,
             onDismiss: {
                 finishDismissal(of: .signIn)
@@ -97,11 +92,13 @@ struct RootView: View {
                 SignInView(session: session) {
                     present(.signUp)
                 }
+                .toolbar { authenticationCloseButton }
             }
             .tint(Color.accentColor)
-            .interactiveDismissDisabled()
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(
+        .sheet(
             isPresented: isSignUpPresented,
             onDismiss: {
                 finishDismissal(of: .signUp)
@@ -111,9 +108,11 @@ struct RootView: View {
                 SignUpView(session: session) {
                     present(.signIn)
                 }
+                .toolbar { authenticationCloseButton }
             }
             .tint(Color.accentColor)
-            .interactiveDismissDisabled()
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .onChange(of: session.state) { _, state in
             switch state {
@@ -124,14 +123,45 @@ struct RootView: View {
                 coverFlow = .none
 
             case .signedOut:
-                if hasFinishedOnboarding {
-                    present(.signIn)
-                }
+                break
 
             case .unknown:
                 break
             }
         }
+        .onChange(of: session.signInPresentationRequestID) {
+            guard session.state != .signedIn else { return }
+            present(.signIn)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var authenticationCloseButton: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarTrailing) {
+                authenticationCloseAction
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarTrailing) {
+                authenticationCloseAction
+            }
+        }
+    }
+
+    private var authenticationCloseAction: some View {
+        Button {
+            coverFlow = .none
+        } label: {
+            Image(systemName: "xmark")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
+    }
+
+    private func finishOnboarding() {
+        hasFinishedOnboarding = true
+        coverFlow = .none
     }
 
     private func finishOnboarding(to cover: CoverFlow) {
@@ -170,7 +200,14 @@ struct RootView: View {
     private func finishDismissal(of dismissedCover: CoverFlow) {
         guard coverFlow == .none else { return }
         guard pendingCoverSource == dismissedCover,
-              let pendingCover else { return }
+              let pendingCover else {
+            // Авторизацию закрыли, не войдя и не переключаясь на второй
+            // экран — отложенное защищённое действие больше не актуально.
+            if dismissedCover != .onboarding, session.state != .signedIn {
+                session.cancelPendingAuthentication()
+            }
+            return
+        }
         let pendingTransitionID = transitionID
         self.pendingCover = nil
         self.pendingCoverSource = nil

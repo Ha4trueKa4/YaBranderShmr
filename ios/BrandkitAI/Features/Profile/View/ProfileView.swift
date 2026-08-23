@@ -56,7 +56,7 @@ struct ProfileView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .task { await viewModel.load() }
+        .task(id: session.state) { await viewModel.load() }
         .refreshable { await viewModel.load() }
     }
 
@@ -99,7 +99,7 @@ struct ProfileView: View {
                                     .stroke(Color.accentColor, lineWidth: 1)
                             }
                     }
-                } else if viewModel.canFollow {
+                } else if viewModel.showsFollowButton {
                     followButton
                 }
             }
@@ -140,19 +140,7 @@ struct ProfileView: View {
     }
 
     private var settingsButton: some View {
-        Button(action: onOpenSettings) {
-            ZStack {
-                Circle()
-                    .fill(Color(.onAccent).opacity(0.25))
-                    .stroke(Color(.onAccent).opacity(0.35), lineWidth: 1)
-                    .frame(width: 38, height: 38)
-                Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(width: 44, height: 44)
-            }
-        }
-        .foregroundStyle(Color(.onAccent))
-        .accessibilityLabel("Settings")
+        CoverSettingsButton(action: onOpenSettings)
     }
 
     private var avatar: some View {
@@ -164,7 +152,11 @@ struct ProfileView: View {
         FollowButton(
             isSubscribed: viewModel.isSubscribed,
             isBusy: viewModel.isFollowBusy,
-            action: viewModel.toggleFollowing
+            action: {
+                session.performAuthenticated { [viewModel] in
+                    viewModel.requestFollowToggle()
+                }
+            }
         )
     }
 
