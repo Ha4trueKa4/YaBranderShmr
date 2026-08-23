@@ -1,0 +1,19 @@
+<!--
+  Знак Yandex ID: красный круг с белой «Я». Полноцветный (не тинтуется темой) —
+  бренд-логотип, поэтому цвета живут в ресурсе, а не в коде фичи. Плейсхолдер
+  геометрии: при наличии официального ассета заменить им.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FC3F1D"
+        android:pathData="M12,0 A12,12 0 1 0 12,24 A12,12 0 1 0 12,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13,6 H15 V18 H13 Z
+            M13,6 H10 C8,6 8,11.5 10,11.5 H13 Z
+            M13,11.5 L13,14 L9.8,18 L7.6,18 Z" />
+</vector>

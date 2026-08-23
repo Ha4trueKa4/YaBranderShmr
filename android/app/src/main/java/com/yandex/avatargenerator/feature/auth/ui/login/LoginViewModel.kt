@@ -3,7 +3,10 @@ package com.yandex.avatargenerator.feature.auth.ui.login
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.core.mvi.BaseViewModel
 import com.yandex.avatargenerator.feature.auth.domain.LoginUseCase
+import com.yandex.avatargenerator.feature.auth.domain.LoginWithYandexUseCase
+import com.yandex.avatargenerator.feature.auth.domain.YandexAuthRequestFactory
 import com.yandex.avatargenerator.feature.auth.ui.AuthField
+import com.yandex.avatargenerator.feature.auth.ui.AuthFormError
 import com.yandex.avatargenerator.feature.auth.ui.MaxAuthInputLength
 import com.yandex.avatargenerator.feature.auth.ui.targetField
 import com.yandex.avatargenerator.feature.auth.ui.toAuthFormError
@@ -12,13 +15,19 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel экрана входа: держит поля формы и по [LoginIntent.OnSubmitClick]
- * логинит пользователя через [LoginUseCase]. Токен репозиторий сохраняет сам —
- * сюда возвращается только результат, по которому шлётся
+ * логинит пользователя через [LoginUseCase]. Вход через Yandex ID — по
+ * [LoginIntent.OnYandexClick] открывает экран согласия, а пришедший `code`
+ * меняет на токен через [LoginWithYandexUseCase]. Токен репозиторий сохраняет
+ * сам — сюда возвращается только результат, по которому шлётся
  * [LoginEffect.NavigateToApp].
  */
 internal class LoginViewModel(
     private val login: LoginUseCase,
-) : BaseViewModel<LoginIntent, LoginState, LoginEffect>(LoginState()) {
+    private val loginWithYandex: LoginWithYandexUseCase,
+    private val yandexAuthRequestFactory: YandexAuthRequestFactory,
+) : BaseViewModel<LoginIntent, LoginState, LoginEffect>(
+    LoginState(isYandexAvailable = yandexAuthRequestFactory.isConfigured()),
+) {
 
     override suspend fun handleIntent(intent: LoginIntent, state: LoginState) {
         when (intent) {
@@ -48,6 +57,38 @@ internal class LoginViewModel(
             LoginIntent.OnSubmitClick -> submit(state)
             LoginIntent.OnForgotPasswordClick -> sendEffect(LoginEffect.NavigateToPasswordRecovery)
             LoginIntent.OnRegisterClick -> sendEffect(LoginEffect.NavigateToRegister)
+
+            LoginIntent.OnYandexClick -> if (!state.isBusy && state.isYandexAvailable) {
+                updateState { copy(yandexAuth = yandexAuthRequestFactory.create(), formError = null) }
+            }
+
+            is LoginIntent.OnYandexCodeReceived -> exchangeYandexCode(intent.code)
+
+            LoginIntent.OnYandexAuthDismissed -> updateState { copy(yandexAuth = null) }
+
+            LoginIntent.OnYandexAuthFailed -> updateState {
+                copy(yandexAuth = null, formError = AuthFormError.YandexFailed)
+            }
+        }
+    }
+
+    /**
+     * Закрывает экран согласия и меняет `code` на токен. `isSubmitting`
+     * поднимаем до `launch` по той же причине, что и в [submit]: цикл интентов
+     * не приостанавливается, пока в канале есть следующий интент.
+     */
+    private fun exchangeYandexCode(code: String) {
+        updateState { copy(yandexAuth = null, isSubmitting = true, formError = null) }
+        viewModelScope.launch {
+            try {
+                loginWithYandex(code)
+                updateState { copy(isSubmitting = false) }
+                sendEffect(LoginEffect.NavigateToApp)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (failure: Exception) {
+                updateState { applyError(failure) }
+            }
         }
     }
 

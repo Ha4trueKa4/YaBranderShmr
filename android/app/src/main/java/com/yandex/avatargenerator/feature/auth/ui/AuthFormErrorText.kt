@@ -20,6 +20,8 @@ internal fun AuthFormError.text(): String = stringResource(
         AuthFormError.InvalidEmail -> R.string.auth_error_invalid_email
         AuthFormError.InvalidPassword -> R.string.auth_error_invalid_password
         AuthFormError.InvalidNickname -> R.string.auth_error_invalid_nickname
+        AuthFormError.YandexEmailTaken -> R.string.auth_error_yandex_email_taken
+        AuthFormError.YandexFailed -> R.string.auth_error_yandex_failed
         AuthFormError.NoConnection -> R.string.auth_error_no_connection
         AuthFormError.ServerUnavailable -> R.string.auth_error_server
         AuthFormError.Unknown -> R.string.auth_error_unknown

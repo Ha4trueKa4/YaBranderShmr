@@ -17,4 +17,16 @@ internal sealed interface LoginIntent : BaseIntent {
     data object OnForgotPasswordClick : LoginIntent
 
     data object OnRegisterClick : LoginIntent
+
+    /** Тап по «Войти через Яндекс» — открыть экран согласия. */
+    data object OnYandexClick : LoginIntent
+
+    /** WebView согласия вернул `code` из редиректа — меняем его на токен. */
+    data class OnYandexCodeReceived(val code: String) : LoginIntent
+
+    /** Пользователь закрыл экран согласия — молча, без ошибки. */
+    data object OnYandexAuthDismissed : LoginIntent
+
+    /** Редирект пришёл с ошибкой или несовпавшим `state` — показать сбой. */
+    data object OnYandexAuthFailed : LoginIntent
 }

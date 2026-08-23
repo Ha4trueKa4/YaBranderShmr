@@ -25,6 +25,9 @@
     <string name="auth_have_account">Уже есть аккаунт?</string>
     <string name="auth_signing_in">Вход…</string>
     <string name="auth_creating_account">Создание аккаунта…</string>
+    <string name="auth_or_divider">или</string>
+    <string name="auth_sign_in_with_yandex">Войти через Яндекс</string>
+    <string name="auth_yandex_close">Закрыть</string>
 
     <!-- Вход и регистрация: ошибки. Сообщения бэкенда пользователю не показываем -->
     <string name="auth_error_invalid_credentials">Неверный email или пароль</string>
@@ -33,6 +36,8 @@
     <string name="auth_error_invalid_email">Введите корректный email</string>
     <string name="auth_error_invalid_password">Пароль должен содержать 8–128 символов, буквы и цифры</string>
     <string name="auth_error_invalid_nickname">Имя должно содержать 3–64 символа</string>
+    <string name="auth_error_yandex_email_taken">Этот email уже зарегистрирован с паролем. Войдите по паролю.</string>
+    <string name="auth_error_yandex_failed">Не удалось войти через Яндекс. Попробуйте ещё раз</string>
     <string name="auth_error_no_connection">Нет подключения к интернету</string>
     <string name="auth_error_server">Сервер недоступен. Попробуйте позже</string>
     <string name="auth_error_unknown">Что-то пошло не так. Попробуйте ещё раз</string>
