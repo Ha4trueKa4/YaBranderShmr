@@ -1,15 +1,18 @@
 import SwiftUI
 
-struct FeedListCardView: View {
+enum FeedListCardStyle {
     static let titleFont = Font.system(size: 14, weight: .bold)
     static let authorFont = Font.system(size: 12, weight: .medium)
+}
 
+struct FeedListCardView<CoverOverlay: View>: View {
     let title: String
     let previewURL: URL?
     let coverColors: [Color]?
     let coverHeight: CGFloat?
     let accountName: String?
     let onTap: () -> Void
+    let coverOverlay: CoverOverlay
 
     init(
         title: String,
@@ -17,7 +20,8 @@ struct FeedListCardView: View {
         coverColors: [Color]? = nil,
         coverHeight: CGFloat? = nil,
         accountName: String? = nil,
-        onTap: @escaping () -> Void
+        onTap: @escaping () -> Void,
+        @ViewBuilder coverOverlay: () -> CoverOverlay = { EmptyView() }
     ) {
         self.title = title
         self.previewURL = previewURL
@@ -25,6 +29,7 @@ struct FeedListCardView: View {
         self.coverHeight = coverHeight
         self.accountName = accountName
         self.onTap = onTap
+        self.coverOverlay = coverOverlay()
     }
 
     var body: some View {
@@ -40,7 +45,7 @@ struct FeedListCardView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(Self.titleFont)
+                    .font(FeedListCardStyle.titleFont)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
@@ -49,7 +54,7 @@ struct FeedListCardView: View {
                         AvatarView(initials: accountName.initials, size: 24)
 
                         Text(accountName)
-                            .font(Self.authorFont)
+                            .font(FeedListCardStyle.authorFont)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
@@ -75,6 +80,9 @@ struct FeedListCardView: View {
             } else {
                 FeedPreviewImage(url: previewURL)
             }
+        }
+        .overlay {
+            coverOverlay
         }
         .clipShape(.rect(topLeadingRadius: 16, topTrailingRadius: 16))
     }

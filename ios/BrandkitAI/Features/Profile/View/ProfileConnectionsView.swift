@@ -64,23 +64,10 @@ struct ProfileConnectionsView: View {
     }
 
     private func connectionRow(_ user: ProfileConnection) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                onOpenProfile(user.id)
-            } label: {
-                HStack(spacing: 12) {
-                    AvatarView(initials: user.name.initials, size: 56)
-
-                    Text(user.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
+        ProfileConnectionRow(
+            name: user.name,
+            onOpenProfile: { onOpenProfile(user.id) }
+        ) {
             if viewModel.canFollow(user), let isSubscribed = user.isSubscribed {
                 FollowButton(
                     isSubscribed: isSubscribed,
@@ -89,9 +76,6 @@ struct ProfileConnectionsView: View {
                 )
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, minHeight: 88)
-        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 14))
     }
 
     private var emptyDescription: String {

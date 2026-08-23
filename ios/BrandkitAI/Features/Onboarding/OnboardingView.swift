@@ -20,7 +20,7 @@ struct OnboardingView: View {
     @State private var scrollState = OnboardingScrollState()
 
     private var pages: [AnyView] {
-        [AnyView(logoPage), AnyView(howItWorksPage), AnyView(getStartedPage)]
+        [AnyView(brandIdentity), AnyView(yourDesign), AnyView(shareWithCommunity)]
     }
 
     private var lastPage: Int { pages.count - 1 }
@@ -30,6 +30,9 @@ struct OnboardingView: View {
             ForEach(Array(pages.enumerated()), id: \.offset) { index, content in
                 content.tag(index)
             }
+        }
+        .onAppear() {
+            setupAppearance()
         }
         .safeAreaInset(edge: .bottom) {
             Button {
@@ -79,165 +82,198 @@ struct OnboardingView: View {
         }
     }
     
-    var logoPage: some View {
+    func setupAppearance() {
+        UIPageControl.appearance().currentPageIndicatorTintColor = .accent
+        UIPageControl.appearance().pageIndicatorTintColor = .secondaryLabel.withAlphaComponent(0.4)
+    }
+    
+    var brandIdentity: some View {
         var logo: some View {
-            Image(systemName: "xmark.circle")
-                .resizable()
-                .frame(width: 50, height: 50)
-                .padding(25)
+            Image("Logo")
+                .frame(width: 88, height: 88)
         }
         
-        return VStack(spacing: 32) {
-            if #available(iOS 26.0, *) {
+        return VStack(spacing: 0) {
+            VStack(spacing: 20) {
                 logo
-                    .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 28, height: 28)))
-            } else {
-                logo
-                    .alternateBackground(cornerSize: CGSize(width: 28, height: 28))
-            }
-            VStack(spacing: 12) {
-                Text("Brandkit AI")
+                Text("Ya Brander")
                     .font(.title.bold())
-                Text("Turn words into brand identity")
-                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
                 GeometryReader { proxy in
-                    let fraction = max(0, min(1, 1 + proxy.frame(in: .global).minX / proxy.size.width))
+                    let frame = proxy.frame(in: .global)
+                    let fraction = max(0, min(1, 1 + frame.minX / proxy.size.width))
                     Color.clear
+                        .onAppear {
+                            scrollState.fraction = fraction
+                            scrollState.gradientCenter = CGPoint(x: frame.midX, y: frame.midY)
+                        }
                         .onChange(of: fraction) { _, newValue in
                             scrollState.fraction = newValue
                         }
+                        .onChange(of: frame) { _, newValue in
+                            scrollState.gradientCenter = CGPoint(x: newValue.midX, y: newValue.midY)
+                        }
                 }
             }
-        }
-        .colorScheme(.dark)
-        .padding(.top, 16)
-    }
-    
-    var howItWorksPage: some View {
-        func makeLine(logo: Image, title: String, subtitle: String) -> some View {
-            var sizedLogo: some View {
-                logo
-                    .font(.system(size: 20))
-                    .padding(14)
-                    .frame(width: 48, height: 48)
-            }
-            
-            return HStack(spacing: 16) {
-                if #available(iOS 26.0, *) {
-                    sizedLogo
-                        .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 14, height: 14)))
-                } else {
-                    sizedLogo
-                        .alternateBackground(cornerSize: CGSize(width: 14, height: 14))
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .bold()
-                    Text(subtitle)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        
-        return VStack {
-            Text("How it works")
-                .font(.title2.bold())
-            VStack(spacing: 28) {
-                makeLine(logo: Image(systemName: "pencil.line"), title: "Describe", subtitle: "Write what you need")
-                makeLine(logo: Image(systemName: "pencil.line"), title: "Describe", subtitle: "Write what you need")
-                makeLine(logo: Image(systemName: "pencil.line"), title: "Describe", subtitle: "Write what you need")
-                makeLine(logo: Image(systemName: "pencil.line"), title: "Describe", subtitle: "Write what you need")
-            }
-            .padding(24)
+            makeTextBlock(firstLine: "Turn words into", secondLine: "brand identity", subtitle: "Describe your brand in a brief — AI builds\nlogo, palette and typography in vector")
         }
     }
     
-    var getStartedPage: some View {
-        var logo: some View {
-            VStack(spacing: 16) {
-                Image(systemName: "wand.and.sparkles")
-                    .font(.system(size: 40))
-                    .frame(width: 40, height: 40)
-                    .padding(30)
-                    .background {
-                        RadialGradient(
-                            colors: [
-                                Color(.endGradient),
-                                Color(.startGradient),
-                            ],
-                            center: .center,
-                            startRadius: 0, endRadius: 50
-                        )
-                        .clipShape(Circle())
-                    }
-                VStack(spacing: 6) {
-                    Text("NEXUS")
-                        .font(.title3.bold())
-                    Text("BRAND DESIGN")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-            }
-            .frame(width: 300, height: 300)
-        }
+    var yourDesign: some View {
+        let shape = RoundedRectangle(cornerRadius: 24)
         
-        return VStack(spacing: 32) {
-            if #available(iOS 26.0, *) {
-                logo
-                    .glassEffect(.regular, in: RoundedRectangle(cornerSize: CGSize(width: 24, height: 24)))
-            } else {
-                logo
-                    .alternateBackground(cornerSize: CGSize(width: 24, height: 24))
-            }
-            VStack(spacing: 20) {
-                Text("Start creating for free")
-                    .font(.title.bold())
-            }
-            HStack {
-                Text("Already have an account?")
-                    .foregroundStyle(.secondary)
-                Button {
-                    onSignIn()
-                } label: {
-                    Text("Sign in")
+        return VStack(spacing: 24) {
+            chatDemo
+                .clipShape(shape)
+                .overlay {
+                    shape.stroke().foregroundStyle(.border)
+                }
+                .padding(.top, 1)
+                .padding(.horizontal, 24)
+                .frame(maxHeight: 460)
+                .frame(maxHeight: .infinity)
+            makeTextBlock(firstLine: "Refine the design", secondLine: "right in the chat", subtitle: "Ask for changes in plain words — the\nassistant updates the design and saves it")
+        }
+    }
+    
+    private var chatDemo: some View {
+        NavigationStack {
+            ChatView(
+                title: "Ya Brander",
+                viewModel: ChatViewModel.makeDemo()
+            )
+        }
+        .allowsHitTesting(false)
+    }
+    
+    var shareWithCommunity: some View {
+        let shape = RoundedRectangle(cornerRadius: 24)
+
+        return VStack(spacing: 24) {
+            communityDemo
+                .background(Color.background)
+                .clipShape(shape)
+                .overlay {
+                    shape.stroke().foregroundStyle(.border)
+                }
+                .padding(.top, 1)
+                .padding(.horizontal, 24)
+                .frame(maxHeight: 460)
+                .frame(maxHeight: .infinity)
+            makeTextBlock(firstLine: "Share with", secondLine: "the community", subtitle: "Publish to the feed, follow creators and\nexport your kit as PNG or SVG")
+        }
+    }
+
+    private var communityDemo: some View {
+        VStack(spacing: 20) {
+            HStack(spacing: 12) {
+                FeedListCardView(
+                    title: "Project Alpha",
+                    coverColors: [Color(red: 1, green: 0.71, blue: 0.42), Color(red: 0.91, green: 0.36, blue: 0.02)],
+                    coverHeight: 96,
+                    accountName: "Alice",
+                    onTap: {}
+                ) {
+                    projectCoverLogo
+                }
+
+                FeedListCardView(
+                    title: "Project Beta",
+                    coverColors: [Color(red: 0.64, green: 0.39, blue: 1), Color(red: 0.36, green: 0.18, blue: 0.62)],
+                    coverHeight: 96,
+                    accountName: "Bob",
+                    onTap: {}
+                ) {
+                    projectCoverLogo
                 }
             }
+
+            ProfileConnectionRow(
+                name: "Sarah Chen",
+                subtitle: "Brand designer",
+                onOpenProfile: {}
+            ) {
+                FollowButton(isSubscribed: false, isBusy: false, action: {})
+            }
+
+            HStack(spacing: 12) {
+                ExportFormatButton(title: "PNG", systemImage: "photo")
+                ExportFormatButton(title: "SVG", systemImage: "chevron.left.forwardslash.chevron.right")
+            }
         }
-        .padding(24)
+        .padding(16)
+        .allowsHitTesting(false)
+    }
+
+    private var projectCoverLogo: some View {
+        Image(systemName: "sparkle")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 36, height: 36)
+    }
+    
+    func makeTextBlock(firstLine: String, secondLine: String, subtitle: String) -> some View {
+        return VStack(spacing: 13) {
+            VStack(spacing: 0) {
+                Text(firstLine)
+                Text(secondLine)
+                    .foregroundStyle(.accent)
+            }
+            .font(.largeTitle.bold())
+            Text(subtitle)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.bottom, 90)
     }
 }
 
 @Observable
 final class OnboardingScrollState {
     var fraction: CGFloat = 1.0
+    var gradientCenter: CGPoint?
 }
 
 private struct OnboardingGradientBackground: View {
+    @Environment(\.colorScheme) var colorScheme
+    
     let state: OnboardingScrollState
-
+    private let endRadius: Double = max(UIScreen.main.bounds.height, UIScreen.main.bounds.width) / 2
+    private let middleRadius: Double = 160
+    private let middleCoefficient: Double
+    
+    init(state: OnboardingScrollState) {
+        self.state = state
+        self.middleCoefficient = middleRadius / endRadius
+    }
+    
     var body: some View {
-        let fraction = state.fraction
-        let inverted = 1 - fraction
-        let gradientStopLocation = min(0.999, 0.35 * (inverted * 2 + 1))
-        ZStack {
-            Color(.background)
-            RadialGradient(
-                stops: [
-                    .init(color: .endGradient, location: 0),
-                    .init(color: .startGradient, location: gradientStopLocation),
-                    .init(color: .endGradient, location: 1),
-                ],
-                center: .center,
-                startRadius: 0,
-                endRadius: 500
-            )
-            .opacity(fraction)
-            .blur(radius: inverted * 20)
-            .grayscale(inverted)
+        GeometryReader { proxy in
+            let fraction = state.fraction
+            let inverted = 1 - fraction
+            let gradientStopLocation = min(0.999, middleCoefficient * (inverted * 2 + 1))
+            let center = state.gradientCenter.map {
+                UnitPoint(x: $0.x / proxy.size.width, y: $0.y / proxy.size.height)
+            } ?? .center
+            ZStack {
+                Color(.background)
+                RadialGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .startGradient, location: gradientStopLocation),
+                        .init(color: .clear, location: 1),
+                    ],
+                    center: center,
+                    startRadius: 0,
+                    endRadius: endRadius * (inverted + 1)
+                )
+                .opacity(fraction)
+                .grayscale(inverted)
+                LinearGradient(stops: [.init(color: .startGradient.opacity(0.8), location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom)
+                .opacity(inverted)
+            }
         }
         .ignoresSafeArea(.all)
     }

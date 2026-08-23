@@ -10,14 +10,14 @@ struct FeedListCardSkeleton: View {
                 .aspectRatio(1, contentMode: .fit)
 
             VStack(alignment: .leading, spacing: 8) {
-                textLine(width: 96, font: FeedListCardView.titleFont)
+                textLine(width: 96, font: FeedListCardStyle.titleFont)
 
                 HStack(spacing: 8) {
                     ShimmerPlaceholder()
                         .frame(width: 24, height: 24)
                         .clipShape(Circle())
 
-                    textLine(width: 64, font: FeedListCardView.authorFont)
+                    textLine(width: 64, font: FeedListCardStyle.authorFont)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

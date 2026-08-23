@@ -10,7 +10,7 @@ import SwiftUI
 struct ChatView: View {
     let projectID: UUID
     let title: String
-    var onBack: () -> Void = {}
+    var onBack: (() -> Void)? = nil
     var onOpenImage: (UUID, Date?) -> Void = { _, _ in }
 
     @State private var viewModel: ChatViewModel
@@ -23,7 +23,7 @@ struct ChatView: View {
     init(
         projectID: UUID = UUID(),
         title: String,
-        onBack: @escaping () -> Void = {},
+        onBack: (() -> Void)? = nil,
         onOpenImage: @escaping (UUID, Date?) -> Void = { _, _ in },
         service: any ProjectServiceProtocol = ProjectService(),
         viewModel: ChatViewModel? = nil
@@ -45,88 +45,7 @@ struct ChatView: View {
                     loadFailedState
                 } else {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 20) {
-                            if viewModel.isLoading && viewModel.messages.isEmpty {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                            }
-
-                            if viewModel.isOffline {
-                                offlinePill
-                            }
-
-                    ForEach(viewModel.sections) { section in
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(viewModel.dateTitle(for: section.date))
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity)
-
-                            ForEach(section.messages) { message in
-                                ChatMessageView(
-                                    message: message,
-                                    timeTitle: viewModel.timeTitle(for: message.date)
-                                ) {
-                                    switch message.attachment {
-                                    case .version(let versionID, let url):
-                                        GeometryReader { _ in
-                                            SVGDocumentView(
-                                                source: .url(
-                                                    url,
-                                                    cacheKey: SVGCache.versionKey(projectID: projectID, versionID: versionID),
-                                                    isPrivate: true
-                                                ),
-                                                refreshURL: {
-                                                    try await viewModel.versionURL(for: versionID)
-                                                },
-                                                onTap: {
-                                                    onOpenImage(versionID, message.date)
-                                                }
-                                            )
-                                        }
-                                        .aspectRatio(1, contentMode: .fit)
-                                        .frame(maxWidth: .infinity)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .contentShape(RoundedRectangle(cornerRadius: 10))
-                                    case .none:
-                                        EmptyView()
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if viewModel.isGenerating {
-                        HStack {
-                            HStack(spacing: 10) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text("Generating…")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(14)
-                            .frame(maxWidth: 270, alignment: .leading)
-                            .background(
-                                Color(.secondarySystemBackground),
-                                in: UnevenRoundedRectangle(
-                                    topLeadingRadius: 16,
-                                    bottomLeadingRadius: 4,
-                                    bottomTrailingRadius: 16,
-                                    topTrailingRadius: 16
-                                )
-                            )
-
-                            Spacer(minLength: 40)
-                        }
-                    }
-
-                    Color.clear
-                        .frame(height: 1)
-                        .id(bottomAnchor)
-                }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .top)
+                        messageList
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .defaultScrollAnchor(.bottom)
@@ -175,6 +94,96 @@ struct ChatView: View {
                     Task { await viewModel.updatePrivacy(newPrivacy) }
                 }
             }
+    }
+
+    @ViewBuilder
+    private var messageList: some View {
+        LazyVStack(alignment: .leading, spacing: 20) {
+            if viewModel.isLoading && viewModel.messages.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            }
+
+            if viewModel.isOffline {
+                offlinePill
+            }
+
+            ForEach(viewModel.sections) { section in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(viewModel.dateTitle(for: section.date))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+
+                    ForEach(section.messages) { message in
+                        ChatMessageView(
+                            message: message,
+                            timeTitle: viewModel.timeTitle(for: message.date)
+                        ) {
+                            switch message.attachment {
+                            case .version(let versionID, let url):
+                                GeometryReader { _ in
+                                    SVGDocumentView(
+                                        source: .url(
+                                            url,
+                                            cacheKey: SVGCache.versionKey(projectID: projectID, versionID: versionID),
+                                            isPrivate: true
+                                        ),
+                                        refreshURL: {
+                                            try await viewModel.versionURL(for: versionID)
+                                        },
+                                        onTap: {
+                                            onOpenImage(versionID, message.date)
+                                        }
+                                    )
+                                }
+                                .aspectRatio(1, contentMode: .fit)
+                                .frame(maxWidth: .infinity)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .contentShape(RoundedRectangle(cornerRadius: 10))
+                            case .mock:
+                                ChatImageMockView()
+                                    .frame(maxWidth: .infinity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            case .none:
+                                EmptyView()
+                            }
+                        }
+                    }
+                }
+            }
+
+            if viewModel.isGenerating {
+                HStack {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Generating…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: 270, alignment: .leading)
+                    .background(
+                        Color(.secondarySystemBackground),
+                        in: UnevenRoundedRectangle(
+                            topLeadingRadius: 16,
+                            bottomLeadingRadius: 4,
+                            bottomTrailingRadius: 16,
+                            topTrailingRadius: 16
+                        )
+                    )
+
+                    Spacer(minLength: 40)
+                }
+            }
+
+            Color.clear
+                .frame(height: 1)
+                .id(bottomAnchor)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     @ToolbarContentBuilder
