@@ -51,6 +51,28 @@ async def project_a(service_client, auth_header_a):
     return response.json()
 
 
+@pytest.fixture
+async def project_a2(service_client, auth_header_a):
+    """Второй проект первого пользователя — для тестов референсов"""
+    response = await service_client.post(
+        "/api/v1/projects",
+        json={"name": "Второй проект", "description": ""},
+        headers=auth_header_a,
+    )
+    return response.json()
+
+
+@pytest.fixture
+async def project_b(service_client, auth_header_b):
+    """Проект второго пользователя — для тестов референсов"""
+    response = await service_client.post(
+        "/api/v1/projects",
+        json={"name": "Проект Ивана", "description": ""},
+        headers=auth_header_b,
+    )
+    return response.json()
+
+
 # ===================================================
 # Создание проекта с авторизацией и без, 2 сценария
 # ===================================================
@@ -266,3 +288,220 @@ async def test_generate_ai_forbidden(
     )
 
     assert response.status == 403
+
+
+# ===================================================
+# Генерация ИИ с references (SVG других проектов) —
+# учитываются только при первичной генерации
+# ===================================================
+REFERENCE_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">'
+    '<rect width="500" height="500"/></svg>'
+)
+
+
+async def _generate_and_wait(service_client, project_id, headers, payload):
+    """POST /generate (асинхронный job) + поллинг до status != pending.
+
+    Нужен тестам references: реальный вызов LLM происходит в фоновой
+    корутине, поэтому mock_yandex_gpt.next_call() можно проверять только
+    после того, как job реально завершился.
+    """
+    response = await service_client.post(
+        f"/api/v1/projects/{project_id}/generate",
+        json=payload,
+        headers=headers,
+    )
+    assert response.status == 202
+    job_id = response.json()["job_id"]
+
+    status = "pending"
+    data = {}
+    for _ in range(10):
+        poll = await service_client.get(
+            f"/api/v1/projects/{project_id}/generate/{job_id}",
+            headers=headers,
+        )
+        assert poll.status == 200
+        data = poll.json()
+        status = data["status"]
+        if status != "pending":
+            break
+
+    assert status == "done"
+    return data
+
+
+def _last_generation_call(mock_yandex_gpt):
+    """Возвращает вызов основной генерации, пропустив вызов
+    PromptPolisherComponent — он тоже бьёт в /yandex-gpt-mock (тот же
+    api-url) перед реальной генерацией, поэтому на каждый успешный job
+    в очереди мока оказывается ровно два вызова: сначала polish, потом
+    сама генерация.
+    """
+    mock_yandex_gpt.next_call()  # PromptPolisherComponent.Polish*
+    return mock_yandex_gpt.next_call()
+
+
+async def test_generate_ai_initial_with_own_reference(
+        service_client, project_a, project_a2, auth_header_a, mock_yandex_gpt
+):
+    """Референс на свой проект с реальным SVG -> попадает в промпт"""
+    patch_resp = await service_client.patch(
+        f"/api/v1/projects/{project_a2['id']}",
+        json={"data": REFERENCE_SVG},
+        headers=auth_header_a,
+    )
+    assert patch_resp.status == 200
+
+    project_id = project_a["id"]
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_a2["id"]]},
+    )
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС 1" in call["request"].json["input"]
+    assert REFERENCE_SVG in call["request"].json["input"]
+
+
+async def test_generate_ai_initial_with_public_reference_from_other_user(
+        service_client, project_a, project_b,
+        auth_header_a, auth_header_b, mock_yandex_gpt
+):
+    """Референс на чужой ПУБЛИЧНЫЙ проект -> попадает в промпт"""
+    patch_resp = await service_client.patch(
+        f"/api/v1/projects/{project_b['id']}",
+        json={"is_public": True, "data": REFERENCE_SVG},
+        headers=auth_header_b,
+    )
+    assert patch_resp.status == 200
+
+    project_id = project_a["id"]
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_b["id"]]},
+    )
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС 1" in call["request"].json["input"]
+
+
+async def test_generate_ai_initial_reference_private_skipped(
+        service_client, project_a, project_b,
+        auth_header_a, auth_header_b, mock_yandex_gpt
+):
+    """Референс на чужой ПРИВАТНЫЙ проект -> молча пропускается, не ошибка"""
+    patch_resp = await service_client.patch(
+        f"/api/v1/projects/{project_b['id']}",
+        json={"data": REFERENCE_SVG},
+        headers=auth_header_b,
+    )
+    assert patch_resp.status == 200
+
+    project_id = project_a["id"]
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_b["id"]]},
+    )
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
+
+
+async def test_generate_ai_initial_reference_nonexistent_silently_skipped(
+        service_client, project_a, auth_header_a, mock_yandex_gpt
+):
+    """Несуществующий id в references -> молча пропускается, не ошибка"""
+    project_id = project_a["id"]
+    fake_id = "00000000-0000-0000-0000-000000000000"
+
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [fake_id]},
+    )
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
+
+
+async def test_generate_ai_initial_reference_default_svg_silently_skipped(
+        service_client, project_a, project_a2, auth_header_a, mock_yandex_gpt
+):
+    """Референс на проект без реальной версии (kDefaultSvg) -> пропускается"""
+    project_id = project_a["id"]
+
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_a2["id"]]},
+    )
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
+
+
+async def test_generate_ai_edit_mode_references_ignored(
+        service_client, project_a, project_a2, auth_header_a, mock_yandex_gpt
+):
+    """На повторной (edit) генерации references молча игнорируются"""
+    patch_resp = await service_client.patch(
+        f"/api/v1/projects/{project_a2['id']}",
+        json={"data": REFERENCE_SVG},
+        headers=auth_header_a,
+    )
+    assert patch_resp.status == 200
+
+    project_id = project_a["id"]
+
+    # Первый вызов без references -> дожидаемся done, чтобы project_a
+    # гарантированно перешёл в edit-режим до второго вызова
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип"},
+    )
+    _last_generation_call(mock_yandex_gpt)  # первый вызов, не проверяем
+
+    # Второй вызов уже в edit-режиме, с валидным references
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Поменяй цвет", "references": [project_a2["id"]]},
+    )
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]
+
+
+async def test_generate_ai_references_too_many_rejected(
+        service_client, project_a, auth_header_a
+):
+    """Больше 2 id в references -> 400"""
+    project_id = project_a["id"]
+    fake_ids = [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002",
+        "00000000-0000-0000-0000-000000000003",
+    ]
+
+    response = await service_client.post(
+        f"/api/v1/projects/{project_id}/generate",
+        json={"prompt": "Сделай логотип", "references": fake_ids},
+        headers=auth_header_a,
+    )
+
+    assert response.status == 400
+    assert response.json()[
+        "message"] == "references supports at most 2 project ids"
+
+
+async def test_generate_ai_references_self_reference_no_error(
+        service_client, project_a, auth_header_a, mock_yandex_gpt
+):
+    """Самоссылка в references (свой же пустой проект) -> не ошибка"""
+    project_id = project_a["id"]
+
+    await _generate_and_wait(
+        service_client, project_id, auth_header_a,
+        {"prompt": "Сделай логотип", "references": [project_id]},
+    )
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert "ПОЛЬЗОВАТЕЛЬСКИЙ РЕФЕРЕНС" not in call["request"].json["input"]

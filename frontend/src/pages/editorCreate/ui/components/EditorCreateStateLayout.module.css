@@ -12,7 +12,7 @@
   display: grid;
   place-items: center;
   min-height: 0;
-  border: 2px dashed var(--color-border);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
@@ -45,10 +45,35 @@
   font-size: var(--font-size-h2);
 }
 
+.copy h1.titleShimmer,
+.copyWidthLimited h1.titleShimmer {
+  animation: title-shimmer 1.8s ease-in-out infinite;
+  background: var(--gradient-accent);
+  background-clip: text;
+  background-size: 200% 100%;
+  color: transparent;
+}
+
 .copy p,
 .copyWidthLimited p {
   margin: var(--space-2) 0 0;
   color: var(--color-text-muted);
+}
+
+@keyframes title-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .titleShimmer {
+    animation: none;
+  }
 }
 
 .composer {
@@ -66,7 +91,7 @@
     width: min(100% - 2rem, 68rem);
     min-height: 0;
     gap: var(--space-4);
-    padding: var(--space-4) 0 var(--space-6);
+    padding: var(--space-4) 0;
   }
 
   .copy,

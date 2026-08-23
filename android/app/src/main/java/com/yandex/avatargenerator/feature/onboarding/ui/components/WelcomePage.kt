@@ -30,7 +30,7 @@ import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
-/** Первая страница: тёмный фон с фиолетовым свечением, плашка логотипа и название продукта. */
+/** Первая страница: коралловое свечение на фоне темы, плашка логотипа и название продукта. */
 @Composable
 internal fun WelcomePage(modifier: Modifier = Modifier) {
     Column(

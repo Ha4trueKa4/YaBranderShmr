@@ -58,7 +58,7 @@ internal fun ChatSystemTag(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatSystemTagPreview() {
     AvatarGeneratorTheme {

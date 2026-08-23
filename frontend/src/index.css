@@ -15,6 +15,7 @@
   --color-success: #22c55e;
   --color-error: #ef4444;
   --color-border: #27272a;
+  --color-card-border: var(--color-border);
   --color-focus: #06b6d4;
   --color-auth-panel: var(--color-surface);
   --color-auth-field: var(--color-surface-elevated);
@@ -25,6 +26,12 @@
 
   /* Gradients */
   --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+  --gradient-profile-cover: linear-gradient(
+    145deg,
+    #24104f 0%,
+    #173c56 52%,
+    #0f2b3b 100%
+  );
 
   /* Typography */
   --font-family-base:
@@ -88,6 +95,12 @@
     --color-auth-field: #f4f4f5;
     --color-auth-text: #18181b;
     --color-auth-muted: #71717a;
+    --gradient-profile-cover: linear-gradient(
+      145deg,
+      #eee8ff 0%,
+      #ddf6fb 52%,
+      #e9f9f5 100%
+    );
     --shadow-sm: 0 1px 2px rgb(24 24 27 / 8%);
     --shadow-md: 0 8px 24px rgb(24 24 27 / 12%);
     --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
@@ -114,6 +127,12 @@
   --color-auth-field: #f4f4f5;
   --color-auth-text: #18181b;
   --color-auth-muted: #71717a;
+  --gradient-profile-cover: linear-gradient(
+    145deg,
+    #eee8ff 0%,
+    #ddf6fb 52%,
+    #e9f9f5 100%
+  );
   --shadow-sm: 0 1px 2px rgb(24 24 27 / 8%);
   --shadow-md: 0 8px 24px rgb(24 24 27 / 12%);
   --shadow-lg: 0 16px 40px rgb(24 24 27 / 16%);
@@ -136,6 +155,7 @@
   --color-success: #3f6b4f;
   --color-error: #a84335;
   --color-border: #b9895d;
+  --color-card-border: transparent;
   --color-focus: #7b4b22;
   --color-auth-panel: #fffaf3;
   --color-auth-field: #e8d1b6;
@@ -144,6 +164,12 @@
   --color-auth-promo-background: #422717;
   --color-auth-promo-text: #fff;
   --gradient-accent: linear-gradient(135deg, #7b4b22 0%, #a9682d 100%);
+  --gradient-profile-cover: linear-gradient(
+    145deg,
+    #f3dfc7 0%,
+    #e8c59e 52%,
+    #f7ead8 100%
+  );
   --shadow-sm: 0 1px 2px rgb(43 24 11 / 12%);
   --shadow-md: 0 8px 24px rgb(43 24 11 / 16%);
   --shadow-lg: 0 16px 40px rgb(43 24 11 / 20%);
@@ -173,7 +199,7 @@
   --color-auth-muted: #858585;
   --color-auth-promo-background: #ffcc00;
   --color-auth-promo-text: #21201f;
-  --gradient-yandex-soft: linear-gradient(
+  --gradient-profile-cover: linear-gradient(
     145deg,
     #fff0eb 0%,
     #fff7df 52%,

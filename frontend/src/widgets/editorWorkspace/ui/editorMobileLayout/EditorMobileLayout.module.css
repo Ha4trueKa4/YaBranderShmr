@@ -162,11 +162,6 @@
     color: var(--color-text-inverse);
   }
 
-  .fitIcon {
-    font-size: 1.5rem;
-    line-height: 1;
-  }
-
   .propertiesTrigger {
     display: flex;
     align-items: center;

@@ -42,6 +42,18 @@ export function createTextEditing({
       }
     },
 
+    setTextOpacity(nodeId: string, opacity: number) {
+      const node = getEditableText(getDocument(), nodeId)
+
+      if (!node || !Number.isFinite(opacity)) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.opacity = Math.min(Math.max(opacity, 0), 1)
+      })
+    },
+
     setTextFontFamily(nodeId: string, fontFamily: string) {
       const node = getEditableText(getDocument(), nodeId)
 

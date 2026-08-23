@@ -240,6 +240,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       measuredRotationCenter.nodeId === editorStore.selectedNode?.id
         ? { x: measuredRotationCenter.x, y: measuredRotationCenter.y }
         : undefined,
+    onDeleteSelectedNode: handleDeleteSelection,
     onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
     onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
@@ -249,6 +250,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
     onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
     onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
+    onShapeStrokeOpacityChange:
+      editorStore.svgNodeEditing.setShapeStrokeOpacity,
     onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
     onShapeTransformChange: editorStore.svgNodeEditing.setShapeTransform,
     onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
@@ -258,6 +261,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onTextFontSizeChange: editorStore.svgNodeEditing.setTextFontSize,
     onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
     onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
+    onTextOpacityChange: editorStore.svgNodeEditing.setTextOpacity,
     onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
     onTextRotationChange: editorStore.svgNodeEditing.setTextRotation,
     onTextTransformChange: editorStore.svgNodeEditing.setTextTransform,
@@ -299,6 +303,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           {...inspectorProps}
           activeTool={activeTool}
           canEdit={canEdit}
+          canRedo={editorStore.canRedo}
+          canUndo={editorStore.canUndo}
           isCreatingProjectCopy={isCreatingCopy}
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
@@ -312,12 +318,13 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onOpenColorPicker={handleOpenMobileColorPicker}
           onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
+          onRedo={handleRedo}
           onSaveVersion={saveVersion}
           onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
+          onUndo={handleUndo}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
-          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
           zoom={zoom}

@@ -7,19 +7,31 @@
 #include <exception>
 
 #include <userver/components/component_context.hpp>
+#include <userver/components/statistics_storage.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/utils/periodic_task.hpp>
+#include <userver/utils/statistics/metric_tag.hpp>
+#include <userver/utils/statistics/metrics_storage.hpp>
+#include <userver/utils/statistics/rate_counter.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace ya_brander::components {
+
+namespace {
+
+/// @brief Счетик Prometheus: общее кол-во собранных S3 объектов с помощью GC.
+const userver::utils::statistics::MetricTag<userver::utils::statistics::RateCounter>
+    kGcOrphansReclaimedMetric{"gc_orphans_reclaimed_total"};
+
+}  // namespace
 
 GarbageCollectorComponent::GarbageCollectorComponent(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : LoggableComponentBase(config, context),
       version_storage_(context.FindComponent<VersionStorageComponent>()),
-      grace_(config["grace-seconds"].As<std::chrono::seconds>(
-          std::chrono::seconds{3600})),
+      metrics_storage_(context.FindComponent<userver::components::StatisticsStorage>().GetMetricsStorageRef()),
+      grace_(config["grace-seconds"].As<std::chrono::seconds>(std::chrono::seconds{3600})),
       max_orphan_ratio_(config["max-orphan-ratio"].As<double>(0.5)) {
   // GC активируется с помощью ENV VAR. По дефолту выключен:
   // только на проде ставить GC_ENABLED=true в .env.
@@ -62,8 +74,9 @@ GarbageCollectorComponent::~GarbageCollectorComponent() { task_.Stop(); }
 
 void GarbageCollectorComponent::RunOnce() {
   try {
-    const auto reclaimed =
-        version_storage_.CollectGarbage(grace_, max_orphan_ratio_);
+    const auto reclaimed = version_storage_.CollectGarbage(grace_, max_orphan_ratio_);
+    metrics_storage_.GetMetric(kGcOrphansReclaimedMetric)
+        .Add(userver::utils::statistics::Rate{reclaimed});
     LOG_INFO() << "orphan-gc run complete, reclaimed=" << reclaimed;
   } catch (const std::exception& e) {
     LOG_ERROR() << "orphan-gc run failed: " << e.what();

@@ -4,6 +4,9 @@
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>
 
+    <!-- Навигация -->
+    <string name="nav_back">Back</string>
+
     <!-- Вкладки нижней навигации -->
     <string name="nav_feed">Feed</string>
     <string name="nav_create">Create</string>

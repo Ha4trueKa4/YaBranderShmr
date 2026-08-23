@@ -33,13 +33,16 @@
   transition: none;
 }
 
+.dragArea {
+  touch-action: none;
+  user-select: none;
+}
+
 .handle {
   background: var(--color-border);
   border-radius: 999px;
   height: 0.25rem;
   margin: var(--space-2) auto;
-  touch-action: none;
-  user-select: none;
   width: 2.5rem;
 }
 
@@ -50,8 +53,6 @@
   justify-content: space-between;
   min-height: 3rem;
   padding: 0 var(--space-4);
-  touch-action: none;
-  user-select: none;
 }
 
 .header h2 {

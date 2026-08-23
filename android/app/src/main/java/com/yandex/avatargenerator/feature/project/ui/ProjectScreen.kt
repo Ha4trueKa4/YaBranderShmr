@@ -146,7 +146,7 @@ private fun ProjectCenteredBox(content: @Composable () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenContentPreview() {
     AvatarGeneratorTheme {
@@ -167,7 +167,7 @@ private fun ProjectScreenContentPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenEmptyChatPreview() {
     AvatarGeneratorTheme {
@@ -176,7 +176,7 @@ private fun ProjectScreenEmptyChatPreview() {
                 title = "New project",
                 isPublic = false,
                 messages = emptyList(),
-                draft = "Violet logo for an AI startup",
+                draft = "Coral logo for an AI startup",
             ),
             onBackClick = {},
             onRetry = {},
@@ -188,7 +188,7 @@ private fun ProjectScreenEmptyChatPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenLoadingPreview() {
     AvatarGeneratorTheme {
@@ -204,7 +204,7 @@ private fun ProjectScreenLoadingPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenGeneratingPreview() {
     AvatarGeneratorTheme {
@@ -226,7 +226,7 @@ private fun ProjectScreenGeneratingPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenFailedGenerationPreview() {
     AvatarGeneratorTheme {
@@ -247,7 +247,7 @@ private fun ProjectScreenFailedGenerationPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ProjectScreenErrorPreview() {
     AvatarGeneratorTheme {

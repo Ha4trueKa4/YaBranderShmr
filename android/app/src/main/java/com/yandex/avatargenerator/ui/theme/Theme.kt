@@ -19,8 +19,10 @@ private fun AppColorScheme.toMaterialColorScheme(darkTheme: Boolean): ColorSchem
     return base.copy(
         primary = accent,
         onPrimary = onAccent,
-        secondary = accentCyan,
-        onSecondary = onAccentCyan,
+        secondary = accentSoft,
+        onSecondary = onAccentSoft,
+        tertiary = accentWarm,
+        onTertiary = onAccentWarm,
         background = background,
         onBackground = textPrimary,
         surface = surface,

@@ -5,7 +5,7 @@ export interface GenerationDraft {
   model: string
 }
 
-type GenerationProcessStatus = 'idle' | 'starting' | 'pending'
+type GenerationProcessStatus = 'idle' | 'starting' | 'pending' | 'cancelling'
 
 class GenerationProcessStore {
   draft: GenerationDraft | null = null
@@ -21,6 +21,10 @@ class GenerationProcessStore {
     return this.status !== 'idle'
   }
 
+  get isCancelling() {
+    return this.status === 'cancelling'
+  }
+
   begin(draft: GenerationDraft) {
     this.draft = draft
     this.jobId = null
@@ -32,6 +36,12 @@ class GenerationProcessStore {
     this.projectId = projectId
     this.jobId = jobId
     this.status = 'pending'
+  }
+
+  cancel() {
+    if (this.isInProgress) {
+      this.status = 'cancelling'
+    }
   }
 
   reset() {

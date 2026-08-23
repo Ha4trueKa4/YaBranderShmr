@@ -11,6 +11,7 @@ type GenerateProjectRequest = PostProjectsByIdGenerateData['body']
 export async function generateProject(
   projectId: string,
   body: GenerateProjectRequest,
+  signal?: AbortSignal,
 ): Promise<PostProjectsByIdGenerateResponse> {
   const validBody = zPostProjectsByIdGenerateBody.parse(body)
   const response = await api<unknown, GenerateProjectRequest>(
@@ -19,6 +20,7 @@ export async function generateProject(
       body: validBody,
       method: 'POST',
       requiresAuth: true,
+      signal,
     },
   )
 

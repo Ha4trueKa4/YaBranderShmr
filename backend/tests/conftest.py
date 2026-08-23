@@ -46,7 +46,8 @@ def _get_connection_string(conn_info):
         return str(conn_info)
     except Exception:
         pass
-    raise AttributeError(f"Не удалось получить строку подключения из {conn_info!r}")
+    raise AttributeError(
+        f"Не удалось получить строку подключения из {conn_info!r}")
 
 
 @pytest.fixture(scope='session')
@@ -54,27 +55,60 @@ def userver_pg_config(pgsql_local):
     def _patch_config(config_yaml, config_vars):
         conn_str = _get_connection_string(pgsql_local['db-1'])
         config_vars['dbconnection'] = conn_str
-        config_vars['dbconnection-vector'] = conn_str
+        # dbconnection-vector нарочно НЕ переопределяем: у pgsql_local нет
+        # pgvector (локальный тестовый Postgres его не поддерживает), а
+        # значение по умолчанию из config_vars.testing.yaml указывает на
+        # настоящий service-vector-postgres, который docker-compose уже
+        # поднимает и мигрирует (migrate-vector) до старта тестов.
 
     return _patch_config
 
 
 @pytest.fixture(autouse=True)
 def mock_s3(mockserver):
-    """Глобальный мок для Yandex S3. Перехватывает запросы от S3ObjectStorageComponent"""
+    """Глобальный мок для Yandex S3. Перехватывает запросы от
+    S3ObjectStorageComponent.
+
+    Хранит объекты в памяти по ключу (путь после префикса бакета), а не
+    отдаёт фиксированную строку на любой GET: иначе GenerateAI никогда не
+    видит реальный kDefaultSvg только что созданного проекта и всегда идёт
+    по edit-ветке промпта, даже для первой генерации.
+    """
+    prefix = '/ya-brander-svg/'
+    storage: dict[str, bytes] = {}
 
     # Используем чистую строку без 'r' и '^', так как prefix=True
-    @mockserver.handler('/ya-brander-svg/', prefix=True)
+    @mockserver.handler(prefix, prefix=True)
     def _mock_s3_handler(request):
+        key = request.path[len(prefix):]
         if request.method == 'PUT':
+            # PUT ...?acl (смена ACL версии) не несёт тела и не должен
+            # затирать уже сохранённые данные объекта.
+            if 'acl' not in request.query:
+                storage[key] = request.get_data()
             return mockserver.make_response(status=200)
         elif request.method == 'DELETE':
+            storage.pop(key, None)
             return mockserver.make_response(status=204)
         elif request.method == 'GET':
-            return mockserver.make_response('<svg>mocked from s3</svg>', status=200)
+            data = storage.get(key)
+            if data is None:
+                return mockserver.make_response(status=404)
+            return mockserver.make_response(data, status=200)
         return mockserver.make_response(status=405)
 
     return _mock_s3_handler
+
+
+@pytest.fixture(autouse=True)
+def mock_yandex_embedding(mockserver):
+    """Фейковый сервер Yandex-эмбеддингов (нужен VectorSearchComponent)"""
+
+    @mockserver.json_handler("/yandex-embedding-mock")
+    def _mock_embedding(request):
+        return {"embedding": [0.0] * 256}
+
+    return _mock_embedding
 
 
 @pytest.fixture(autouse=True)

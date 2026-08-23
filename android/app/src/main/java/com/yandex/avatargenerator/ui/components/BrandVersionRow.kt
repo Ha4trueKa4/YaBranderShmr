@@ -77,7 +77,7 @@ fun BrandVersionRow(
                 if (badgeText != null) {
                     BrandBadge(
                         text = badgeText,
-                        variant = if (isActive) BrandBadgeVariant.Violet else BrandBadgeVariant.Neutral
+                        variant = if (isActive) BrandBadgeVariant.Accent else BrandBadgeVariant.Neutral
                     )
                 }
             }
@@ -102,7 +102,7 @@ private fun RestoreButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun BrandVersionRowPreview() {
     AvatarGeneratorTheme {

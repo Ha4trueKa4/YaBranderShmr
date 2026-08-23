@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite'
 import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
+import { OpacityProperty } from '../components/OpacityProperty'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
 import { TransformProperties } from '../components/TransformProperties'
 import styles from '../Properties.module.css'
@@ -31,6 +32,7 @@ interface TextPropertiesProps {
   onFontStyleChange: (fontStyle: 'italic' | 'normal') => void
   onFontWeightChange: (fontWeight: number) => void
   onPositionChange: (x: number, y: number) => void
+  onOpacityChange: (opacity: number) => void
   onRotationChange: (
     rotation: number,
     rotationCenter: { x: number; y: number },
@@ -63,6 +65,7 @@ export const TextProperties = observer(function TextProperties({
   onFontStyleChange,
   onFontWeightChange,
   onPositionChange,
+  onOpacityChange,
   onRotationChange,
   onTransformChange,
 }: TextPropertiesProps) {
@@ -125,6 +128,10 @@ export const TextProperties = observer(function TextProperties({
         measuredRotationCenter={measuredRotationCenter}
         onRotationChange={onRotationChange}
         onTransformChange={onTransformChange}
+      />
+      <OpacityProperty
+        onOpacityChange={onOpacityChange}
+        opacity={layer.opacity}
       />
       <FillProperty
         fill={fill}

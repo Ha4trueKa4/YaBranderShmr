@@ -32,7 +32,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
-find_package(userver COMPONENTS core postgresql QUIET)
+find_package(userver COMPONENTS core postgresql otlp QUIET)
 if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
@@ -136,6 +136,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
         ${PROJECT_NAME}_sql
+        userver::otlp
         nlohmann_json::nlohmann_json
         jwt-cpp
         pugixml

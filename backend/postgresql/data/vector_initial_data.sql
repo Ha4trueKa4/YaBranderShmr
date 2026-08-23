@@ -2361,6 +2361,7 @@ ON CONFLICT (id) DO NOTHING;
 
 
 
+
 -- [ 1] belka, животное, лес, белка
 INSERT INTO vector_examples (id, description, embedding, svg_data, created_at)
 VALUES (
