@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom'
 interface UseEditorProjectActionsParams {
   canEdit: boolean
   document: EditorDocument
+  initialIsPublic: boolean
   initialProjectName: string
   projectId: string
 }
@@ -21,6 +22,7 @@ interface UseEditorProjectActionsParams {
 export function useEditorProjectActions({
   canEdit,
   document,
+  initialIsPublic,
   initialProjectName,
   projectId,
 }: UseEditorProjectActionsParams) {
@@ -29,6 +31,7 @@ export function useEditorProjectActions({
   const toast = useToast()
   const { t } = useTranslation()
   const [projectName, setProjectName] = useState(initialProjectName)
+  const [isProjectPublic, setIsProjectPublic] = useState(initialIsPublic)
   const [savedProjectSvg, setSavedProjectSvg] = useState(() =>
     serializeSvg(document),
   )
@@ -111,6 +114,24 @@ export function useEditorProjectActions({
     toast,
   ])
 
+  const toggleProjectVisibility = useCallback(async () => {
+    const nextIsPublic = !isProjectPublic
+
+    try {
+      await saveProjectVersion({ is_public: nextIsPublic, projectId })
+      setIsProjectPublic(nextIsPublic)
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectQueryKey(projectId),
+        }),
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['feed'] }),
+      ])
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    }
+  }, [isProjectPublic, projectId, queryClient, saveProjectVersion, toast])
+
   const createCopy = useCallback(async () => {
     setIsCopyingProject(true)
 
@@ -146,6 +167,7 @@ export function useEditorProjectActions({
   return {
     createCopy,
     isCreatingCopy: isCopyingProject || isCreatingProjectCopy,
+    isProjectPublic,
     isSavingVersion,
     hasUnsavedChanges,
     markDocumentAsSaved,
@@ -153,5 +175,6 @@ export function useEditorProjectActions({
     renameProject,
     saveVersion,
     shouldBlockNavigation,
+    toggleProjectVisibility,
   }
 }

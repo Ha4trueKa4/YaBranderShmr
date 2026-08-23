@@ -39,7 +39,10 @@
   }
 
   .title {
-    display: grid;
+    align-items: center;
+    display: flex;
+    gap: var(--space-1);
+    justify-content: center;
     justify-items: center;
     min-width: 0;
     text-align: center;

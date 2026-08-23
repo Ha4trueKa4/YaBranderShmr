@@ -33,6 +33,7 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 interface EditorWorkspaceProps {
   canEdit: boolean
   document: EditorDocument
+  isPublic: boolean
   projectId: string
   projectName: string
 }
@@ -45,6 +46,7 @@ const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
+  isPublic,
   projectId,
   projectName: initialProjectName,
 }: EditorWorkspaceProps) {
@@ -73,15 +75,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     createCopy,
     hasUnsavedChanges,
     isCreatingCopy,
+    isProjectPublic,
     isSavingVersion,
     markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,
     shouldBlockNavigation,
+    toggleProjectVisibility,
   } = useEditorProjectActions({
     canEdit,
     document: editorStore.document,
+    initialIsPublic: isPublic,
     initialProjectName,
     projectId,
   })
@@ -321,7 +326,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           canRedo={editorStore.canRedo}
           canUndo={editorStore.canUndo}
           isCreatingProjectCopy={isCreatingCopy}
+          isProjectPublic={isProjectPublic}
           isSavingVersion={isSavingVersion}
+          isVisibilityUpdating={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
           onCancelColorPicker={handleCancelMobileProperties}
@@ -336,6 +343,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onRedo={handleRedo}
           onSaveVersion={saveVersion}
+          onToggleProjectVisibility={toggleProjectVisibility}
           onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
           onUndo={handleUndo}
@@ -373,6 +381,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               canRedo={editorStore.canRedo}
               canUndo={editorStore.canUndo}
               isCreatingProjectCopy={isCreatingCopy}
+              isProjectPublic={isProjectPublic}
               isSavingVersion={isSavingVersion}
               onBack={() => navigate(-1)}
               onCreateCopy={createCopy}
@@ -382,6 +391,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
               onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
+              onToggleProjectVisibility={toggleProjectVisibility}
               onToolChange={setActiveTool}
               onRedo={handleRedo}
               onSaveVersion={saveVersion}
