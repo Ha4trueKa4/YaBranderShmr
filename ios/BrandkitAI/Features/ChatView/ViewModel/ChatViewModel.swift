@@ -13,8 +13,6 @@ private nonisolated final class ChatObserverHolder: @unchecked Sendable {
 final class ChatViewModel {
     static let maxPromptUTF8Length = 1_500
 
-    private static let selectedModelStorageKey = "chat.selectedGenerationModel"
-
     enum ProjectPrivacy: String, CaseIterable, Identifiable {
         case privateProject
         case publicShowcase
@@ -91,7 +89,7 @@ final class ChatViewModel {
         self.projectID = projectID
         self.service = service
         self.selectedModelID = UserDefaults.standard.string(
-            forKey: Self.selectedModelStorageKey
+            forKey: GenerationModel.selectionStorageKey
         ) ?? GenerationModel.defaultID
         observerHolder.token = NotificationCenter.default.addObserver(
             forName: .networkDidBecomeAvailable,
@@ -175,13 +173,14 @@ final class ChatViewModel {
         isGenerating = true
 
         do {
-            let generatedURL = try await service.generate(
+            let jobID = try await service.generate(
                 projectID: projectID,
                 prompt: text,
                 modelID: modelID
             )
-            try? await refreshChatAfterGenerate(generatedURL: generatedURL)
+            await pollAndRefresh(jobID: jobID)
             isGenerating = false
+            guard !Task.isCancelled else { return }
             await flushPendingMessages()
         } catch {
             isGenerating = false
@@ -215,9 +214,9 @@ final class ChatViewModel {
                 continue
             }
 
-            let generatedURL: URL?
+            let jobID: String
             do {
-                generatedURL = try await service.generate(
+                jobID = try await service.generate(
                     projectID: projectID,
                     prompt: prompt.text,
                     modelID: prompt.modelID
@@ -236,13 +235,12 @@ final class ChatViewModel {
             pendingMessages.removeFirst()
             pendingCount = pendingMessages.count
             sendErrorMessage = nil
-            do {
-                try await refreshChatAfterGenerate(generatedURL: generatedURL)
-            } catch {
-                // Generation succeeded, so the item must not return to the queue.
-                // Keep the local bubble as sent when refreshing remote history fails.
-                markPendingMessageSent(prompt)
-            }
+            await pollAndRefresh(jobID: jobID)
+            guard !Task.isCancelled else { break }
+
+            // The server accepted the prompt, so it must not return to the
+            // offline queue even when refreshing the history later fails.
+            markPendingMessageSent(prompt)
         }
 
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
@@ -288,7 +286,50 @@ final class ChatViewModel {
         return url
     }
 
-    /// Read-шаг после успешной генерации: подтягивает свежую историю чата,
+    private func pollGeneration(jobID: String) async throws -> GenerationStatus {
+        while true {
+            try Task.checkCancellation()
+            let result = try await service.generateStatus(
+                projectID: projectID,
+                jobID: jobID
+            )
+
+            switch result.status {
+            case .pending:
+                continue
+            case .cancelling:
+                try await Task.sleep(for: .milliseconds(250))
+            case .done, .error, .cancelled:
+                return result
+            }
+        }
+    }
+
+    private func pollAndRefresh(jobID: String) async {
+        do {
+            let result = try await pollGeneration(jobID: jobID)
+            switch result.status {
+            case .done:
+                try? await refreshChatAfterGenerate(generatedURL: result.url)
+            case .error:
+                sendErrorMessage = result.message ?? "Generation failed."
+                try? await refreshChatAfterGenerate(generatedURL: nil)
+            case .cancelled:
+                sendErrorMessage = nil
+                try? await refreshChatAfterGenerate(generatedURL: nil)
+            case .pending, .cancelling:
+                break
+            }
+        } catch is CancellationError {
+            // The screen-owned task was cancelled; the backend job continues.
+        } catch {
+            guard !Task.isCancelled else { return }
+            sendErrorMessage = failureMessage(for: error)
+            try? await refreshChatAfterGenerate(generatedURL: nil)
+        }
+    }
+
+    /// Read-шаг после завершения генерации: подтягивает свежую историю чата,
     /// маппит URL новой версии, разогревает кеш SVG и сохраняет состояние.
     /// Ошибки `fetchChat` здесь некритичны — генерация уже принята бэкендом,
     /// поэтому вызывающий снимает промпт с очереди до этого вызова.
@@ -376,7 +417,7 @@ final class ChatViewModel {
     }
 
     private func persistSelectedModel() {
-        UserDefaults.standard.set(selectedModelID, forKey: Self.selectedModelStorageKey)
+        UserDefaults.standard.set(selectedModelID, forKey: GenerationModel.selectionStorageKey)
     }
 
     private func shouldKeepPending(after error: Error) -> Bool {
@@ -412,12 +453,14 @@ final class ChatViewModel {
         isLoading = true
         isOffline = false
         loadFailed = false
+        var activeJobID: String?
 
         do {
             async let project = service.fetchProject(id: projectID)
             async let remoteMessages = service.fetchChat(projectID: projectID)
             let (fetchedProject, fetchedMessages) = try await (project, remoteMessages)
             privacy = ProjectPrivacy(isPublic: fetchedProject.isPublic)
+            activeJobID = findActiveGeneration(in: fetchedMessages)
             applyRemoteMessages(fetchedMessages)
             didLoad = true
             await ChatCache.shared.save(
@@ -434,9 +477,24 @@ final class ChatViewModel {
         }
         isLoading = false
 
+        if let activeJobID {
+            isGenerating = true
+            await pollAndRefresh(jobID: activeJobID)
+            isGenerating = false
+            guard !Task.isCancelled else { return }
+        }
+
         if !pendingMessages.isEmpty {
             await flushPendingMessages()
         }
+    }
+
+    private func findActiveGeneration(in messages: [RemoteChatMessage]) -> String? {
+        messages.reversed().first(where: { message in
+            message.role.lowercased() == "assistant"
+                && (message.status == "pending" || message.status == "cancelling")
+                && message.jobID != nil
+        })?.jobID
     }
 
     private func applyRemoteMessages(_ remoteMessages: [RemoteChatMessage]) {
@@ -460,12 +518,30 @@ final class ChatViewModel {
     }
 
     private func replaceMessages(_ remoteMessages: [RemoteChatMessage]) {
-        let mapped = remoteMessages.map { remoteMessage in
-            ChatMessage(
-                type: remoteMessage.role.lowercased() == "assistant" ? .assistant : .user,
-                text: remoteMessage.role.lowercased() == "assistant"
-                    ? "Generated a new version."
-                    : (remoteMessage.text ?? ""),
+        let mapped = remoteMessages.compactMap { remoteMessage -> ChatMessage? in
+            let isAssistant = remoteMessage.role.lowercased() == "assistant"
+
+            // The backend appends a virtual assistant placeholder while a job
+            // is active. The dedicated generating bubble renders that state.
+            if isAssistant,
+               remoteMessage.status == "pending" || remoteMessage.status == "cancelling" {
+                return nil
+            }
+
+            let text: String
+            if !isAssistant {
+                text = remoteMessage.text ?? ""
+            } else if let error = remoteMessage.error {
+                text = error
+            } else if remoteMessage.status == "cancelled" {
+                text = "Generation cancelled"
+            } else {
+                text = "Generated a new version."
+            }
+
+            return ChatMessage(
+                type: isAssistant ? .assistant : .user,
+                text: text,
                 date: remoteMessage.createdAt,
                 attachment: remoteMessage.versionID.map {
                     .version(id: $0, url: versionURLs[$0])

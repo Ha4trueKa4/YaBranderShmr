@@ -18,6 +18,7 @@ nonisolated enum APIEndpoint {
     case projects
     case project(id: UUID)
     case generate(projectID: UUID)
+    case generationStatus(projectID: UUID, jobID: String)
     case projectChat(projectID: UUID)
     case projectVersions(projectID: UUID)
     case projectVersion(projectID: UUID, versionID: UUID)
@@ -56,6 +57,9 @@ nonisolated enum APIEndpoint {
 
         case .generate(let projectID):
             "/projects/\(Self.pathID(projectID))/generate"
+
+        case .generationStatus(let projectID, let jobID):
+            "/projects/\(Self.pathID(projectID))/generate/\(jobID)"
 
         case .projectChat(let projectID):
             "/projects/\(Self.pathID(projectID))/chat"

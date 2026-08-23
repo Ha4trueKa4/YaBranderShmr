@@ -308,9 +308,12 @@ private nonisolated final class PreviewProjectService: ProjectServiceProtocol {
     func fetchProjects(for userID: UUID) async throws -> [Project] { [] }
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage] { [] }
     func fetchModels() async throws -> [GenerationModel] { [.fallback] }
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL? { nil }
+    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> String { "preview-job" }
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        GenerationStatus(status: .done, url: nil, message: nil)
+    }
     func deleteProject(id: UUID) async throws {}
-    func createProject(name: String, description: String) async throws -> Project { fatalError() }
+    func createProject(name: String, prompt: String, modelID: String) async throws -> Project { fatalError() }
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project { fatalError() }
 }
 #endif

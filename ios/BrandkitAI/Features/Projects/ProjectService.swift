@@ -3,12 +3,13 @@ import Foundation
 nonisolated protocol ProjectServiceProtocol: Sendable {
     func fetchProjects(for userID: UUID) async throws -> [Project]
     func fetchProject(id: UUID) async throws -> Project
-    func createProject(name: String, description: String) async throws -> Project
+    func createProject(name: String, prompt: String, modelID: String) async throws -> Project
     func deleteProject(id: UUID) async throws
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
     func fetchModels() async throws -> [GenerationModel]
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL?
+    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> String
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL
 }
 
@@ -37,12 +38,12 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         return Project(dto: dto)
     }
 
-    func createProject(name: String, description: String) async throws -> Project {
+    func createProject(name: String, prompt: String, modelID: String) async throws -> Project {
         let dto: ProjectDTO = try await client.request(
             .post,
             .projects,
             authorization: .required,
-            body: CreateProjectRequest(name: name, description: description)
+            body: CreateProjectRequest(name: name, prompt: prompt, model: modelID)
         )
         return Project(dto: dto)
     }
@@ -85,7 +86,7 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         }
     }
 
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL? {
+    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> String {
         let response: GenerateResponseDTO = try await client.request(
             .post,
             .generate(projectID: projectID),
@@ -93,7 +94,18 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
             body: GenerateProjectRequest(prompt: prompt, model: modelID),
             timeout: 180
         )
-        return response.url
+        guard let jobID = response.jobID else { throw NetworkError.invalidResponse }
+        return jobID
+    }
+
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        try await client.request(
+            .get,
+            .generationStatus(projectID: projectID, jobID: jobID),
+            authorization: .required,
+            body: Optional<String>.none,
+            timeout: 35
+        )
     }
 
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL {
@@ -111,7 +123,42 @@ nonisolated struct RemoteChatMessage: Sendable, Codable {
     let role: String
     let text: String?
     let versionID: UUID?
+    let error: String?
+    let status: String?
+    let jobID: String?
     let createdAt: Date
+
+    init(
+        role: String,
+        text: String?,
+        versionID: UUID?,
+        error: String? = nil,
+        status: String? = nil,
+        jobID: String? = nil,
+        createdAt: Date
+    ) {
+        self.role = role
+        self.text = text
+        self.versionID = versionID
+        self.error = error
+        self.status = status
+        self.jobID = jobID
+        self.createdAt = createdAt
+    }
+}
+
+nonisolated struct GenerationStatus: Decodable, Sendable {
+    enum State: String, Decodable, Sendable {
+        case pending
+        case done
+        case error
+        case cancelling
+        case cancelled
+    }
+
+    let status: State
+    let url: URL?
+    let message: String?
 }
 
 private nonisolated struct UserProjectsResponseDTO: Decodable, Sendable {
@@ -140,7 +187,8 @@ private nonisolated struct ProjectDTO: Decodable, Sendable {
 
 private nonisolated struct CreateProjectRequest: Encodable, Sendable {
     let name: String
-    let description: String
+    let prompt: String
+    let model: String
 }
 
 private nonisolated struct UpdateVisibilityRequest: Encodable, Sendable {
@@ -162,7 +210,11 @@ private nonisolated struct ModelDTO: Decodable, Sendable {
 }
 
 private nonisolated struct GenerateResponseDTO: Decodable, Sendable {
-    let url: URL?
+    let jobID: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case jobID = "jobId"
+    }
 }
 
 private nonisolated struct ChatHistoryResponseDTO: Decodable, Sendable {
@@ -175,6 +227,9 @@ private nonisolated struct ChatHistoryResponseDTO: Decodable, Sendable {
                 role: message.role,
                 text: message.text,
                 versionID: message.versionID,
+                error: message.error,
+                status: message.status,
+                jobID: message.jobID,
                 createdAt: date
             )
         }
@@ -185,12 +240,18 @@ private nonisolated struct ChatMessageDTO: Decodable, Sendable {
     let role: String
     let text: String?
     let versionID: UUID?
+    let error: String?
+    let status: String?
+    let jobID: String?
     let createdAt: String?
 
     private enum CodingKeys: String, CodingKey {
         case role
         case text
         case versionID = "versionId"
+        case error
+        case status
+        case jobID = "jobId"
         case createdAt
     }
 }

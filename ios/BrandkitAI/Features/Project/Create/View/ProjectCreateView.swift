@@ -5,6 +5,7 @@ struct ProjectCreateView: View {
     var onGenerate: (Project) -> Void = { _ in }
 
     @State private var viewModel: ProjectCreateViewModel
+    @State private var isModelPickerPresented = false
 
     init(
         onBack: (() -> Void)? = nil,
@@ -29,10 +30,13 @@ struct ProjectCreateView: View {
                 )
 
                 FormTextEditor(
-                    label: "BRAND DESCRIPTION & BRIEF",
-                    placeholder: "Describe your brand values, target audience, preferred color scheme, visual mood (e.g., 'A modern cyberpunk aesthetic with neon highlights, catering to software developers who love dark mode tools...')",
-                    text: $viewModel.brief
+                    label: "PROMPT",
+                    placeholder: "Describe the brandkit you want to create — its style, colors, audience, mood, and required elements.",
+                    text: $viewModel.prompt,
+                    errorMessage: viewModel.promptValidationMessage
                 )
+
+                modelPickerButton
 
                 FormHint(text: viewModel.hint)
 
@@ -63,6 +67,66 @@ struct ProjectCreateView: View {
         .scrollDismissesKeyboard(.interactively)
         .brandBackground()
         .customNavigationBar(title: viewModel.title, onBack: onBack)
+        .sheet(isPresented: $isModelPickerPresented) {
+            ModelPickerSheet(
+                availableModels: viewModel.availableModels,
+                selectedModelID: viewModel.selectedModel.id,
+                isLoading: viewModel.isLoadingModels,
+                loadFailed: viewModel.modelsLoadFailed,
+                onSelect: viewModel.selectModel,
+                onRetry: { await viewModel.loadModels(force: true) }
+            )
+        }
+        .task {
+            await viewModel.loadModels()
+        }
+    }
+
+    private var modelPickerButton: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("MODEL")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                isModelPickerPresented = true
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(viewModel.selectedModel.title)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        Text(viewModel.selectedModel.providerTitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    if viewModel.isLoadingModels && viewModel.availableModels.isEmpty {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 60)
+                .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(.separator), lineWidth: 1)
+                }
+                .contentShape(.rect(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Generation model")
+            .accessibilityValue(viewModel.selectedModel.title)
+            .accessibilityHint("Opens the list of available models")
+        }
     }
 }
 

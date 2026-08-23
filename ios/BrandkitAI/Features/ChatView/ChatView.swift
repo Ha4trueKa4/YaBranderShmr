@@ -179,7 +179,14 @@ struct ChatView: View {
                 }
             }
             .sheet(isPresented: $isModelPickerPresented) {
-                ModelPickerSheet(viewModel: viewModel)
+                ModelPickerSheet(
+                    availableModels: viewModel.availableModels,
+                    selectedModelID: viewModel.selectedModel.id,
+                    isLoading: viewModel.isLoadingModels,
+                    loadFailed: viewModel.modelsLoadFailed,
+                    onSelect: viewModel.selectModel,
+                    onRetry: { await viewModel.loadModels(force: true) }
+                )
             }
             .task {
                 await viewModel.loadModels()

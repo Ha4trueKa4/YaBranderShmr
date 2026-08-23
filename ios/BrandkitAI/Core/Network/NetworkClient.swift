@@ -207,7 +207,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
             method: method,
             path: path,
             authorization: authorization,
-            body: body
+            body: body,
+            timeout: timeout
         )
     }
 
@@ -282,7 +283,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         method: HTTPMethod,
         path: String,
         authorization: AuthorizationRequirement,
-        body: Data?
+        body: Data?,
+        timeout: TimeInterval? = nil
     ) async throws -> Data {
         var attempt = 0
         var delayNs = Self.minDelay
@@ -292,7 +294,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
                     method: method,
                     path: path,
                     authorization: authorization,
-                    body: body
+                    body: body,
+                    timeout: timeout
                 )
             } catch NetworkError.httpError(let code) where Self.retryableStatusCodes.contains(code) {
                 if attempt >= Self.maxAttempts {
