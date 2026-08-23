@@ -1,0 +1,10 @@
+.composer {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.composer > span {
+  flex: 1;
+}

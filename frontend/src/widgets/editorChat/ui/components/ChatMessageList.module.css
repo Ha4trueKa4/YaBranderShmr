@@ -1,0 +1,20 @@
+.messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.emptyState {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  flex: 1;
+  font-size: var(--font-size-body);
+  justify-content: center;
+  padding: var(--space-6);
+  text-align: center;
+}
