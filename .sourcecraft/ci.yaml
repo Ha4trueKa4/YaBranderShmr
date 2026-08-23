@@ -94,6 +94,8 @@ workflows:
               MONIUM_PROJECT: ${{ secrets.MONIUM_PROJECT }}
               MONIUM_API_KEY: ${{ secrets.MONIUM_API_KEY }}
               ADMIN_ID: ${{ secrets.ADMIN_ID }}
+              ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+              ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
 
   deploy-frontend-dev:
     tasks:
