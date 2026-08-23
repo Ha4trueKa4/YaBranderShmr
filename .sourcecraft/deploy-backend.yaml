@@ -46,6 +46,8 @@ deploy:
           -e PGHOST=service-postgres -e PGPORT=5432 \
           -e PGUSER=user -e PGPASSWORD=password -e PGDATABASE=ya_brander_db_1 \
           -e MIGRATIONS_DIR=/postgresql/migrations/db-1 \
+          -e ADMIN_EMAIL="$ADMIN_EMAIL" \
+          -e ADMIN_PASSWORD_HASH="$ADMIN_PASSWORD_HASH" \
           -v ~/$REMOTE_APP_DIR/backend/postgresql:/postgresql:ro \
           -v ~/$REMOTE_APP_DIR/backend/scripts:/scripts:ro \
           postgres:18 bash /scripts/run_migrations.sh
