@@ -4,12 +4,20 @@ components_manager:
     main-task-processor: # Make a task processor for CPU-bound couroutine tasks.
       worker_threads: $worker-threads         # Process tasks in 4 threads.
 
+    monitor-task-processor: # для мониторинга
+      worker_threads: 2
+      thread_name: mon-worker
+
     fs-task-processor: # Make a separate task processor for filesystem bound tasks.
       worker_threads: $worker-fs-threads
 
     bg-task-processor: # Фоновые генерации (ProjectManagerComponent) — отдельно от
       worker_threads: $worker-bg-threads   # main-task-processor, чтобы не конкурировать
                                             # с обработкой HTTP-запросов (в т.ч. long-poll).
+
+    grpc-blocking-task-processor: # Для блокирующей инициализации gRPC-каналов (otlp-logger).
+      worker_threads: 2
+      thread_name: grpc-worker
 
   default_task_processor: main-task-processor
 
@@ -18,7 +26,9 @@ components_manager:
       listener: # configuring the main listening socket...
         port: $server-port            # ...to listen on this port and...
         task_processor: main-task-processor    # ...process incoming requests on this task processor.
-
+      listener-monitor: # internal-only diagnostics socket — never published to the host or internet,
+        port: $monitor-port           # only reachable by other containers on the same docker network
+        task_processor: monitor-task-processor    # (local Grafana/Prometheus, and the otel-collector for Monium).
     cors-middleware:
       allowed-origins:
         - http://localhost:5173
@@ -74,6 +84,15 @@ components_manager:
       task_processor: main-task-processor
       throttling_enabled: false
       url_trailing_slash: strict-match
+
+    # Exposes userver's own metrics (request rates, latencies, etc.) on the internal
+    # listener-monitor socket. No default 'format' is set, so every caller must pass
+    # ?format=... explicitly — see monitoring/prometheus/prometheus.yml (local Grafana)
+    # and otel/otel-collector.yaml (Monium), which both request format=prometheus.
+    handler-server-monitor:
+      path: /service/monitor
+      method: GET
+      task_processor: main-task-processor
 
     handler-check:
       path: /check
@@ -138,6 +157,24 @@ components_manager:
       thread_pools:
         redis_thread_pool_size: 2
         sentinel_thread_pool_size: 1
+
+    # ==========================================
+    # Monium telemetry (OTLP logs + traces)
+    # ==========================================
+    grpc-client-common:
+      blocking-task-processor: grpc-blocking-task-processor
+
+    grpc-client-factory:
+      channel-args: { }
+
+    otlp-logger:
+      client-factory-name: grpc-client-factory
+      endpoint: $monium-otlp-endpoint
+      service-name: ya-brander
+      log-level: $logger-level
+      sinks:
+        logs: both
+        tracing: both
 
     # ==========================================
     # Внешние сервисы (или их моки)

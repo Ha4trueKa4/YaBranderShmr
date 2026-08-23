@@ -6,6 +6,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/components/loggable_component_base.hpp>
 #include <userver/utils/periodic_task.hpp>
+#include <userver/utils/statistics/metrics_storage_fwd.hpp>
 #include <userver/yaml_config/schema.hpp>
 
 #include "../version_storage/version_storage_component.hpp"
@@ -34,6 +35,7 @@ namespace ya_brander::components {
         void RunOnce();
 
         VersionStorageComponent& version_storage_;
+        userver::utils::statistics::MetricsStorage& metrics_storage_;
         std::chrono::seconds grace_;
         double max_orphan_ratio_;
         userver::utils::PeriodicTask task_;

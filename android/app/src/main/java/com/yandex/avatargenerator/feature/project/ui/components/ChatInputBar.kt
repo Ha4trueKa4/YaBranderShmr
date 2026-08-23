@@ -166,7 +166,7 @@ private fun ChatInputSendButton(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatInputBarEmptyPreview() {
     AvatarGeneratorTheme {
@@ -174,7 +174,7 @@ private fun ChatInputBarEmptyPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatInputBarFilledPreview() {
     AvatarGeneratorTheme {
@@ -186,7 +186,7 @@ private fun ChatInputBarFilledPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatInputBarSendingPreview() {
     AvatarGeneratorTheme {

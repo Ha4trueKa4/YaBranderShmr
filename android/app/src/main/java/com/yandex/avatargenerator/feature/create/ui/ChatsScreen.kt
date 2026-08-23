@@ -152,7 +152,7 @@ private fun ChatsList(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatsScreenContentPreview() {
     AvatarGeneratorTheme {
@@ -165,7 +165,7 @@ private fun ChatsScreenContentPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatsScreenEmptyPreview() {
     AvatarGeneratorTheme {
@@ -178,7 +178,7 @@ private fun ChatsScreenEmptyPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatsScreenLoadingPreview() {
     AvatarGeneratorTheme {
@@ -191,7 +191,7 @@ private fun ChatsScreenLoadingPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
 @Composable
 private fun ChatsScreenErrorPreview() {
     AvatarGeneratorTheme {

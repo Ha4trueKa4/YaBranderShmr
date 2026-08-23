@@ -101,12 +101,17 @@ fun ProfileHeader(
         ) {
             NameBlock(displayName = profile.displayName, handle = profile.handle)
 
-            Text(
-                text = profile.bio,
-                style = AppTypography.body.copy(color = AppColors.TextSecondary),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // Контракт `GET /users/{id}` био не отдаёт — маппер подставляет "".
+            // Пустой Text всё равно занимал бы высоту строки плюс отступ колонки,
+            // из-за чего под именем зияла дыра.
+            if (profile.bio.isNotBlank()) {
+                Text(
+                    text = profile.bio,
+                    style = AppTypography.body.copy(color = AppColors.TextSecondary),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             StatsRow(
                 projects = profile.projectsCount,

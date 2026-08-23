@@ -8,6 +8,8 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "password_hasher.hpp"
 #include "../../utils/errors.hpp"
 
@@ -62,7 +64,7 @@ userver::formats::json::Value RegisterHandler::HandleRequestJsonThrow(
     try {
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            "INSERT INTO users(login, email, password_hash) VALUES($1, $2, $3) RETURNING id::text",
+            sql::kRegisterUser,
             nickname, email, password_hash);
 
         const auto user_id = result.Front()[0].As<std::string>();

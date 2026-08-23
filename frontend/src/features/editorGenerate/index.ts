@@ -1,4 +1,6 @@
+export { cancelGeneration } from './api/cancelGeneration'
 export {
+  GenerationPollingCancelledError,
   GenerationPollingTimeoutError,
   pollGenerationStatus,
 } from './api/pollGenerationStatus'

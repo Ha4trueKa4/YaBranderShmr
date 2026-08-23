@@ -6,15 +6,7 @@
 
 .cover {
   height: 10rem;
-  background: linear-gradient(
-    to right,
-    var(--color-accent-primary) 0 34%,
-    var(--color-surface-elevated) 34% 100%
-  );
-}
-
-:global(:root[data-theme="yandex"]) .cover {
-  background: var(--gradient-yandex-soft);
+  background: var(--gradient-profile-cover);
 }
 
 .content {
@@ -113,7 +105,7 @@
   flex-wrap: wrap;
   justify-content: end;
   gap: var(--space-2);
-  padding-right: 0;
+  padding-right: var(--space-5);
 }
 
 @media (width < 960px) {
@@ -129,21 +121,23 @@
 
 @media (width < 760px) {
   .cover {
-    display: none;
+    height: 7rem;
   }
 
   .content {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
     padding: 0 0 var(--space-4);
   }
 
   .avatar {
     position: static;
-    margin-top: 0;
+    margin-top: -3.5rem;
   }
 
   .actions {
     min-width: 0;
+    gap: var(--space-4);
   }
 
   .stats {

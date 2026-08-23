@@ -1,0 +1,123 @@
+{
+  "id": null,
+  "uid": "ya-brander-overview",
+  "title": "ya_brander Overview",
+  "tags": ["ya_brander"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Request rate (RPS)",
+      "description": "http_handler_rps, per handler",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_handler_rps[1m])) by (http_handler)",
+          "legendFormat": "{{http_handler}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Error rate (5xx)",
+      "description": "http_handler_reply_codes with http_code in the 5xx range, per handler",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_handler_reply_codes{http_code=~\"5..\"}[1m])) by (http_handler)",
+          "legendFormat": "{{http_handler}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latency p99",
+      "description": "http_handler_timings, percentile=p99, per handler",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "http_handler_timings{percentile=\"p99\"}",
+          "legendFormat": "{{http_handler}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Postgres pool (active / busy)",
+      "description": "postgresql_connections_active and postgresql_connections_busy, per database",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "postgresql_connections_active",
+          "legendFormat": "active {{postgresql_database}}",
+          "refId": "A"
+        },
+        {
+          "expr": "postgresql_connections_busy",
+          "legendFormat": "busy {{postgresql_database}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "GC reclaimed orphans (total)",
+      "description": "gc_orphans_reclaimed_total, incremented by the value CollectGarbage returns on each garbage-collector run",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "gc_orphans_reclaimed_total",
+          "legendFormat": "reclaimed",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

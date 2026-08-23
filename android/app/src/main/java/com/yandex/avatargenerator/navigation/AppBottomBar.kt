@@ -35,7 +35,7 @@ import com.yandex.avatargenerator.ui.theme.AppColors
  *  - верхняя разделительная линия 1dp ([AppColors.Border]);
  *  - ряд вкладок высотой 64dp, фон [AppColors.Surface], отступы по бокам 32dp,
  *    вкладки распределены `SpaceBetween`;
- *  - активная вкладка окрашена в [AppColors.Accent], неактивные — в
+ *  - активная вкладка окрашена в [AppColors.AccentText], неактивные — в
  *    [AppColors.TextMuted] (иконка + подпись);
  *  - подсветки нажатия у вкладок нет — обратную связь даёт смена цвета;
  *  - снизу — область системного жеста («хват»), залитая тем же фоном.
@@ -89,7 +89,7 @@ private fun NavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tint: Color = if (selected) AppColors.Accent else AppColors.TextMuted
+    val tint: Color = if (selected) AppColors.AccentText else AppColors.TextMuted
     val label = stringResource(tab.labelRes)
 
     Column(

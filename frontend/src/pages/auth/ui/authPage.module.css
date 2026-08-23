@@ -43,7 +43,7 @@
 }
 
 :global(:root[data-theme="yandex"]) .promoPanel {
-  background: var(--gradient-yandex-soft);
+  background: var(--gradient-profile-cover);
 }
 
 :global(:root[data-theme="yandex"]) .backButton,

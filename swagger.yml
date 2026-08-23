@@ -847,6 +847,26 @@ paths:
                     Модель генерации. gpt-5.6-luna отправляется напрямую в
                     OpenAI, остальные доступные модели — в Yandex AI Studio.
                   example: "deepseek-v4-flash/latest"
+                references:
+                  type: array
+                  maxItems: 2
+                  items:
+                    type: string
+                    description: "id (UUID) проекта-референса, а не файл/картинка"
+                    example: "123e4567-e89b-12d3-a456-426614174000"
+                  example:
+                    - "123e4567-e89b-12d3-a456-426614174000"
+                    - "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  description: >
+                    Опционально: id (UUID, до 2) других проектов пользователя
+                    (или чужих публичных проектов), чьи последние SVG
+                    используются как референсы стиля/содержимого — не файлы
+                    и не изображения, а именно id уже существующих проектов
+                    в системе. Учитывается только при первичной генерации (у
+                    целевого проекта ещё нет реальной версии); при
+                    редактировании существующего проекта поле игнорируется
+                    без ошибки. Недоступные (несуществующие, приватные
+                    чужие) или пустые референсы молча пропускаются.
       responses:
         '202':
           description: >
@@ -862,13 +882,18 @@ paths:
                     description: Идентификатор фоновой задачи генерации.
                     example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         '400':
-          description: Не передан prompt, либо prompt длиннее 1500 символов
+          description: Не передан prompt, либо prompt длиннее 1500 символов, либо references содержит больше 2 id
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
-              example:
-                message: "Prompt cannot be empty"
+              examples:
+                empty_prompt:
+                  value:
+                    message: "Prompt cannot be empty"
+                too_many_references:
+                  value:
+                    message: "references supports at most 2 project ids"
         '401':
           description: Не авторизован
         '403':

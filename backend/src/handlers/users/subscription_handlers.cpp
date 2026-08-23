@@ -10,6 +10,8 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
 
 namespace ya_brander::handlers {
@@ -68,7 +70,7 @@ userver::formats::json::Value SubscribeHandler::HandleRequestJsonThrow(
   try {
     pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "INSERT INTO subscriptions (subscriber_id, target_user_id) VALUES ($1::uuid, $2::uuid) ON CONFLICT DO NOTHING",
+        sql::kInsertSubscription,
         user_id, target_id);
   } catch (const userver::storages::postgres::ForeignKeyViolation&) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -92,7 +94,7 @@ userver::formats::json::Value UnsubscribeHandler::HandleRequestJsonThrow(
 
   pg_cluster_->Execute(
       userver::storages::postgres::ClusterHostType::kMaster,
-      "DELETE FROM subscriptions WHERE subscriber_id = $1::uuid AND target_user_id = $2::uuid",
+      sql::kDeleteSubscription,
       user_id, target_id);
 
   return MakeMessage("Unsubscribed successfully");
@@ -131,9 +133,7 @@ userver::formats::json::Value DeleteSubscriberHandler::HandleRequestJsonThrow(
   try {
     const auto result = pg_cluster_->Execute(
         userver::storages::postgres::ClusterHostType::kMaster,
-        "DELETE FROM subscriptions "
-        "WHERE subscriber_id = $1::uuid AND target_user_id = $2::uuid "
-        "RETURNING 1 AS deleted",
+        sql::kDeleteSubscriber,
         subscriber_id, target_user_id);
 
     if (result.IsEmpty()) {

@@ -132,7 +132,7 @@ internal object OnboardingDefaults {
     val StepIconSize = 20.dp
 
     val StepIconTint: Color
-        @Composable @ReadOnlyComposable get() = AppColors.AccentCyan
+        @Composable @ReadOnlyComposable get() = AppColors.AccentSoft
 
     val PageTitleStyle: TextStyle
         @Composable @ReadOnlyComposable get() = AppTypography.heading2
@@ -159,12 +159,12 @@ internal object OnboardingDefaults {
     val CtaGroupSpacing = 20.dp
 
     /**
-     * Cyan в центре → violet по краю. Промежуточные стопы из макета лежат ровно
+     * Мягкий коралл в центре → коралл по краю. Промежуточные стопы из макета лежат ровно
      * на линейной интерполяции краёв, которую Compose делает сам.
      */
     val GlowBrush: Brush
         @Composable @ReadOnlyComposable
-        get() = Brush.radialGradient(listOf(AppColors.AccentCyan, AppColors.Accent))
+        get() = Brush.radialGradient(listOf(AppColors.AccentSoft, AppColors.Accent))
 
     val MockupBrandNameStyle: TextStyle
         @Composable @ReadOnlyComposable

@@ -2,6 +2,9 @@
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Восстановить</string>
 
+    <!-- Навигация -->
+    <string name="nav_back">Назад</string>
+
     <!-- Вкладки нижней навигации -->
     <string name="nav_feed">Лента</string>
     <string name="nav_create">Создать</string>

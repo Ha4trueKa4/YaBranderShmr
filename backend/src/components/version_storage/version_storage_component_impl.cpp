@@ -1,10 +1,16 @@
 #include "version_storage_component_impl.hpp"
+
 #include <cstdint>
 #include <stdexcept>
 #include <unordered_set>
+#include <vector>
+
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <vector>
+
+#include <ya_brander/sql_queries.hpp>
+
+#include "../../utils/postgres_retry.hpp"
 #include "../svg_validator.hpp"
 
 namespace ya_brander::components {
@@ -40,10 +46,7 @@ std::string VersionStorageComponentImpl::SaveVersion(
     auto txn =
         pg_cluster_->Begin(pg::ClusterHostType::kMaster, pg::Transaction::RW);
 
-    auto proj = txn.Execute(
-        "SELECT is_private, last_version_key FROM projects "
-        "WHERE id = $1::uuid FOR UPDATE",
-        project_id);
+    auto proj = txn.Execute(sql::kLockProjectVersionState, project_id);
     if (proj.IsEmpty()) {
       throw std::runtime_error("SaveVersion: project not found");
     }
@@ -52,46 +55,31 @@ std::string VersionStorageComponentImpl::SaveVersion(
       old_key = proj[0]["last_version_key"].As<std::string>();
     }
 
-    // Резервируем строку версии с NULL, без s3 ключа. Если вдруг PUT в S3
-    // зафейлится, то строка останется как NULL и вернет 404 если будет как то
-    // запрошена. ListVersions теперь исключает строки с NULL.
-    auto ins = txn.Execute(
-        "INSERT INTO project_versions (project_id, version_num) VALUES "
-        "($1::uuid, (SELECT COALESCE(MAX(version_num), 0) + 1 "
-        "            FROM project_versions WHERE project_id = $1::uuid)) "
-        "RETURNING id::text",
-        project_id);
+    // Резервируем строку версии с NULL, без s3 ключа. Если PUT в S3
+    // завершится ошибкой, строка останется с NULL и не попадёт в GET/list.
+    auto ins = txn.Execute(sql::kCreateProjectVersion, project_id);
     version_id = ins[0]["id"].As<std::string>();
     new_key = MakeKey(project_id, version_id);
 
     txn.Commit();
   }
 
-  // Если здесь возникает ошибка, она пробрасывается наверх,
-  // а строка s3_file_key просто остается пустой и фильтруется при GET запросах.
+  // При ошибке строка s3_file_key остаётся пустой и фильтруется при чтении.
   storage_.Put(new_key, data, /*make_public=*/is_public);
 
   {
     auto txn =
         pg_cluster_->Begin(pg::ClusterHostType::kMaster, pg::Transaction::RW);
 
-    // Обновляем ключ версии на реальный (был NULL) и last_version_key
-    // одной транзакцией: если что-то упадёт, обе колонки останутся как были,
-    // а уже загруженный в S3 объект будет позже собран GC как orphan.
-    txn.Execute(
-        "UPDATE project_versions SET s3_file_key = $2 WHERE id = $1::uuid",
-        version_id, new_key);
-
-    txn.Execute(
-        "UPDATE projects SET last_version_key = $2, updated_at = NOW() "
-        "WHERE id = $1::uuid",
-        project_id, new_key);
+    // Обновляем ключ версии и last_version_key атомарно. Если транзакция
+    // завершится ошибкой, загруженный объект позже удалит orphan-GC.
+    txn.Execute(sql::kUpdateProjectVersionKey, version_id, new_key);
+    txn.Execute(sql::kUpdateProjectLatestVersionKey, project_id, new_key);
 
     txn.Commit();
   }
 
-  // Best-effort demote of the previous latest (never fail the whole save on
-  // it).
+  // Ошибка смены ACL старой версии не должна ломать успешное сохранение.
   if (is_public && !old_key.empty()) {
     try {
       storage_.SetAcl(old_key, /*make_public=*/false);
@@ -106,30 +94,35 @@ std::string VersionStorageComponentImpl::SaveVersion(
 
 std::string VersionStorageComponentImpl::GetVersion(
     const std::string& project_id, const std::string& version_id) {
-  auto res =
-      pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                           "SELECT s3_file_key FROM project_versions "
-                           "WHERE id = $1::uuid AND project_id = $2::uuid",
-                           version_id, project_id);
+  auto res = utils::ExecuteSelectWithRetry("select-project-version-key", [&] {
+    return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                sql::kSelectProjectVersionKey, version_id,
+                                project_id);
+  });
   if (res.IsEmpty() || res[0]["s3_file_key"].IsNull()) return "";
   return storage_.Get(res[0]["s3_file_key"].As<std::string>());
 }
 
 std::string VersionStorageComponentImpl::GetLatestVersionData(
     const std::string& project_id) {
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kSlave,
-      "SELECT last_version_key FROM projects WHERE id = $1::uuid", project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-latest-version-key", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                    sql::kSelectProjectLatestVersionKey,
+                                    project_id);
+      });
   if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) return "";
   return storage_.Get(res[0]["last_version_key"].As<std::string>());
 }
 
 std::string VersionStorageComponentImpl::GetLatestVersionUrl(
     const std::string& project_id) {
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kSlave,
-      "SELECT last_version_key, is_private FROM projects WHERE id = $1::uuid",
-      project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-latest-version-state", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                    sql::kSelectProjectLatestVersionState,
+                                    project_id);
+      });
   if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) return "";
   const bool is_public = !res[0]["is_private"].As<bool>();
   return storage_.GetUrl(res[0]["last_version_key"].As<std::string>(),
@@ -138,11 +131,11 @@ std::string VersionStorageComponentImpl::GetLatestVersionUrl(
 
 std::string VersionStorageComponentImpl::GetVersionUrl(
     const std::string& project_id, const std::string& version_id) {
-  auto res =
-      pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                           "SELECT s3_file_key FROM project_versions "
-                           "WHERE id = $1::uuid AND project_id = $2::uuid",
-                           version_id, project_id);
+  auto res = utils::ExecuteSelectWithRetry("select-project-version-key", [&] {
+    return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                sql::kSelectProjectVersionKey, version_id,
+                                project_id);
+  });
   if (res.IsEmpty() || res[0]["s3_file_key"].IsNull()) return "";
   return storage_.GetUrl(res[0]["s3_file_key"].As<std::string>(),
                          /*is_public=*/false);
@@ -161,13 +154,10 @@ VersionStorageComponentImpl::GetManyUrls(const std::vector<std::string>& keys,
 
 std::vector<models::Version> VersionStorageComponentImpl::ListVersions(
     const std::string& project_id) {
-  const auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kSlave,
-      "SELECT id, project_id, version_num, created_at "
-      "FROM project_versions "
-      "WHERE project_id = $1::uuid AND s3_file_key IS NOT NULL "
-      "ORDER BY version_num DESC",
-      project_id);
+  const auto res = utils::ExecuteSelectWithRetry("list-project-versions", [&] {
+    return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                sql::kListProjectVersions, project_id);
+  });
 
   std::vector<models::Version> versions;
   versions.reserve(res.Size());
@@ -194,25 +184,29 @@ std::string VersionStorageComponentImpl::RestoreVersion(
 
 void VersionStorageComponentImpl::SetLatestAcl(const std::string& project_id,
                                                bool make_public) {
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kMaster,
-      "SELECT last_version_key FROM projects WHERE id = $1::uuid", project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-latest-version-key", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kMaster,
+                                    sql::kSelectProjectLatestVersionKey,
+                                    project_id);
+      });
   if (res.IsEmpty() || res[0]["last_version_key"].IsNull()) return;
   storage_.SetAcl(res[0]["last_version_key"].As<std::string>(), make_public);
 }
 
 void VersionStorageComponentImpl::DeleteAllVersions(
     const std::string& project_id) {
-  auto res = pg_cluster_->Execute(
-      pg::ClusterHostType::kMaster,
-      "SELECT s3_file_key FROM project_versions "
-      "WHERE project_id = $1::uuid AND s3_file_key IS NOT NULL",
-      project_id);
+  auto res =
+      utils::ExecuteSelectWithRetry("select-project-version-keys", [&] {
+        return pg_cluster_->Execute(pg::ClusterHostType::kMaster,
+                                    sql::kSelectProjectVersionKeys, project_id);
+      });
 
   std::vector<std::string> keys;
   keys.reserve(res.Size());
-  for (const auto& row : res)
+  for (const auto& row : res) {
     keys.push_back(row["s3_file_key"].As<std::string>());
+  }
   if (keys.empty()) return;
 
   try {
@@ -225,13 +219,11 @@ void VersionStorageComponentImpl::DeleteAllVersions(
 
 std::size_t VersionStorageComponentImpl::CollectGarbage(
     std::chrono::seconds grace, double max_orphan_ratio) {
-  // Транзакционный advisory-lock: не даёт двум инстансам мести одновременно.
-  // Снимается автоматически при выходе из функции (Commit не обязателен —
-  // транзакция ничего не пишет, только держит lock).
+  // Транзакционный advisory-lock не даёт двум инстансам запускать GC вместе.
   auto lock_txn =
       pg_cluster_->Begin(pg::ClusterHostType::kMaster, pg::Transaction::RW);
-  const auto lock_res = lock_txn.Execute(
-      "SELECT pg_try_advisory_xact_lock($1::bigint)", kGcAdvisoryLockKey);
+  const auto lock_res =
+      lock_txn.Execute(sql::kTryLockGarbageCollection, kGcAdvisoryLockKey);
   if (!lock_res[0][0].As<bool>()) {
     LOG_WARNING()
         << "CollectGarbage: another instance is already running GC, skipping.";
@@ -247,15 +239,15 @@ std::size_t VersionStorageComponentImpl::CollectGarbage(
 
   std::unordered_set<std::string> referenced;
   {
-    const auto res =
-        pg_cluster_->Execute(pg::ClusterHostType::kSlave,
-                             "SELECT s3_file_key AS k FROM project_versions "
-                             "WHERE s3_file_key IS NOT NULL "
-                             "UNION "
-                             "SELECT last_version_key AS k FROM projects WHERE "
-                             "last_version_key IS NOT NULL");
+    const auto res = utils::ExecuteSelectWithRetry(
+        "select-referenced-version-keys", [&] {
+          return pg_cluster_->Execute(pg::ClusterHostType::kSlave,
+                                      sql::kSelectReferencedVersionKeys);
+        });
     referenced.reserve(res.Size());
-    for (const auto& row : res) referenced.insert(row["k"].As<std::string>());
+    for (const auto& row : res) {
+      referenced.insert(row["k"].As<std::string>());
+    }
   }
 
   if (referenced.empty()) {
@@ -298,4 +290,5 @@ std::size_t VersionStorageComponentImpl::CollectGarbage(
 
   return deleted;
 }
+
 }  // namespace ya_brander::components

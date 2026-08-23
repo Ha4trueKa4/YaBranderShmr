@@ -32,7 +32,6 @@ private:
     userver::clients::http::Client& http_client_;
     std::string api_key_;
     std::string embedding_url_;
-    std::string db_table_;
     std::string embedding_model_;
 };
 

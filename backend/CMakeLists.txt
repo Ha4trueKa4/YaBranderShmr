@@ -32,7 +32,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
-find_package(userver COMPONENTS core postgresql redis QUIET)
+find_package(userver COMPONENTS core postgresql redis otlp QUIET)
 if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
@@ -52,6 +52,13 @@ if (NOT userver_FOUND)  # Fallback to subdirectory usage
 endif ()
 
 userver_setup_environment()
+
+userver_add_sql_library(${PROJECT_NAME}_sql
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sql/queries
+        OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/sql
+        NAMESPACE ya_brander
+        SQL_FILES *.sql
+)
 
 
 # Common sources
@@ -124,11 +131,14 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/utils/errors.hpp
         src/utils/errors.cpp
         src/components/garbage_collector/garbage_collector_component.cpp
+        src/utils/postgres_retry.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
         userver::redis
+        ${PROJECT_NAME}_sql
+        userver::otlp
         nlohmann_json::nlohmann_json
         jwt-cpp
         pugixml

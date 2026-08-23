@@ -72,7 +72,15 @@ public:
   /// @throws std::exception если не удалось создать job (например, недоступна
   ///         БД при записи сообщения пользователя) — в этом случае job_id
   ///         никому не отдаётся и в Redis ничего не остаётся (см. ReleaseReservedJob).
-  std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
+  /// @param caller_id Автор запроса (уже проверен хендлером как владелец
+  ///        project_id) — используется для проверки доступа к
+  ///        reference_project_ids внутри ResolveReferenceSvgs.
+  /// @param reference_project_ids Id (не более 2) других проектов, чьи SVG
+  ///        подмешиваются в промпт — учитываются только при первичной
+  ///        генерации project_id (см. ResolveReferenceSvgs).
+  std::string StartGeneration(const std::string& project_id, const std::string& prompt, const std::string& model,
+                              const std::string& caller_id,
+                              const std::vector<std::string>& reference_project_ids = {});
 
   /// @brief Ждёт завершения job'а генерации не дольше timeout (long polling).
   /// @returns std::nullopt, если job с таким id не найден для этого проекта.
@@ -157,7 +165,9 @@ private:
   /// @brief Собственно генерация (построение промпта, вызов LLM, сохранение
   ///        версии), выполняется в фоновой корутине из StartGeneration.
   ///        @returns id сохранённой версии.
-  std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model);
+  std::string RunGeneration(const std::string& project_id, const std::string& prompt, const std::string& model,
+                           const std::string& caller_id,
+                           const std::vector<std::string>& reference_project_ids);
 
   /// @brief Читает job:{job_id} из Redis. @returns std::nullopt, если хэш
   ///        не существует (job никогда не было или его TTL истёк).
@@ -198,6 +208,18 @@ private:
   static std::string ActiveJobKey(const std::string& project_id);
   static std::string JobStatusToString(JobStatus status);
   static JobStatus JobStatusFromString(const std::string& value);
+
+  /// @brief Резолвит id референс-проектов (не более 2, лишние игнорируются
+  ///        вызывающим на уровне хендлера) в содержимое их последних SVG для
+  ///        промпта первичной генерации.
+  /// @details Молча пропускает (не бросает исключений) id, которые: не
+  ///          существуют; существуют, но приватны и не принадлежат caller_id;
+  ///          чья последняя версия пуста или равна kDefaultSvg (сюда же
+  ///          попадает самоссылка на генерируемый проект — в ветке первичной
+  ///          генерации его собственный current_state и так пуст/дефолтен).
+  std::vector<std::string> ResolveReferenceSvgs(
+      const std::string& caller_id,
+      const std::vector<std::string>& reference_project_ids);
 
   userver::storages::postgres::ClusterPtr pg_cluster_;
   VersionStorageComponent& version_storage_;
