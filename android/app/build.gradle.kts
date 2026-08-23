@@ -45,7 +45,6 @@ android {
         // через -P или local.properties.
         val yandexClientId = providers.gradleProperty("yandexClientId").orNull
             ?: localProperties.getProperty("yandexClientId")
-            ?: "34ecb56087424456a5f045cb8ed09701"
         buildConfigField("String", "YANDEX_CLIENT_ID", "\"$yandexClientId\"")
         // Тот же redirect_uri, что зарегистрирован в приложении Yandex под веб
         // (frontend). Yandex принимает только зарегистрированный URI, поэтому
