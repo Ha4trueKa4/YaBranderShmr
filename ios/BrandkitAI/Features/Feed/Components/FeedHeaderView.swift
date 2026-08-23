@@ -3,12 +3,6 @@ import SwiftUI
 struct FeedHeaderView: View {
     var onSearch: () -> Void = {}
 
-    private static let brandGradient = LinearGradient(
-        colors: [Color(.startGradient), Color(.endGradient)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
     var body: some View {
         HStack(spacing: 8) {
             logo
@@ -24,22 +18,19 @@ struct FeedHeaderView: View {
 
     private var logo: some View {
         HStack(spacing: 8) {
-            Image(systemName: "cpu")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Self.brandGradient)
+            Image(.appLogo)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-            HStack(spacing: 5) {
-                Text("Brandkit")
-                    .foregroundStyle(.primary)
-
-                Text("AI")
-                    .foregroundStyle(Self.brandGradient)
-            }
-            .font(.system(size: 18, weight: .bold))
-            .lineLimit(1)
+            Text("Ya Brender")
+                .foregroundStyle(.white)
+                .font(.system(size: 18, weight: .bold))
+                .lineLimit(1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Ya Brander")
+        .accessibilityLabel("Ya Brender")
     }
 
     private var searchButton: some View {
