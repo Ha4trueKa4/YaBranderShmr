@@ -20,7 +20,7 @@ import com.yandex.avatargenerator.feature.auth.ui.rememberCurrentUser
 import com.yandex.avatargenerator.feature.create.ui.ChatsScreen
 import com.yandex.avatargenerator.feature.createproject.ui.CreateProjectScreen
 import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
-import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingRoute
+import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingScreen
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
 import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
@@ -53,15 +53,11 @@ fun AppNavHost(
         modifier = modifier,
     ) {
         composable(Destination.Onboarding.route) {
-            OnboardingRoute(
+            // Вход отсюда не открывается: ссылка «войти» есть на самом экране
+            // регистрации, а в макете онбординга её нет.
+            OnboardingScreen(
                 onFinish = {
                     navController.navigate(Destination.Register.route) {
-                        popUpTo(Destination.Onboarding.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onSignIn = {
-                    navController.navigate(Destination.Login.route) {
                         popUpTo(Destination.Onboarding.route) { inclusive = true }
                         launchSingleTop = true
                     }
