@@ -34,7 +34,9 @@ export function ProjectTitle({
 
   return (
     <div className={styles.projectTitle}>
-      <strong className={styles.projectName}>{title}</strong>
+      <strong className={styles.projectName} title={title}>
+        {title}
+      </strong>
       {canEdit && (
         <>
           <button
