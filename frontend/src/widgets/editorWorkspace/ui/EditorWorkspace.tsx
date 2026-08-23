@@ -320,6 +320,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       activeTool={activeTool}
       constrainZoom={constrainZoom}
       document={editorStore.document}
+      isMobileLayout={isMobileLayout}
       isReadOnly={!canEdit}
       onClearSelection={() => editorStore.setSelectedNode(null)}
       onDocumentChangeEnd={editorStore.commitHistoryTransaction}

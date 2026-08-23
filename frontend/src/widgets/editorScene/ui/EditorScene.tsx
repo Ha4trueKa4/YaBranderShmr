@@ -9,6 +9,7 @@ interface EditorSceneProps {
   activeTool: CanvasTool
   constrainZoom: (zoom: number) => number
   document: EditorDocument
+  isMobileLayout: boolean
   isReadOnly: boolean
   onClearSelection: () => void
   onDocumentChangeEnd: () => void
@@ -64,6 +65,7 @@ export function EditorScene({
   activeTool,
   constrainZoom,
   document,
+  isMobileLayout,
   isReadOnly,
   onClearSelection,
   onDocumentChangeEnd,
@@ -92,6 +94,7 @@ export function EditorScene({
         activeTool={activeTool}
         constrainZoom={constrainZoom}
         document={document}
+        isMobileLayout={isMobileLayout}
         isReadOnly={isReadOnly}
         onClearSelection={onClearSelection}
         onDocumentChangeEnd={onDocumentChangeEnd}
