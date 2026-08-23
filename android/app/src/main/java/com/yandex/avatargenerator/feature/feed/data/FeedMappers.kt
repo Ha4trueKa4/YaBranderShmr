@@ -1,12 +1,12 @@
 package com.yandex.avatargenerator.feature.feed.data
 
+import com.yandex.avatargenerator.core.data.toInstantOrNull
 import com.yandex.avatargenerator.feature.feed.data.dto.FeedItemDto
 import com.yandex.avatargenerator.feature.feed.data.dto.FeedResponseDto
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedAuthor
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedPage
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedProject
 import com.yandex.avatargenerator.feature.feed.domain.model.FeedTab
-import com.yandex.avatargenerator.feature.project.data.toInstantOrNull
 
 /** Значение параметра `scope` для бэкенда. */
 internal val FeedTab.scope: String

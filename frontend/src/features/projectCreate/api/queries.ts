@@ -1,16 +1,15 @@
-import type { PostProjectsData } from '@shared/api/types'
 import { useMutation } from '@tanstack/react-query'
 
 import { createProject } from './createProject'
 
+type CreateProjectRequest = Parameters<typeof createProject>[0]
+
 interface CreateProjectWithSignalInput {
-  body: PostProjectsData['body']
+  body: CreateProjectRequest
   signal?: AbortSignal
 }
 
-type CreateProjectInput =
-  | PostProjectsData['body']
-  | CreateProjectWithSignalInput
+type CreateProjectInput = CreateProjectRequest | CreateProjectWithSignalInput
 
 export function useCreateProjectMutation() {
   return useMutation({

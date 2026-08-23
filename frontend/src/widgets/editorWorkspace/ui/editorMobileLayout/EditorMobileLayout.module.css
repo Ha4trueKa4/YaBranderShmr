@@ -17,7 +17,7 @@
     align-items: center;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface);
-    padding: env(safe-area-inset-top) var(--space-3) 0;
+    padding: env(safe-area-inset-top) var(--space-2) 0;
   }
 
   .headerButton {
@@ -39,7 +39,10 @@
   }
 
   .title {
-    display: grid;
+    align-items: center;
+    display: flex;
+    gap: 0.1875rem;
+    justify-content: center;
     justify-items: center;
     min-width: 0;
     text-align: center;
@@ -54,8 +57,9 @@
   }
 
   .title strong {
+    max-inline-size: 17ch;
+    min-width: 0;
     overflow: hidden;
-    max-width: 100%;
     font-size: var(--font-size-body);
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -215,5 +219,9 @@
 
   .title span {
     font-size: 0.625rem;
+  }
+
+  .title strong {
+    max-inline-size: 13ch;
   }
 }

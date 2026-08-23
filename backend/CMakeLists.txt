@@ -72,8 +72,12 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/login_handler.cpp
         src/handlers/auth/password_hasher.hpp
         src/handlers/auth/password_hasher.cpp
+        src/handlers/auth/yandex_profile_client.hpp
+        src/handlers/auth/yandex_profile_client.cpp
         src/handlers/auth/yandex_oauth_handler.hpp
         src/handlers/auth/yandex_oauth_handler.cpp
+        src/handlers/auth/link_yandex_handler.hpp
+        src/handlers/auth/link_yandex_handler.cpp
         src/handlers/auth/auth_method_handler.hpp
         src/handlers/auth/auth_method_handler.cpp
         src/handlers/auth/set_password_handler.hpp
@@ -94,6 +98,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/svg_validator.cpp
         src/components/prompt_constructor/prompt_constructor_component.cpp
         src/components/vector_search_component.h
+        src/handlers/projects/prompt_validation.h
+        src/handlers/projects/prompt_validation.cpp
         src/handlers/projects/create_project.cpp
         src/handlers/projects/get_project.cpp
         src/handlers/projects/patch_project.cpp

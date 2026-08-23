@@ -25,6 +25,9 @@
     <string name="auth_have_account">Уже есть аккаунт?</string>
     <string name="auth_signing_in">Вход…</string>
     <string name="auth_creating_account">Создание аккаунта…</string>
+    <string name="auth_or_divider">или</string>
+    <string name="auth_sign_in_with_yandex">Войти через Яндекс</string>
+    <string name="auth_yandex_close">Закрыть</string>
 
     <!-- Вход и регистрация: ошибки. Сообщения бэкенда пользователю не показываем -->
     <string name="auth_error_invalid_credentials">Неверный email или пароль</string>
@@ -33,32 +36,58 @@
     <string name="auth_error_invalid_email">Введите корректный email</string>
     <string name="auth_error_invalid_password">Пароль должен содержать 8–128 символов, буквы и цифры</string>
     <string name="auth_error_invalid_nickname">Имя должно содержать 3–64 символа</string>
+    <string name="auth_error_yandex_email_taken">Этот email уже зарегистрирован с паролем. Войдите по паролю.</string>
+    <string name="auth_error_yandex_failed">Не удалось войти через Яндекс. Попробуйте ещё раз</string>
     <string name="auth_error_no_connection">Нет подключения к интернету</string>
     <string name="auth_error_server">Сервер недоступен. Попробуйте позже</string>
     <string name="auth_error_unknown">Что-то пошло не так. Попробуйте ещё раз</string>
 
-    <!-- Онбординг: приветствие -->
-    <string name="onboarding_brand_title">Brandkit AI</string>
-    <string name="onboarding_brand_subtitle">Превращайте слова в фирменный стиль</string>
+    <!-- Онбординг: слайды -->
+    <string name="onboarding_brand_title">Ya Brander</string>
 
-    <!-- Онбординг: как это работает -->
-    <string name="onboarding_how_it_works_title">Как это работает</string>
-    <string name="onboarding_step_describe_title">Опишите</string>
-    <string name="onboarding_step_describe_subtitle">Напишите, что вам нужно</string>
-    <string name="onboarding_step_generate_title">Генерация</string>
-    <string name="onboarding_step_generate_subtitle">ИИ создаёт векторную графику</string>
-    <string name="onboarding_step_edit_title">Редактируйте</string>
-    <string name="onboarding_step_edit_subtitle">Дорабатывайте в визуальном редакторе</string>
-    <string name="onboarding_step_publish_title">Публикуйте</string>
-    <string name="onboarding_step_publish_subtitle">Делитесь с миром</string>
+    <string name="onboarding_generate_title">Превращайте слова</string>
+    <string name="onboarding_generate_title_accent">в фирменный стиль</string>
+    <string name="onboarding_generate_subtitle">Опишите бренд в брифе — ИИ соберёт логотип, палитру и типографику в векторе</string>
 
-    <!-- Онбординг: начать -->
-    <string name="onboarding_mockup_brand_name">NEXUS</string>
-    <string name="onboarding_mockup_brand_tagline">BRAND DESIGN</string>
-    <string name="onboarding_cta_title">Начните создавать бесплатно</string>
-    <string name="onboarding_cta_button">Начать</string>
-    <string name="onboarding_sign_in_prompt">Уже есть аккаунт?</string>
-    <string name="onboarding_sign_in_action">Войти</string>
+    <string name="onboarding_chat_title">Дорабатывайте дизайн</string>
+    <string name="onboarding_chat_title_accent">прямо в чате</string>
+    <string name="onboarding_chat_subtitle">Просите правки обычными словами — ассистент обновит дизайн и сохранит его</string>
+
+    <string name="onboarding_versions_title">Каждое изменение</string>
+    <string name="onboarding_versions_title_accent">под контролем</string>
+    <string name="onboarding_versions_subtitle">Правьте во встроенном редакторе и в любой момент возвращайтесь к сохранённой версии</string>
+
+    <string name="onboarding_community_title">Делитесь с</string>
+    <string name="onboarding_community_title_accent">сообществом</string>
+    <string name="onboarding_community_subtitle">Публикуйте в ленту, подписывайтесь на авторов и выгружайте набор в PNG или SVG</string>
+
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_get_started">Начать</string>
+
+    <!-- Онбординг: бутафория внутри иллюстраций (декоративная, TalkBack её не читает) -->
+    <string name="onboarding_mock_chat_project">Мой стартап</string>
+    <string name="onboarding_mock_chat_private">Приватный</string>
+    <string name="onboarding_mock_chat_outgoing">Сделай фон темнее</string>
+    <string name="onboarding_mock_chat_incoming">Готово! Затемнил основу и добавил мягкое свечение.</string>
+    <string name="onboarding_mock_chat_version_saved">ВЕРСИЯ 1.2 СОХРАНЕНА</string>
+    <string name="onboarding_mock_chat_input_hint">Спросите ассистента…</string>
+
+    <string name="onboarding_mock_version_current_title">Версия 1.3</string>
+    <string name="onboarding_mock_version_current_time">Сегодня, 11:53</string>
+    <string name="onboarding_mock_version_current_badge">Текущая</string>
+    <string name="onboarding_mock_version_previous_title">Версия 1.2</string>
+    <string name="onboarding_mock_version_previous_time">Вчера, 18:08</string>
+
+    <string name="onboarding_mock_project_alpha">Project Alpha</string>
+    <string name="onboarding_mock_project_alpha_author">Алиса</string>
+    <string name="onboarding_mock_project_beta">Project Beta</string>
+    <string name="onboarding_mock_project_beta_author">Боб</string>
+    <string name="onboarding_mock_creator_name">Sarah Chen</string>
+    <string name="onboarding_mock_creator_initials">SC</string>
+    <string name="onboarding_mock_creator_role">Бренд-дизайнер</string>
+    <string name="onboarding_mock_follow">Подписаться</string>
+    <string name="onboarding_mock_export_png">PNG</string>
+    <string name="onboarding_mock_export_svg">SVG</string>
 
     <!-- Онбординг: доступность -->
     <string name="onboarding_page_indicator_description">Страница %1$d из %2$d</string>
@@ -92,6 +121,7 @@
 
     <string name="chats_error_title">Не удалось загрузить чаты</string>
     <string name="chats_error_retry">Повторить</string>
+    <string name="chats_refresh_error">Не удалось обновить</string>
 
     <!-- Создание проекта -->
     <string name="create_project_title">Новый проект</string>
@@ -115,6 +145,17 @@
     <string name="project_back_description">Назад</string>
     <string name="project_history_description">История версий</string>
     <string name="project_share_description">Поделиться проектом</string>
+
+    <!-- Приватность проекта: чип в шапке и шторка выбора видимости -->
+    <string name="project_visibility_private_badge">Приватный</string>
+    <string name="project_visibility_public_badge">Публичный</string>
+    <string name="project_visibility_open_description">Изменить видимость проекта</string>
+    <string name="project_visibility_title">Видимость проекта</string>
+    <string name="project_visibility_subtitle">Выберите, кто может просматривать и копировать ваш брендбук.</string>
+    <string name="project_visibility_private_title">Приватный проект</string>
+    <string name="project_visibility_private_subtitle">Только вы можете просматривать и редактировать</string>
+    <string name="project_visibility_public_title">Публичный проект</string>
+    <string name="project_visibility_public_subtitle">Любой по ссылке сможет просматривать</string>
     <string name="project_input_placeholder">Опишите, что изменить…</string>
     <string name="project_send_description">Отправить сообщение</string>
 

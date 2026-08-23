@@ -163,8 +163,10 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
           description: >
-            Не передано ни code, ни access_token, либо Yandex-приложение не
-            запросило скоуп login:email и профиль пришёл без email.
+            Не передано ни code, ни access_token; Yandex-приложение не
+            запросило скоуп login:email и профиль пришёл без email; либо сам
+            code/access_token невалиден, просрочен или (для access_token)
+            не проходит проверку подписи JWT-профиля.
           content:
             application/json:
               schema:
@@ -180,6 +182,11 @@ paths:
                   value:
                     code: "YANDEX_EMAIL_SCOPE_REQUIRED"
                     message: "Yandex ID app must request the login:email scope"
+                InvalidYandexCredential:
+                  summary: code/access_token невалиден, просрочен или подпись не сходится
+                  value:
+                    code: "INVALID_YANDEX_CREDENTIAL"
+                    message: "The provided Yandex code/access_token is invalid or expired"
         '409':
           description: >
             Email из профиля Yandex уже принадлежит существующему аккаунту без
@@ -187,7 +194,7 @@ paths:
             Автоматическая привязка намеренно не выполняется — иначе аккаунт
             можно угнать, заранее зарегистрировав чужой email своим паролем.
             Пользователю нужно войти по паролю и привязать Yandex ID явно
-            (отдельный флоу, пока не реализован).
+            через POST /auth/yandex/link.
           content:
             application/json:
               schema:
@@ -197,9 +204,111 @@ paths:
                 message: "This email is already registered with a password. Log in with your password and link Yandex ID from account settings."
         '502':
           description: >
-            Yandex API недоступен, code невалиден/просрочен, access_token
-            невалиден/просрочен/подпись JWT не сходится, либо не удалось
-            получить профиль.
+            Yandex API недоступен (сетевой сбой, 5xx) — в отличие от 400,
+            здесь сам code/access_token мог быть валиден, просто Яндекс не
+            ответил.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: "YANDEX_OAUTH_FAILED"
+                message: "Yandex authentication is temporarily unavailable. Please try again."
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /auth/yandex/link:
+    post:
+      summary: Привязать Yandex ID к текущему аккаунту
+      description: >
+        Закрывает флоу, на который ссылается 409 в POST /auth/yandex: когда
+        Yandex-профиль пришёл с email, уже занятым обычным (email+пароль)
+        аккаунтом, пользователь логинится по паролю как обычно (POST
+        /auth/login), получает JWT, и уже этим JWT привязывает Yandex ID
+        сюда. Тело запроса — то же {code}/{access_token}, что и у
+        POST /auth/yandex (см. YandexAuthRequest). Повторный вызов с тем же
+        Yandex-аккаунтом идемпотентен (просто 200).
+      tags: [ Auth ]
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexAuthRequest'
+      responses:
+        '200':
+          description: Yandex ID привязан (или уже был привязан к этому же аккаунту)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                Linked:
+                  summary: Привязка выполнена
+                  value:
+                    message: "Yandex ID linked successfully"
+                AlreadyLinkedSame:
+                  summary: Повторный вызов с тем же Yandex-аккаунтом
+                  value:
+                    message: "Yandex ID is already linked to this account"
+        '400':
+          description: >
+            Не передано ни code, ни access_token, либо сам code/access_token
+            невалиден, просрочен или (для access_token) не проходит проверку
+            подписи JWT-профиля.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                MissingCredential:
+                  summary: Не передан ни code, ни access_token
+                  value:
+                    code: "INVALID_REQUEST"
+                    message: "Either code or access_token is required"
+                InvalidYandexCredential:
+                  summary: code/access_token невалиден, просрочен или подпись не сходится
+                  value:
+                    code: "INVALID_YANDEX_CREDENTIAL"
+                    message: "The provided Yandex code/access_token is invalid or expired"
+        '401':
+          description: Отсутствует или некорректен JWT
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "USER_NOT_FOUND"
+                message: "User not found"
+        '409':
+          description: >
+            Конфликт привязки: либо у текущего пользователя уже привязан
+            другой Yandex ID, либо этот Yandex-аккаунт уже привязан к
+            другому пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                AccountAlreadyLinked:
+                  summary: У текущего аккаунта уже есть другая привязка
+                  value:
+                    code: "ACCOUNT_ALREADY_LINKED"
+                    message: "This account is already linked to a different Yandex ID"
+                YandexAccountAlreadyLinked:
+                  summary: Этот Yandex-аккаунт привязан к другому пользователю
+                  value:
+                    code: "YANDEX_ACCOUNT_ALREADY_LINKED"
+                    message: "This Yandex ID is already linked to another account"
+        '502':
+          description: >
+            Yandex API недоступен (сетевой сбой, 5xx) — в отличие от 400,
+            здесь сам code/access_token мог быть валиден, просто Яндекс не
+            ответил.
           content:
             application/json:
               schema:
@@ -647,7 +756,20 @@ paths:
 
   /projects:
     post:
-      summary: Создать новый проект
+      summary: Создать новый проект и запустить его первичную генерацию (асинхронно)
+      description: >
+        Создание проекта невозможно без первичной генерации: запрос сразу
+        создаёт строку проекта (с временным SVG-плейсхолдером) и запускает в
+        фоне генерацию его первого реального SVG по prompt — сам запрос не
+        ждёт завершения обращения к LLM и сразу отвечает job_id вместе с
+        данными проекта. prompt добавляется в историю чата проекта
+        (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
+        независимо от того, чем закончится сама генерация. Результат (или
+        ошибку) генерации нужно опрашивать через
+        GET /projects/{id}/generate/{job_id} — тот же эндпоинт, что и для
+        последующих правок. name и description опциональны. Референсы
+        (references) учитываются только здесь, при первичной генерации —
+        POST /projects/{id}/generate их не принимает.
       tags: [ Projects ]
       security:
         - BearerAuth: [ ]
@@ -658,7 +780,7 @@ paths:
             schema:
               type: object
               required:
-                - name
+                - prompt
               properties:
                 name:
                   type: string
@@ -666,21 +788,64 @@ paths:
                 description:
                   type: string
                   example: "Минималистичный стиль, темные тона, для спешелти кофейни"
+                prompt:
+                  type: string
+                  example: "Добавь логотип с изображением кружки"
+                model:
+                  type: string
+                  description: >
+                    Модель генерации. gpt-5.6-luna отправляется напрямую в
+                    OpenAI, остальные доступные модели — в Yandex AI Studio.
+                  example: "deepseek-v4-flash/latest"
+                references:
+                  type: array
+                  maxItems: 2
+                  items:
+                    type: string
+                    description: "id (UUID) проекта-референса, а не файл/картинка"
+                    example: "123e4567-e89b-12d3-a456-426614174000"
+                  example:
+                    - "123e4567-e89b-12d3-a456-426614174000"
+                    - "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  description: >
+                    Опционально: id (UUID, до 2) других проектов пользователя
+                    (или чужих публичных проектов), чьи последние SVG
+                    используются как референсы стиля/содержимого — не файлы
+                    и не изображения, а именно id уже существующих проектов
+                    в системе. Недоступные (несуществующие, приватные чужие)
+                    или пустые референсы молча пропускаются.
       responses:
-        '201':
-          description: Проект создан
+        '202':
+          description: >
+            Проект создан, первичная генерация запущена в фоне. Дальнейший
+            статус — через GET /projects/{id}/generate/{job_id}.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Project'
+                allOf:
+                  - $ref: '#/components/schemas/Project'
+                  - type: object
+                    properties:
+                      job_id:
+                        type: string
+                        description: Идентификатор фоновой задачи первичной генерации.
+                        example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         '400':
-          description: Не передано название проекта (name)
+          description: Не передан prompt, prompt длиннее 5000 символов, либо references содержит больше 2 id
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
-              example:
-                message: "Name is required"
+              examples:
+                empty_prompt:
+                  value:
+                    message: "Prompt cannot be empty"
+                prompt_too_long:
+                  value:
+                    message: "Prompt is too long (max 5000 characters)"
+                too_many_references:
+                  value:
+                    message: "references supports at most 2 project ids"
         '401':
           description: Отсутствует или некорректен JWT
         '500':
@@ -804,17 +969,22 @@ paths:
 
   /projects/{id}/generate:
     post:
-      summary: Запуск генерации/правки проекта с помощью ИИ (асинхронно)
+      summary: Запуск правки проекта с помощью ИИ (асинхронно)
       description: >
-        Запускает в фоне генерацию (если у проекта ещё нет версий) либо правку
-        (иначе) SVG по запросу пользователя — сам запрос не ждёт завершения
-        обращения к LLM и сразу отвечает job_id. В промпт модели автоматически
-        подмешивается история последних 10 предыдущих запросов пользователя по
-        этому же проекту (без ответов модели) — как контекст, не как повторное
-        задание. Сообщение пользователя добавляется в историю чата проекта
-        (GET /projects/{id}/chat) немедленно, синхронно с этим запросом —
-        независимо от того, чем закончится сама генерация. Результат (или
-        ошибку) генерации нужно опрашивать через
+        Запускает в фоне правку (edit) уже существующего SVG проекта —
+        безусловно, каким бы ни было его текущее содержимое (включая случай,
+        когда там пока только временный SVG-плейсхолдер, если первичная
+        генерация проекта ещё не завершилась/провалилась) — сам запрос не
+        ждёт завершения обращения к LLM и сразу отвечает job_id. Первичная
+        генерация (создание первого SVG проекта) через этот эндпоинт не
+        запускается — она выполняется только при создании проекта, см.
+        POST /projects; references здесь не поддерживаются. В промпт модели
+        автоматически подмешивается история последних 10 предыдущих запросов
+        пользователя по этому же проекту (без ответов модели) — как контекст,
+        не как повторное задание. Сообщение пользователя добавляется в
+        историю чата проекта (GET /projects/{id}/chat) немедленно, синхронно
+        с этим запросом — независимо от того, чем закончится сама генерация.
+        Результат (или ошибку) генерации нужно опрашивать через
         GET /projects/{id}/generate/{job_id}. Одновременно для одного проекта
         может выполняться только одна генерация — если предыдущая ещё не
         завершена, запрос отклоняется с 409 (её можно дождаться через
@@ -847,26 +1017,6 @@ paths:
                     Модель генерации. gpt-5.6-luna отправляется напрямую в
                     OpenAI, остальные доступные модели — в Yandex AI Studio.
                   example: "deepseek-v4-flash/latest"
-                references:
-                  type: array
-                  maxItems: 2
-                  items:
-                    type: string
-                    description: "id (UUID) проекта-референса, а не файл/картинка"
-                    example: "123e4567-e89b-12d3-a456-426614174000"
-                  example:
-                    - "123e4567-e89b-12d3-a456-426614174000"
-                    - "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-                  description: >
-                    Опционально: id (UUID, до 2) других проектов пользователя
-                    (или чужих публичных проектов), чьи последние SVG
-                    используются как референсы стиля/содержимого — не файлы
-                    и не изображения, а именно id уже существующих проектов
-                    в системе. Учитывается только при первичной генерации (у
-                    целевого проекта ещё нет реальной версии); при
-                    редактировании существующего проекта поле игнорируется
-                    без ошибки. Недоступные (несуществующие, приватные
-                    чужие) или пустые референсы молча пропускаются.
       responses:
         '202':
           description: >
@@ -882,18 +1032,13 @@ paths:
                     description: Идентификатор фоновой задачи генерации.
                     example: "b3d9f2b0-6e3a-4b1a-9f0c-2b7b9a2d9c11"
         '400':
-          description: Не передан prompt, либо prompt длиннее 1500 символов, либо references содержит больше 2 id
+          description: Не передан prompt, либо prompt длиннее 5000 символов
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
-              examples:
-                empty_prompt:
-                  value:
-                    message: "Prompt cannot be empty"
-                too_many_references:
-                  value:
-                    message: "references supports at most 2 project ids"
+              example:
+                message: "Prompt cannot be empty"
         '401':
           description: Не авторизован
         '403':
@@ -1612,8 +1757,9 @@ components:
         через POST .../generate/{job_id}/cancel — вместо самого SVG или
         ссылки на него. Сообщение пользователя и ответ ассистента одного
         обмена связаны общим job_id (идентификатором фоновой задачи генерации
-        из POST .../generate); пользовательское сообщение появляется в
-        истории сразу при старте задачи, ответ ассистента — только после её
+        из POST /projects — для первой пары сообщений проекта — либо из
+        последующих POST .../generate); пользовательское сообщение появляется
+        в истории сразу при старте задачи, ответ ассистента — только после её
         завершения (в т.ч. отменой). Пока задача ещё не завершилась (не
         больше одной активной генерации на проект), в конец истории на лету
         подставляется — только в ответе, не в БД — служебное сообщение

@@ -31,9 +31,11 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  * Индикатор страниц из макета: активная точка растягивается в «капсулу» 24×8,
  * неактивные остаются кружками 8×8.
  *
- * @param color цвет активной точки; неактивные — он же с прозрачностью
- *   [OnboardingDefaults.InactiveDotAlpha]. Индикатор лежит поверх всех страниц
- *   сразу, а фон у них разный, поэтому цвет выбирает вызывающий.
+ * @param color цвет активной точки. Индикатор лежит поверх всех страниц сразу,
+ *   а фон у них разный, поэтому цвет выбирает вызывающий.
+ * @param inactiveColor основа для неактивных точек: берётся с прозрачностью
+ *   [OnboardingDefaults.InactiveDotAlpha]. По умолчанию — тот же [color];
+ *   отдельным задают, когда активная точка акцентная, а остальные нейтральные.
  */
 @Composable
 internal fun PageIndicator(
@@ -41,6 +43,7 @@ internal fun PageIndicator(
     currentPage: Int,
     color: Color,
     modifier: Modifier = Modifier,
+    inactiveColor: Color = color,
 ) {
     val description = stringResource(
         R.string.onboarding_page_indicator_description,
@@ -62,7 +65,7 @@ internal fun PageIndicator(
                 targetValue = if (isActive) {
                     color
                 } else {
-                    color.copy(alpha = OnboardingDefaults.InactiveDotAlpha)
+                    inactiveColor.copy(alpha = OnboardingDefaults.InactiveDotAlpha)
                 },
                 label = "dotColor",
             )
@@ -84,7 +87,12 @@ internal fun PageIndicator(
 private fun PageIndicatorPreview() {
     AvatarGeneratorTheme {
         Box(modifier = Modifier.background(AppColors.Background).padding(AppSpacing.m)) {
-            PageIndicator(pageCount = 3, currentPage = 1, color = AppColors.TextPrimary)
+            PageIndicator(
+                pageCount = 4,
+                currentPage = 1,
+                color = AppColors.Accent,
+                inactiveColor = AppColors.TextPrimary,
+            )
         }
     }
 }

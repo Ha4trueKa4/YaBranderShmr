@@ -26,6 +26,9 @@ internal class AuthFormErrorTest {
             AuthException.FieldRejected(AuthException.Field.Password) to AuthFormError.InvalidPassword,
             AuthException.FieldRejected(AuthException.Field.Nickname) to AuthFormError.InvalidNickname,
             AuthException.FieldRejected(AuthException.Field.Unknown) to AuthFormError.Unknown,
+
+            AuthException.YandexEmailConflict() to AuthFormError.YandexEmailTaken,
+            AuthException.YandexAuthFailed() to AuthFormError.YandexFailed,
         )
 
         cases.forEach { (failure, expected) ->

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    var onSignUp: () -> Void = {}
+    var onGetStarted: () -> Void = {}
     var onSignIn: () -> Void = {}
     
     private let onboardingOpenAnimationDuration: Double = 1.5
@@ -186,7 +186,7 @@ struct OnboardingView: View {
                 Text("Start creating for free")
                     .font(.title.bold())
                 Button {
-                    onSignUp()
+                    onGetStarted()
                 } label: {
                     Text("Get Started")
                         .bold()

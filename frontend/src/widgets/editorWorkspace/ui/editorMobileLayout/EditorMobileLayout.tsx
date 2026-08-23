@@ -17,7 +17,9 @@ interface EditorMobileLayoutProps
   canRedo: boolean
   canUndo: boolean
   isCreatingProjectCopy: boolean
+  isProjectPublic: boolean
   isSavingVersion: boolean
+  isVisibilityUpdating: boolean
   isPropertiesOpen: boolean
   onBack: () => void
   onCancelColorPicker: () => void
@@ -26,11 +28,13 @@ interface EditorMobileLayoutProps
   onDeleteSelection: () => void
   onExport: () => void
   onOpenProperties: () => void
+  onOpenChat: () => void
   onOpenVersionHistory: () => void
   onOpenColorPicker: () => void
   onRedo: () => void
   onDoneColorPicker: () => void
   onSaveVersion: () => void
+  onToggleProjectVisibility: () => void
   onDoneProperties: () => void
   onToolChange: (tool: CanvasTool) => void
   onUndo: () => void
@@ -61,7 +65,9 @@ export function EditorMobileLayout({
   canRedo,
   canUndo,
   isCreatingProjectCopy,
+  isProjectPublic,
   isSavingVersion,
+  isVisibilityUpdating,
   isPropertiesOpen,
   onBack,
   onCancelColorPicker,
@@ -70,11 +76,13 @@ export function EditorMobileLayout({
   onDeleteSelection,
   onExport,
   onOpenProperties,
+  onOpenChat,
   onOpenVersionHistory,
   onOpenColorPicker,
   onRedo,
   onDoneColorPicker,
   onSaveVersion,
+  onToggleProjectVisibility,
   onDoneProperties,
   onToolChange,
   onUndo,
@@ -143,12 +151,16 @@ export function EditorMobileLayout({
       <MobileEditorHeader
         canEdit={canEdit}
         isCreatingProjectCopy={isCreatingProjectCopy}
+        isProjectPublic={isProjectPublic}
         isSavingVersion={isSavingVersion}
+        isVisibilityUpdating={isVisibilityUpdating}
         onBack={onBack}
         onCreateCopy={onCreateCopy}
         onExport={onExport}
+        onOpenChat={onOpenChat}
         onOpenVersionHistory={onOpenVersionHistory}
         onSaveVersion={onSaveVersion}
+        onToggleProjectVisibility={onToggleProjectVisibility}
         projectName={projectName}
       />
       <div className={styles.scene}>{scene}</div>

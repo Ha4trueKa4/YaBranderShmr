@@ -9,6 +9,9 @@ final class ProfileConnectionsViewModel {
     private(set) var errorMessage: String?
     private(set) var currentUserID: UUID?
 
+    private var loadGeneration = 0
+    private var pendingFollowUserID: UUID?
+
     private let currentUserService: any CurrentUserService
     private let userProfileService: any UserProfileService
     private let userID: UUID
@@ -28,30 +31,67 @@ final class ProfileConnectionsViewModel {
     }
 
     func load() async {
-        guard !isLoading else { return }
+        // Каждый вызов перекрывает предыдущий: `.task(id: session.state)`
+        // отменяет старую задачу при смене сессии, а устаревшая загрузка не
+        // должна ни применить данные, ни показать ошибку отмены.
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration { isLoading = false }
+        }
 
         if currentUserService.id == nil {
             await currentUserService.restore()
         }
+        guard generation == loadGeneration else { return }
         currentUserID = currentUserService.id
 
         do {
+            let loaded: [ProfileConnection]
             switch kind {
             case .followers:
-                users = try await userProfileService.subscribers(for: userID)
+                loaded = try await userProfileService.subscribers(for: userID)
             case .following:
-                users = try await userProfileService.subscriptions(for: userID)
+                loaded = try await userProfileService.subscriptions(for: userID)
             }
+            guard generation == loadGeneration else { return }
+            users = loaded
+            consumePendingFollowToggle()
         } catch {
+            guard generation == loadGeneration, !error.isTaskCancellation else { return }
+            pendingFollowUserID = nil
             errorMessage = "Couldn't load \(kind.title.lowercased())."
         }
     }
 
     func canFollow(_ user: ProfileConnection) -> Bool {
         currentUserID != nil && user.id != currentUserID && user.isSubscribed != nil
+    }
+
+    /// Гостю кнопка видна всегда (тап уведёт в авторизацию), залогиненному —
+    /// только когда сервер вернул состояние подписки и тап реально сработает.
+    func showsFollowButton(for user: ProfileConnection) -> Bool {
+        guard user.id != currentUserID else { return false }
+        return currentUserID == nil || user.isSubscribed != nil
+    }
+
+    /// Тап по кнопке Follow в строке. Сразу после входа список ещё загружен
+    /// по-гостевому (без состояний подписки), поэтому переключение
+    /// откладывается до ближайшей успешной перезагрузки.
+    func requestFollowToggle(userID: UUID) {
+        if let index = users.firstIndex(where: { $0.id == userID }), canFollow(users[index]) {
+            toggleFollowing(userID: userID)
+        } else {
+            pendingFollowUserID = userID
+        }
+    }
+
+    private func consumePendingFollowToggle() {
+        guard let userID = pendingFollowUserID else { return }
+        pendingFollowUserID = nil
+        toggleFollowing(userID: userID)
     }
 
     func toggleFollowing(userID: UUID) {

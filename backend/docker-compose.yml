@@ -90,6 +90,7 @@ services:
       - MONIUM_PROJECT=${MONIUM_PROJECT}
       - MONIUM_API_KEY=${MONIUM_API_KEY}
       - YA_BRANDER_HOST=ya_brander-container
+      - OTEL_SERVICE_NAME=ya-brander
     volumes:
       - ./otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     networks:
