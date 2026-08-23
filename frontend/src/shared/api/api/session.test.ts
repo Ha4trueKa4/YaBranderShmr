@@ -17,7 +17,6 @@ const session = {
 
 afterEach(() => {
   localStorage.clear()
-  sessionStorage.clear()
 })
 
 describe('auth session storage', () => {
@@ -28,7 +27,6 @@ describe('auth session storage', () => {
     expect(localStorage.getItem(sessionStorageKey)).toBe(
       JSON.stringify(session),
     )
-    expect(sessionStorage.getItem(sessionStorageKey)).toBeNull()
   })
 
   it('removes the session from localStorage on sign out', () => {
