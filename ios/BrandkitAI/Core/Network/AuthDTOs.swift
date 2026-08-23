@@ -13,6 +13,12 @@ nonisolated struct RegisterRequest: Encodable, Sendable {
     let nickname: String
 }
 
+/// SDK-флоу Yandex ID: клиент шлёт готовый OAuth-токен, бэкенд проверяет его
+/// через login.yandex.ru/info?format=jwt (подпись — client_secret).
+nonisolated struct YandexAuthRequest: Encodable, Sendable {
+    let accessToken: String
+}
+
 nonisolated struct AuthResponse: Decodable, Sendable {
     let accessToken: String
     let tokenType: String

@@ -15,6 +15,7 @@ struct ProjectPreviewView: View {
     @State private var activeExport: ExportKind?
     @State private var exportedFile: ExportedFile?
     @State private var exportFailed = false
+    @Environment(SessionStore.self) private var session
 
     var onBack: (() -> Void)?
     var onOpenAuthor: (UUID) -> Void = { _ in }
@@ -43,7 +44,7 @@ struct ProjectPreviewView: View {
         .customNavigationBar(onBack: onBack)
         .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .task { await viewModel.load() }
+        .task(id: session.state) { await viewModel.load() }
         .sheet(item: $exportedFile) { file in
             ShareSheet(items: [file.url])
         }
@@ -55,18 +56,22 @@ struct ProjectPreviewView: View {
     // MARK: - Экспорт
 
     private func exportSVG() {
-        export(.svg) { data in
-            try SVGExporter.writeSVGFile(data, named: viewModel.title)
+        session.performAuthenticated {
+            export(.svg) { data in
+                try SVGExporter.writeSVGFile(data, named: viewModel.title)
+            }
         }
     }
 
     private func exportPNG() {
-        export(.png) { data in
-            guard let svgText = String(data: data, encoding: .utf8) else {
-                throw SVGRasterizer.RasterizationError.renderingFailed
+        session.performAuthenticated {
+            export(.png) { data in
+                guard let svgText = String(data: data, encoding: .utf8) else {
+                    throw SVGRasterizer.RasterizationError.renderingFailed
+                }
+                let pngData = try await SVGRasterizer.pngData(fromSVG: svgText)
+                return try SVGExporter.writePNGFile(pngData, named: viewModel.title)
             }
-            let pngData = try await SVGRasterizer.pngData(fromSVG: svgText)
-            return try SVGExporter.writePNGFile(pngData, named: viewModel.title)
         }
     }
 
@@ -228,7 +233,7 @@ struct ProjectPreviewView: View {
 
                 Spacer()
 
-                if viewModel.canFollow {
+                if viewModel.showsFollowButton {
                     followButton
                 }
             }
@@ -257,7 +262,11 @@ struct ProjectPreviewView: View {
         FollowButton(
             isSubscribed: viewModel.isSubscribed,
             isBusy: viewModel.isFollowBusy,
-            action: viewModel.toggleFollowing
+            action: {
+                session.performAuthenticated { [viewModel] in
+                    viewModel.requestFollowToggle()
+                }
+            }
         )
     }
 
@@ -332,4 +341,8 @@ private nonisolated final class PreviewProjectService: ProjectServiceProtocol {
         .brandBackground()
         .preferredColorScheme(.dark)
     }
+    .environment(SessionStore(
+        currentUserService: MockCurrentUserService(),
+        userProfileService: MockUserProfileService()
+    ))
 }

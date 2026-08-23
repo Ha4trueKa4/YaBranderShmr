@@ -17,8 +17,16 @@ internal sealed interface ChatsUiState {
     /** Чатов ещё нет — у нового пользователя это нормальный сценарий. */
     data object Empty : ChatsUiState
 
-    /** Список чатов, свежие сверху. */
-    data class Content(val chats: List<Chat>) : ChatsUiState
+    /**
+     * Список чатов, свежие сверху.
+     *
+     * @property isRefreshFailed фоновое обновление не удалось — список показываем
+     *  прежний, а сверху плашку. Сбрасывается успешной загрузкой.
+     */
+    data class Content(
+        val chats: List<Chat>,
+        val isRefreshFailed: Boolean = false,
+    ) : ChatsUiState
 
     /** Загрузка не удалась; пользователю доступен повтор. */
     data object Error : ChatsUiState

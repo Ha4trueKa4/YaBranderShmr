@@ -10,10 +10,13 @@ import com.yandex.avatargenerator.feature.project.domain.model.Project
  * @param projectResult что вернуть на очередной [getProject] — успех или ошибка;
  *  поле `var`, чтобы в тесте retry подменить ошибку успехом.
  * @param createResult что вернуть на [createProject] — успех или ошибка.
+ * @param updateResult что вернуть на [updateProject] — успех или ошибка; поле
+ *  `var`, чтобы проверять оптимистичный откат видимости.
  */
 internal class FakeProjectRepository(
     var projectResult: Result<Project> = Result.success(DEFAULT_PROJECT),
     var createResult: Result<Project> = Result.success(DEFAULT_PROJECT),
+    var updateResult: Result<Unit> = Result.success(Unit),
 ) : ProjectRepository {
 
     var getProjectCallCount: Int = 0
@@ -26,6 +29,13 @@ internal class FakeProjectRepository(
     var lastCreatedName: String? = null
         private set
     var lastCreatedDescription: String? = null
+        private set
+
+    var updateProjectCallCount: Int = 0
+        private set
+
+    /** Аргумент видимости последнего [updateProject] — проверяем, что PATCH ушёл. */
+    var lastUpdatedIsPublic: Boolean? = null
         private set
 
     override suspend fun createProject(name: String, description: String): Result<Project> {
@@ -44,7 +54,11 @@ internal class FakeProjectRepository(
         id: String,
         isPublic: Boolean?,
         data: String?,
-    ): Result<Unit> = Result.success(Unit)
+    ): Result<Unit> {
+        updateProjectCallCount++
+        lastUpdatedIsPublic = isPublic
+        return updateResult
+    }
 
     override suspend fun deleteProject(id: String): Result<Unit> = Result.success(Unit)
 

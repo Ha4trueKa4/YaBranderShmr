@@ -43,6 +43,15 @@ interface AuthRepository {
      */
     suspend fun login(email: String, password: String): AuthSession
 
+    /**
+     * `POST /auth/yandex` (web-флоу). `code` из редиректа страницы согласия
+     * бэкенд меняет на токен и заводит аккаунт, если такого ещё не было.
+     *
+     * @throws AuthException.YandexEmailConflict email занят аккаунтом с паролем (409).
+     * @throws AuthException.YandexAuthFailed Yandex ID не отдал профиль (400/502).
+     */
+    suspend fun loginWithYandex(code: String): AuthSession
+
     /** Локальный разлогин: ручки на бэкенде нет. */
     suspend fun logout()
 }

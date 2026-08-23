@@ -1,5 +1,5 @@
 import type { EditorDocument } from '../types'
-
+import { deduplicateSvgAttributes } from './deduplicateAttributes'
 import { SvgParseError } from './errors'
 import { normalizeSvg } from './normalizeSvg'
 import { parseRoot } from './parseRoot'
@@ -9,7 +9,12 @@ import { sanitizeSvg } from './sanitizeSvg'
 import type { SvgImportResult } from './types'
 
 export function importSvg(svg: string): SvgImportResult {
-  const xml = new DOMParser().parseFromString(svg, 'image/svg+xml')
+  const { svg: normalizedAttributesSvg, warnings: attributeWarnings } =
+    deduplicateSvgAttributes(svg)
+  const xml = new DOMParser().parseFromString(
+    normalizedAttributesSvg,
+    'image/svg+xml',
+  )
   const parserError = xml.querySelector('parsererror')
 
   if (parserError) {
@@ -17,6 +22,7 @@ export function importSvg(svg: string): SvgImportResult {
   }
 
   const warnings = [
+    ...attributeWarnings,
     ...sanitizeSvg(xml.documentElement),
     ...normalizeSvg(xml.documentElement),
   ]

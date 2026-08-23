@@ -1,5 +1,5 @@
 import { ColorPicker, ColorSwatch } from '@shared/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import styles from './FillProperty.module.css'
@@ -7,6 +7,8 @@ import { OpacityProperty } from './OpacityProperty'
 
 interface FillPropertyProps {
   fill: string
+  onColorChangeEnd?: () => void
+  onColorChangeStart?: () => void
   onFillChange: (fill: string) => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
@@ -18,6 +20,8 @@ interface FillPropertyProps {
 
 export function FillProperty({
   fill,
+  onColorChangeEnd,
+  onColorChangeStart,
   onFillChange,
   onEyeDropperEnd,
   onEyeDropperStart,
@@ -30,6 +34,26 @@ export function FillProperty({
   const [draftFill, setDraftFill] = useState(fill)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const colorControlRef = useRef<HTMLDivElement>(null)
+  const isColorChangeActiveRef = useRef(false)
+
+  const beginColorChange = useCallback(() => {
+    if (!isColorChangeActiveRef.current) {
+      onColorChangeStart?.()
+      isColorChangeActiveRef.current = true
+    }
+  }, [onColorChangeStart])
+
+  const endColorChange = useCallback(() => {
+    if (isColorChangeActiveRef.current) {
+      onColorChangeEnd?.()
+      isColorChangeActiveRef.current = false
+    }
+  }, [onColorChangeEnd])
+
+  const closeColorPicker = useCallback(() => {
+    endColorChange()
+    setIsColorPickerOpen(false)
+  }, [endColorChange])
 
   useEffect(() => {
     if (!isColorPickerOpen) {
@@ -41,13 +65,13 @@ export function FillProperty({
         event.target instanceof Node &&
         !colorControlRef.current?.contains(event.target)
       ) {
-        setIsColorPickerOpen(false)
+        closeColorPicker()
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsColorPickerOpen(false)
+        closeColorPicker()
       }
     }
 
@@ -58,13 +82,14 @@ export function FillProperty({
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isColorPickerOpen])
+  }, [isColorPickerOpen, closeColorPicker])
 
   useEffect(() => {
     setDraftFill(fill)
   }, [fill])
 
   function handleFillChange(color: string) {
+    beginColorChange()
     setDraftFill(color)
     onFillChange(color)
   }
@@ -76,13 +101,20 @@ export function FillProperty({
         <div className={styles.colorControl} ref={colorControlRef}>
           <ColorSwatch
             color={draftFill}
-            onClick={() => setIsColorPickerOpen((isOpen) => !isOpen)}
+            onClick={() => {
+              if (isColorPickerOpen) {
+                closeColorPicker()
+              } else {
+                setIsColorPickerOpen(true)
+              }
+            }}
           />
           {isColorPickerOpen && (
             <div className={styles.colorPickerPopover}>
               <ColorPicker
                 color={draftFill}
                 onChange={handleFillChange}
+                onChangeEnd={endColorChange}
                 onEyeDropperEnd={onEyeDropperEnd}
                 onEyeDropperStart={onEyeDropperStart}
               />

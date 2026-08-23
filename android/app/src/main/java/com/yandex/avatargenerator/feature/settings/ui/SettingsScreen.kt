@@ -1,7 +1,6 @@
 package com.yandex.avatargenerator.feature.settings.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,12 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,7 +37,9 @@ import com.yandex.avatargenerator.feature.settings.ui.components.SettingsCard
 import com.yandex.avatargenerator.feature.settings.ui.components.SettingsRow
 import com.yandex.avatargenerator.feature.settings.ui.components.SettingsSectionHeader
 import com.yandex.avatargenerator.feature.settings.ui.components.SettingsThemeSelector
+import com.yandex.avatargenerator.ui.components.BrandBottomSheet
 import com.yandex.avatargenerator.ui.components.BrandDestructiveButton
+import com.yandex.avatargenerator.ui.components.BrandSelectableOption
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
@@ -232,60 +230,24 @@ private fun SettingsDivider() {
     HorizontalDivider(thickness = 1.dp, color = AppColors.Border)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsLanguageSheet(
     selected: AppLanguage,
     onSelect: (AppLanguage) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = AppColors.Surface,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+    BrandBottomSheet(
+        title = stringResource(R.string.settings_language),
+        onDismiss = onDismiss,
     ) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = AppSpacing.l)) {
-            Text(
-                text = stringResource(R.string.settings_language),
-                style = AppTypography.heading3,
-                modifier = Modifier.padding(horizontal = AppSpacing.m, vertical = AppSpacing.s),
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.s)) {
             AppLanguage.entries.forEach { language ->
-                LanguageOptionRow(
-                    label = stringResource(language.labelRes()),
+                BrandSelectableOption(
+                    title = stringResource(language.labelRes()),
                     selected = language == selected,
                     onClick = { onSelect(language) },
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun LanguageOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = AppSpacing.m, vertical = AppSpacing.s),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = AppTypography.body.copy(
-                color = if (selected) AppColors.Accent else AppColors.TextPrimary,
-            ),
-            modifier = Modifier.weight(1f),
-        )
-        if (selected) {
-            Icon(
-                painter = painterResource(R.drawable.ic_check),
-                contentDescription = null,
-                tint = AppColors.Accent,
-                modifier = Modifier.size(20.dp),
-            )
         }
     }
 }

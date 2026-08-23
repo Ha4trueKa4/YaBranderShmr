@@ -26,6 +26,7 @@ internal class ProjectViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var chatRepository: FakeChatRepository
     private lateinit var versionsRepository: FakeVersionsRepository
+    private lateinit var projectRepository: FakeProjectRepository
 
     private val messages = listOf<ChatMessage>(
         ChatMessage.System.ProjectCreated(id = "system-created"),
@@ -106,6 +107,7 @@ internal class ProjectViewModelTest {
         Dispatchers.setMain(dispatcher)
         chatRepository = FakeChatRepository()
         versionsRepository = FakeVersionsRepository()
+        projectRepository = FakeProjectRepository()
     }
 
     @After
@@ -113,7 +115,8 @@ internal class ProjectViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ProjectViewModel(chatRepository, versionsRepository, PROJECT_ID)
+    private fun viewModel() =
+        ProjectViewModel(chatRepository, versionsRepository, projectRepository, PROJECT_ID)
 
     @Test
     fun `starts in loading state`() {
@@ -675,6 +678,48 @@ internal class ProjectViewModelTest {
         assertEquals(OLD_URL, old.previewUrl)
         // Повторного запроса за той же ссылкой не было — взяли из кэша.
         assertEquals(listOf("v-1"), versionsRepository.requestedVersionIds)
+    }
+
+    @Test
+    fun `смена видимости переключает чип сразу и шлёт PATCH`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat) // chat.isPublic = true
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.setVisibility(false)
+        // До advanceUntilIdle: обновление оптимистичное, чип уже приватный.
+        assertEquals(false, contentOf(viewModel).isPublic)
+
+        advanceUntilIdle()
+        assertEquals(false, contentOf(viewModel).isPublic)
+        assertEquals(1, projectRepository.updateProjectCallCount)
+        assertEquals(false, projectRepository.lastUpdatedIsPublic)
+    }
+
+    @Test
+    fun `неудачный PATCH откатывает видимость`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        projectRepository.updateResult = Result.failure(NetworkException.Forbidden())
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.setVisibility(false)
+        advanceUntilIdle()
+
+        // Сервер отказал — чип вернулся к прежнему значению.
+        assertEquals(true, contentOf(viewModel).isPublic)
+    }
+
+    @Test
+    fun `выбор текущей видимости PATCH не шлёт`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat) // уже публичный
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.setVisibility(true)
+        advanceUntilIdle()
+
+        assertEquals(0, projectRepository.updateProjectCallCount)
     }
 
     private fun contentOf(viewModel: ProjectViewModel): ProjectUiState.Content =

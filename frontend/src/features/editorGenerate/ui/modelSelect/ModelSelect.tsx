@@ -1,11 +1,13 @@
 import { PopupMenu, Portal } from '@shared/ui'
 import { ChevronDown } from 'lucide-react'
-import { type CSSProperties, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 
 import { useModelsQuery } from '../../api/queries'
 import styles from './ModelSelect.module.css'
-
-export const DEFAULT_GENERATION_MODEL = 'deepseek-v4-flash/latest'
+import {
+  DEFAULT_GENERATION_MODEL,
+  getDefaultGenerationModel,
+} from './modelDefaults'
 
 const menuGap = 4
 const menuMaxHeight = 320
@@ -29,6 +31,7 @@ export function ModelSelect({
   const [isOpen, setIsOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState<CSSProperties>({})
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const hasSelectedModelRef = useRef(false)
   const { data: models = [], isError, isLoading } = useModelsQuery()
   const options = models.length
     ? models
@@ -42,6 +45,23 @@ export function ModelSelect({
   const selectedModel =
     options.find((model) => model.id === value) ?? options[0]
   const isDisabled = disabled || isLoading
+
+  useEffect(() => {
+    if (!models.length || hasSelectedModelRef.current) {
+      return
+    }
+
+    const defaultModel = getDefaultGenerationModel(models)
+
+    if (value !== defaultModel) {
+      onChange(defaultModel)
+    }
+  }, [models, onChange, value])
+
+  function handleModelChange(model: string) {
+    hasSelectedModelRef.current = true
+    onChange(model)
+  }
 
   function toggleMenu() {
     if (isError && onUnauthorizedSelect) {
@@ -125,7 +145,7 @@ export function ModelSelect({
             anchorRef={triggerRef}
             items={options.map((model) => ({
               label: `${model.owner} — ${model.id}`,
-              onClick: () => onChange(model.id),
+              onClick: () => handleModelChange(model.id),
               selected: model.id === selectedModel.id,
             }))}
             onClose={() => setIsOpen(false)}
