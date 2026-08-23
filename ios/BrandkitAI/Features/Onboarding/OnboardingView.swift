@@ -51,6 +51,7 @@ struct OnboardingView: View {
             }
             .padding(.horizontal, 36)
             .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 20))
             .animation(.smooth, value: page)
         }
         .tabViewStyle(.page)
@@ -90,6 +91,7 @@ struct OnboardingView: View {
     var brandIdentity: some View {
         var logo: some View {
             Image("Logo")
+                .resizable()
                 .frame(width: 88, height: 88)
         }
         
@@ -212,6 +214,7 @@ struct OnboardingView: View {
             .resizable()
             .scaledToFit()
             .frame(width: 36, height: 36)
+            .foregroundStyle(.white)
     }
     
     func makeTextBlock(firstLine: String, secondLine: String, subtitle: String) -> some View {
@@ -253,22 +256,39 @@ private struct OnboardingGradientBackground: View {
         GeometryReader { proxy in
             let fraction = state.fraction
             let inverted = 1 - fraction
-            let gradientStopLocation = min(0.999, middleCoefficient * (inverted * 2 + 1))
             let center = state.gradientCenter.map {
                 UnitPoint(x: $0.x / proxy.size.width, y: $0.y / proxy.size.height)
             } ?? .center
             ZStack {
                 Color(.background)
-                RadialGradient(
-                    stops: [
-                        .init(color: .clear, location: 0),
-                        .init(color: .startGradient, location: gradientStopLocation),
-                        .init(color: .clear, location: 1),
-                    ],
-                    center: center,
-                    startRadius: 0,
-                    endRadius: endRadius * (inverted + 1)
-                )
+                Group {
+                    if colorScheme == .dark {
+                        let gradientStopLocation = min(0.999, middleCoefficient * (inverted * 2 + 1))
+                        
+                        RadialGradient(
+                            stops: [
+                                .init(color: .clear, location: 0),
+                                .init(color: .startGradient, location: gradientStopLocation),
+                                .init(color: .clear, location: 1),
+                            ],
+                            center: center,
+                            startRadius: 0,
+                            endRadius: endRadius * (inverted + 1)
+                        )
+                    } else {
+                        let gradientStopLocation = (inverted)
+                        
+                        RadialGradient(
+                            stops: [
+                                .init(color: .startGradient, location: gradientStopLocation),
+                                .init(color: .clear, location: 1),
+                            ],
+                            center: center,
+                            startRadius: 0,
+                            endRadius: endRadius * (inverted + 1)
+                        )
+                    }
+                }
                 .opacity(fraction)
                 .grayscale(inverted)
                 LinearGradient(stops: [.init(color: .startGradient.opacity(0.8), location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom)
