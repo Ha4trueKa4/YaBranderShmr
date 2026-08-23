@@ -32,4 +32,20 @@ sealed class AuthException(
         val serverMessage: String? = null,
         cause: Throwable? = null,
     ) : AuthException(serverMessage, cause)
+
+    /**
+     * `409` на `POST /auth/yandex`: email из профиля Yandex уже принадлежит
+     * аккаунту с паролем. Автопривязки нет намеренно — нужно войти по паролю
+     * и привязать Yandex ID отдельно.
+     */
+    class YandexEmailConflict(cause: Throwable? = null) :
+        AuthException("Email already registered with a password", cause)
+
+    /**
+     * `400`/`502` на `POST /auth/yandex`: Yandex ID недоступен, `code` протух,
+     * либо приложение не запросило скоуп `login:email`. Пользователю — общее
+     * «не удалось, попробуйте ещё раз».
+     */
+    class YandexAuthFailed(cause: Throwable? = null) :
+        AuthException("Yandex ID authentication failed", cause)
 }
