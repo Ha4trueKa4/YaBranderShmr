@@ -6,7 +6,6 @@ struct ProfileView: View {
 
     var isCurrentUser: Bool
     var onBack: (() -> Void)?
-    var onEditProfile: () -> Void
     var onOpenSettings: () -> Void
     var onOpenProject: (UUID, String, URL?) -> Void
     var onOpenConnections: (UUID, ProfileConnectionsKind) -> Void
@@ -16,7 +15,6 @@ struct ProfileView: View {
         isCurrentUser: Bool = true,
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
-        onEditProfile: @escaping () -> Void = {},
         onOpenSettings: @escaping () -> Void = {},
         onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in },
         onOpenConnections: @escaping (UUID, ProfileConnectionsKind) -> Void = { _, _ in }
@@ -24,7 +22,6 @@ struct ProfileView: View {
         self.session = session
         self.isCurrentUser = isCurrentUser
         self.onBack = onBack
-        self.onEditProfile = onEditProfile
         self.onOpenSettings = onOpenSettings
         self.onOpenProject = onOpenProject
         self.onOpenConnections = onOpenConnections
@@ -55,9 +52,11 @@ struct ProfileView: View {
                 projectsSection
             }
         }
+        .brandRefresher {
+            await viewModel.load()
+        }
         .scrollIndicators(.hidden)
         .task(id: session.state) { await viewModel.load() }
-        .refreshable { await viewModel.load() }
     }
 
     private var profileHeader: some View {
@@ -87,19 +86,7 @@ struct ProfileView: View {
 
                 stats
 
-                if isCurrentUser {
-                    Button(action: onEditProfile) {
-                        Text("Edit Profile")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.accentColor)
-                            .padding(.horizontal, 20)
-                            .frame(height: 36)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.accentColor, lineWidth: 1)
-                            }
-                    }
-                } else if viewModel.showsFollowButton {
+                if viewModel.showsFollowButton {
                     followButton
                 }
             }
@@ -120,7 +107,7 @@ struct ProfileView: View {
             )
             .mask {
                 LinearGradient(
-                    colors: [Color(.black).opacity(viewModel.isLoading ? 0 : max(0, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
+                    colors: [Color(.black).opacity(viewModel.isLoading ? 0.25 : max(0.25, 1 - proxy.frame(in: .scrollView).origin.y * 0.01)), Color(.black)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
