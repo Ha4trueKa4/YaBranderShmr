@@ -64,10 +64,10 @@ nonisolated enum APIEndpoint {
             "/projects/\(Self.pathID(projectID))/generate"
 
         case .generateStatus(let projectID, let jobID):
-            "/projects/\(Self.pathID(projectID))/generate/\(jobID)"
+            "/projects/\(Self.pathID(projectID))/generate/\(Self.encodedJobID(jobID))"
 
         case .cancelGeneration(let projectID, let jobID):
-            "/projects/\(Self.pathID(projectID))/generate/\(jobID)/cancel"
+            "/projects/\(Self.pathID(projectID))/generate/\(Self.encodedJobID(jobID))/cancel"
 
         case .projectChat(let projectID):
             "/projects/\(Self.pathID(projectID))/chat"
@@ -85,6 +85,14 @@ nonisolated enum APIEndpoint {
 
     private static func pathID(_ id: UUID) -> String {
         id.uuidString.lowercased()
+    }
+
+    /// jobID приходит из ответа сервера и подставляется одним сегментом
+    /// пути, поэтому слэш кодируем как %2F, прочие спецсимволы — стандартно.
+    private static func encodedJobID(_ jobID: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("/")
+        return jobID.addingPercentEncoding(withAllowedCharacters: allowed) ?? jobID
     }
 
     private static func feedPath(scope: FeedScope, cursor: String?, limit: Int) -> String {

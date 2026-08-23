@@ -331,7 +331,6 @@ struct ChatView: View {
                 .onSubmit {
                     sendMessage()
                 }
-                .disabled(viewModel.isGenerating)
                 .padding(.leading, 8)
                 .padding(.trailing, isComposerExpanded ? 8 : 50)
                 .padding(.vertical, 10)
@@ -414,22 +413,40 @@ struct ChatView: View {
         .accessibilityHint("Opens model picker")
     }
 
+    private enum SendButtonAction {
+        case cancelGeneration
+        case sendMessage
+        case restoreUnsent
+    }
+
+    /// Единый приоритет для кнопки и Enter: набранный текст всегда
+    /// отправляется, восстановление незавершённого сообщения — только
+    /// при пустом поле ввода.
+    private var sendButtonAction: SendButtonAction {
+        if viewModel.isGenerating { return .cancelGeneration }
+        if canSendMessage { return .sendMessage }
+        if viewModel.hasUnsentMessage { return .restoreUnsent }
+        return .sendMessage
+    }
+
     private var sendButton: some View {
         Button {
-            if viewModel.isGenerating {
+            switch sendButtonAction {
+            case .cancelGeneration:
                 Task { await viewModel.cancelGeneration() }
-            } else if viewModel.hasUnsentMessage {
+            case .sendMessage:
+                sendMessage()
+            case .restoreUnsent:
                 isInputFocused = false
                 Task { await viewModel.restoreUnsentMessage() }
-            } else {
-                sendMessage()
             }
         } label: {
             Group {
                 if viewModel.isCancelling {
                     ProgressView()
                         .tint(Color(.onAccent))
-                } else if viewModel.isGenerating || viewModel.hasUnsentMessage {
+                } else if sendButtonAction == .cancelGeneration
+                    || sendButtonAction == .restoreUnsent {
                     Image(systemName: "stop.fill")
                         .font(.system(size: 17, weight: .semibold))
                 } else {
@@ -460,9 +477,11 @@ struct ChatView: View {
     }
 
     private var sendButtonAccessibilityLabel: String {
-        if viewModel.isGenerating { return "Cancel generation" }
-        if viewModel.hasUnsentMessage { return "Edit unsent message" }
-        return "Send message"
+        switch sendButtonAction {
+        case .cancelGeneration: return "Cancel generation"
+        case .sendMessage: return "Send message"
+        case .restoreUnsent: return "Edit unsent message"
+        }
     }
 
     private var canSendMessage: Bool {

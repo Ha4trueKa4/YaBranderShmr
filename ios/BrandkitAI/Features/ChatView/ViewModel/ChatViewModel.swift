@@ -79,6 +79,13 @@ final class ChatViewModel {
     private(set) var selectedModelID: String
     private(set) var restorePrompt: String?
     private(set) var activeJobID: String?
+
+    /// Запрос на локальное прекращение ожидания long-poll'а. Ставится в
+    /// `cancelGeneration`, когда cancel-запрос до сервера не доходит
+    /// (например, офлайн): генерация на сервере продолжает выполняться,
+    /// а клиент отвязывается от неё и снова прицепится при `reload()`
+    /// (placeholder в истории) или при следующем `generate` (409).
+    private var pollAbortRequested = false
     var privacy = ProjectPrivacy.privateProject
 
     private let service: any ProjectServiceProtocol
@@ -375,6 +382,9 @@ final class ChatViewModel {
             _ = try await service.cancelGeneration(projectID: projectID, jobID: jobID)
         } catch {
             isCancelling = false
+            // Cancel-запрос не дошёл до сервера — не держим пользователя
+            // в ожидании: прерываем опрос локально (см. pollAbortRequested).
+            pollAbortRequested = true
         }
     }
 
@@ -415,11 +425,17 @@ final class ChatViewModel {
     /// При `pending`/`cancelling` немедленно открывает новое соединение.
     /// При разрыве делает retry с backoff, при оффлайне ждёт восстановления.
     /// После ~10 неудачных попыток или 404 (задача потеряна) выбрасывает ошибку.
+    /// Прерывается локально (без ошибки) по `pollAbortRequested` — см. поле выше.
     private func pollGeneration(jobID: String) async throws -> GenerationOutcome {
+        pollAbortRequested = false
         var attempt = 0
         var delayNs = Self.pollMinDelayNs
 
         while true {
+            if pollAbortRequested {
+                pollAbortRequested = false
+                return .cancelled
+            }
             try Task.checkCancellation()
 
             do {
@@ -449,6 +465,7 @@ final class ChatViewModel {
                     throw error
                 }
                 if Self.isOfflineError(error) {
+                    isOffline = true
                     await waitForNetworkRecovery()
                 } else {
                     try await Task.sleep(nanoseconds: delayNs)
@@ -490,7 +507,7 @@ final class ChatViewModel {
     private func waitForNetworkRecovery() async {
         if NetworkMonitor.shared.isConnected { return }
         for _ in 0..<60 {
-            if Task.isCancelled { return }
+            if Task.isCancelled || pollAbortRequested { return }
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             if NetworkMonitor.shared.isConnected { return }
         }
@@ -722,6 +739,7 @@ final class ChatViewModel {
     }
 
     private func resumeGeneration(jobID: String, cancelling: Bool) async {
+        guard !isGenerating else { return }
         isGenerating = true
         activeJobID = jobID
         isCancelling = cancelling
