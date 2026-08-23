@@ -51,11 +51,22 @@ struct SignInView: View {
             PrimaryButton(
                 title: "Sign in",
                 isEnabled: !viewModel.isLoading,
-                isLoading: viewModel.isLoading
+                isLoading: viewModel.isPasswordLoading
             ) {
                 viewModel.signIn()
             }
             .padding(.top, 24)
+
+            AuthDivider()
+                .padding(.top, 16)
+
+            YandexIDButton(
+                isEnabled: !viewModel.isLoading,
+                isLoading: viewModel.isYandexLoading
+            ) {
+                viewModel.signInWithYandex()
+            }
+            .padding(.top, 16)
 
             ScreenFooter(question: "No account?", actionTitle: "Register") {
                 viewModel.clearError()

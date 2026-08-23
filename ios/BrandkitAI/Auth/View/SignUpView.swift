@@ -60,11 +60,22 @@ struct SignUpView: View {
             PrimaryButton(
                 title: "Create account",
                 isEnabled: !viewModel.isLoading,
-                isLoading: viewModel.isLoading
+                isLoading: viewModel.isPasswordLoading
             ) {
                 viewModel.register()
             }
             .padding(.top, 24)
+
+            AuthDivider()
+                .padding(.top, 16)
+
+            YandexIDButton(
+                isEnabled: !viewModel.isLoading,
+                isLoading: viewModel.isYandexLoading
+            ) {
+                viewModel.signInWithYandex()
+            }
+            .padding(.top, 16)
 
             ScreenFooter(
                 question: "Already have an account?",

@@ -17,6 +17,7 @@ final class SessionStore {
     enum AuthOperation: Equatable {
         case signIn
         case register
+        case yandexSignIn
     }
 
     enum State: Equatable {
@@ -28,6 +29,9 @@ final class SessionStore {
 
     private(set) var state: State = .unknown
     private(set) var isLoading = false
+    /// Какая операция крутит спиннер: на экране две кнопки входа, и `isLoading`
+    /// сам по себе не говорит, чей индикатор показывать.
+    private(set) var activeOperation: AuthOperation?
     private(set) var errorMessage: String?
     private(set) var errorField: AuthField?
     private(set) var lastSuccessfulOperation: AuthOperation?
@@ -40,11 +44,13 @@ final class SessionStore {
     /// Данные авторизованного пользователя (id + имя) и доступ к профилям.
     let currentUserService: any CurrentUserService
     let userProfileService: any UserProfileService
+    private let yandexAuthService: any YandexAuthorizing
 
     init(
         networkClient: NetworkClient = NetworkClient.shared,
         currentUserService: (any CurrentUserService)? = nil,
-        userProfileService: (any UserProfileService)? = nil
+        userProfileService: (any UserProfileService)? = nil,
+        yandexAuthService: (any YandexAuthorizing)? = nil
     ) {
         let tokenStore = TokenStore()
         let profileService = userProfileService ?? RemoteUserProfileService(networkClient: networkClient)
@@ -55,6 +61,7 @@ final class SessionStore {
             tokenStore: tokenStore,
             userProfileService: profileService
         )
+        self.yandexAuthService = yandexAuthService ?? YandexAuthService()
     }
 
     /// Проверка на входе: вызывается один раз при запуске.
@@ -87,6 +94,47 @@ final class SessionStore {
         )
     }
 
+    /// SDK-флоу Yandex ID: нативная авторизация → OAuth-токен → обмен на нашу
+    /// сессию через POST /auth/yandex. Отмена шторки пользователем — не ошибка.
+    func signInWithYandex() {
+        guard !isLoading else { return }
+
+        isLoading = true
+        activeOperation = .yandexSignIn
+        clearError()
+        lastSuccessfulOperation = nil
+        let requestID = UUID()
+        authenticationRequestID = requestID
+
+        authenticationTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let token = try await self.yandexAuthService.authorize()
+                guard !Task.isCancelled, self.authenticationRequestID == requestID else { return }
+                self.isLoading = false
+                self.authenticationTask = nil
+                self.authenticate(
+                    endpoint: .yandexAuth,
+                    body: YandexAuthRequest(accessToken: token),
+                    operation: .yandexSignIn
+                )
+            } catch {
+                guard !Task.isCancelled, self.authenticationRequestID == requestID else { return }
+                self.isLoading = false
+                self.activeOperation = nil
+                self.authenticationTask = nil
+                switch error {
+                case YandexAuthError.cancelled:
+                    break
+                case YandexAuthError.unavailable:
+                    self.errorMessage = "Yandex ID sign-in is not available right now."
+                default:
+                    self.errorMessage = "Yandex authentication failed. Please try again."
+                }
+            }
+        }
+    }
+
     func clearError() {
         errorMessage = nil
         errorField = nil
@@ -100,6 +148,7 @@ final class SessionStore {
         guard !isLoading else { return }
 
         isLoading = true
+        activeOperation = operation
         clearError()
         lastSuccessfulOperation = nil
         let requestID = UUID()
@@ -133,6 +182,7 @@ final class SessionStore {
                 self.lastSuccessfulOperation = operation
                 self.state = .signedIn
                 self.isLoading = false
+                self.activeOperation = nil
                 self.authenticationTask = nil
             } catch is CancellationError {
                 return
@@ -145,6 +195,7 @@ final class SessionStore {
                 self.errorMessage = failure.message
                 self.errorField = failure.field
                 self.isLoading = false
+                self.activeOperation = nil
                 self.authenticationTask = nil
             }
         }
@@ -156,6 +207,7 @@ final class SessionStore {
         authenticationTask?.cancel()
         authenticationTask = nil
         isLoading = false
+        activeOperation = nil
         tokenStore.clear()
         currentUserService.clear()
         clearError()
@@ -166,8 +218,16 @@ final class SessionStore {
         if case NetworkError.serverValidation(_, let code, let field) = error {
             let resolvedField = authField(for: code ?? field, operation: operation)
             switch code {
+            case "EMAIL_EXISTS" where operation == .yandexSignIn:
+                // Автопривязки Yandex ID к парольному аккаунту нет намеренно —
+                // объясняем общей плашкой, поля email на этом пути нет.
+                return ("This email is already registered with a password. Sign in with your password instead.", nil)
             case "EMAIL_EXISTS":
                 return ("An account with this email already exists.", .email)
+            case "YANDEX_EMAIL_SCOPE_REQUIRED", "INVALID_REQUEST":
+                return ("Yandex authentication failed. Please try again.", nil)
+            case "YANDEX_OAUTH_FAILED":
+                return ("Yandex authentication is temporarily unavailable. Try again later.", nil)
             case "NICKNAME_EXISTS":
                 return ("This name is already in use.", .fullName)
             case "INVALID_EMAIL":
