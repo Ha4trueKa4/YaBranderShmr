@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.feature.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.profile.ui.components.ProfileHeader
 import com.yandex.avatargenerator.feature.profile.ui.components.ProfileSkeleton
+import com.yandex.avatargenerator.ui.components.BrandBackTopBar
 import com.yandex.avatargenerator.ui.components.BrandEmptyState
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.components.ProjectCard
@@ -44,8 +46,12 @@ import org.koin.core.parameter.parametersOf
  *
  * @param onProjectClick открыть проект по id.
  * @param onActionClick клик по кнопке шапки (Follow / Edit profile).
+ * @param onOpenFollowers открыть список подписчиков этого профиля.
+ * @param onOpenFollowing открыть список подписок этого профиля.
  * @param onOpenSettings открыть настройки; задаётся только для своего профиля —
  *   тогда в правом верхнем углу показывается кнопка-шестерёнка.
+ * @param onBackClick возврат из шапки; null — бара нет. Своя вкладка открыта из
+ *   нижней панели, возвращаться там некуда, а чужой профиль — экран-деталь.
  */
 @Composable
 fun ProfileScreen(
@@ -53,38 +59,53 @@ fun ProfileScreen(
     isOwnProfile: Boolean,
     onProjectClick: (projectId: String) -> Unit,
     onActionClick: () -> Unit,
+    onOpenFollowers: () -> Unit,
+    onOpenFollowing: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null,
     viewModel: ProfileViewModel = koinViewModel { parametersOf(userId, isOwnProfile) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background),
     ) {
-        when (val current = state) {
-            is ProfileUiState.Loading ->
-                ProfileSkeleton(modifier = Modifier.fillMaxSize())
+        if (onBackClick != null) {
+            // Имя в шапке появляется только с загруженным профилем — до этого
+            // показывать нечего, а бар с кнопкой нужен сразу.
+            BrandBackTopBar(
+                onBackClick = onBackClick,
+                title = (state as? ProfileUiState.Content)?.profile?.displayName,
+            )
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            when (val current = state) {
+                is ProfileUiState.Loading ->
+                    ProfileSkeleton(modifier = Modifier.fillMaxSize())
 
-            is ProfileUiState.Error ->
-                BrandErrorState(
-                    title = stringResource(R.string.profile_error_title),
-                    retryLabel = stringResource(R.string.profile_error_retry),
-                    onRetry = viewModel::load,
-                    modifier = Modifier.align(Alignment.Center),
-                )
+                is ProfileUiState.Error ->
+                    BrandErrorState(
+                        title = stringResource(R.string.profile_error_title),
+                        retryLabel = stringResource(R.string.profile_error_retry),
+                        onRetry = viewModel::load,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
 
-            is ProfileUiState.Content ->
-                ProfileContent(
-                    state = current,
-                    onProjectClick = onProjectClick,
-                    onActionClick = {
-                        if (current.isOwnProfile) onActionClick() else viewModel.toggleFollow()
-                    },
-                    onOpenSettings = onOpenSettings,
-                )
+                is ProfileUiState.Content ->
+                    ProfileContent(
+                        state = current,
+                        onProjectClick = onProjectClick,
+                        onActionClick = {
+                            if (current.isOwnProfile) onActionClick() else viewModel.toggleFollow()
+                        },
+                        onOpenFollowers = onOpenFollowers,
+                        onOpenFollowing = onOpenFollowing,
+                        onOpenSettings = onOpenSettings,
+                    )
+            }
         }
     }
 }
@@ -94,6 +115,8 @@ private fun ProfileContent(
     state: ProfileUiState.Content,
     onProjectClick: (String) -> Unit,
     onActionClick: () -> Unit,
+    onOpenFollowers: () -> Unit,
+    onOpenFollowing: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
 ) {
@@ -106,6 +129,8 @@ private fun ProfileContent(
                 profile = state.profile,
                 isOwnProfile = state.isOwnProfile,
                 onActionClick = onActionClick,
+                onFollowersClick = onOpenFollowers,
+                onFollowingClick = onOpenFollowing,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.bleedHorizontally(AppSpacing.m),
             )

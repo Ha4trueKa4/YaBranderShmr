@@ -41,6 +41,17 @@ final class ProjectsViewModel {
         let deletedItems = offsets.map { items[$0] }
         items.remove(atOffsets: offsets)
 
+        deleteFromServer(deletedItems)
+    }
+
+    func delete(_ item: ProjectListItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items.remove(at: index)
+
+        deleteFromServer([item])
+    }
+
+    private func deleteFromServer(_ deletedItems: [ProjectListItem]) {
         Task { @MainActor in
             do {
                 for item in deletedItems {

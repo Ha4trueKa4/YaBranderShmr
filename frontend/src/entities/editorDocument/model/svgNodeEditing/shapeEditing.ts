@@ -102,6 +102,67 @@ export function createShapeEditing({
       })
     },
 
+    setShapeRotation(
+      nodeId: string,
+      rotation: number,
+      rotationCenter: { x: number; y: number },
+    ) {
+      const node = getEditableShape(getDocument(), nodeId)
+
+      if (
+        !node ||
+        !Number.isFinite(rotation) ||
+        !Number.isFinite(rotationCenter.x) ||
+        !Number.isFinite(rotationCenter.y)
+      ) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.transform.rotation = rotation
+        node.transform.rotationCenter = rotationCenter
+      })
+    },
+
+    setShapeTransform(
+      nodeId: string,
+      transform: {
+        rotationCenter?: { x: number; y: number }
+        scaleX: number
+        scaleY: number
+        x: number
+        y: number
+      },
+    ) {
+      const node = getEditableShape(getDocument(), nodeId)
+
+      if (
+        !node ||
+        !Number.isFinite(transform.x) ||
+        !Number.isFinite(transform.y) ||
+        !Number.isFinite(transform.scaleX) ||
+        !Number.isFinite(transform.scaleY) ||
+        (transform.rotationCenter &&
+          (!Number.isFinite(transform.rotationCenter.x) ||
+            !Number.isFinite(transform.rotationCenter.y))) ||
+        transform.scaleX <= 0 ||
+        transform.scaleY <= 0
+      ) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.transform.x = transform.x
+        node.transform.y = transform.y
+        node.transform.scaleX = transform.scaleX
+        node.transform.scaleY = transform.scaleY
+
+        if (transform.rotationCenter) {
+          node.transform.rotationCenter = transform.rotationCenter
+        }
+      })
+    },
+
     setShapeStrokeColor(nodeId: string, color: string) {
       const node = getEditableShape(getDocument(), nodeId)
 
@@ -112,6 +173,18 @@ export function createShapeEditing({
       applyDocumentChange(() => {
         node.style.stroke = { type: 'color', value: color }
         node.style.strokeWidth = Math.max(node.style.strokeWidth, 1)
+      })
+    },
+
+    setShapeStrokeOpacity(nodeId: string, opacity: number) {
+      const node = getEditableShape(getDocument(), nodeId)
+
+      if (!node || !Number.isFinite(opacity)) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.style.strokeOpacity = Math.min(Math.max(opacity, 0), 1)
       })
     },
 

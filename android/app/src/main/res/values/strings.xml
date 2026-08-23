@@ -4,6 +4,9 @@
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>
 
+    <!-- Навигация -->
+    <string name="nav_back">Back</string>
+
     <!-- Вкладки нижней навигации -->
     <string name="nav_feed">Feed</string>
     <string name="nav_create">Create</string>
@@ -114,6 +117,17 @@
     <string name="project_back_description">Back</string>
     <string name="project_history_description">Version history</string>
     <string name="project_share_description">Share project</string>
+
+    <!-- Приватность проекта: чип в шапке и шторка выбора видимости -->
+    <string name="project_visibility_private_badge">Private</string>
+    <string name="project_visibility_public_badge">Public</string>
+    <string name="project_visibility_open_description">Change project visibility</string>
+    <string name="project_visibility_title">Project visibility</string>
+    <string name="project_visibility_subtitle">Manage who can view and copy your brandkit.</string>
+    <string name="project_visibility_private_title">Private project</string>
+    <string name="project_visibility_private_subtitle">Only you can view and edit it</string>
+    <string name="project_visibility_public_title">Public project</string>
+    <string name="project_visibility_public_subtitle">Anyone with the link can view it</string>
     <string name="project_input_placeholder">Describe what to change…</string>
     <string name="project_send_description">Send message</string>
 
@@ -126,11 +140,23 @@
     <string name="project_error_title">Couldn\'t load project</string>
     <string name="project_error_retry">Retry</string>
 
+    <!-- Ожидание и провал генерации: пузыри в ленте на месте будущего ответа ИИ -->
+    <!-- Заглушка на случай, когда сервер прислал ошибку без текста -->
+    <string name="project_generation_failed">Generation failed. Please try again.</string>
+    <string name="project_generation_retry">Retry</string>
+    <string name="project_generation_still_running">Still generating — check back in a bit</string>
+
     <!-- Экран публичного проекта -->
     <string name="public_project_follow">Follow</string>
     <string name="public_project_following">Following</string>
     <string name="public_project_download_png">Download PNG</string>
     <string name="public_project_download_svg">Download SVG</string>
+    <string name="public_project_download_saved">%1$s saved to Downloads</string>
+    <string name="public_project_download_saved_gallery">%1$s saved to gallery</string>
+    <string name="public_project_download_failed">Couldn\'t save %1$s</string>
+    <string name="public_project_download_empty">Nothing to export yet</string>
+    <string name="export_format_png">PNG</string>
+    <string name="export_format_svg">SVG</string>
     <string name="public_project_related_title">More from this creator</string>
     <string name="public_project_error_title">Couldn\'t load project</string>
     <string name="public_project_error_retry">Retry</string>
@@ -147,7 +173,10 @@
 
     <!-- Профиль (свой/чужой) -->
     <string name="profile_handle">\@%1$s</string>
-    <string name="profile_stats">%1$d Projects · %2$s Followers · %3$d Following</string>
+    <string name="profile_stat_projects">%1$d Projects</string>
+    <string name="profile_stat_followers">%1$s Followers</string>
+    <string name="profile_stat_following">%1$d Following</string>
+    <string name="profile_stat_separator">·</string>
     <string name="profile_action_edit">Edit Profile</string>
     <string name="profile_action_following">Following</string>
     <string name="profile_action_follow">Follow</string>
@@ -158,6 +187,21 @@
     <string name="profile_empty_other_subtitle">This user hasn\'t published anything yet</string>
     <string name="profile_error_title">Couldn\'t load profile</string>
     <string name="profile_error_retry">Retry</string>
+
+    <!-- Подписки (подписчики/подписки) -->
+    <string name="subscriptions_title_followers">Followers</string>
+    <string name="subscriptions_title_following">Following</string>
+    <string name="subscriptions_followers_count">%1$d followers</string>
+    <string name="subscriptions_action_follow">Follow</string>
+    <string name="subscriptions_action_unfollow">Unfollow</string>
+    <string name="subscriptions_you">You</string>
+    <string name="subscriptions_back_description">Back</string>
+    <string name="subscriptions_error_title">Couldn\'t load the list</string>
+    <string name="subscriptions_error_retry">Retry</string>
+    <string name="subscriptions_empty_followers_title">No followers yet</string>
+    <string name="subscriptions_empty_followers_subtitle">When someone follows this profile, they\'ll show up here</string>
+    <string name="subscriptions_empty_following_title">Not following anyone yet</string>
+    <string name="subscriptions_empty_following_subtitle">Profiles this user follows will appear here</string>
 
     <!-- Настройки -->
     <string name="settings_title">Settings</string>

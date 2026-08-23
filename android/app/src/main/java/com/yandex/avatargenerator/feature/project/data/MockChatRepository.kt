@@ -2,18 +2,18 @@ package com.yandex.avatargenerator.feature.project.data
 
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
 
 /**
  * Мок диалога с ИИ — только для `@Preview` и ручной проверки вёрстки: в графе
  * Koin его больше нет, боевой источник — [ChatRepositoryImpl].
  *
  * @param networkDelayMillis имитация задержки загрузки — чтобы видеть Loading.
- * @param sendDelayMillis имитация задержки отправки.
+ * @param sendDelayMillis имитация задержки генерации.
  * @param title заголовок проекта в шапке.
  * @param messages стартовая лента; параметр вынесен наружу, чтобы в `@Preview` и
  *  при ручной проверке можно было подсунуть `emptyList()` (новый проект).
@@ -33,23 +33,28 @@ class MockChatRepository(
     }
 
     /**
-     * Ответа ИИ мок не имитирует осознанно: генерация — задача бэкенда,
-     * а экрану достаточно увидеть, что исходящее сообщение попало в ленту.
+     * Новую версию мок не создаёт: генерация — задача бэкенда, а `@Preview`
+     * ленту всё равно не перезапрашивает. Отдаём выдуманный `job_id`.
      */
-    override suspend fun sendMessage(projectId: String, text: String): Result<ChatMessage> {
+    override suspend fun startGeneration(projectId: String, prompt: String): Result<String> {
         delay(sendDelayMillis)
-        return Result.success(
-            ChatMessage.Outgoing(
-                id = UUID.randomUUID().toString(),
-                text = text,
-                sentAt = Instant.now(),
-            ),
-        )
+        return Result.success(MOCK_JOB_ID)
+    }
+
+    override suspend fun awaitGeneration(
+        projectId: String,
+        jobId: String,
+    ): Result<GenerationOutcome> {
+        delay(sendDelayMillis)
+        return Result.success(GenerationOutcome.Done(previewUrl = null))
     }
 
     companion object {
 
         const val DEFAULT_TITLE: String = "Orion Brand AI"
+
+        /** Задачи у мока нет — `job_id` нужен только чтобы закрыть контракт. */
+        const val MOCK_JOB_ID: String = "mock-job"
 
         /**
          * Лента ровно по макету: все четыре вида сообщений видны сразу.
@@ -60,14 +65,14 @@ class MockChatRepository(
             ChatMessage.System.ProjectCreated(id = "system-created"),
             ChatMessage.Outgoing(
                 id = "out-1",
-                text = "Can you generate a modern violet branding kit for my AI startup?",
+                text = "Can you generate a modern coral branding kit for my AI startup?",
                 sentAt = now.minus(12, ChronoUnit.MINUTES),
             ),
             ChatMessage.Incoming(
                 id = "in-1",
                 versionId = "version-1",
                 sentAt = now.minus(11, ChronoUnit.MINUTES),
-                previewUrl = "https://placehold.co/248x100/7C3AED/FFFFFF/png",
+                previewUrl = "https://placehold.co/248x100/F8604A/FFFFFF/png",
             ),
             ChatMessage.System.VersionSaved(
                 id = "system-version-1",
@@ -84,7 +89,7 @@ class MockChatRepository(
                 id = "in-2",
                 versionId = "version-2",
                 sentAt = now.minus(3, ChronoUnit.MINUTES),
-                previewUrl = "https://placehold.co/248x100/06B6D4/FFFFFF/png",
+                previewUrl = "https://placehold.co/248x100/FE9693/FFFFFF/png",
             ),
             ChatMessage.System.VersionSaved(
                 id = "system-version-2",
@@ -93,5 +98,31 @@ class MockChatRepository(
                 createdAt = now.minus(3, ChronoUnit.MINUTES),
             ),
         )
+
+        /** Лента с идущей генерацией: под последним промптом — скелетон ответа. */
+        fun generatingMessages(now: Instant = Instant.now()): List<ChatMessage> =
+            defaultMessages(now) + listOf(
+                ChatMessage.Outgoing(
+                    id = "out-3",
+                    text = "Now try a darker background.",
+                    sentAt = now.minus(1, ChronoUnit.MINUTES),
+                ),
+                ChatMessage.Pending(id = "pending-1", jobId = MOCK_JOB_ID),
+            )
+
+        /** Лента с провалившейся генерацией: пузырь ошибки с «Повторить». */
+        fun failedMessages(now: Instant = Instant.now()): List<ChatMessage> =
+            defaultMessages(now) + listOf(
+                ChatMessage.Outgoing(
+                    id = "out-3",
+                    text = "Now try a darker background.",
+                    sentAt = now.minus(2, ChronoUnit.MINUTES),
+                ),
+                ChatMessage.Failed(
+                    id = "failed-1",
+                    text = "Generation service is temporarily unavailable. Please try again later.",
+                    sentAt = now.minus(1, ChronoUnit.MINUTES),
+                ),
+            )
     }
 }

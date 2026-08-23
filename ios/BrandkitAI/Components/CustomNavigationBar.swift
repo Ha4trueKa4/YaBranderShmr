@@ -2,12 +2,15 @@ import SwiftUI
 
 struct NavigationBackButton: View {
     let action: () -> Void
+    var foregroundColor: Color = .primary
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "arrow.left")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(foregroundColor)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Back")
@@ -29,8 +32,6 @@ private struct CustomNavigationBarModifier: ViewModifier {
                     backItem(action: onBack)
                 }
             }
-            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
-            .toolbarBackground(Color.background, for: .navigationBar)
             .toolbarColorScheme(colorScheme, for: .navigationBar)
     }
 

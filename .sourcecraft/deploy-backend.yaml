@@ -15,7 +15,7 @@ deploy:
     # --- 1. Подготовка ключа и переменных окружения ---
     - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key
     - >
-      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\nYANDEX_OAUTH_CLIENT_ID=%s\nYANDEX_OAUTH_CLIENT_SECRET=%s' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY" "$YANDEX_OAUTH_CLIENT_ID" "$YANDEX_OAUTH_CLIENT_SECRET"
+      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\nYANDEX_OAUTH_CLIENT_ID=%s\nYANDEX_OAUTH_CLIENT_SECRET=%s\nREDIS_PASSWORD=%s\nOPENAI_API_KEY=%s\nGC_ENABLED=%s\nMONIUM_PROJECT=%s\nMONIUM_API_KEY=%s\nADMIN_ID=%s' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY" "$YANDEX_OAUTH_CLIENT_ID" "$YANDEX_OAUTH_CLIENT_SECRET" "$REDIS_PASSWORD" "$OPENAI_API_KEY" "$GC_ENABLED" "$MONIUM_PROJECT" "$MONIUM_API_KEY" "$ADMIN_ID"
       | base64 -w0 > /tmp/env_b64
     - >
       cat /tmp/env_b64 | ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
@@ -26,7 +26,7 @@ deploy:
     # run_migrations.sh и SQL-файлы миграций не входят в Docker-образ backend,
     # поэтому передаём их на сервер отдельно (tar-стримом по SSH).
     - >
-      tar -C backend -czf - postgresql scripts |
+      tar -C backend -czf - postgresql scripts otel |
       ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
       "mkdir -p ~/$REMOTE_APP_DIR/backend && tar -xzf - -C ~/$REMOTE_APP_DIR/backend"
 
@@ -97,7 +97,27 @@ deploy:
         docker network create ya-brander-net || true
         docker network disconnect ya-brander-net service-postgres 2>/dev/null || true
         docker network connect ya-brander-net service-postgres || true
-        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env $REGISTRY/$IMAGE:latest
+        docker rm -f otel-collector || true
+        docker run -d --name otel-collector --restart unless-stopped --network ya-brander-net \
+          --env-file ~/$REMOTE_APP_DIR/backend/.env \
+          -e YA_BRANDER_HOST=ya-brander \
+          -e OTEL_SERVICE_NAME=ya-brander \
+          -v ~/$REMOTE_APP_DIR/backend/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro \
+          otel/opentelemetry-collector-contrib:0.159.0
+        for i in \$(seq 1 30); do
+          docker run --rm --network ya-brander-net curlimages/curl:8.10.1 -sf http://otel-collector:13133 >/dev/null 2>&1 && break
+          sleep 1
+        done
+        docker run --rm --network ya-brander-net curlimages/curl:8.10.1 -sf http://otel-collector:13133 >/dev/null 2>&1 \
+          && echo 'otel-collector is ready' \
+          || echo 'WARNING: otel-collector not ready after 30s, starting ya-brander anyway'
+        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env \
+          -e http_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
+          -e https_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
+          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis \
+          $REGISTRY/$IMAGE:latest
+        docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
+          echo "WARNING: service-redis не запущен!"
       "
 
     # --- 6. Проверка работоспособности бэкенда ---

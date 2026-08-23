@@ -35,18 +35,6 @@
   min-width: 0;
 }
 
-.brandMark {
-  flex: 0 0 auto;
-  height: 2rem;
-  width: 2rem;
-}
-
-.brandMark img {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-
 .projectName {
   overflow: hidden;
   text-overflow: ellipsis;

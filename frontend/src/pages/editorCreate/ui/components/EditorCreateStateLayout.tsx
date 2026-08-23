@@ -8,6 +8,7 @@ interface EditorCreateStateLayoutProps {
   description: string
   isCopyWidthLimited?: boolean
   isPreviewCompact?: boolean
+  isTitleAnimated?: boolean
   title: string
 }
 
@@ -16,6 +17,7 @@ export function EditorCreateStateLayout({
   description,
   isCopyWidthLimited = false,
   isPreviewCompact = false,
+  isTitleAnimated = false,
   title,
 }: EditorCreateStateLayoutProps) {
   return (
@@ -29,7 +31,9 @@ export function EditorCreateStateLayout({
           className={isCopyWidthLimited ? styles.copyWidthLimited : styles.copy}
         >
           <GenerateIcon className={styles.icon} />
-          <h1>{title}</h1>
+          <h1 className={isTitleAnimated ? styles.titleShimmer : undefined}>
+            {title}
+          </h1>
           <p>{description}</p>
         </div>
       </div>

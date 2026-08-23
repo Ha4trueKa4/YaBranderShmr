@@ -6,11 +6,14 @@ logger-level: debug
 is-testing: true
 
 server-port: 8080
+monitor-port: 8085
 
 # ya_brander_db-1 is the service name + _ + filename of the db-1.sql
 dbconnection: 'postgresql://testsuite@localhost:15433/ya_brander_db-1'
 dbconnection-vector: 'postgresql://user:password@service-vector-postgres:5432/vector_db'
 yandex-gpt-url: $mockserver/yandex-gpt-mock
 yandex-gpt-models-url: $mockserver/yandex-gpt-models-mock
+openai-responses-url: $mockserver/openai-responses-mock
 yandex-embedding-url: $mockserver/yandex-embedding-mock
 s3-endpoint: $mockserver
+monium-otlp-endpoint: '127.0.0.1:4317'

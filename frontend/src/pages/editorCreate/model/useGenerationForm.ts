@@ -7,20 +7,28 @@ import { z } from 'zod'
 type GenerationFormValues = { description: string; model: string }
 
 interface UseGenerationFormOptions {
+  initialValues?: Partial<GenerationFormValues>
   onSubmit: (values: GenerationFormValues) => void
 }
 
-export function useGenerationForm({ onSubmit }: UseGenerationFormOptions) {
+export function useGenerationForm({
+  initialValues,
+  onSubmit,
+}: UseGenerationFormOptions) {
   const { t } = useTranslation()
   const generationFormSchema = z.object({
     description: z
       .string()
       .trim()
-      .min(1, t('Describe the identity you want to generate.')),
+      .min(1, t('Describe the identity you want to generate.'))
+      .max(1500, t('Prompt must not exceed 1500 characters.')),
     model: z.string(),
   })
   const form = useForm<GenerationFormValues>({
-    defaultValues: { description: '', model: DEFAULT_GENERATION_MODEL },
+    defaultValues: {
+      description: initialValues?.description ?? '',
+      model: initialValues?.model ?? DEFAULT_GENERATION_MODEL,
+    },
     mode: 'onSubmit',
     resolver: zodResolver(generationFormSchema),
   })

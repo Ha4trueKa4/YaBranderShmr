@@ -1,6 +1,6 @@
 .card {
   min-width: 0;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-card-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
@@ -18,6 +18,14 @@
   position: relative;
   min-width: 0;
   padding: var(--space-3) var(--space-3) 0;
+}
+
+.generationPreview {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
 }
 
 .visibility {

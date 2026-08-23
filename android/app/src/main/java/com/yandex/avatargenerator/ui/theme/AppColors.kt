@@ -18,63 +18,91 @@ internal data class AppColorScheme(
     val textSecondary: Color,
     val textMuted: Color,
     val accent: Color,
-    val accentCyan: Color,
+    val accentText: Color,
+    val accentSoft: Color,
+    val accentWarm: Color,
     val onAccent: Color,
-    val onAccentCyan: Color,
+    val onAccentSoft: Color,
+    val onAccentWarm: Color,
     val success: Color,
     val error: Color,
     val shimmerBase: Color,
     val shimmerHighlight: Color,
+    /** Тёмная ли это тема — для редких мест, где цвет зависит не от токена, а от самой темы. */
+    val isDark: Boolean,
 )
 
 /**
- * Палитра макета.
+ * Фирменная палитра: коралл `#F8604A` — основной акцент, мягкий коралл `#FE9693` —
+ * его вторая ступень, жёлтый `#FFD64F` — тёплый акцент (награды, «pro», подсветка).
+ * Гамма целиком тёплая, фиолетового в теме нет. Нейтрали построены на
+ * чернильном `#222A3A`.
  *
  * ВАЖНО: при изменении `background` синхронно правь `@color/window_background`
  * в `values-night/colors.xml` — это фон окна до отрисовки Compose.
  */
 internal val DarkAppColorScheme = AppColorScheme(
-    background = Color(0xFF0F0F14),
-    surface = Color(0xFF1A1A24),
-    surfaceVariant = Color(0xFF22222F),
-    border = Color(0xFF27272A),
-    textPrimary = Color(0xFFF4F4F5),
-    textSecondary = Color(0xFFA1A1AA),
-    textMuted = Color(0xFF52525B),
-    accent = Color(0xFF7C3AED),
-    accentCyan = Color(0xFF06B6D4),
-    onAccent = Color.White,
-    onAccentCyan = Color(0xFF0F0F14),
-    success = Color(0xFF22C55E),
-    error = Color(0xFFEF4444),
-    shimmerBase = Color(0xFF27272A),
-    shimmerHighlight = Color(0xFF3F3F46),
+    background = Color(0xFF222A3A),
+    surface = Color(0xFF2B3446),
+    surfaceVariant = Color(0xFF354055),
+    border = Color(0xFF3E4A61),
+    textPrimary = Color(0xFFFFFFFF),
+    textSecondary = Color(0xFFCFCDDD),
+    textMuted = Color(0xFF8B93A5),
+    accent = Color(0xFFF8604A),
+    // Фирменный коралл к фону проходит (4.6:1), но на карточках и плашках уже нет
+    // — берём его же на ступень светлее, чтобы AA держался на всех трёх подложках.
+    accentText = Color(0xFFFF8A75),
+    accentSoft = Color(0xFFFE9693),
+    accentWarm = Color(0xFFFFD64F),
+    onAccent = Color(0xFFFFFFFF),
+    onAccentSoft = Color(0xFF222A3A),
+    onAccentWarm = Color(0xFF222A3A),
+    success = Color(0xFF3ECF8E),
+    // Уведён в чистый красный: коралловый акцент занял всю тёплую гамму, и
+    // ошибка совпадающего оттенка перестала читаться как ошибка.
+    error = Color(0xFFFF6369),
+    shimmerBase = Color(0xFF2B3446),
+    shimmerHighlight = Color(0xFF3E4A61),
+    isDark = true,
 )
 
 /**
- * Та же шкала (нейтрали zinc, акценты violet/cyan), развёрнутая: акценты взяты
- * на 1–2 ступени темнее, иначе не держат контраст на светлом фоне. Все текстовые
- * токены проходят WCAG AA к `background` (минимум — textMuted, 4.6:1).
+ * Та же шкала, развёрнутая: нейтрали намеренно обесцвечены — крупные плоскости
+ * остаются серыми, цвет живёт только в акцентах. Мягкий акцент и семантика взяты
+ * на ступень темнее, иначе не держат контраст на светлом фоне.
+ *
+ * Коралл здесь раздвоен. `accent` — фирменный `#F8604A`, но только заливкой под
+ * белым текстом: по светлому фону он даёт 2.8:1 и как текст нечитаем. Текст,
+ * который должен быть акцентным, берёт `accentText` (4.7:1).
+ *
+ * Все текстовые токены проходят WCAG AA (4.5:1) к трём подложкам сразу —
+ * `background`, `surface` и `surfaceVariant`; минимум — accentText на
+ * surfaceVariant, 4.55:1.
  *
  * ВАЖНО: при изменении `background` синхронно правь `@color/window_background`
  * в `values/colors.xml`.
  */
 internal val LightAppColorScheme = AppColorScheme(
-    background = Color(0xFFFAFAFA),
+    background = Color(0xFFF4F4F6),
     surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFF4F4F5),
-    border = Color(0xFFE4E4E7),
-    textPrimary = Color(0xFF18181B),
-    textSecondary = Color(0xFF52525B),
-    textMuted = Color(0xFF71717A),
-    accent = Color(0xFF6D28D9),
-    accentCyan = Color(0xFF0E7490),
-    onAccent = Color.White,
-    onAccentCyan = Color.White,
-    success = Color(0xFF15803D),
-    error = Color(0xFFDC2626),
-    shimmerBase = Color(0xFFE4E4E7),
-    shimmerHighlight = Color(0xFFF4F4F5),
+    surfaceVariant = Color(0xFFEBEBEF),
+    border = Color(0xFFCFCDDD),
+    textPrimary = Color(0xFF222A3A),
+    textSecondary = Color(0xFF575E6E),
+    textMuted = Color(0xFF626976),
+    accent = Color(0xFFF8604A),
+    accentText = Color(0xFFC2381F),
+    accentSoft = Color(0xFFFB7C69),
+    accentWarm = Color(0xFFFFC812),
+    onAccent = Color(0xFFFFFFFF),
+    onAccentSoft = Color(0xFF222A3A),
+    onAccentWarm = Color(0xFF222A3A),
+    success = Color(0xFF12946A),
+    error = Color(0xFFD03340),
+    shimmerBase = Color(0xFFEBEBEF),
+    shimmerHighlight = Color(0xFFF6F6F8),
+    isDark = false,
 )
 
 internal val LocalAppColorScheme = staticCompositionLocalOf { DarkAppColorScheme }
@@ -105,27 +133,53 @@ internal object AppColors {
     val TextMuted: Color
         @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.textMuted
 
+    /** Основной фирменный акцент — коралл. */
     val Accent: Color
         @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.accent
-    val AccentCyan: Color
-        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.accentCyan
+
+    /**
+     * Акцент для текста и иконок поверх фона. Отдельный токен, потому что
+     * заливочный [Accent] на светлой теме не добирает контраста для чтения.
+     */
+    val AccentText: Color
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.accentText
+
+    /** Мягкая ступень акцента; вторая точка градиентов и парных состояний. */
+    val AccentSoft: Color
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.accentSoft
+
+    /** Тёплый акцент — жёлтый; выделения, награды, «pro»-метки. */
+    val AccentWarm: Color
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.accentWarm
 
     /** Цвет содержимого поверх заливки Accent (кнопки, беджи). */
     val OnAccent: Color
         @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.onAccent
 
-    /** Цвет содержимого поверх заливки AccentCyan. */
-    val OnAccentCyan: Color
-        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.onAccentCyan
+    /** Цвет содержимого поверх заливки AccentSoft. */
+    val OnAccentSoft: Color
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.onAccentSoft
+
+    /** Цвет содержимого поверх заливки AccentWarm. */
+    val OnAccentWarm: Color
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.onAccentWarm
 
     val Success: Color
         @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.success
     val Error: Color
         @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.error
 
-    /** Диагональный градиент Accent → AccentCyan — аватары, превью-плашки проектов. */
+    /**
+     * Диагональный градиент Accent → AccentSoft — аватары, превью-плашки
+     * проектов. Обе точки лежат на соседних ступенях коралла: переход читается как
+     * лёгкий объём, а не как двухцветная заливка.
+     */
     val AccentGradient: Brush
-        @Composable @ReadOnlyComposable get() = Brush.linearGradient(listOf(Accent, AccentCyan))
+        @Composable @ReadOnlyComposable get() = Brush.linearGradient(listOf(Accent, AccentSoft))
+
+    /** Активна ли тёмная тема (учитывает ручное переключение). */
+    val IsDark: Boolean
+        @Composable @ReadOnlyComposable get() = LocalAppColorScheme.current.isDark
 
     // Плейсхолдеры скелетона загрузки (shimmer).
     val ShimmerBase: Color

@@ -12,6 +12,8 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/logging/log.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 namespace ya_brander::components {
 
 VectorSearchComponent::VectorSearchComponent(
@@ -23,7 +25,6 @@ VectorSearchComponent::VectorSearchComponent(
                        .GetCluster()),
       http_client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()),
       embedding_url_(config["embedding-url"].As<std::string>()),
-      db_table_(config["db-table"].As<std::string>("vector_examples")),
       embedding_model_(config["embedding-model"].As<std::string>("text-embeddings-v2-query")) {
 
     const char* key = std::getenv("YANDEX_AI_API_KEY");
@@ -88,17 +89,9 @@ std::vector<double> VectorSearchComponent::GetEmbedding(const std::string& text)
 std::vector<std::string> VectorSearchComponent::SearchInDb(
     const std::string& vec_str, int limit, double max_distance) const {
     try {
-        const auto query = fmt::format(
-            "SELECT svg_data, (embedding <=> $1::vector) AS dist "
-            "FROM {} "
-            "WHERE embedding <=> $1::vector < $3 "
-            "ORDER BY dist "
-            "LIMIT $2",
-            db_table_);
-
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
-            query, vec_str, limit, max_distance);
+            sql::kFindSimilarVectorExamples, vec_str, limit, max_distance);
 
         std::vector<std::string> svgs;
         svgs.reserve(result.Size());
@@ -107,6 +100,8 @@ std::vector<std::string> VectorSearchComponent::SearchInDb(
         }
         return svgs;
     } catch (const std::exception& e) {
+        LOG_WARNING() << "RAG vector search failed, continuing without examples: "
+                      << e.what();
         return {};
     }
 }

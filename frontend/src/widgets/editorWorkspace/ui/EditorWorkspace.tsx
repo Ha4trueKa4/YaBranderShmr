@@ -54,13 +54,20 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     () => new EditorStore(document),
   )
   const [sceneRenderVersion, setSceneRenderVersion] = useState(0)
-  const [activeTool, setActiveTool] = useState<CanvasTool>('select')
+  const [activeTool, setActiveTool] = useState<CanvasTool>(
+    isMobileLayout ? 'hand' : 'select',
+  )
   const [zoom, setZoom] = useState(1)
   const [viewportOffset, setViewportOffset] = useState(INITIAL_VIEWPORT_OFFSET)
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false)
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
+  const [measuredRotationCenter, setMeasuredRotationCenter] = useState<{
+    nodeId: string
+    x: number
+    y: number
+  } | null>(null)
   const {
     createCopy,
     hasUnsavedChanges,
@@ -123,6 +130,30 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setIsImageExportModalOpen(true)
   }
 
+  function handleOpenMobileProperties() {
+    editorStore.beginHistoryTransaction()
+    setIsMobileInspectorOpen(true)
+  }
+
+  function handleOpenMobileColorPicker() {
+    editorStore.beginHistoryTransaction()
+  }
+
+  function handleDoneMobileProperties() {
+    editorStore.commitHistoryTransaction()
+    setIsMobileInspectorOpen(false)
+  }
+
+  function handleCancelMobileProperties() {
+    const wasCancelled = editorStore.cancelHistoryTransaction()
+
+    if (wasCancelled) {
+      setSceneRenderVersion((version) => version + 1)
+    }
+
+    setIsMobileInspectorOpen(false)
+  }
+
   function handleRestoreDocument(restoredDocument: EditorDocument) {
     setEditorStore(new EditorStore(restoredDocument))
     markDocumentAsSaved(restoredDocument)
@@ -156,6 +187,19 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   function handleSceneSelectNode(nodeId: string, isMultiSelect: boolean) {
     editorStore.selectNode(nodeId, isMultiSelect)
   }
+
+  const handleMeasuredRotationCenterChange = useCallback(
+    (nextCenter: { nodeId: string; x: number; y: number } | null) => {
+      setMeasuredRotationCenter((currentCenter) =>
+        currentCenter?.nodeId === nextCenter?.nodeId &&
+        currentCenter?.x === nextCenter?.x &&
+        currentCenter?.y === nextCenter?.y
+          ? currentCenter
+          : nextCenter,
+      )
+    },
+    [],
+  )
 
   const handleDeleteSelection = useCallback(() => {
     if (!editorStore.deleteSelectedNode()) {
@@ -191,17 +235,35 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     }
   }
 
+  async function handleSaveAndExit() {
+    const wasSaved = await saveVersion()
+
+    if (wasSaved && navigationBlocker.state === 'blocked') {
+      navigationBlocker.proceed()
+    }
+  }
+
   const inspectorProps = {
     definitions: editorStore.document.definitions,
+    measuredRotationCenter:
+      measuredRotationCenter &&
+      measuredRotationCenter.nodeId === editorStore.selectedNode?.id
+        ? { x: measuredRotationCenter.x, y: measuredRotationCenter.y }
+        : undefined,
+    onDeleteSelectedNode: handleDeleteSelection,
     onGradientStopColorChange: editorStore.svgNodeEditing.setGradientStopColor,
     onShapeFillChange: editorStore.svgNodeEditing.setShapeFillColor,
     onShapeFillOpacityChange: editorStore.svgNodeEditing.setShapeFillOpacity,
     onShapeOpacityChange: editorStore.svgNodeEditing.setShapeOpacity,
     onShapePositionChange: editorStore.svgNodeEditing.setShapePosition,
+    onShapeRotationChange: editorStore.svgNodeEditing.setShapeRotation,
     onShapeStrokeAdd: editorStore.svgNodeEditing.addShapeStroke,
     onShapeStrokeColorChange: editorStore.svgNodeEditing.setShapeStrokeColor,
     onShapeStrokeRemove: editorStore.svgNodeEditing.removeShapeStroke,
+    onShapeStrokeOpacityChange:
+      editorStore.svgNodeEditing.setShapeStrokeOpacity,
     onShapeStrokeWidthChange: editorStore.svgNodeEditing.setShapeStrokeWidth,
+    onShapeTransformChange: editorStore.svgNodeEditing.setShapeTransform,
     onTextAnchorChange: editorStore.svgNodeEditing.setTextAnchor,
     onTextContentChange: editorStore.svgNodeEditing.setTextContent,
     onTextFillColorChange: editorStore.svgNodeEditing.setTextFillColor,
@@ -209,7 +271,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     onTextFontSizeChange: editorStore.svgNodeEditing.setTextFontSize,
     onTextFontStyleChange: editorStore.svgNodeEditing.setTextFontStyle,
     onTextFontWeightChange: editorStore.svgNodeEditing.setTextFontWeight,
+    onTextOpacityChange: editorStore.svgNodeEditing.setTextOpacity,
     onTextPositionChange: editorStore.svgNodeEditing.setTextPosition,
+    onTextRotationChange: editorStore.svgNodeEditing.setTextRotation,
+    onTextTransformChange: editorStore.svgNodeEditing.setTextTransform,
     selectedNode: editorStore.selectedNode,
   }
   const scene = (
@@ -223,9 +288,14 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       onDocumentChangeStart={editorStore.beginHistoryTransaction}
       onGroupPositionChange={editorStore.svgNodeEditing.setGroupPosition}
       onRawPositionChange={editorStore.svgNodeEditing.setRawPosition}
+      onMeasuredRotationCenterChange={handleMeasuredRotationCenterChange}
       onSelectNode={handleSceneSelectNode}
       onShapePositionChange={editorStore.svgNodeEditing.setShapePosition}
+      onShapeRotationChange={editorStore.svgNodeEditing.setShapeRotation}
+      onShapeTransformChange={editorStore.svgNodeEditing.setShapeTransform}
       onTextPositionChange={editorStore.svgNodeEditing.setTextPosition}
+      onTextRotationChange={editorStore.svgNodeEditing.setTextRotation}
+      onTextTransformChange={editorStore.svgNodeEditing.setTextTransform}
       onViewportOffsetChange={setViewportOffset}
       onZoomChange={handleZoomChange}
       renderVersion={sceneRenderVersion}
@@ -243,21 +313,28 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           {...inspectorProps}
           activeTool={activeTool}
           canEdit={canEdit}
+          canRedo={editorStore.canRedo}
+          canUndo={editorStore.canUndo}
           isCreatingProjectCopy={isCreatingCopy}
           isSavingVersion={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
-          onCloseProperties={() => setIsMobileInspectorOpen(false)}
+          onCancelColorPicker={handleCancelMobileProperties}
+          onCancelProperties={handleCancelMobileProperties}
           onCreateCopy={createCopy}
           onDeleteSelection={handleDeleteSelection}
           onExport={handleExport}
-          onOpenProperties={() => setIsMobileInspectorOpen(true)}
+          onDoneColorPicker={handleDoneMobileProperties}
+          onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
+          onRedo={handleRedo}
           onSaveVersion={saveVersion}
+          onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
+          onUndo={handleUndo}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
-          onZoomReset={() => setZoom(1)}
           projectName={projectName}
           scene={scene}
           zoom={zoom}
@@ -277,7 +354,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
             />
           }
           scene={scene}
-          status={<EditorStatusBar />}
+          status={
+            <EditorStatusBar
+              selectedNode={editorStore.selectedNode}
+              zoom={zoom}
+            />
+          }
           toolbar={
             <EditorToolbar
               activeTool={activeTool}
@@ -308,8 +390,10 @@ export const EditorWorkspace = observer(function EditorWorkspace({
       )}
       <ConfirmUnsavedChangeModal
         isOpen={navigationBlocker.state === 'blocked'}
-        onCancel={handleCancelExit}
-        onConfirm={handleConfirmExit}
+        isSaving={isSavingVersion}
+        onDismiss={handleCancelExit}
+        onLeave={handleConfirmExit}
+        onSave={handleSaveAndExit}
       />
       <ImageExportModal
         isExporting={isImageExporting}

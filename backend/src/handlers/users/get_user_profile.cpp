@@ -10,6 +10,10 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
+#include "../../utils/postgres_retry.hpp"
+
 namespace ya_brander::handlers {
 
 GetUserProfileHandler::GetUserProfileHandler(
@@ -31,11 +35,12 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
   std::string auth_user_id = auth_user_id_ptr ? *auth_user_id_ptr : "";
 
   try {
-    auto user_res = pg_cluster_->Execute(
-        userver::storages::postgres::ClusterHostType::kSlave,
-        "SELECT id::text, login FROM users WHERE id = $1::uuid",
-        target_id
-    );
+    auto user_res = utils::ExecuteSelectWithRetry(
+        "select-user-profile", [&] {
+          return pg_cluster_->Execute(
+              userver::storages::postgres::ClusterHostType::kSlave,
+              sql::kSelectUserProfile, target_id);
+        });
 
     if (user_res.IsEmpty()) {
       request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
@@ -52,26 +57,26 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
     auto subscribers_count = subscription_storage_.GetSubscribersCount(target_id);
     auto subscriptions_count = subscription_storage_.GetSubscriptionsCount(target_id);
 
-    bool is_self = (auth_user_id == target_id);
+    // Compare with the canonical UUID returned by PostgreSQL rather than the
+    // raw path argument, which may contain upper-case hexadecimal characters.
+    bool is_self = (auth_user_id == user_id_str);
 
     std::optional<bool> is_subscribed = std::nullopt;
     if (!is_self && !auth_user_id.empty()) {
       is_subscribed = subscription_storage_.IsSubscribed(auth_user_id, target_id);
     }
 
-    auto proj_res = is_self
-        ? pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at, last_version_key "
-            "FROM projects WHERE author_id = $1::uuid ORDER BY created_at DESC",
-            target_id
-        )
-        : pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kSlave,
-            "SELECT id::text, author_id::text, name, COALESCE(description, '') as description, is_private, created_at, last_version_key "
-            "FROM projects WHERE author_id = $1::uuid AND is_private = FALSE ORDER BY created_at DESC",
-            target_id
-        );
+    auto proj_res = utils::ExecuteSelectWithRetry(
+        is_self ? "select-all-user-projects" : "select-public-user-projects",
+        [&] {
+          return is_self
+                     ? pg_cluster_->Execute(
+                           userver::storages::postgres::ClusterHostType::kSlave,
+                           sql::kSelectAllUserProjects, target_id)
+                     : pg_cluster_->Execute(
+                           userver::storages::postgres::ClusterHostType::kSlave,
+                           sql::kSelectPublicUserProjects, target_id);
+        });
 
     std::vector<std::string> keys_public;
     std::vector<std::string> keys_private;
@@ -140,6 +145,8 @@ userver::formats::json::Value GetUserProfileHandler::HandleRequestJsonThrow(
     err["code"] = "INVALID_UUID";
     err["message"] = "Некорректный формат ID пользователя";
     return err.ExtractValue();
+  } catch (const utils::DatabaseUnavailableError&) {
+    throw;
   } catch (const std::exception& e) {
     request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
     userver::formats::json::ValueBuilder err;

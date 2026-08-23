@@ -59,8 +59,12 @@ struct MainShellView: View {
             ProfileView(
                 session: session,
                 isCurrentUser: true,
+                onOpenSettings: { router.push(.settings, in: .profile) },
                 onOpenProject: { projectID, title, imageURL in
                     router.push(.projectImage(projectID: projectID, title: title, imageURL: imageURL), in: .profile)
+                },
+                onOpenConnections: { userID, kind in
+                    router.push(.profileConnections(userID: userID, kind: kind), in: .profile)
                 }
             )
         }

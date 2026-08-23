@@ -7,7 +7,9 @@ struct ProfileView: View {
     var isCurrentUser: Bool
     var onBack: (() -> Void)?
     var onEditProfile: () -> Void
+    var onOpenSettings: () -> Void
     var onOpenProject: (UUID, String, URL?) -> Void
+    var onOpenConnections: (UUID, ProfileConnectionsKind) -> Void
 
     init(
         session: SessionStore,
@@ -15,13 +17,17 @@ struct ProfileView: View {
         userID: UUID? = nil,
         onBack: (() -> Void)? = nil,
         onEditProfile: @escaping () -> Void = {},
-        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in }
+        onOpenSettings: @escaping () -> Void = {},
+        onOpenProject: @escaping (UUID, String, URL?) -> Void = { _, _, _ in },
+        onOpenConnections: @escaping (UUID, ProfileConnectionsKind) -> Void = { _, _ in }
     ) {
         self.session = session
         self.isCurrentUser = isCurrentUser
         self.onBack = onBack
         self.onEditProfile = onEditProfile
+        self.onOpenSettings = onOpenSettings
         self.onOpenProject = onOpenProject
+        self.onOpenConnections = onOpenConnections
         _viewModel = State(initialValue: ProfileViewModel(
             currentUserService: session.currentUserService,
             userProfileService: session.userProfileService,
@@ -123,7 +129,7 @@ struct ProfileView: View {
             .accessibilityHidden(true)
             .overlay(alignment: .trailing) {
                 if isCurrentUser {
-                    signOutButton
+                    settingsButton
                         .padding(.top, 48)
                         .padding(.trailing, 12)
                 }
@@ -133,17 +139,20 @@ struct ProfileView: View {
         .frame(minHeight: baseHeight)
     }
 
-    private var signOutButton: some View {
-        Button(role: .destructive) {
-            session.signOut()
-        } label: {
-            Image(systemName: "rectangle.portrait.and.arrow.right")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+    private var settingsButton: some View {
+        Button(action: onOpenSettings) {
+            ZStack {
+                Circle()
+                    .fill(Color(.onAccent).opacity(0.25))
+                    .stroke(Color(.onAccent).opacity(0.35), lineWidth: 1)
+                    .frame(width: 38, height: 38)
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: 44, height: 44)
+            }
         }
-        .buttonStyle(.plain)
         .foregroundStyle(Color(.onAccent))
-        .accessibilityLabel("Sign out")
+        .accessibilityLabel("Settings")
     }
 
     private var avatar: some View {
@@ -163,11 +172,38 @@ struct ProfileView: View {
         HStack(spacing: 8) {
             stat(value: viewModel.projectsCount, title: "Projects")
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followersCount, title: "Followers", animated: true)
+            connectionStat(
+                value: viewModel.followersCount,
+                title: "Followers",
+                kind: .followers,
+                animated: true
+            )
             Text("·").foregroundStyle(.secondary)
-            stat(value: viewModel.followingCount, title: "Following")
+            connectionStat(
+                value: viewModel.followingCount,
+                title: "Following",
+                kind: .following
+            )
         }
         .font(.system(size: 13))
+    }
+
+    private func connectionStat(
+        value: Int,
+        title: String,
+        kind: ProfileConnectionsKind,
+        animated: Bool = false
+    ) -> some View {
+        Button {
+            guard let profileID = viewModel.profileID else { return }
+            onOpenConnections(profileID, kind)
+        } label: {
+            stat(value: value, title: title, animated: animated)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.profileID == nil)
+        .accessibilityHint("Opens \(title.lowercased()) list")
     }
 
     private func stat(value: Int, title: String, animated: Bool = false) -> some View {

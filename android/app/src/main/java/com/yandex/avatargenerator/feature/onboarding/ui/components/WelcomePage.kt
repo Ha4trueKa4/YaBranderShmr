@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -28,15 +27,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingDefaults
+import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 
-/** Первая страница: градиент purple → cyan, плашка логотипа и название продукта. */
+/** Первая страница: коралловое свечение на фоне темы, плашка логотипа и название продукта. */
 @Composable
 internal fun WelcomePage(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(OnboardingDefaults.WelcomeGradient)
+            .background(AppColors.Background)
+            .background(OnboardingDefaults.WelcomeGlow)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
             .padding(
@@ -67,7 +68,7 @@ internal fun WelcomePage(modifier: Modifier = Modifier) {
             Icon(
                 painter = painterResource(R.drawable.ic_logo_circle_x),
                 contentDescription = null,
-                tint = Color.White,
+                tint = AppColors.TextPrimary,
                 modifier = Modifier.size(OnboardingDefaults.LogoGlyphSize),
             )
         }

@@ -29,7 +29,7 @@ internal fun AuthBrandMark(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Outlined.HighlightOff,
             contentDescription = null,
-            tint = AppColors.Accent,
+            tint = AppColors.AccentText,
             modifier = Modifier.size(20.dp)
         )
     }

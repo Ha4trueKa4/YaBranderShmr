@@ -1,4 +1,5 @@
 #include "LLMClientComponent.hpp"
+#include "llm_models.hpp"
 
 #include <nlohmann/json.hpp>
 #include <regex>
@@ -440,90 +441,129 @@ namespace ya_brander::components {
 
   std::string LLMClientComponent::SendPrompt(const LlmPrompt& prompt,
      std::size_t max_output_tokens,
-     const std::string& Model,
-     double TEMPERATURE) const {
+     const std::string& model,
+     double temperature) const {
     if (prompt.input.empty()) {
       throw std::invalid_argument("Empty prompt provided");
     }
-        userver::formats::json::ValueBuilder request_body;
-        request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/" + Model;
-        request_body["temperature"] = TEMPERATURE;
-        request_body["max_output_tokens"] = max_output_tokens;
-        request_body["instructions"] = prompt.instructions;
-        request_body["input"] = prompt.input;
 
-  auto json_value = request_body.ExtractValue();
-  std::string json_data = userver::formats::json::ToString(json_value);
+    const bool is_openai = IsOpenAIModel(model);
+    if (is_openai && openai_api_key_.empty()) {
+      throw std::runtime_error("OPENAI_API_KEY is not set");
+    }
 
-  auto request = http_client_.CreateRequest();
-  request.method(userver::clients::http::HttpMethod::kPost);
-  request.url(api_url_);
-  request.headers({{"Authorization", "Api-Key " + api_key_},
-                   {"Content-Type", "application/json"}});
+    userver::formats::json::ValueBuilder request_body;
+    request_body["model"] =
+        is_openai ? model : "gpt://b1gttnvmtpd0tagdlb7o/" + model;
+    request_body["temperature"] = temperature;
+    request_body["max_output_tokens"] = max_output_tokens;
+    request_body["instructions"] = prompt.instructions;
+    request_body["input"] = prompt.input;
+    if (is_openai) {
+      request_body["store"] = false;
+      request_body["reasoning"]["effort"] = "none";
+    }
 
-        // Увеличиваем таймауты для SSL
-        request.timeout(240000);  // 120 секунд
+    auto json_value = request_body.ExtractValue();
+    std::string json_data = userver::formats::json::ToString(json_value);
 
-        request.data(json_data);
+    auto request = http_client_.CreateRequest();
+    request.method(userver::clients::http::HttpMethod::kPost);
+    request.url(is_openai ? openai_api_url_ : yandex_api_url_);
+    request.headers(
+        {{"Authorization",
+          (is_openai ? "Bearer " + openai_api_key_
+                     : "Api-Key " + yandex_api_key_)},
+         {"Content-Type", "application/json"}});
 
-        auto response = request.perform();
-        std::string response_body = response->body();
-        LOG_INFO() << "LLM response" << response_body; //delete later
+    request.timeout(240000);  // 240 секунд
 
-        if (response->status_code() != 200) {
-          std::string error_msg;
-          try {
-            auto error_json = nlohmann::json::parse(response_body);
-            if (error_json.contains("error")) {
-              auto error = error_json["error"];
-              error_msg = "API Error: " + error.value("code", "Unknown") +
-                         " - " + error.value("message", "Unknown error");
-            } else if (error_json.contains("message")) {
-              error_msg = "API Error: " + error_json["message"].get<std::string>();
-            } else {
-              error_msg = "HTTP Error " + std::to_string(response->status_code());
-            }
-          } catch (const std::exception& e) {
-            error_msg = "HTTP Error " + std::to_string(response->status_code()) +
-                       ", body: " + response_body.substr(0, 200);
-          }
-          throw std::runtime_error(error_msg);
+    if (is_openai) {
+        const char* proxy_env = std::getenv("https_proxy");
+        if (!proxy_env) {
+            proxy_env = std::getenv("HTTPS_PROXY");  // на случай другого регистра в окружении
         }
-        auto response_json = nlohmann::json::parse(response->body());
-
-        std::string json_string = response_json.dump();
-        std::string extracted_text;
-        bool text_found = false;
-        for (const auto& output_item : response_json["output"]) {
-          if (output_item.contains("content") && output_item["content"].is_array() && !output_item["content"].empty()) {
-            for (const auto& content_item : output_item["content"]) {
-              if (content_item.contains("text") && content_item["text"].is_string()) {
-                extracted_text = content_item["text"].get<std::string>();
-                text_found = true;
-                break;
-              }
-            }
-            if (text_found) break;
-          }
+        if (proxy_env && *proxy_env != '\0') {
+            request.proxy(proxy_env);
         }
-        std::string svg = ExtractSVG(extracted_text);
-        // ValidateSVG(svg);
-        return svg;
+    }
+
+    request.data(json_data);
+
+    auto response = request.perform();
+    std::string response_body = response->body();
+
+    if (response->status_code() != 200) {
+      std::string error_msg;
+      try {
+        auto error_json = nlohmann::json::parse(response_body);
+        if (error_json.contains("error") && error_json["error"].is_object()) {
+          const auto& error = error_json["error"];
+          const std::string code =
+              error.contains("code") && error["code"].is_string()
+                  ? error["code"].get<std::string>()
+                  : "Unknown";
+          const std::string message =
+              error.contains("message") && error["message"].is_string()
+                  ? error["message"].get<std::string>()
+                  : "Unknown error";
+          error_msg = "API Error: " + code + " - " + message;
+        } else if (error_json.contains("message")) {
+          error_msg =
+              "API Error: " + error_json["message"].get<std::string>();
+        } else {
+          error_msg =
+              "HTTP Error " + std::to_string(response->status_code());
+        }
+      } catch (const std::exception&) {
+        error_msg = "HTTP Error " + std::to_string(response->status_code());
+      }
+      throw std::runtime_error(error_msg);
+    }
+
+    const auto response_json = nlohmann::json::parse(response_body);
+    if (is_openai && response_json.value("status", "") != "completed") {
+      const std::string status = response_json.value("status", "unknown");
+      throw std::runtime_error("OpenAI response status is " + status);
+    }
+
+    std::string extracted_text;
+    if (response_json.contains("output") && response_json["output"].is_array()) {
+      for (const auto& output_item : response_json["output"]) {
+        if (!output_item.contains("content") ||
+            !output_item["content"].is_array()) {
+          continue;
+        }
+        for (const auto& content_item : output_item["content"]) {
+          if (!content_item.contains("text") ||
+              !content_item["text"].is_string()) {
+            continue;
+          }
+          if (is_openai && content_item.value("type", "") != "output_text") {
+            continue;
+          }
+          extracted_text += content_item["text"].get<std::string>();
+        }
+      }
+    }
+    const std::string svg = ExtractSVG(extracted_text);
+    // ValidateSVG(svg);
+    return svg;
   }
 
 userver::yaml_config::Schema LLMClientComponent::GetStaticConfigSchema() {
   return userver::yaml_config::MergeSchemas<
       userver::components::LoggableComponentBase>(R"(
 type: object
-description: LLM client component for Yandex AI Studio
+description: LLM client component for Yandex AI Studio and OpenAI
 additionalProperties: false
 properties:
-    api-url:
+    yandex-api-url:
         type: string
-        description: URL for Yandex GPT API
-    api-key:
+        description: URL for Yandex AI Studio Responses API
+    openai-api-url:
         type: string
-        description: API Key
+        description: URL for OpenAI Responses API
     )");
 }
 

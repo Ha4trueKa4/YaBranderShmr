@@ -42,6 +42,18 @@ export function createTextEditing({
       }
     },
 
+    setTextOpacity(nodeId: string, opacity: number) {
+      const node = getEditableText(getDocument(), nodeId)
+
+      if (!node || !Number.isFinite(opacity)) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.opacity = Math.min(Math.max(opacity, 0), 1)
+      })
+    },
+
     setTextFontFamily(nodeId: string, fontFamily: string) {
       const node = getEditableText(getDocument(), nodeId)
 
@@ -94,6 +106,67 @@ export function createTextEditing({
           node.y = y
         })
       }
+    },
+
+    setTextRotation(
+      nodeId: string,
+      rotation: number,
+      rotationCenter: { x: number; y: number },
+    ) {
+      const node = getEditableText(getDocument(), nodeId)
+
+      if (
+        !node ||
+        !Number.isFinite(rotation) ||
+        !Number.isFinite(rotationCenter.x) ||
+        !Number.isFinite(rotationCenter.y)
+      ) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.transform.rotation = rotation
+        node.transform.rotationCenter = rotationCenter
+      })
+    },
+
+    setTextTransform(
+      nodeId: string,
+      transform: {
+        rotationCenter?: { x: number; y: number }
+        scaleX: number
+        scaleY: number
+        x: number
+        y: number
+      },
+    ) {
+      const node = getEditableText(getDocument(), nodeId)
+
+      if (
+        !node ||
+        !Number.isFinite(transform.x) ||
+        !Number.isFinite(transform.y) ||
+        !Number.isFinite(transform.scaleX) ||
+        !Number.isFinite(transform.scaleY) ||
+        transform.scaleX <= 0 ||
+        transform.scaleY <= 0 ||
+        (transform.rotationCenter &&
+          (!Number.isFinite(transform.rotationCenter.x) ||
+            !Number.isFinite(transform.rotationCenter.y)))
+      ) {
+        return
+      }
+
+      applyDocumentChange(() => {
+        node.transform.x = transform.x
+        node.transform.y = transform.y
+        node.transform.scaleX = transform.scaleX
+        node.transform.scaleY = transform.scaleY
+
+        if (transform.rotationCenter) {
+          node.transform.rotationCenter = transform.rotationCenter
+        }
+      })
     },
   }
 }

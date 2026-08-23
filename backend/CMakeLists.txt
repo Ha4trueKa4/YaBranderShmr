@@ -32,7 +32,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
-find_package(userver COMPONENTS core postgresql QUIET)
+find_package(userver COMPONENTS core postgresql otlp QUIET)
 if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
@@ -51,6 +51,13 @@ if (NOT userver_FOUND)  # Fallback to subdirectory usage
 endif ()
 
 userver_setup_environment()
+
+userver_add_sql_library(${PROJECT_NAME}_sql
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sql/queries
+        OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/sql
+        NAMESPACE ya_brander
+        SQL_FILES *.sql
+)
 
 
 # Common sources
@@ -84,6 +91,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/LLMClientComponent.hpp
         src/components/LLMClientComponent.cpp
         src/components/llm_prompt.hpp
+        src/components/llm_models.hpp
         src/components/prompt_constructor/prompt_template.hpp
         src/components/prompt_constructor/prompt_template.cpp
         src/components/svg_validator.hpp
@@ -98,6 +106,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/projects/get_project_chat.cpp
         src/handlers/projects/generation/generate_project.cpp
         src/handlers/projects/generation/generate_status.cpp
+        src/handlers/projects/generation/cancel_generation.cpp
         src/handlers/projects/generation/append_generation.cpp
         src/handlers/projects/versions/get_version.cpp
         src/handlers/projects/versions/restore_version.cpp
@@ -120,12 +129,18 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/users/get_user_profile.cpp
         src/handlers/users/patch_user_profile.cpp
         src/handlers/users/user_subscriptions_handlers.cpp
+        src/components/prompt_constructor/prompt_polisher_component.cpp
+        src/handlers/test_llm_handler/test_polisher_handler.cpp
         src/utils/errors.hpp
         src/utils/errors.cpp
+        src/components/garbage_collector/garbage_collector_component.cpp
+        src/utils/postgres_retry.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
+        ${PROJECT_NAME}_sql
+        userver::otlp
         nlohmann_json::nlohmann_json
         jwt-cpp
         pugixml

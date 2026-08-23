@@ -25,6 +25,7 @@ export interface BottomSheetProps extends PropsWithChildren {
   contentClassName?: string
   isOpen: boolean
   onClose: () => void
+  showCloseButton?: boolean
   title: string
 }
 
@@ -35,6 +36,7 @@ export function BottomSheet({
   contentClassName,
   isOpen,
   onClose,
+  showCloseButton = true,
   title,
 }: BottomSheetProps) {
   const dragStateRef = useRef<DragState | null>(null)
@@ -123,27 +125,25 @@ export function BottomSheet({
           style={{ transform: `translateY(${dragOffset}px)` }}
         >
           <div
-            className={styles.handle}
-            onPointerCancel={handleDragCancel}
-            onPointerDown={handleDragStart}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-          />
-          <header
-            className={styles.header}
+            className={styles.dragArea}
             onPointerCancel={handleDragCancel}
             onPointerDown={handleDragStart}
             onPointerMove={handleDragMove}
             onPointerUp={handleDragEnd}
           >
-            <h2>{title}</h2>
-            <div className={styles.headerActions}>
-              {actions}
-              <IconButton onClick={onClose} size="sm">
-                <X />
-              </IconButton>
-            </div>
-          </header>
+            <div className={styles.handle} />
+            <header className={styles.header}>
+              <h2>{title}</h2>
+              <div className={styles.headerActions}>
+                {actions}
+                {showCloseButton && (
+                  <IconButton onClick={onClose} size="sm">
+                    <X />
+                  </IconButton>
+                )}
+              </div>
+            </header>
+          </div>
           <div
             className={[styles.content, contentClassName]
               .filter(Boolean)

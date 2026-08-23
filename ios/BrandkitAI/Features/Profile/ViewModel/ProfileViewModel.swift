@@ -11,13 +11,15 @@ final class ProfileViewModel {
         let previewURL: URL?
     }
 
-    private(set) var name = ""
+    private var loadedName = ""
     private(set) var projectsCount = 0
     private(set) var followersCount = 0
     private(set) var followingCount = 0
     private(set) var projects: [Project] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    /// Идентификатор показываемого профиля: нужен экранам подписчиков/подписок.
+    private(set) var profileID: UUID?
 
     private(set) var isSubscribed = false
     private(set) var isFollowBusy = false
@@ -41,7 +43,14 @@ final class ProfileViewModel {
         self.currentUserService = currentUserService
         self.userProfileService = userProfileService
         self.userID = userID
-        self.name = (userID == nil) ? (currentUserService.name ?? "") : ""
+        self.profileID = userID ?? currentUserService.id
+    }
+
+    var name: String {
+        if userID == nil, let currentName = currentUserService.name {
+            return currentName
+        }
+        return loadedName
     }
 
     var initials: String {
@@ -73,6 +82,7 @@ final class ProfileViewModel {
         }
 
         guard let id = userID ?? currentUserService.id else { return }
+        profileID = id
 
         if userID != nil {
             let viewerID = currentUserService.id
@@ -82,7 +92,12 @@ final class ProfileViewModel {
 
         do {
             let profile = try await userProfileService.profile(for: id)
-            name = profile.name
+            loadedName = profile.name
+
+            if userID == nil {
+                currentUserService.update(name: profile.name)
+            }
+
             followersCount = profile.subscribersCount
             followingCount = profile.subscriptionsCount
             projectsCount = profile.projects.count

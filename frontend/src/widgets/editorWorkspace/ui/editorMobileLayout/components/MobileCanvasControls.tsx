@@ -1,30 +1,33 @@
-import { ColorSwatch, IconButton, Tooltip } from '@shared/ui'
+import { IconButton, Tooltip } from '@shared/ui'
 import type { CanvasTool } from '@widgets/editorScene'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import iconMousePointer from '../../editorToolbar/assets/iconMousePointer.svg'
+import iconRotateLeft from '../../editorToolbar/assets/iconRotateLeft.svg'
+import iconRotateRight from '../../editorToolbar/assets/iconRotateRight.svg'
 import styles from '../EditorMobileLayout.module.css'
 
 interface MobileCanvasControlsProps {
   activeTool: CanvasTool
-  fillColor: string | null
-  onOpenColorPicker: () => void
+  canRedo: boolean
+  canUndo: boolean
   onToolChange: (tool: CanvasTool) => void
+  onRedo: () => void
+  onUndo: () => void
   onZoomIn: () => void
   onZoomOut: () => void
-  onZoomReset: () => void
   zoom: number
 }
 
 export function MobileCanvasControls({
   activeTool,
-  fillColor,
-  onOpenColorPicker,
+  canRedo,
+  canUndo,
   onToolChange,
+  onRedo,
+  onUndo,
   onZoomIn,
   onZoomOut,
-  onZoomReset,
   zoom,
 }: MobileCanvasControlsProps) {
   const { t } = useTranslation()
@@ -32,17 +35,13 @@ export function MobileCanvasControls({
 
   return (
     <div className={styles.canvasControls}>
-      {fillColor ? (
-        <ColorSwatch
-          className={styles.fillSwatch}
-          color={fillColor}
-          onClick={onOpenColorPicker}
-        />
-      ) : (
-        <IconButton className={styles.activeTool} title={t('Select tool')}>
-          <img alt="" src={iconMousePointer} />
-        </IconButton>
-      )}
+      <IconButton
+        className={activeTool === 'select' ? styles.activeTool : undefined}
+        onClick={() => onToolChange('select')}
+        title={t('Select tool')}
+      >
+        <span className={styles.selectIcon} />
+      </IconButton>
       <IconButton
         className={activeTool === 'hand' ? styles.activeTool : undefined}
         onClick={() => onToolChange(activeTool === 'hand' ? 'select' : 'hand')}
@@ -70,8 +69,11 @@ export function MobileCanvasControls({
         </IconButton>
       </Tooltip>
       <span />
-      <IconButton onClick={onZoomReset} title={t('Fit canvas')}>
-        <span className={styles.fitIcon}>⌗</span>
+      <IconButton disabled={!canUndo} onClick={onUndo} title={t('Undo')}>
+        <img alt="" src={iconRotateLeft} />
+      </IconButton>
+      <IconButton disabled={!canRedo} onClick={onRedo} title={t('Redo')}>
+        <img alt="" src={iconRotateRight} />
       </IconButton>
     </div>
   )

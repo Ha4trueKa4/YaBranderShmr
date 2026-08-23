@@ -50,7 +50,7 @@ fun FeedAppendError(
     ) {
         Text(
             text = stringResource(R.string.feed_append_error_retry),
-            style = AppTypography.body.copy(color = AppColors.Accent),
+            style = AppTypography.body.copy(color = AppColors.AccentText),
             modifier = Modifier
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },

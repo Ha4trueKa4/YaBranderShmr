@@ -4,7 +4,9 @@ import { observer } from 'mobx-react-lite'
 import { useTranslation } from 'react-i18next'
 
 import { FillProperty } from '../components/FillProperty'
+import { OpacityProperty } from '../components/OpacityProperty'
 import { ScrubbableNumberInput } from '../components/ScrubbableNumberInput'
+import { TransformProperties } from '../components/TransformProperties'
 import styles from '../Properties.module.css'
 
 const fontFamilies = [
@@ -19,14 +21,29 @@ const fontFamilies = [
 
 interface TextPropertiesProps {
   layer: EditorText
+  measuredRotationCenter?: { x: number; y: number }
   onAnchorChange: (textAnchor: 'end' | 'middle' | 'start') => void
   onContentChange: (text: string) => void
   onFillColorChange: (color: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onFontFamilyChange: (fontFamily: string) => void
   onFontSizeChange: (fontSize: number) => void
   onFontStyleChange: (fontStyle: 'italic' | 'normal') => void
   onFontWeightChange: (fontWeight: number) => void
   onPositionChange: (x: number, y: number) => void
+  onOpacityChange: (opacity: number) => void
+  onRotationChange: (
+    rotation: number,
+    rotationCenter: { x: number; y: number },
+  ) => void
+  onTransformChange: (transform: {
+    rotationCenter?: { x: number; y: number }
+    scaleX: number
+    scaleY: number
+    x: number
+    y: number
+  }) => void
 }
 
 function getFiniteNumber(value: string): number | null {
@@ -37,14 +54,20 @@ function getFiniteNumber(value: string): number | null {
 
 export const TextProperties = observer(function TextProperties({
   layer,
+  measuredRotationCenter,
   onAnchorChange,
   onContentChange,
   onFillColorChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onFontFamilyChange,
   onFontSizeChange,
   onFontStyleChange,
   onFontWeightChange,
   onPositionChange,
+  onOpacityChange,
+  onRotationChange,
+  onTransformChange,
 }: TextPropertiesProps) {
   const { t } = useTranslation()
   const fill =
@@ -100,9 +123,21 @@ export const TextProperties = observer(function TextProperties({
           />
         </div>
       </div>
+      <TransformProperties
+        layer={layer}
+        measuredRotationCenter={measuredRotationCenter}
+        onRotationChange={onRotationChange}
+        onTransformChange={onTransformChange}
+      />
+      <OpacityProperty
+        onOpacityChange={onOpacityChange}
+        opacity={layer.opacity}
+      />
       <FillProperty
         fill={fill}
         onFillChange={onFillColorChange}
+        onEyeDropperEnd={onEyeDropperEnd}
+        onEyeDropperStart={onEyeDropperStart}
         title={t('Color')}
       />
       <label className={styles.field}>

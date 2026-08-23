@@ -20,8 +20,11 @@ public:
 
   /// @param history Предыдущие запросы пользователя по этому проекту
   ///        (без ответов модели), от старых к новым.
+  /// @param reference_svgs SVG других проектов пользователя, выбранные им как
+  ///        референсы (только для первичной генерации).
   LlmPrompt BuildGenerationPrompt(const std::string& user_message,
-                                  const std::vector<std::string>& history = {}) const;
+                                  const std::vector<std::string>& history = {},
+                                  const std::vector<std::string>& reference_svgs = {}) const;
 
   LlmPrompt BuildEditPrompt(const std::string& current_state,
                             const std::string& user_message,

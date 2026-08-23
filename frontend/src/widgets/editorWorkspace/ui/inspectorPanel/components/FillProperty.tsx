@@ -1,29 +1,35 @@
-import { ColorPicker, ColorSwatch, Range } from '@shared/ui'
+import { ColorPicker, ColorSwatch } from '@shared/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import styles from './FillProperty.module.css'
+import { OpacityProperty } from './OpacityProperty'
 
 interface FillPropertyProps {
   fill: string
   onFillChange: (fill: string) => void
+  onEyeDropperEnd?: () => void
+  onEyeDropperStart?: () => void
   onOpacityChange?: (opacity: number) => void
   opacity?: number
+  opacityLabel?: string
   title?: string
 }
 
 export function FillProperty({
   fill,
   onFillChange,
+  onEyeDropperEnd,
+  onEyeDropperStart,
   onOpacityChange,
   opacity = 1,
-  title = 'Fill',
+  opacityLabel,
+  title,
 }: FillPropertyProps) {
   const { t } = useTranslation()
   const [draftFill, setDraftFill] = useState(fill)
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const colorControlRef = useRef<HTMLDivElement>(null)
-  const opacityPercent = Math.round(opacity * 100)
 
   useEffect(() => {
     if (!isColorPickerOpen) {
@@ -63,13 +69,9 @@ export function FillProperty({
     onFillChange(color)
   }
 
-  function handleOpacityChange(opacityPercent: number) {
-    onOpacityChange?.(opacityPercent / 100)
-  }
-
   return (
     <section className={styles.property}>
-      <p className={styles.title}>{title}</p>
+      <p className={styles.title}>{t(title ?? 'Fill')}</p>
       <div className={styles.colorValue}>
         <div className={styles.colorControl} ref={colorControlRef}>
           <ColorSwatch
@@ -78,30 +80,25 @@ export function FillProperty({
           />
           {isColorPickerOpen && (
             <div className={styles.colorPickerPopover}>
-              <ColorPicker color={draftFill} onChange={handleFillChange} />
+              <ColorPicker
+                color={draftFill}
+                onChange={handleFillChange}
+                onEyeDropperEnd={onEyeDropperEnd}
+                onEyeDropperStart={onEyeDropperStart}
+              />
             </div>
           )}
         </div>
         <div>
           <p className={styles.hex}>{draftFill.toUpperCase()}</p>
-          <p className={styles.colorName}>{t('Violet Primary')}</p>
         </div>
       </div>
       {onOpacityChange && (
-        <>
-          <div className={styles.opacityHeader}>
-            <span>{t('Opacity')}</span>
-            <strong>{opacityPercent}%</strong>
-          </div>
-          <Range
-            max="100"
-            min="0"
-            onChange={(event) =>
-              handleOpacityChange(Number(event.target.value))
-            }
-            value={opacityPercent}
-          />
-        </>
+        <OpacityProperty
+          label={opacityLabel ?? 'Fill opacity'}
+          onOpacityChange={onOpacityChange}
+          opacity={opacity}
+        />
       )}
     </section>
   )

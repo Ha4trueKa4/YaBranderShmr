@@ -10,12 +10,14 @@ type CreateProjectRequest = PostProjectsData['body']
 
 export async function createProject(
   body: CreateProjectRequest,
+  signal?: AbortSignal,
 ): Promise<Project> {
   const validBody = zPostProjectsBody.parse(body)
   const response = await api<unknown, CreateProjectRequest>('/projects', {
     method: 'POST',
     body: validBody,
     requiresAuth: true,
+    signal,
   })
 
   return parseApiResponse(zPostProjectsResponse, response, '/projects')

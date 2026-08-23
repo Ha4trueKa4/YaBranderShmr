@@ -103,6 +103,38 @@ final class ProjectPreviewViewModel {
         return imageURL
     }
 
+    func exportSVGData() async throws -> Data {
+        switch mode {
+        case .version:
+            guard let versionID else { throw NetworkError.invalidResponse }
+            let key = SVGCache.versionKey(projectID: projectID, versionID: versionID)
+            if let cached = await SVGCache.shared.dataIfCached(for: key) {
+                return cached
+            }
+            let url = try await versionImageURL()
+            return try await SVGCache.shared.data(for: url, key: key)
+
+        case .owned:
+            let url: URL
+            if let imageURL, !(imageIsPrivate && URLSignature.isExpired(imageURL)) {
+                url = imageURL
+            } else {
+                url = try await refreshOwnedImageURL()
+            }
+            return try await cachedData(for: url, isPrivate: imageIsPrivate)
+
+        case .publicProject:
+            guard let imageURL else { throw NetworkError.invalidResponse }
+            return try await cachedData(for: imageURL, isPrivate: false)
+        }
+    }
+
+    private func cachedData(for url: URL, isPrivate: Bool) async throws -> Data {
+        let source = SVGDocumentView.Source.url(url, isPrivate: isPrivate)
+        let key = source.cacheKey ?? url.absoluteString
+        return try await SVGCache.shared.data(for: url, key: key)
+    }
+
     func load() async {
         guard !isLoading else { return }
         isLoading = true
