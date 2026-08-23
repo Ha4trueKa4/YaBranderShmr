@@ -23,6 +23,7 @@ interface SceneFrameProps {
   activeTool: CanvasTool
   constrainZoom: (zoom: number) => number
   document: EditorDocument
+  isMobileLayout: boolean
   isReadOnly: boolean
   onClearSelection: () => void
   onDocumentChangeEnd: () => void
@@ -78,6 +79,7 @@ export function SceneFrame({
   activeTool,
   constrainZoom,
   document,
+  isMobileLayout,
   isReadOnly,
   onClearSelection,
   onDocumentChangeEnd,
@@ -280,6 +282,7 @@ export function SceneFrame({
                   canvasX={document.viewBoxX ?? 0}
                   canvasY={document.viewBoxY ?? 0}
                   getEditableElement={getEditableElement}
+                  isMobileLayout={isMobileLayout}
                   onDocumentChangeEnd={onDocumentChangeEnd}
                   onDocumentChangeStart={onDocumentChangeStart}
                   onShapeTransformChange={onShapeTransformChange}

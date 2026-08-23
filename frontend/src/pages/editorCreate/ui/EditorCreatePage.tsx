@@ -3,6 +3,7 @@ import {
   deleteProject,
   getProjectSvg,
   projectQueryKey,
+  projectReferencesStore,
   projectSvgQueryKey,
 } from '@entities/project'
 import {
@@ -31,9 +32,11 @@ import { EditorGeneratingState } from './components/EditorGeneratingState'
 import styles from './EditorCreatePage.module.css'
 
 interface ProjectDraft {
+  data?: string
   description: string
   model: string
   name: string
+  references?: string[]
 }
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
@@ -57,6 +60,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       setCancelledDraft(null)
       generationProcessStore.begin(draft)
       let pollingController: AbortController | null = null
+      let createdProjectId: string | undefined
 
       const deleteCancelledProject = async (projectId: string | undefined) => {
         if (!projectId) {
@@ -72,7 +76,21 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
 
       try {
         const project = await createProject({
-          body: { ...draft, prompt: draft.description },
+          body: draft.data
+            ? {
+                data: draft.data,
+                name: draft.name,
+                references: draft.references,
+              }
+            : {
+                model: draft.model,
+                name: draft.name,
+                prompt: draft.description,
+                references:
+                  draft.references && draft.references.length > 0
+                    ? draft.references
+                    : undefined,
+              },
         })
 
         if (!project.id) {
@@ -80,6 +98,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
+        createdProjectId = project.id
         const jobId = project.job_id
 
         // Не прерываем запрос создания проекта по AbortSignal: сервер мог уже
@@ -91,6 +110,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         }
 
         if (!jobId) {
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -110,6 +130,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         )
 
         if (generatedProject.status === 'error') {
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -119,6 +140,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -137,11 +159,14 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       } catch (error) {
         if (error instanceof GenerationPollingCancelledError) {
           await deleteCancelledProject(
-            generationProcessStore.projectId ?? undefined,
+            createdProjectId ?? generationProcessStore.projectId ?? undefined,
           )
           return
         }
 
+        await deleteCancelledProject(
+          createdProjectId ?? generationProcessStore.projectId ?? undefined,
+        )
         toast.error(
           error instanceof GenerationPollingTimeoutError
             ? t('Generation is taking too long. Please try again.')
@@ -172,7 +197,16 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     }
 
     pendingGenerationStore.clear()
-    void startGeneration(draft)
+    void startGeneration({ ...draft, references: projectReferencesStore.ids })
+  }
+
+  function handleUpload(data: string) {
+    handleGenerate({
+      data,
+      description: '',
+      model: DEFAULT_GENERATION_MODEL,
+      name: t('Untitled project'),
+    })
   }
 
   function handleCancelGeneration() {
@@ -204,6 +238,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
             }
             initialModel={cancelledDraft?.model}
             onGenerate={handleGenerate}
+            onUpload={handleUpload}
             onUnauthorizedModelSelect={
               isAuthorized ? undefined : handleUnauthorizedModelSelect
             }

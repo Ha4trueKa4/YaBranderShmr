@@ -1,14 +1,19 @@
+import { projectReferencesStore } from '@entities/project'
 import { GenerationPromptComposer } from '@features/editorGenerate'
+import { observer } from 'mobx-react-lite'
+import { useState } from 'react'
 import { Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
 import { useGenerationForm } from '../../model/useGenerationForm'
 import { EditorCreateStateLayout } from './EditorCreateStateLayout'
 import styles from './EditorEmptyState.module.css'
+import { EditorFileDropzone } from './EditorFileDropzone'
 
 interface EditorEmptyStateProps {
   initialDescription?: string
   initialModel?: string
+  onUpload: (data: string) => void
   onGenerate: (draft: {
     description: string
     model: string
@@ -17,13 +22,16 @@ interface EditorEmptyStateProps {
   onUnauthorizedModelSelect?: () => void
 }
 
-export function EditorEmptyState({
+export const EditorEmptyState = observer(function EditorEmptyState({
   initialDescription,
   initialModel,
   onGenerate,
+  onUpload,
   onUnauthorizedModelSelect,
 }: EditorEmptyStateProps) {
   const { t } = useTranslation()
+  const [isFileDragging, setIsFileDragging] = useState(false)
+  const selectedReferences = projectReferencesStore.references
   const { form, submit } = useGenerationForm({
     initialValues: {
       description: initialDescription,
@@ -52,7 +60,9 @@ export function EditorEmptyState({
                     onDescriptionChange={field.onChange}
                     onGenerate={submit}
                     onModelChange={modelField.onChange}
+                    onRemoveReference={projectReferencesStore.remove}
                     onUnauthorizedModelSelect={onUnauthorizedModelSelect}
+                    references={selectedReferences}
                   />
                 )}
               />
@@ -65,7 +75,18 @@ export function EditorEmptyState({
       )}
       isCopyWidthLimited
       isPreviewCompact
+      isPreviewDragging={isFileDragging}
+      preview={
+        <EditorFileDropzone
+          description={t(
+            'Create customized vectors, logos, and high-fidelity marks instantly.',
+          )}
+          onDraggingChange={setIsFileDragging}
+          onUpload={onUpload}
+          title={t('Paste your description and generate')}
+        />
+      }
       title={t('Paste your description and generate')}
     />
   )
-}
+})
