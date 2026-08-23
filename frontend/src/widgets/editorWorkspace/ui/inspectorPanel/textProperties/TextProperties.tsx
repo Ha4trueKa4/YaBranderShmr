@@ -24,6 +24,8 @@ interface TextPropertiesProps {
   measuredRotationCenter?: { x: number; y: number }
   onAnchorChange: (textAnchor: 'end' | 'middle' | 'start') => void
   onContentChange: (text: string) => void
+  onColorChangeEnd?: () => void
+  onColorChangeStart?: () => void
   onFillColorChange: (color: string) => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
@@ -57,6 +59,8 @@ export const TextProperties = observer(function TextProperties({
   measuredRotationCenter,
   onAnchorChange,
   onContentChange,
+  onColorChangeEnd,
+  onColorChangeStart,
   onFillColorChange,
   onEyeDropperEnd,
   onEyeDropperStart,
@@ -135,6 +139,8 @@ export const TextProperties = observer(function TextProperties({
       />
       <FillProperty
         fill={fill}
+        onColorChangeEnd={onColorChangeEnd}
+        onColorChangeStart={onColorChangeStart}
         onFillChange={onFillColorChange}
         onEyeDropperEnd={onEyeDropperEnd}
         onEyeDropperStart={onEyeDropperStart}

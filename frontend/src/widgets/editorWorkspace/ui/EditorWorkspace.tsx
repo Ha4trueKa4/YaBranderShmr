@@ -1,5 +1,6 @@
 import { AppRoute } from '@app/providers/router/routes'
 import { type EditorDocument, EditorStore } from '@entities/editorDocument'
+import { useEditorChatGeneration } from '@features/editorChat'
 import { exportEditorDocument } from '@features/editorExport'
 import { VersionHistoryModal } from '@features/editorVersionHistory'
 import {
@@ -8,6 +9,7 @@ import {
   ImageExportModal,
   useToast,
 } from '@shared/ui'
+import { EditorChat } from '@widgets/editorChat'
 import {
   type CanvasTool,
   EditorScene,
@@ -31,6 +33,7 @@ import { LayersPanel } from './layersPanel/LayersPanel'
 interface EditorWorkspaceProps {
   canEdit: boolean
   document: EditorDocument
+  isPublic: boolean
   projectId: string
   projectName: string
 }
@@ -43,6 +46,7 @@ const INITIAL_VIEWPORT_OFFSET: ViewportOffset = { x: 0, y: 0 }
 export const EditorWorkspace = observer(function EditorWorkspace({
   canEdit,
   document,
+  isPublic,
   projectId,
   projectName: initialProjectName,
 }: EditorWorkspaceProps) {
@@ -63,6 +67,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
   const [isImageExportModalOpen, setIsImageExportModalOpen] = useState(false)
   const [isImageExporting, setIsImageExporting] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const [measuredRotationCenter, setMeasuredRotationCenter] = useState<{
     nodeId: string
     x: number
@@ -72,15 +77,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     createCopy,
     hasUnsavedChanges,
     isCreatingCopy,
+    isProjectPublic,
     isSavingVersion,
     markDocumentAsSaved,
     projectName,
     renameProject,
     saveVersion,
     shouldBlockNavigation,
+    toggleProjectVisibility,
   } = useEditorProjectActions({
     canEdit,
     document: editorStore.document,
+    initialIsPublic: isPublic,
     initialProjectName,
     projectId,
   })
@@ -160,6 +168,18 @@ export const EditorWorkspace = observer(function EditorWorkspace({
     setSceneRenderVersion((version) => version + 1)
     setIsMobileInspectorOpen(false)
   }
+
+  const {
+    isGenerationPending: isChatGenerationPending,
+    messages: chatMessages,
+    sendPrompt: sendChatPrompt,
+  } = useEditorChatGeneration({
+    canEdit,
+    hasUnsavedChanges,
+    onDocumentGenerated: handleRestoreDocument,
+    projectId,
+    saveVersion,
+  })
 
   async function handleImageExport(fileType: ImageExportFileType) {
     setIsImageExporting(true)
@@ -245,6 +265,8 @@ export const EditorWorkspace = observer(function EditorWorkspace({
 
   const inspectorProps = {
     definitions: editorStore.document.definitions,
+    onColorChangeEnd: editorStore.commitHistoryTransaction,
+    onColorChangeStart: editorStore.beginHistoryTransaction,
     measuredRotationCenter:
       measuredRotationCenter &&
       measuredRotationCenter.nodeId === editorStore.selectedNode?.id
@@ -316,7 +338,9 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           canRedo={editorStore.canRedo}
           canUndo={editorStore.canUndo}
           isCreatingProjectCopy={isCreatingCopy}
+          isProjectPublic={isProjectPublic}
           isSavingVersion={isSavingVersion}
+          isVisibilityUpdating={isSavingVersion}
           isPropertiesOpen={isMobileInspectorOpen}
           onBack={() => navigate(-1)}
           onCancelColorPicker={handleCancelMobileProperties}
@@ -326,10 +350,12 @@ export const EditorWorkspace = observer(function EditorWorkspace({
           onExport={handleExport}
           onDoneColorPicker={handleDoneMobileProperties}
           onOpenColorPicker={handleOpenMobileColorPicker}
+          onOpenChat={() => setIsMobileChatOpen(true)}
           onOpenProperties={handleOpenMobileProperties}
           onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
           onRedo={handleRedo}
           onSaveVersion={saveVersion}
+          onToggleProjectVisibility={toggleProjectVisibility}
           onDoneProperties={handleDoneMobileProperties}
           onToolChange={setActiveTool}
           onUndo={handleUndo}
@@ -367,6 +393,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               canRedo={editorStore.canRedo}
               canUndo={editorStore.canUndo}
               isCreatingProjectCopy={isCreatingCopy}
+              isProjectPublic={isProjectPublic}
               isSavingVersion={isSavingVersion}
               onBack={() => navigate(-1)}
               onCreateCopy={createCopy}
@@ -376,6 +403,7 @@ export const EditorWorkspace = observer(function EditorWorkspace({
                 navigate(AppRoute.Profile, { viewTransition: true })
               }
               onOpenVersionHistory={() => setIsVersionHistoryOpen(true)}
+              onToggleProjectVisibility={toggleProjectVisibility}
               onToolChange={setActiveTool}
               onRedo={handleRedo}
               onSaveVersion={saveVersion}
@@ -386,6 +414,15 @@ export const EditorWorkspace = observer(function EditorWorkspace({
               zoom={zoom}
             />
           }
+        />
+      )}
+      {canEdit && (
+        <EditorChat
+          isOpen={isMobileLayout ? isMobileChatOpen : undefined}
+          isPending={isChatGenerationPending}
+          messages={chatMessages}
+          onOpenChange={isMobileLayout ? setIsMobileChatOpen : undefined}
+          onSendPrompt={(prompt) => void sendChatPrompt(prompt)}
         />
       )}
       <ConfirmUnsavedChangeModal

@@ -303,4 +303,63 @@ class AuthRepositoryImplTest {
         assertNull(tokenStore.currentToken())
         assertNull(userStore.savedUser)
     }
+
+    @Test
+    fun `loginWithYandex уходит на auth-yandex методом POST с code и запоминает токен`() = runTest {
+        var path: String? = null
+        var body: String? = null
+        val repository = repository { request ->
+            path = request.url.encodedPath
+            body = (request.body as io.ktor.http.content.TextContent).text
+            respond(AuthResponseJson, headers = jsonHeaders())
+        }
+
+        val session = repository.loginWithYandex("auth-code")
+
+        assertEquals("/api/v1/auth/yandex", path)
+        assertTrue("ушло $body", body!!.contains("\"code\":\"auth-code\""))
+        assertEquals("jwt-token", session.accessToken)
+        assertEquals("jwt-token", tokenStore.currentToken())
+    }
+
+    @Test
+    fun `409 на auth-yandex превращается в YandexEmailConflict`() = runTest {
+        val repository = repository {
+            respond(
+                content = """{"code":"EMAIL_EXISTS","message":"занят"}""",
+                status = HttpStatusCode.Conflict,
+                headers = jsonHeaders(),
+            )
+        }
+
+        val error = runCatching { repository.loginWithYandex("auth-code") }.exceptionOrNull()
+
+        assertTrue("получили $error", error is AuthException.YandexEmailConflict)
+        assertNull(tokenStore.currentToken())
+    }
+
+    @Test
+    fun `502 на auth-yandex превращается в YandexAuthFailed`() = runTest {
+        val repository = repository { respondError(HttpStatusCode.BadGateway) }
+
+        val error = runCatching { repository.loginWithYandex("auth-code") }.exceptionOrNull()
+
+        // Это сбой Yandex ID, а не «наш сервер лёг» — сообщение должно быть про Yandex.
+        assertTrue("получили $error", error is AuthException.YandexAuthFailed)
+    }
+
+    @Test
+    fun `400 на auth-yandex тоже превращается в YandexAuthFailed`() = runTest {
+        val repository = repository {
+            respond(
+                content = """{"code":"YANDEX_EMAIL_SCOPE_REQUIRED","message":"нет email"}""",
+                status = HttpStatusCode.BadRequest,
+                headers = jsonHeaders(),
+            )
+        }
+
+        val error = runCatching { repository.loginWithYandex("auth-code") }.exceptionOrNull()
+
+        assertTrue("получили $error", error is AuthException.YandexAuthFailed)
+    }
 }

@@ -1,0 +1,36 @@
+.message {
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+  line-height: 1.45;
+  max-width: 86%;
+  padding: var(--space-3);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.user {
+  align-self: flex-end;
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
+}
+
+.assistant {
+  align-self: flex-start;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.error {
+  background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+}
+
+.pending {
+  color: var(--color-text-secondary);
+}
+
+.pendingContent {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}

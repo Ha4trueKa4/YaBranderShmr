@@ -95,6 +95,8 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/components/svg_validator.cpp
         src/components/prompt_constructor/prompt_constructor_component.cpp
         src/components/vector_search_component.h
+        src/handlers/projects/prompt_validation.h
+        src/handlers/projects/prompt_validation.cpp
         src/handlers/projects/create_project.cpp
         src/handlers/projects/get_project.cpp
         src/handlers/projects/patch_project.cpp

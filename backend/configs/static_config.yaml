@@ -13,7 +13,7 @@ components_manager:
 
     bg-task-processor: # Фоновые генерации (ProjectManagerComponent) — отдельно от
       worker_threads: $worker-bg-threads   # main-task-processor, чтобы не конкурировать
-                                            # с обработкой HTTP-запросов (в т.ч. long-poll).
+      # с обработкой HTTP-запросов (в т.ч. long-poll).
 
     grpc-blocking-task-processor: # Для блокирующей инициализации gRPC-каналов (otlp-logger).
       worker_threads: 2
@@ -223,6 +223,8 @@ components_manager:
       auth:
         types:
           - jwt-required
+      max_requests_in_flight: 150
+      max_requests_per_second: 300
 
     handler-projects-get:
       path: /api/v1/projects/{id}

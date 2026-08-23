@@ -39,6 +39,8 @@ internal class FakeAuthRepository : AuthRepository {
         private set
     var registerCallCount: Int = 0
         private set
+    var yandexCallCount: Int = 0
+        private set
 
     /** Аргументы последнего вызова — для проверки, что они дошли до репозитория. */
     var lastEmail: String? = null
@@ -46,6 +48,8 @@ internal class FakeAuthRepository : AuthRepository {
     var lastPassword: String? = null
         private set
     var lastNickname: String? = null
+        private set
+    var lastYandexCode: String? = null
         private set
 
     /**
@@ -75,6 +79,12 @@ internal class FakeAuthRepository : AuthRepository {
         loginCallCount++
         lastEmail = email
         lastPassword = password
+        return awaitResult()
+    }
+
+    override suspend fun loginWithYandex(code: String): AuthSession {
+        yandexCallCount++
+        lastYandexCode = code
         return awaitResult()
     }
 

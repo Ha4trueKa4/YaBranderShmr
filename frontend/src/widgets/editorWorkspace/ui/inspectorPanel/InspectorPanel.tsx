@@ -10,6 +10,8 @@ import { TextProperties } from './textProperties/TextProperties'
 interface InspectorPanelProps {
   definitions?: EditorDefinitions
   measuredRotationCenter?: { x: number; y: number }
+  onColorChangeEnd?: () => void
+  onColorChangeStart?: () => void
   onShapeFillChange: (nodeId: string, color: string) => void
   onEyeDropperEnd?: () => void
   onEyeDropperStart?: () => void
@@ -99,6 +101,8 @@ function InspectorHeader({
 export function InspectorPanel({
   definitions,
   measuredRotationCenter,
+  onColorChangeEnd,
+  onColorChangeStart,
   onShapeFillChange,
   onEyeDropperEnd,
   onEyeDropperStart,
@@ -184,6 +188,8 @@ export function InspectorPanel({
             definitions={definitions}
             layer={selectedNode}
             measuredRotationCenter={measuredRotationCenter}
+            onColorChangeEnd={onColorChangeEnd}
+            onColorChangeStart={onColorChangeStart}
             onFillChange={(color) => onShapeFillChange(selectedNode.id, color)}
             onEyeDropperEnd={onEyeDropperEnd}
             onEyeDropperStart={onEyeDropperStart}
@@ -241,6 +247,8 @@ export function InspectorPanel({
         <TextProperties
           layer={selectedNode}
           measuredRotationCenter={measuredRotationCenter}
+          onColorChangeEnd={onColorChangeEnd}
+          onColorChangeStart={onColorChangeStart}
           onAnchorChange={(textAnchor) =>
             onTextAnchorChange(selectedNode.id, textAnchor)
           }

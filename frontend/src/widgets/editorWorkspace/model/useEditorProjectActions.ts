@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom'
 interface UseEditorProjectActionsParams {
   canEdit: boolean
   document: EditorDocument
+  initialIsPublic: boolean
   initialProjectName: string
   projectId: string
 }
@@ -21,6 +22,7 @@ interface UseEditorProjectActionsParams {
 export function useEditorProjectActions({
   canEdit,
   document,
+  initialIsPublic,
   initialProjectName,
   projectId,
 }: UseEditorProjectActionsParams) {
@@ -29,11 +31,12 @@ export function useEditorProjectActions({
   const toast = useToast()
   const { t } = useTranslation()
   const [projectName, setProjectName] = useState(initialProjectName)
+  const [isProjectPublic, setIsProjectPublic] = useState(initialIsPublic)
+  const [isCopyingProject, setIsCopyingProject] = useState(false)
+  const isLeavingAfterCopyReference = useRef(false)
   const [savedProjectSvg, setSavedProjectSvg] = useState(() =>
     serializeSvg(document),
   )
-  const [isCopyingProject, setIsCopyingProject] = useState(false)
-  const isLeavingAfterCopyReference = useRef(false)
   const { isPending: isSavingVersion, mutateAsync: saveProjectVersion } =
     useUpdateProjectMetadataMutation()
   const { isPending: isCreatingProjectCopy, mutateAsync: createProject } =
@@ -111,20 +114,37 @@ export function useEditorProjectActions({
     toast,
   ])
 
+  const toggleProjectVisibility = useCallback(async () => {
+    const nextIsPublic = !isProjectPublic
+
+    try {
+      await saveProjectVersion({ is_public: nextIsPublic, projectId })
+      setIsProjectPublic(nextIsPublic)
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectQueryKey(projectId),
+        }),
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['feed'] }),
+      ])
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    }
+  }, [isProjectPublic, projectId, queryClient, saveProjectVersion, toast])
+
   const createCopy = useCallback(async () => {
     setIsCopyingProject(true)
 
     try {
-      const createdProject = await createProject({ name: projectName })
+      const createdProject = await createProject({
+        data: serializeSvg(document),
+        name: projectName,
+      })
 
       if (!createdProject.id) {
         throw new TypeError('Created project ID is missing')
       }
 
-      await saveProjectVersion({
-        data: serializeSvg(document),
-        projectId: createdProject.id,
-      })
       isLeavingAfterCopyReference.current = true
       navigate(`/projects/${createdProject.id}`, { viewTransition: true })
       toast.info(t('Project copy created.'))
@@ -133,19 +153,12 @@ export function useEditorProjectActions({
     } finally {
       setIsCopyingProject(false)
     }
-  }, [
-    createProject,
-    document,
-    navigate,
-    projectName,
-    saveProjectVersion,
-    t,
-    toast,
-  ])
+  }, [createProject, document, navigate, projectName, t, toast])
 
   return {
     createCopy,
     isCreatingCopy: isCopyingProject || isCreatingProjectCopy,
+    isProjectPublic,
     isSavingVersion,
     hasUnsavedChanges,
     markDocumentAsSaved,
@@ -153,5 +166,6 @@ export function useEditorProjectActions({
     renameProject,
     saveVersion,
     shouldBlockNavigation,
+    toggleProjectVisibility,
   }
 }

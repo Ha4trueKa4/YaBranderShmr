@@ -1,0 +1,22 @@
+.bar {
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  gap: var(--space-2);
+  max-width: 42rem;
+  padding: var(--space-2);
+  width: min(calc(100vw - 2rem), 42rem);
+}
+
+.icon {
+  color: var(--color-accent-primary);
+  flex: 0 0 auto;
+  margin-left: var(--space-1);
+}
+
+.bar form {
+  flex: 1;
+}
