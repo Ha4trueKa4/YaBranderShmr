@@ -32,10 +32,11 @@ FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
-find_package(userver COMPONENTS core postgresql QUIET)
+find_package(userver COMPONENTS core postgresql redis QUIET)
 if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
+    set(USERVER_FEATURE_REDIS ON CACHE BOOL "" FORCE)
 
     # Compatibility mode: some systems don't support these features
     set(USERVER_FEATURE_CRYPTOPP_BLAKE2 OFF CACHE BOOL "" FORCE)
@@ -127,6 +128,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
+        userver::redis
         nlohmann_json::nlohmann_json
         jwt-cpp
         pugixml

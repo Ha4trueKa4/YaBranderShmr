@@ -120,6 +120,25 @@ components_manager:
     dns-client:
       fs-task-processor: fs-task-processor
 
+    # Секреты (сейчас только Redis) — JSON целиком приходит из переменной
+    # окружения SECDIST_CONFIG, без файла на диске.
+    default-secdist-provider:
+      config: ''
+      missing-ok: true
+      environment-secrets-key: SECDIST_CONFIG
+
+    secdist:
+      provider: default-secdist-provider
+
+    redis:
+      groups:
+        - config_name: ya_brander_jobs
+          db: ya_brander_jobs
+      subscribe_groups: []
+      thread_pools:
+        redis_thread_pool_size: 2
+        sentinel_thread_pool_size: 1
+
     # ==========================================
     # Внешние сервисы (или их моки)
     # ==========================================

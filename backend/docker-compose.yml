@@ -81,6 +81,19 @@ services:
     networks:
       - postgres
 
+  redis:
+    container_name: service-redis
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    ports:
+      - 6379
+    networks:
+      - postgres
+
   ya_brander-container:
     image: ghcr.io/userver-framework/ubuntu-22.04-userver-pg:v3.0
     privileged: true
@@ -102,6 +115,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}
       - YANDEX_OAUTH_CLIENT_SECRET=${YANDEX_OAUTH_CLIENT_SECRET}
+      - SECDIST_CONFIG=${SECDIST_CONFIG}
       - GC_ENABLED=${GC_ENABLED}
     volumes:
       - .:/ya_brander:rw
@@ -116,6 +130,8 @@ services:
         condition: service_completed_successfully
       migrate-vector:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     networks:
       - postgres
       - default
