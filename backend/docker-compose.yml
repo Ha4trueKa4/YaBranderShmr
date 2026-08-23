@@ -30,6 +30,8 @@ services:
       - PGDATABASE=ya_brander_db_1
       - MIGRATIONS_DIR=/postgresql/migrations/db-1
       - SEED_FILE=/postgresql/data/initial_data.sql
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
     volumes:
       - ./postgresql:/postgresql:ro
       - ./scripts:/scripts:ro

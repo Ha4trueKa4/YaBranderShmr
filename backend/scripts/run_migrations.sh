@@ -10,6 +10,7 @@
 #
 # Параметры задаются переменными окружения (см. значения по умолчанию):
 #   PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, MIGRATIONS_DIR, SEED_FILE
+#   ADMIN_EMAIL, ADMIN_PASSWORD_HASH - для создания администратора
 set -euo pipefail
 
 PGHOST="${PGHOST:-service-postgres}"
@@ -45,7 +46,19 @@ for file in "$MIGRATIONS_DIR"/*.sql; do
   fi
 
   echo "Apply: $version"
+
+  # Для миграции с администратором устанавливаем параметры через SET
+  if [[ "$version" == "0004_add_admin.sql" ]]; then
+    echo "Applying admin migration with ADMIN_EMAIL=${ADMIN_EMAIL:-not set}"
+
+    # Устанавливаем параметры сессии через SET перед выполнением миграции
+    psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 \
+      -c "SET my.admin_email = '${ADMIN_EMAIL:-}'" \
+      -c "SET my.admin_password_hash = '${ADMIN_PASSWORD_HASH:-}'" \
+      -f "$file"
+  else
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f "$file"
+  fi
 
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 \
     -c "INSERT INTO schema_migrations (version) VALUES ('$version')"
