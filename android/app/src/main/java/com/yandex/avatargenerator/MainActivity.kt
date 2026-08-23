@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
@@ -40,15 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // auto(...) сам подбирает светлые/тёмные иконки системных баров под активную
-        // тему. Статус-бар оставляем полностью прозрачным — под ним контент экрана.
-        // Навбару в 3-кнопочном режиме нужен запасной scrim: contrast enforcement
-        // появился только на API 29+, а на 26–28 тёмные иконки светлой темы утонули бы
-        // в тёмном контенте под баром (hero-градиент, превью проекта).
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.auto(LightNavigationBarScrim, DarkNavigationBarScrim),
-        )
+        applyEdgeToEdge(settingsRepository.lastThemeMode.isDark(resources.configuration.isNightMode()))
         setContent {
             // initialValue — последние известные тема/язык, а не дефолт: иначе первый
             // кадр мигал бы системными значениями, пока DataStore читается асинхронно.
@@ -56,14 +49,44 @@ class MainActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(initialValue = settingsRepository.lastThemeMode)
             val language by settingsRepository.language
                 .collectAsStateWithLifecycle(initialValue = settingsRepository.lastLanguage)
-            AvatarGeneratorTheme(darkTheme = themeMode.isDark(isSystemInDarkTheme())) {
+            val darkTheme = themeMode.isDark(isSystemInDarkTheme())
+            // Тема живёт в приложении, а не в uiMode системы, поэтому цвет иконок баров
+            // переприменяем сами: иначе в светлой теме поверх тёмной системной остались
+            // бы белые иконки на белом фоне.
+            DisposableEffect(darkTheme) {
+                applyEdgeToEdge(darkTheme)
+                onDispose {}
+            }
+            AvatarGeneratorTheme(darkTheme = darkTheme) {
                 ProvideAppLocale(language) {
                     AvatarGeneratorApp()
                 }
             }
         }
     }
+
+    /**
+     * Статус-бар оставляем полностью прозрачным — под ним контент экрана. Навбару в
+     * 3-кнопочном режиме нужен запасной scrim: contrast enforcement появился только на
+     * API 29+, а на 26–28 тёмные иконки светлой темы утонули бы в тёмном контенте под
+     * баром (hero-градиент, превью проекта).
+     */
+    private fun applyEdgeToEdge(darkTheme: Boolean) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ) { darkTheme },
+            navigationBarStyle = SystemBarStyle.auto(
+                LightNavigationBarScrim,
+                DarkNavigationBarScrim,
+            ) { darkTheme },
+        )
+    }
 }
+
+private fun Configuration.isNightMode(): Boolean =
+    uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
 
 /**
  * Подменяет локаль для всего Compose-поддерева: `stringResource`/`pluralStringResource`
