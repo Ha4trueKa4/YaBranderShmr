@@ -7,11 +7,13 @@ actor ChatCache {
         let id: UUID
         let text: String
         let createdAt: Date
+        let modelID: String
 
-        init(id: UUID, text: String, createdAt: Date) {
+        init(id: UUID, text: String, createdAt: Date, modelID: String) {
             self.id = id
             self.text = text
             self.createdAt = createdAt
+            self.modelID = modelID
         }
 
         init(from decoder: Decoder) throws {
@@ -19,6 +21,8 @@ actor ChatCache {
             id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
             text = try container.decode(String.self, forKey: .text)
             createdAt = try container.decode(Date.self, forKey: .createdAt)
+            modelID = try container.decodeIfPresent(String.self, forKey: .modelID)
+                ?? GenerationModel.defaultID
         }
     }
 

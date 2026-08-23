@@ -17,7 +17,10 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 
+#include <ya_brander/sql_queries.hpp>
+
 #include "../../utils/errors.hpp"
+#include "../../utils/postgres_retry.hpp"
 
 namespace ya_brander::auth {
 
@@ -191,10 +194,12 @@ YandexOAuthHandler::YandexProfile YandexOAuthHandler::FetchProfileFromJwt(
 YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const YandexProfile& profile) const {
     // 1. Пользователь уже входил через Yandex ID раньше.
     {
-        auto result = pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kMaster,
-            "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
-            profile.provider_id);
+        auto result = utils::ExecuteSelectWithRetry(
+            "select-yandex-user", [&] {
+              return pg_cluster_->Execute(
+                  userver::storages::postgres::ClusterHostType::kMaster,
+                  sql::kSelectYandexUser, profile.provider_id);
+            });
         if (result.Size() > 0) {
             const auto row = result.Front();
             return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
@@ -205,10 +210,12 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
     //    привязываем Yandex ID автоматически (см. EmailOwnedByAnotherAccountError),
     //    отдаём наверх ошибку, чтобы пользователь подтвердил привязку явно.
     {
-        auto result = pg_cluster_->Execute(
-            userver::storages::postgres::ClusterHostType::kMaster,
-            "SELECT 1 FROM users WHERE email = $1 AND provider_id IS NULL",
-            profile.email);
+        auto result = utils::ExecuteSelectWithRetry(
+            "select-password-user-by-email", [&] {
+              return pg_cluster_->Execute(
+                  userver::storages::postgres::ClusterHostType::kMaster,
+                  sql::kSelectPasswordUserByEmail, profile.email);
+            });
         if (result.Size() > 0) {
             throw EmailOwnedByAnotherAccountError{};
         }
@@ -221,9 +228,7 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
         try {
             auto result = pg_cluster_->Execute(
                 userver::storages::postgres::ClusterHostType::kMaster,
-                "INSERT INTO users(login, email, password_hash, provider, provider_id) "
-                "VALUES($1, $2, NULL, 'yandex', $3) "
-                "RETURNING id::text, login, email",
+                sql::kRegisterYandexUser,
                 login, profile.email, profile.provider_id);
             const auto row = result.Front();
             return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
@@ -234,10 +239,12 @@ YandexOAuthHandler::UserRecord YandexOAuthHandler::FindOrCreateUser(const Yandex
                 continue;
             }
             if (constraint == kProviderIdentityIndex) {
-                auto result = pg_cluster_->Execute(
-                    userver::storages::postgres::ClusterHostType::kMaster,
-                    "SELECT id::text, login, email FROM users WHERE provider = 'yandex' AND provider_id = $1",
-                    profile.provider_id);
+                auto result = utils::ExecuteSelectWithRetry(
+                    "select-yandex-user", [&] {
+                      return pg_cluster_->Execute(
+                          userver::storages::postgres::ClusterHostType::kMaster,
+                          sql::kSelectYandexUser, profile.provider_id);
+                    });
                 const auto row = result.Front();
                 return {row[0].As<std::string>(), row[1].As<std::string>(), row[2].As<std::string>()};
             }
@@ -285,6 +292,8 @@ userver::formats::json::Value YandexOAuthHandler::HandleRequestJsonThrow(
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kInternalServerError);
         return MakeError("INTERNAL_ERROR", "Something went wrong on our side. Please try again.");
+    } catch (const utils::DatabaseUnavailableError&) {
+        throw;
     } catch (const std::exception& ex) {
         LOG_ERROR() << "Yandex OAuth flow failed: " << ex.what();
         request.SetResponseStatus(userver::server::http::HttpStatus::kBadGateway);

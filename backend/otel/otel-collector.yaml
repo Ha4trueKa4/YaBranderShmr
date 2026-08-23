@@ -23,6 +23,11 @@ receivers:
 processors:
   cumulative_to_delta:
   batch:
+  resource:  # Tags every signal with Monium's required service identity (the metrics
+    attributes:  # pipeline had none before — it relied on the Prometheus receiver's implicit
+      - key: service.name  # job->service.name translation, which Monium didn't recognize).
+        value: ${env:OTEL_SERVICE_NAME}
+        action: upsert
 
 extensions:
   health_check:  # Exposes GET /health on 13133 once all pipelines are up — used by the
@@ -41,13 +46,24 @@ service:
   pipelines:
     metrics:
       receivers: [ otlp, prometheus ]
-      processors: [ batch, cumulative_to_delta ]
+      processors: [ resource, batch, cumulative_to_delta ]
       exporters: [ otlp_grpc/monium ]
     traces:
       receivers: [ otlp ]
-      processors: [ batch ]
+      processors: [ resource, batch ]
       exporters: [ otlp_grpc/monium ]
     logs:
       receivers: [ otlp ]
-      processors: [ batch ]
+      processors: [ resource, batch ]
       exporters: [ otlp_grpc/monium ]
+  telemetry:  # Self-monitoring: pushes the collector's own health (exporter queue depth,
+    metrics:  # dropped/failed export counts, etc.) back through its own otlp receiver into
+      level: normal  # Monium — so failures like the API-key issue above show up as metrics
+      readers:  # instead of only being visible via `docker logs`.
+        - periodic:
+            exporter:
+              otlp:
+                protocol: http/protobuf
+                endpoint: http://localhost:4318
+            interval: 30000
+            timeout: 5000

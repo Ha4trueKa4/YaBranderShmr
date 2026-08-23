@@ -3,6 +3,7 @@ package com.yandex.avatargenerator.feature.project.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
+import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
@@ -37,6 +38,7 @@ import java.util.UUID
 internal class ProjectViewModel(
     private val chatRepository: ChatRepository,
     private val versionsRepository: VersionsRepository,
+    private val projectRepository: ProjectRepository,
     private val projectId: String,
 ) : ViewModel() {
 
@@ -65,6 +67,24 @@ internal class ProjectViewModel(
 
     /** Повтор после ошибки. */
     fun retry() = load()
+
+    /**
+     * Переключает видимость проекта (`PATCH /projects/{id}`).
+     *
+     * Оптимистично: чип в шапке и шторка переключаются сразу, до ответа сервера —
+     * так тап ощущается мгновенным. Не прошло — откатываем видимость обратно; свой
+     * промпт-флоу это не трогает, генерация и приватность независимы.
+     */
+    fun setVisibility(isPublic: Boolean) {
+        val state = _uiState.value
+        if (state !is ProjectUiState.Content || state.isPublic == isPublic) return
+
+        _uiState.updateContent { it.copy(isPublic = isPublic) }
+        viewModelScope.launch {
+            projectRepository.updateProject(projectId, isPublic = isPublic)
+                .onFailure { _uiState.updateContent { content -> content.copy(isPublic = !isPublic) } }
+        }
+    }
 
     /** Ввод обрезаем по [MaxPromptBytes] — см. комментарий у константы. */
     fun onDraftChange(text: String) {

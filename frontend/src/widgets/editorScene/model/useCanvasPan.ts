@@ -1,4 +1,5 @@
 import {
+  type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useRef,
@@ -9,6 +10,7 @@ import type { ViewportOffset } from './viewportOffset'
 interface UseCanvasPanParams {
   activeTool: CanvasTool
   constrainOffset: (offset: ViewportOffset) => ViewportOffset
+  isNativeGestureActiveReference: MutableRefObject<boolean>
   offset: ViewportOffset
   onOffsetChange: (offset: ViewportOffset) => void
 }
@@ -17,11 +19,13 @@ interface PanState {
   pointerId: number
   startOffset: ViewportOffset
   startPosition: { x: number; y: number }
+  target: HTMLDivElement
 }
 
 export function useCanvasPan({
   activeTool,
   constrainOffset,
+  isNativeGestureActiveReference,
   offset,
   onOffsetChange,
 }: UseCanvasPanParams) {
@@ -29,6 +33,10 @@ export function useCanvasPan({
 
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (isNativeGestureActiveReference.current) {
+        return
+      }
+
       const canPanWithHandTool = activeTool === 'hand' && event.button === 0
       const canPanWithMiddleButton = event.button === 1
 
@@ -42,16 +50,21 @@ export function useCanvasPan({
         pointerId: event.pointerId,
         startOffset: offset,
         startPosition: { x: event.clientX, y: event.clientY },
+        target: event.currentTarget,
       }
     },
-    [activeTool, offset],
+    [activeTool, isNativeGestureActiveReference, offset],
   )
 
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const panState = panStateReference.current
 
-      if (!panState || panState.pointerId !== event.pointerId) {
+      if (
+        isNativeGestureActiveReference.current ||
+        !panState ||
+        panState.pointerId !== event.pointerId
+      ) {
         return
       }
 
@@ -63,7 +76,7 @@ export function useCanvasPan({
         }),
       )
     },
-    [constrainOffset, onOffsetChange],
+    [constrainOffset, isNativeGestureActiveReference, onOffsetChange],
   )
 
   const stopPanning = useCallback(
@@ -81,7 +94,18 @@ export function useCanvasPan({
     [],
   )
 
+  const cancelPan = useCallback(() => {
+    const panState = panStateReference.current
+
+    if (panState?.target.hasPointerCapture(panState.pointerId)) {
+      panState.target.releasePointerCapture(panState.pointerId)
+    }
+
+    panStateReference.current = null
+  }, [])
+
   return {
+    cancelPan,
     onPointerCancel: stopPanning,
     onPointerDown,
     onPointerMove,
