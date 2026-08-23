@@ -4,10 +4,6 @@
   background: var(--color-surface);
 }
 
-:global(:root[data-theme="sephia"]) .header {
-  border-bottom: 0;
-}
-
 .content {
   position: relative;
   display: flex;
@@ -71,16 +67,12 @@
 }
 
 :global(:root[data-theme="dark"]) .logoDark,
-:global(:root[data-theme="light"]) .logoLight,
-:global(:root[data-theme="sephia"]) .logoLight,
-:global(:root[data-theme="yandex"]) .logoLight {
+:global(:root[data-theme="light"]) .logoLight {
   display: block;
 }
 
 :global(:root[data-theme="dark"]) .logoLight,
-:global(:root[data-theme="light"]) .logoDark,
-:global(:root[data-theme="sephia"]) .logoDark,
-:global(:root[data-theme="yandex"]) .logoDark {
+:global(:root[data-theme="light"]) .logoDark {
   display: none;
 }
 
