@@ -1,10 +1,10 @@
+import type { ProjectChatMessage } from '@entities/projectChat'
 import { ChatMessage } from '@shared/ui/ChatMessage'
 import { useTranslation } from 'react-i18next'
-import type { EditorChatMessage } from '../../model/types'
 import styles from './ChatMessageList.module.css'
 
 interface ChatMessageListProps {
-  messages: EditorChatMessage[]
+  messages: ProjectChatMessage[]
 }
 
 export function ChatMessageList({ messages }: ChatMessageListProps) {
@@ -24,11 +24,22 @@ export function ChatMessageList({ messages }: ChatMessageListProps) {
         <ChatMessage
           author={message.role}
           isError={message.kind === 'error'}
-          isPending={message.kind === 'pending'}
+          isPending={
+            message.kind === 'pending' || message.kind === 'cancelling'
+          }
           key={message.id}
-          pendingLabel={t('Updating the design…')}
+          pendingLabel={
+            message.kind === 'cancelling'
+              ? t('Cancelling generation…')
+              : t('Updating the design…')
+          }
         >
-          {message.text}
+          {message.text ??
+            (message.kind === 'success'
+              ? t('A new version has been created.')
+              : message.kind === 'cancelled'
+                ? t('Generation cancelled.')
+                : t('Unable to update the design. Please try again.'))}
         </ChatMessage>
       ))}
     </div>

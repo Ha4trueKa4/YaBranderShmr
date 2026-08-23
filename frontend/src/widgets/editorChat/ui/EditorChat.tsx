@@ -1,7 +1,8 @@
+import type { ProjectChatMessage } from '@entities/projectChat'
 import type { PointerEvent } from 'react'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { EditorChatMessage, EditorChatPosition } from '../model/types'
+import type { EditorChatPosition } from '../model/types'
 import { ChatCollapsedBar } from './components/ChatCollapsedBar'
 import { ChatComposer } from './components/ChatComposer'
 import { ChatHeader } from './components/ChatHeader'
@@ -11,7 +12,7 @@ import styles from './EditorChat.module.css'
 interface EditorChatProps {
   disabled?: boolean
   isPending?: boolean
-  messages: EditorChatMessage[]
+  messages: ProjectChatMessage[]
   onSendPrompt: (prompt: string) => void
 }
 
