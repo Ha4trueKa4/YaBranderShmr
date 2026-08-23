@@ -68,6 +68,21 @@ def _last_generation_call(mock_yandex_gpt):
     return mock_yandex_gpt.next_call()
 
 
+async def _create_project_synchronously(service_client, headers, payload):
+    """POST /projects (ветка копирования: data без prompt) — синхронно,
+    201, без job_id.
+    """
+    response = await service_client.post(
+        "/api/v1/projects",
+        json=payload,
+        headers=headers,
+    )
+    assert response.status == 201
+    data = response.json()
+    assert "job_id" not in data
+    return data
+
+
 def _drain_mock_calls(mock_yandex_gpt):
     """Сбрасывает все накопленные в очереди мока вызовы.
 
@@ -216,17 +231,17 @@ async def test_create_project_unauthorized(service_client):
     assert response.status == 401
 
 
-async def test_create_project_prompt_required(
+async def test_create_project_neither_prompt_nor_data(
         service_client, auth_header_a
 ):
-    """Без prompt создать проект нельзя (prompt обязателен) -> 400"""
+    """Ни prompt, ни data не переданы -> 400"""
     response = await service_client.post(
         "/api/v1/projects",
         json={"name": "Бренд кофейни"},
         headers=auth_header_a,
     )
     assert response.status == 400
-    assert response.json()["message"] == "Prompt cannot be empty"
+    assert response.json()["message"] == "Either prompt or data is required"
 
 
 async def test_create_project_without_name_or_description(
@@ -655,3 +670,57 @@ async def test_create_project_references_too_many_rejected(
     assert response.status == 400
     assert response.json()[
         "message"] == "references supports at most 2 project ids"
+
+
+# ===================================================
+# Копирование чужого проекта через POST /projects
+# (поле data, без prompt) — синхронно, без LLM
+# ===================================================
+async def test_create_project_from_data_copies_svg(
+        service_client, project_b,
+        auth_header_a, auth_header_b, mock_yandex_gpt
+):
+    """prompt пуст, data непустая -> 201 без job_id, SVG скопирован, LLM
+    не вызывался вовсе
+    """
+    patch_resp = await service_client.patch(
+        f"/api/v1/projects/{project_b['id']}",
+        json={"is_public": True, "data": REFERENCE_SVG},
+        headers=auth_header_b,
+    )
+    assert patch_resp.status == 200
+
+    # project_b (фикстура) уже сам вызвал LLM при своей первичной генерации —
+    # убираем эти вызовы из очереди, чтобы ниже надёжно проверить, что уже
+    # это, копирующее, действие LLM не вызывает вовсе.
+    _drain_mock_calls(mock_yandex_gpt)
+
+    data = await _create_project_synchronously(
+        service_client, auth_header_a,
+        {"name": "Копия", "data": REFERENCE_SVG},
+    )
+
+    assert data["name"] == "Копия"
+    assert isinstance(data["url"], str)
+    assert data["url"]
+    assert mock_yandex_gpt.times_called == 0
+
+
+async def test_create_project_prompt_takes_precedence_over_data(
+        service_client, auth_header_a, mock_yandex_gpt
+):
+    """И prompt, и data переданы -> обычный LLM-путь (202+job_id), data
+    полностью игнорируется
+    """
+    data = await _create_project_and_wait(
+        service_client, auth_header_a,
+        {
+            "name": "Новый проект",
+            "prompt": "Сделай логотип",
+            "data": REFERENCE_SVG,
+        },
+    )
+    assert "job_id" in data
+
+    call = _last_generation_call(mock_yandex_gpt)
+    assert REFERENCE_SVG not in call["request"].json["input"]
