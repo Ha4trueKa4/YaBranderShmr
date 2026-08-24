@@ -5,9 +5,26 @@ struct ChatMessageView: View {
     let message: ChatMessage
     let timeTitle: String
     private let assistantContent: AnyView
+    private let onRetry: (() -> Void)?
 
-    init(message: ChatMessage, timeTitle: String) {
-        self.init(message: message, timeTitle: timeTitle) {
+    /// Кеш ширин статус-бейджей доставки: вариантов текста всего два
+    /// («Pending»/«Not sent»), а замер через NSString/UIImage раньше
+    /// выполнялся на каждый ререндер каждого баббла. Ключ включает кегль
+    /// шрифта, чтобы кеш инвалидовался при смене Dynamic Type.
+    private struct DeliveryStatusWidthKey: Hashable {
+        let title: String
+        let systemImage: String
+        let fontPointSize: CGFloat
+    }
+
+    private static var deliveryStatusWidthCache: [DeliveryStatusWidthKey: CGFloat] = [:]
+
+    init(
+        message: ChatMessage,
+        timeTitle: String,
+        onRetry: (() -> Void)? = nil
+    ) {
+        self.init(message: message, timeTitle: timeTitle, onRetry: onRetry) {
             EmptyView()
         }
     }
@@ -15,10 +32,12 @@ struct ChatMessageView: View {
     init<Content: View>(
         message: ChatMessage,
         timeTitle: String,
+        onRetry: (() -> Void)? = nil,
         @ViewBuilder assistantContent: () -> Content
     ) {
         self.message = message
         self.timeTitle = timeTitle
+        self.onRetry = onRetry
         self.assistantContent = AnyView(assistantContent())
     }
 
@@ -109,8 +128,24 @@ struct ChatMessageView: View {
 
     private var messageContentBody: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(message.text)
-                .foregroundStyle(message.type == .user ? .white : .primary)
+            if case .error = message.attachment {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(.red)
+                    Text(message.text)
+                        .foregroundStyle(.primary)
+                }
+            } else if case .cancelled = message.attachment {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "stop.circle")
+                        .foregroundStyle(.secondary)
+                    Text(message.text)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text(message.text)
+                    .foregroundStyle(message.type == .user ? .white : .primary)
+            }
 
             if message.isPending {
                 HStack(spacing: 4) {
@@ -120,12 +155,21 @@ struct ChatMessageView: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(message.type == .user ? .white.opacity(0.8) : .secondary)
             } else if message.isFailed {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.circle")
-                    Text("Not sent")
+                Button {
+                    onRetry?()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.circle")
+                        Text("Not sent")
+                            .lineLimit(1)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
                 }
+                .buttonStyle(.plain)
+                .disabled(onRetry == nil)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(message.type == .user ? .white.opacity(0.8) : .red)
+                .accessibilityHint("Retries sending this message")
             }
 
             if message.type == .assistant {
@@ -150,11 +194,49 @@ struct ChatMessageView: View {
         let timeWidth = (timeTitle as NSString).size(
             withAttributes: [.font: UIFont.preferredFont(forTextStyle: .caption2)]
         ).width
+        let statusWidth = deliveryStatusWidth
 
         return min(
-            max(max(textWidth, timeWidth) + horizontalPadding, 90),
+            max(max(max(textWidth, timeWidth), statusWidth) + horizontalPadding, 90),
             270
         )
+    }
+
+    private var deliveryStatusWidth: CGFloat {
+        let title: String
+        let systemImage: String
+
+        if message.isFailed {
+            title = "Not sent"
+            systemImage = "exclamationmark.circle"
+        } else if message.isPending {
+            title = "Pending"
+            systemImage = "clock.arrow.circlepath"
+        } else {
+            return 0
+        }
+
+        let preferredFont = UIFont.preferredFont(forTextStyle: .caption2)
+        let font = UIFont.systemFont(ofSize: preferredFont.pointSize, weight: .medium)
+        let key = DeliveryStatusWidthKey(
+            title: title,
+            systemImage: systemImage,
+            fontPointSize: font.pointSize
+        )
+        if let cached = Self.deliveryStatusWidthCache[key] {
+            return cached
+        }
+
+        let textWidth = (title as NSString).size(withAttributes: [.font: font]).width
+        let symbolConfiguration = UIImage.SymbolConfiguration(font: font)
+        let iconWidth = UIImage(
+            systemName: systemImage,
+            withConfiguration: symbolConfiguration
+        )?.size.width ?? font.pointSize
+
+        let width = iconWidth + 4 + textWidth
+        Self.deliveryStatusWidthCache[key] = width
+        return width
     }
 
     private func maximumLineWidth(for text: String, maxWidth: CGFloat) -> CGFloat {

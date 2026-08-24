@@ -19,6 +19,8 @@ nonisolated enum APIEndpoint {
     case projects
     case project(id: UUID)
     case generate(projectID: UUID)
+    case generateStatus(projectID: UUID, jobID: String)
+    case cancelGeneration(projectID: UUID, jobID: String)
     case projectChat(projectID: UUID)
     case projectVersions(projectID: UUID)
     case projectVersion(projectID: UUID, versionID: UUID)
@@ -61,6 +63,12 @@ nonisolated enum APIEndpoint {
         case .generate(let projectID):
             "/projects/\(Self.pathID(projectID))/generate"
 
+        case .generateStatus(let projectID, let jobID):
+            "/projects/\(Self.pathID(projectID))/generate/\(Self.encodedJobID(jobID))"
+
+        case .cancelGeneration(let projectID, let jobID):
+            "/projects/\(Self.pathID(projectID))/generate/\(Self.encodedJobID(jobID))/cancel"
+
         case .projectChat(let projectID):
             "/projects/\(Self.pathID(projectID))/chat"
 
@@ -77,6 +85,14 @@ nonisolated enum APIEndpoint {
 
     private static func pathID(_ id: UUID) -> String {
         id.uuidString.lowercased()
+    }
+
+    /// jobID приходит из ответа сервера и подставляется одним сегментом
+    /// пути, поэтому слэш кодируем как %2F, прочие спецсимволы — стандартно.
+    private static func encodedJobID(_ jobID: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("/")
+        return jobID.addingPercentEncoding(withAllowedCharacters: allowed) ?? jobID
     }
 
     private static func feedPath(scope: FeedScope, cursor: String?, limit: Int) -> String {
@@ -117,8 +133,16 @@ extension NetworkClient {
         _ endpoint: APIEndpoint,
         authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?,
-        timeout: TimeInterval?
+        timeout: TimeInterval?,
+        retries: Bool = true
     ) async throws -> Response {
-        try await request(method, path: endpoint.path, authorization: authorization, body: body, timeout: timeout)
+        try await request(
+            method,
+            path: endpoint.path,
+            authorization: authorization,
+            body: body,
+            timeout: timeout,
+            retries: retries
+        )
     }
 }

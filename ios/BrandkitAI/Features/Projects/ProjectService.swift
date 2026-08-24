@@ -8,7 +8,9 @@ nonisolated protocol ProjectServiceProtocol: Sendable {
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
     func fetchModels() async throws -> [GenerationModel]
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL?
+    func generate(projectID: UUID, prompt: String, modelID: String, clientRequestID: String?) async throws -> String
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus
+    func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL
 }
 
@@ -85,15 +87,47 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         }
     }
 
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> URL? {
+    func generate(
+        projectID: UUID,
+        prompt: String,
+        modelID: String,
+        clientRequestID: String?
+    ) async throws -> String {
         let response: GenerateResponseDTO = try await client.request(
             .post,
             .generate(projectID: projectID),
             authorization: .required,
-            body: GenerateProjectRequest(prompt: prompt, model: modelID),
+            body: GenerateProjectRequest(
+                prompt: prompt,
+                model: modelID,
+                clientRequestId: clientRequestID
+            ),
             timeout: 180
         )
-        return response.url
+        guard let jobID = response.jobID else { throw NetworkError.invalidResponse }
+        return jobID
+    }
+
+    func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        // Без NetworkClient-retry: retry-политикой опроса владеет
+        // ChatViewModel.pollGeneration — иначе попытки двух слоёв
+        // перемножаются и ожидание растягивается на десятки минут.
+        try await client.request(
+            .get,
+            .generateStatus(projectID: projectID, jobID: jobID),
+            authorization: .required,
+            body: Optional<String>.none,
+            timeout: 60,
+            retries: false
+        )
+    }
+
+    func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        try await client.request(
+            .post,
+            .cancelGeneration(projectID: projectID, jobID: jobID),
+            authorization: .required
+        )
     }
 
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL {
@@ -111,7 +145,28 @@ nonisolated struct RemoteChatMessage: Sendable, Codable {
     let role: String
     let text: String?
     let versionID: UUID?
+    let error: String?
+    let status: String?
+    let jobID: String?
     let createdAt: Date
+
+    init(
+        role: String,
+        text: String?,
+        versionID: UUID?,
+        error: String? = nil,
+        status: String? = nil,
+        jobID: String? = nil,
+        createdAt: Date
+    ) {
+        self.role = role
+        self.text = text
+        self.versionID = versionID
+        self.error = error
+        self.status = status
+        self.jobID = jobID
+        self.createdAt = createdAt
+    }
 }
 
 private nonisolated struct UserProjectsResponseDTO: Decodable, Sendable {
@@ -150,6 +205,17 @@ private nonisolated struct UpdateVisibilityRequest: Encodable, Sendable {
 private nonisolated struct GenerateProjectRequest: Encodable, Sendable {
     let prompt: String
     let model: String
+    /// Стабильный идентификатор логической отправки (uuid баббла сообщения):
+    /// одинаков при всех повторных попытках одного сообщения. Сервер поле
+    /// пока игнорирует; когда бэкенд поддержит идемпотентность по нему,
+    /// повторный POST вернёт существующую job вместо второй генерации.
+    let clientRequestId: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case prompt
+        case model
+        case clientRequestId = "client_request_id"
+    }
 }
 
 private nonisolated struct ModelsResponseDTO: Decodable, Sendable {
@@ -162,7 +228,52 @@ private nonisolated struct ModelDTO: Decodable, Sendable {
 }
 
 private nonisolated struct GenerateResponseDTO: Decodable, Sendable {
-    let url: URL?
+    let jobID: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case jobID = "jobId"
+    }
+}
+
+nonisolated enum GenerationStatus: Decodable, Sendable {
+    enum Status: String, Decodable, Sendable {
+        case pending
+        case done
+        case error
+        case cancelling
+        case cancelled
+    }
+
+    case pending
+    case done(url: URL?)
+    case error(message: String)
+    case cancelling
+    case cancelled
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let status = try container.decode(Status.self, forKey: .status)
+        switch status {
+        case .pending:
+            self = .pending
+        case .done:
+            let url = try container.decodeIfPresent(URL.self, forKey: .url)
+            self = .done(url: url)
+        case .error:
+            let message = try container.decodeIfPresent(String.self, forKey: .message) ?? "Generation failed."
+            self = .error(message: message)
+        case .cancelling:
+            self = .cancelling
+        case .cancelled:
+            self = .cancelled
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case status
+        case url
+        case message
+    }
 }
 
 private nonisolated struct ChatHistoryResponseDTO: Decodable, Sendable {
@@ -175,6 +286,9 @@ private nonisolated struct ChatHistoryResponseDTO: Decodable, Sendable {
                 role: message.role,
                 text: message.text,
                 versionID: message.versionID,
+                error: message.error,
+                status: message.status,
+                jobID: message.jobID,
                 createdAt: date
             )
         }
@@ -185,12 +299,18 @@ private nonisolated struct ChatMessageDTO: Decodable, Sendable {
     let role: String
     let text: String?
     let versionID: UUID?
+    let error: String?
+    let status: String?
+    let jobID: String?
     let createdAt: String?
 
     private enum CodingKeys: String, CodingKey {
         case role
         case text
         case versionID = "versionId"
+        case error
+        case status
+        case jobID = "jobId"
         case createdAt
     }
 }

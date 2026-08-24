@@ -16,11 +16,13 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var messageText = ""
     @State private var didFinishInitialLoad = false
+    @State private var didScrollInitially = false
     @State private var isPrivacyPickerPresented = false
     @State private var isModelPickerPresented = false
     @State private var isModelControlVisible = false
     @State private var isComposerExpanded = false
     @State private var selectedPrivacy = ChatViewModel.ProjectPrivacy.privateProject
+    @State private var isRestoringText = false
     @FocusState private var isInputFocused: Bool
 
     init(
@@ -48,20 +50,51 @@ struct ChatView: View {
                     loadFailedState
                 } else {
                     ScrollView {
-                        messageList
-                    }
+                        messageList                    }
                     .scrollDismissesKeyboard(.interactively)
-                    .defaultScrollAnchor(.bottom)
                 }
             }
             .task {
                 await viewModel.load()
                 await Task.yield()
-                scrollToBottom(using: proxy, animated: false)
+                if !didScrollInitially {
+                    // Fallback: контент не появился ни разу (пустой чат) либо
+                    // onChange не сработал — скроллим по завершении load().
+                    didScrollInitially = true
+                    scrollToBottom(using: proxy, animated: false)
+                }
                 didFinishInitialLoad = true
             }
+            .task {
+                await viewModel.waitForViewRemoval()
+            }
+            .onAppear {
+                // Если restorePrompt установили, пока вьюха была закрыта
+                // другим экраном, onChange не сработал — применяем теперь.
+                applyPendingRestorePrompt()
+            }
+            .onChange(of: viewModel.restorePrompt) { _, prompt in
+                guard let prompt else { return }
+                isRestoringText = true
+                messageText = prompt
+                viewModel.consumeRestorePrompt()
+            }
             .onChange(of: viewModel.lastMessageID) { _, newMessageID in
-                guard didFinishInitialLoad, newMessageID != nil else { return }
+                guard newMessageID != nil else { return }
+
+                if !didScrollInitially {
+                    // Первый контент: скроллим сразу, не дожидаясь конца
+                    // load() — при активной генерации load() внутри ждёт
+                    // опрос job (до grace-таймаута), и прокрутка опоздала бы
+                    // на десятки секунд.
+                    didScrollInitially = true
+                    Task { @MainActor in
+                        await Task.yield()
+                        scrollToBottom(using: proxy, animated: false)
+                    }
+                    return
+                }
+                guard didFinishInitialLoad else { return }
 
                 Task { @MainActor in
                     await Task.yield()
@@ -83,14 +116,23 @@ struct ChatView: View {
             }
         }
             .customNavigationBar(title: title, onBack: onBack)
+            .toolbarBackground(Color.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 privacyToolbarItem
             }
             .safeAreaInset(edge: .top) {
-                Rectangle()
-                    .foregroundStyle(.border)
-                    .frame(height: 1)
-                    .background(Color.background)
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .foregroundStyle(.border)
+                        .frame(height: 1)
+
+                    if viewModel.isOffline {
+                        offlinePill
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                    }
+                }
             }
             .sheet(isPresented: $isPrivacyPickerPresented) {
                 PrivacyPicker(selection: $selectedPrivacy) { newPrivacy in
@@ -113,10 +155,6 @@ struct ChatView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            if viewModel.isOffline {
-                offlinePill
-            }
-
             ForEach(viewModel.sections) { section in
                 VStack(alignment: .leading, spacing: 12) {
                     Text(viewModel.dateTitle(for: section.date))
@@ -127,7 +165,12 @@ struct ChatView: View {
                     ForEach(section.messages) { message in
                         ChatMessageView(
                             message: message,
-                            timeTitle: viewModel.timeTitle(for: message.date)
+                            timeTitle: viewModel.timeTitle(for: message.date),
+                            onRetry: {
+                                Task {
+                                    await viewModel.retryFailedMessage(id: message.id)
+                                }
+                            }
                         ) {
                             switch message.attachment {
                             case .version(let versionID, let url):
@@ -154,6 +197,10 @@ struct ChatView: View {
                                 ChatImageMockView()
                                     .frame(maxWidth: .infinity)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                            case .error:
+                                EmptyView()
+                            case .cancelled:
+                                EmptyView()
                             case .none:
                                 EmptyView()
                             }
@@ -167,7 +214,7 @@ struct ChatView: View {
                     HStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Generating…")
+                        Text(viewModel.isCancelling ? "Cancelling…" : "Generating…")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -301,7 +348,11 @@ struct ChatView: View {
         .background(Color.background)
         .animation(.easeInOut(duration: 0.2), value: isComposerExpanded)
         .onChange(of: messageText) {
-            viewModel.clearSendError()
+            if isRestoringText {
+                isRestoringText = false
+            } else {
+                viewModel.clearSendError()
+            }
         }
     }
 
@@ -315,7 +366,6 @@ struct ChatView: View {
                 .onSubmit {
                     sendMessage()
                 }
-                .disabled(viewModel.isGenerating)
                 .padding(.leading, 8)
                 .padding(.trailing, isComposerExpanded ? 8 : 50)
                 .padding(.vertical, 10)
@@ -398,37 +448,97 @@ struct ChatView: View {
         .accessibilityHint("Opens model picker")
     }
 
+    private enum SendButtonAction {
+        case cancelGeneration
+        case sendMessage
+        case restoreUnsent
+    }
+
+    /// Единый приоритет для кнопки и Enter: набранный текст всегда
+    /// отправляется, восстановление незавершённого сообщения — только
+    /// при пустом поле ввода.
+    private var sendButtonAction: SendButtonAction {
+        if viewModel.isGenerating { return .cancelGeneration }
+        if canSendMessage { return .sendMessage }
+        if viewModel.hasUnsentMessage { return .restoreUnsent }
+        return .sendMessage
+    }
+
     private var sendButton: some View {
         Button {
-            sendMessage()
+            switch sendButtonAction {
+            case .cancelGeneration:
+                Task { await viewModel.cancelGeneration() }
+            case .sendMessage:
+                sendMessage()
+            case .restoreUnsent:
+                isInputFocused = false
+                Task { await viewModel.restoreUnsentMessage() }
+            }
         } label: {
-            Image(systemName: "arrow.up")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(canSendMessage ? Color(.onAccent) : Color(.secondaryLabel))
-                .frame(width: 40, height: 40)
-                .background(
-                    canSendMessage ? Color.accentColor : Color(.tertiarySystemFill),
-                    in: Circle()
-                )
+            Group {
+                if viewModel.isCancelling {
+                    ProgressView()
+                        .tint(Color(.onAccent))
+                } else if sendButtonAction == .cancelGeneration
+                    || sendButtonAction == .restoreUnsent {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+            }
+            .foregroundStyle(
+                hasStopAction || canSendMessage
+                    ? Color(.onAccent)
+                    : Color(.secondaryLabel)
+            )
+            .frame(width: 40, height: 40)
+            .background(
+                hasStopAction || canSendMessage
+                    ? Color.accentColor
+                    : Color(.tertiarySystemFill),
+                in: Circle()
+            )
         }
         .buttonStyle(.plain)
-        .disabled(!canSendMessage)
-        .accessibilityLabel("Send message")
+        .disabled(viewModel.isCancelling || (!hasStopAction && !canSendMessage))
+        .accessibilityLabel(sendButtonAccessibilityLabel)
+    }
+
+    private var hasStopAction: Bool {
+        viewModel.isGenerating || viewModel.hasUnsentMessage
+    }
+
+    private var sendButtonAccessibilityLabel: String {
+        switch sendButtonAction {
+        case .cancelGeneration: return "Cancel generation"
+        case .sendMessage: return "Send message"
+        case .restoreUnsent: return "Edit unsent message"
+        }
     }
 
     private var canSendMessage: Bool {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         return !viewModel.isGenerating
             && !text.isEmpty
-            && text.utf8.count <= ChatViewModel.maxPromptUTF8Length
+            && text.count <= ChatViewModel.maxPromptLength
     }
 
     private var inputErrorMessage: String? {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.utf8.count > ChatViewModel.maxPromptUTF8Length {
-            return "Message is too long (maximum 1500 bytes)."
+        if text.count > ChatViewModel.maxPromptLength {
+            return "Message is too long (maximum 5000 characters)."
         }
         return viewModel.sendErrorMessage
+    }
+
+    private func applyPendingRestorePrompt() {
+        guard let prompt = viewModel.restorePrompt else { return }
+        isRestoringText = true
+        messageText = prompt
+        viewModel.consumeRestorePrompt()
     }
 
     private func sendMessage() {
