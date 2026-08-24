@@ -119,6 +119,7 @@ components_manager:
     llm-client:
       yandex-api-url: $yandex-gpt-url
       openai-api-url: $openai-responses-url
+      recraft-api-url: $recraft-api-url
 
     postgres-db-1:
       dbconnection: $dbconnection

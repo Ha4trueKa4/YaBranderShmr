@@ -2,18 +2,130 @@
 #include "llm_models.hpp"
 
 #include <nlohmann/json.hpp>
+#include <algorithm>
+#include <cctype>
 #include <regex>
 #include <stdexcept>
 #include <pugixml.hpp>
+#include <string_view>
 
 #include <userver/clients/http/client.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/components/component_context.hpp>
+#include <userver/crypto/base64.hpp>
 #include <userver/server/handlers/http_handler_base.hpp>
 #include <userver/yaml_config/schema.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace ya_brander::components {
+  namespace {
+
+  constexpr std::size_t kMaxRecraftSvgSize = 5 * 1024 * 1024;
+
+  std::string ToLower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](const unsigned char character) {
+                     return static_cast<char>(std::tolower(character));
+                   });
+    return value;
+  }
+
+  void ValidateRecraftSvg(const std::string& svg) {
+    if (svg.empty()) {
+      throw SVGValidationError("Recraft returned an empty SVG");
+    }
+    if (svg.size() > kMaxRecraftSvgSize) {
+      throw SVGValidationError("Recraft SVG exceeds the 5 MiB limit");
+    }
+
+    const auto lower_svg = ToLower(svg);
+    if (lower_svg.find("<!doctype") != std::string::npos ||
+        lower_svg.find("<!entity") != std::string::npos) {
+      throw SVGValidationError("DOCTYPE and ENTITY declarations are forbidden");
+    }
+
+    pugi::xml_document document;
+    const auto parse_result = document.load_string(svg.c_str());
+    if (!parse_result) {
+      throw SVGValidationError(
+          "Recraft returned invalid XML: " +
+          std::string(parse_result.description()));
+    }
+
+    const auto root = document.document_element();
+    if (!root || ToLower(root.name()) != "svg") {
+      throw SVGValidationError("Recraft response root must be <svg>");
+    }
+
+    std::vector<pugi::xml_node> nodes{root};
+    for (std::size_t index = 0; index < nodes.size(); ++index) {
+      const auto node = nodes[index];
+      for (auto child = node.first_child(); child; child = child.next_sibling()) {
+        if (child.type() == pugi::node_element) {
+          nodes.push_back(child);
+        }
+      }
+
+      const auto element_name = ToLower(node.name());
+      if (element_name == "script" || element_name == "iframe" ||
+          element_name == "foreignobject" || element_name == "style") {
+        throw SVGValidationError(
+            "Unsafe SVG element returned by Recraft: <" +
+            std::string(node.name()) + ">");
+      }
+
+      for (auto attribute : node.attributes()) {
+        const auto attribute_name = ToLower(attribute.name());
+        const auto attribute_value = ToLower(attribute.value());
+        if (attribute_name.rfind("on", 0) == 0) {
+          throw SVGValidationError(
+              "SVG event handler attributes are forbidden");
+        }
+        if ((attribute_name == "href" || attribute_name == "xlink:href") &&
+            !attribute_value.empty() && attribute_value.front() != '#') {
+          throw SVGValidationError("External SVG references are forbidden");
+        }
+        if (attribute_value.find("javascript:") != std::string::npos ||
+            attribute_value.find("url(http:") != std::string::npos ||
+            attribute_value.find("url(https:") != std::string::npos ||
+            attribute_value.find("url(//") != std::string::npos) {
+          throw SVGValidationError("External URLs in SVG are forbidden");
+        }
+      }
+    }
+  }
+
+  std::string JoinUrl(std::string_view base, std::string_view path) {
+    if (!base.empty() && base.back() == '/') {
+      base.remove_suffix(1);
+    }
+    return std::string(base) + std::string(path);
+  }
+
+  std::string RecraftErrorMessage(const std::string& response_body,
+                                  int status_code) {
+    try {
+      const auto json = nlohmann::json::parse(response_body);
+      if (json.contains("error")) {
+        if (json["error"].is_string()) {
+          return json["error"].get<std::string>();
+        }
+        if (json["error"].is_object() &&
+            json["error"].contains("message") &&
+            json["error"]["message"].is_string()) {
+          return json["error"]["message"].get<std::string>();
+        }
+      }
+      if (json.contains("message") && json["message"].is_string()) {
+        return json["message"].get<std::string>();
+      }
+    } catch (const std::exception&) {
+    }
+    return "HTTP " + std::to_string(status_code);
+  }
+
+  }  // namespace
+
   // Вспомогательные функции
   static void CollectAllNodes(const pugi::xml_node& node, std::vector<pugi::xml_node>& nodes) {
     nodes.push_back(node);
@@ -439,12 +551,83 @@ namespace ya_brander::components {
     return text.substr(start, end - start + 6); // +6 для "</svg>"
   }
 
+  std::string LLMClientComponent::SendRecraftRequest(
+      const std::string& path, const std::string& request_body) const {
+    if (recraft_api_key_.empty()) {
+      throw std::runtime_error("RECRAFT_API_TOKEN is not set");
+    }
+
+    auto request = http_client_.CreateRequest();
+    request.method(userver::clients::http::HttpMethod::kPost);
+    request.url(JoinUrl(recraft_api_url_, path));
+    request.headers({{"Authorization", "Bearer " + recraft_api_key_},
+                     {"Content-Type", "application/json"}});
+    request.timeout(240000);
+
+    const char* proxy_env = std::getenv("https_proxy");
+    if (!proxy_env) {
+      proxy_env = std::getenv("HTTPS_PROXY");
+    }
+    if (proxy_env && *proxy_env != '\0') {
+      request.proxy(proxy_env);
+    }
+
+    request.data(request_body);
+
+    auto response = request.perform();
+    const std::string response_body = response->body();
+    if (!response->IsOk()) {
+      throw std::runtime_error(
+          "Recraft API error: " +
+          RecraftErrorMessage(response_body, response->status_code()));
+    }
+
+    const auto response_json = nlohmann::json::parse(response_body);
+    if (!response_json.contains("data") ||
+        !response_json["data"].is_array() ||
+        response_json["data"].empty() ||
+        !response_json["data"][0].contains("b64_json") ||
+        !response_json["data"][0]["b64_json"].is_string()) {
+      throw std::runtime_error(
+          "Recraft API response does not contain base64 SVG data");
+    }
+
+    std::string svg = userver::crypto::base64::Base64Decode(
+        response_json["data"][0]["b64_json"].get<std::string>());
+    ValidateRecraftSvg(svg);
+    return svg;
+  }
+
+  std::string LLMClientComponent::GenerateRecraftSvg(
+      const std::string& prompt, const std::string& model) const {
+    if (prompt.empty()) {
+      throw std::invalid_argument("Empty prompt provided");
+    }
+    if (!IsRecraftModel(model)) {
+      throw std::invalid_argument("Unsupported Recraft model: " + model);
+    }
+
+    nlohmann::json request_body = {
+        {"model", model},
+        {"prompt", prompt},
+        {"size", "1:1"},
+        {"n", 1},
+        {"response_format", "b64_json"},
+    };
+    return SendRecraftRequest("/images/generations/vector",
+                              request_body.dump());
+  }
+
   std::string LLMClientComponent::SendPrompt(const LlmPrompt& prompt,
      std::size_t max_output_tokens,
      const std::string& model,
      double temperature) const {
     if (prompt.input.empty()) {
       throw std::invalid_argument("Empty prompt provided");
+    }
+
+    if (IsRecraftModel(model)) {
+      return GenerateRecraftSvg(prompt.input, model);
     }
 
     const bool is_openai = IsOpenAIModel(model);
@@ -564,6 +747,9 @@ properties:
     openai-api-url:
         type: string
         description: URL for OpenAI Responses API
+    recraft-api-url:
+        type: string
+        description: Base URL for Recraft API
     )");
 }
 

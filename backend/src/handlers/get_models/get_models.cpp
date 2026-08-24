@@ -91,6 +91,26 @@ std::string GetModels::HandleRequestThrow(
                               {"owned_by", "OpenAI"}});
   }
 
+  const char* recraft_key = std::getenv("RECRAFT_API_TOKEN");
+  const bool recraft_is_configured =
+      recraft_key != nullptr && !std::string_view(recraft_key).empty();
+  if (recraft_is_configured) {
+    for (const auto model : components::kRecraftModels) {
+      const std::string model_uri =
+          std::string{components::kRecraftModelUriPrefix} +
+          std::string{model};
+      const bool model_exists = std::any_of(
+          models["data"].begin(), models["data"].end(),
+          [&model_uri](const auto& existing_model) {
+            return existing_model.value("id", "") == model_uri;
+          });
+      if (!model_exists) {
+        models["data"].push_back(
+            {{"id", model_uri}, {"owned_by", "Recraft"}});
+      }
+    }
+  }
+
   return models.dump();
 }
 

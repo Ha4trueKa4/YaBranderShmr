@@ -1,4 +1,5 @@
 #include "project_manager_component.h"
+#include "llm_models.hpp"
 #include <userver/formats/json/inline.hpp>
 #include <userver/formats/json/value_builder.hpp>
 #include "svg_validator.hpp"
@@ -258,6 +259,15 @@ std::vector<std::string> ProjectManagerComponent::ResolveReferenceSvgs(
 std::string ProjectManagerComponent::RunInitialGeneration(
     const std::string& project_id, const std::string& prompt, const std::string& model,
     const std::string& caller_id, const std::vector<std::string>& reference_project_ids) {
+    if (IsRecraftModel(model)) {
+        if (!reference_project_ids.empty()) {
+            LOG_WARNING() << "Recraft generation does not support project references yet; "
+                          << "references are ignored for project_id=" << project_id;
+        }
+        std::string new_data = llm_client_.GenerateRecraftSvg(prompt, model);
+        return version_storage_.SaveVersion(project_id, new_data);
+    }
+
     // Без истории: это первая генерация проекта, предыдущих запросов по
     // определению нет. AppendUserMessage уже синхронно записал этот же prompt
     // в chat_history до запуска этой корутины — GetRecentUserPrompts вернул
@@ -277,6 +287,11 @@ std::string ProjectManagerComponent::RunEditGeneration(
     const std::string& project_id, const std::string& prompt, const std::string& model,
     const std::string& job_id) {
     std::string current_state = version_storage_.GetLatestVersionData(project_id);
+
+    if (IsRecraftModel(model)) {
+        throw std::invalid_argument(
+            "Recraft V2 supports generation only for new projects");
+    }
 
     // exclude_job_id=job_id: AppendUserMessage уже синхронно записал текущий
     // prompt в chat_history под этим же job_id до запуска этой корутины —
