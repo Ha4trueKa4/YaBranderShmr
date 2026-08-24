@@ -23,3 +23,17 @@ internal data class ModelPickerState(
     val isLoading: Boolean = false,
     val hasError: Boolean = false,
 )
+
+/**
+ * Модель, на которой экран остановится: сохранённая, если она есть в списке,
+ * иначе дефолт бэкенда, иначе первая доступная. Список должен быть непустым.
+ *
+ * Нужна обоим экранам с пикером — чату проекта и форме создания: сохранённый
+ * выбор глобальный и вполне может не найтись в справочнике (бэкенд поменял
+ * allow-list либо выбор приехал с другой версии приложения).
+ */
+internal fun List<GenerationModel>.resolveSelected(selected: String): String = when {
+    any { it.id == selected } -> selected
+    any { it.id == GenerationModel.DefaultId } -> GenerationModel.DefaultId
+    else -> first().id
+}

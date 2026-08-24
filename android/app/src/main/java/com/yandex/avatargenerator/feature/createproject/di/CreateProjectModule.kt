@@ -7,7 +7,9 @@ import org.koin.dsl.module
 /**
  * Своего репозитория у фичи нет: создание проекта — это `POST /projects`,
  * то есть метод `ProjectRepository` из `feature/project` (он же
- * зарегистрирован в `projectModule`). Koin резолвит его через общий граф.
+ * зарегистрирован в `projectModule`); оттуда же берётся
+ * `GenerationModelRepository` для выбора модели. Koin резолвит оба через общий
+ * граф.
  */
 val createProjectModule = module {
     viewModelOf(::CreateProjectViewModel)

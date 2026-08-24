@@ -130,6 +130,7 @@
     <string name="create_project_back_description">Back</string>
     <string name="create_project_prompt_label">Generation prompt</string>
     <string name="create_project_prompt_placeholder">A minimal fox mascot for a fintech startup, flat vector, deep blue and mint…</string>
+    <string name="create_project_model_label">Generation model</string>
     <string name="create_project_name_label">Project name (optional)</string>
     <string name="create_project_name_placeholder">My Startup Brand</string>
     <string name="create_project_description_label">Brand description &amp; brief (optional)</string>

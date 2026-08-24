@@ -128,6 +128,7 @@
     <string name="create_project_back_description">Назад</string>
     <string name="create_project_prompt_label">Промпт для генерации</string>
     <string name="create_project_prompt_placeholder">Минималистичный лис-маскот для финтех-стартапа, плоский вектор, глубокий синий и мятный…</string>
+    <string name="create_project_model_label">Модель генерации</string>
     <string name="create_project_name_label">Название проекта (необязательно)</string>
     <string name="create_project_name_placeholder">Мой бренд</string>
     <string name="create_project_description_label">Описание бренда и бриф (необязательно)</string>

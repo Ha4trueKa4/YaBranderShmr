@@ -2,7 +2,10 @@ package com.yandex.avatargenerator.feature.createproject.ui
 
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.core.mvi.BaseViewModel
+import com.yandex.avatargenerator.feature.project.domain.GenerationModelRepository
 import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
+import com.yandex.avatargenerator.feature.project.ui.ModelPickerState
+import com.yandex.avatargenerator.feature.project.ui.resolveSelected
 import kotlinx.coroutines.launch
 
 /**
@@ -17,12 +20,27 @@ private const val DefaultProjectName = "Untitled project"
  * [CreateProjectIntent.OnSubmitClick] создаёт проект через `POST /projects`
  * ([ProjectRepository] из `feature/project` — своего репозитория у экрана нет,
  * см. KDoc метода), после чего шлёт эффект навигации на экран проекта.
+ *
+ * Модель генерации выбирается тем же пикером, что и в чате проекта
+ * ([GenerationModelRepository]): выбор глобальный, один на приложение, а
+ * справочник тянется лениво — при первом открытии шторки. Первичная генерация
+ * уходит на выбранной здесь модели.
  */
 internal class CreateProjectViewModel(
     private val repository: ProjectRepository,
+    private val generationModelRepository: GenerationModelRepository,
 ) : BaseViewModel<CreateProjectIntent, CreateProjectState, CreateProjectEffect>(
     CreateProjectState(),
 ) {
+
+    init {
+        // Чип рисует имя из сохранённого id без похода в сеть — сам справочник
+        // ждёт первого открытия шторки.
+        viewModelScope.launch {
+            val selectedModelId = generationModelRepository.getSelectedModelId()
+            updateModelPicker { copy(selectedModelId = selectedModelId) }
+        }
+    }
 
     override suspend fun handleIntent(intent: CreateProjectIntent, state: CreateProjectState) {
         when (intent) {
@@ -43,6 +61,14 @@ internal class CreateProjectViewModel(
 
             CreateProjectIntent.OnSubmitClick -> submit(state)
             CreateProjectIntent.OnBackClick -> sendEffect(CreateProjectEffect.NavigateBack)
+
+            CreateProjectIntent.OnModelPickerOpen -> openModelPicker(state.modelPicker)
+            CreateProjectIntent.OnModelPickerDismiss -> updateModelPicker {
+                copy(isSheetVisible = false)
+            }
+
+            is CreateProjectIntent.OnModelSelect -> selectModel(intent.id)
+            CreateProjectIntent.OnModelsRetry -> if (!state.modelPicker.isLoading) loadModels()
         }
     }
 
@@ -77,6 +103,7 @@ internal class CreateProjectViewModel(
                 name = effectiveName(state),
                 description = state.description.trim(),
                 prompt = state.prompt.trim(),
+                model = state.modelPicker.selectedModelId,
             )
                 .onSuccess { creation ->
                     updateState { copy(isSubmitting = false) }
@@ -93,6 +120,54 @@ internal class CreateProjectViewModel(
         }
     }
 
+    /** Открывает шторку и при первом открытии тянет справочник. */
+    private fun openModelPicker(picker: ModelPickerState) {
+        updateModelPicker { copy(isSheetVisible = true) }
+        if (picker.models.isEmpty() && !picker.isLoading) loadModels()
+    }
+
+    /**
+     * Запоминает выбор и закрывает шторку. Состояние правим сразу, не дожидаясь
+     * записи в настройки: проект всё равно создастся с тем `id`, что лежит в
+     * состоянии, а запись — фоновая деталь.
+     */
+    private fun selectModel(id: String) {
+        updateModelPicker { copy(selectedModelId = id, isSheetVisible = false) }
+        viewModelScope.launch { generationModelRepository.selectModel(id) }
+    }
+
+    /**
+     * Тянет справочник моделей.
+     *
+     * Пустой список от ошибки не отличаем: выбирать всё равно не из чего, а
+     * шторке с пустым списком нечего показать, кроме той же ошибки с ретраем.
+     * Создание проекта ни то, ни другое не блокирует — в теле уедет сохранённый
+     * `id`, и разбираться с ним будет сервер.
+     */
+    private fun loadModels() {
+        updateModelPicker { copy(isLoading = true, hasError = false) }
+        viewModelScope.launch {
+            val models = generationModelRepository.getAvailableModels().getOrNull().orEmpty()
+            if (models.isEmpty()) {
+                updateModelPicker { copy(isLoading = false, hasError = true) }
+                return@launch
+            }
+
+            val selected = state.value.modelPicker.selectedModelId
+            val resolved = models.resolveSelected(selected)
+            updateModelPicker {
+                copy(
+                    models = models,
+                    selectedModelId = resolved,
+                    isLoading = false,
+                    hasError = false,
+                )
+            }
+            // Расхождение перезаписываем, чтобы оно не всплыло ещё раз.
+            if (resolved != selected) generationModelRepository.selectModel(resolved)
+        }
+    }
+
     /**
      * Название для запроса: введённое пользователем либо [DefaultProjectName].
      *
@@ -103,4 +178,8 @@ internal class CreateProjectViewModel(
      */
     private fun effectiveName(state: CreateProjectState): String =
         state.name.trim().ifBlank { DefaultProjectName }
+
+    private fun updateModelPicker(block: ModelPickerState.() -> ModelPickerState) {
+        updateState { copy(modelPicker = modelPicker.block()) }
+    }
 }

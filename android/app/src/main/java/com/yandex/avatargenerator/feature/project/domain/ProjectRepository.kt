@@ -29,11 +29,16 @@ interface ProjectRepository {
      * @param name название проекта; пустая строка допустима — бэкенд читает
      *  поле с дефолтом `""`.
      * @param description бриф бренда; тоже опционален, дефолт `""`.
+     * @param model короткое имя модели генерации (см.
+     *  [com.yandex.avatargenerator.feature.project.domain.model.GenerationModel]) —
+     *  первичная генерация пойдёт на ней. `null` — поле не уедет в теле вовсе
+     *  и модель подставит бэкенд.
      */
     suspend fun createProject(
         name: String,
         description: String,
         prompt: String,
+        model: String? = null,
     ): Result<ProjectCreation>
 
     /**

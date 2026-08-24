@@ -72,12 +72,13 @@ class ChatRepositoryImpl(
         val versionsAsync = async { versionsRepository.getVersions(projectId) }
 
         projectAsync.await().map { project ->
+            val history = historyAsync.await()
             ProjectChat(
                 id = project.id,
                 title = project.name,
                 isPublic = project.isPublic,
                 messages = buildChatTimeline(
-                    history = historyAsync.await(),
+                    history = history,
                     // Сервер отдаёт версии по убыванию номера — последняя первая.
                     latestVersionId = versionsAsync.await().getOrNull()?.firstOrNull()?.id,
                     latestVersionUrl = project.url,

@@ -32,6 +32,7 @@ class ProjectRepositoryImpl(
         name: String,
         description: String,
         prompt: String,
+        model: String?,
     ): Result<ProjectCreation> = apiResult {
         val dto = apiCall {
             client.post(ProjectsPath) {
@@ -40,6 +41,7 @@ class ProjectRepositoryImpl(
                         name = name,
                         description = description,
                         prompt = prompt,
+                        model = model,
                     ),
                 )
             }.body<ProjectDto>()

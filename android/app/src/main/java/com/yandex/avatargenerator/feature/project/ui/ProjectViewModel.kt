@@ -37,9 +37,14 @@ import java.util.UUID
  * при первом открытии шторки (см. [openModelPicker]).
  *
  * **Ожидание генерации живёт в `viewModelScope`.** Ушёл с экрана — опрос умер;
- * бэкенд доводит генерацию до конца сам и кладёт результат в историю, так что
- * при возврате экран перечитает ленту и увидит его. Ни `WorkManager`, ни
- * хранение `job_id` на диске ради этого не заводим.
+ * бэкенд доводит генерацию до конца сам. Ни `WorkManager`, ни хранение
+ * `job_id` на диске ради этого не заводим: незакрытую задачу видно в самой
+ * ленте — пока она считается, история отдаёт заглушку [ChatMessage.Pending],
+ * и по ней экран возобновляет опрос (см. [load]). Оттуда же
+ * [ProjectUiState.Content.pendingJobId] берёт задачу для остановки, так что
+ * прервать генерацию можно и после перезахода. Пока она считается, отправка
+ * заблокирована: второй `POST /generate` бэкенд всё равно отвергает, у проекта
+ * не бывает двух активных задач.
  *
  * Экран можно открыть с уже запущенной задачей первичной генерации
  * ([initialJobId]) — так на него уходит форма создания проекта, получив от
@@ -194,6 +199,9 @@ internal class ProjectViewModel(
     /**
      * Ждёт результат задачи [jobId], показывая на её месте скелетон ответа.
      *
+     * Скелетон ставим свой, только если его ещё нет: в ленте, перечитанной во
+     * время генерации, он уже пришёл с сервера, и второй стоял бы рядом.
+     *
      * Исход, о котором знает сервер (версия готова либо генерация упала), лежит
      * в истории чата — по нему лента перечитывается целиком, и после перезахода
      * экран выглядит так же. Сорвавшийся опрос — другое дело: записи об исходе
@@ -201,8 +209,10 @@ internal class ProjectViewModel(
      * `NetworkException` в него не кладём — он служебный.
      */
     private suspend fun awaitGeneration(jobId: String) {
-        val skeleton = ChatMessage.Pending(id = UUID.randomUUID().toString(), jobId = jobId)
-        _uiState.updateContent { it.copy(messages = it.messages + skeleton) }
+        val skeleton = _uiState.value.contentOrNull()?.messages?.pendingFor(jobId)
+            ?: ChatMessage.Pending(id = UUID.randomUUID().toString(), jobId = jobId).also { own ->
+                _uiState.updateContent { it.copy(messages = it.messages + own) }
+            }
 
         chatRepository.awaitGeneration(projectId, jobId).fold(
             onSuccess = { outcome ->
@@ -504,26 +514,32 @@ internal class ProjectViewModel(
         viewModelScope.launch {
             // До сборки Content, иначе чип моргнул бы дефолтом при открытии.
             val selectedModelId = generationModelRepository.getSelectedModelId()
-            _uiState.value = chatRepository.getChat(projectId).fold(
-                onSuccess = { chat ->
-                    rememberPreviews(chat.messages)
-                    ProjectUiState.Content(
-                        title = chat.title,
-                        isPublic = chat.isPublic,
-                        messages = chat.messages.withKnownPreviews(),
-                        modelPicker = ModelPickerState(selectedModelId = selectedModelId),
-                    )
-                },
-                onFailure = { ProjectUiState.Error },
-            )
+            val chat = chatRepository.getChat(projectId).getOrNull()
+            _uiState.value = if (chat != null) {
+                rememberPreviews(chat.messages)
+                ProjectUiState.Content(
+                    title = chat.title,
+                    isPublic = chat.isPublic,
+                    messages = chat.messages.withKnownPreviews(),
+                    modelPicker = ModelPickerState(selectedModelId = selectedModelId),
+                )
+            } else {
+                ProjectUiState.Error
+            }
 
+            // Ждём либо задачу, с которой экран открыли, либо незакрытую из
+            // ленты — после перезахода опрос поднимается только так. Оба
+            // варианта дают один и тот же job_id, если экран открыт формой
+            // создания: pendingInitialJobId просто оказывается первым.
+            //
             // Только по успешной загрузке: на Error ждать некуда — скелетон
             // и ответ рисует Content, а задачу подхватит retry().
             // Обнуляем до вызова, а не после: retry() зовёт тот же load(), и
             // иначе повторная загрузка запустила бы ожидание второй раз.
-            if (_uiState.value is ProjectUiState.Content) {
-                pendingInitialJobId?.let { jobId ->
-                    pendingInitialJobId = null
+            if (chat != null) {
+                val jobId = pendingInitialJobId ?: _uiState.value.contentOrNull()?.pendingJobId
+                pendingInitialJobId = null
+                if (jobId != null) {
                     _uiState.updateContent { it.copy(isSending = true) }
                     awaitGeneration(jobId)
                 }
@@ -537,6 +553,10 @@ private const val ReloadAttempts = 3
 
 /** Пауза между перечитываниями: даём бэкенду дописать историю. */
 private const val ReloadRetryDelayMillis = 500L
+
+/** Скелетон задачи [jobId], если он уже стоит в ленте. */
+private fun List<ChatMessage>.pendingFor(jobId: String): ChatMessage.Pending? =
+    filterIsInstance<ChatMessage.Pending>().lastOrNull { it.jobId == jobId }
 
 /** Есть ли в ленте ответ ИИ на задачу [jobId] — удачный, с ошибкой или отменённый. */
 private fun List<ChatMessage>.hasAnswerFor(jobId: String): Boolean = any { message ->
@@ -561,16 +581,6 @@ private fun List<ChatMessage>.promptAbove(messageId: String): String? {
 /** Содержимое экрана или `null`, если он всё ещё грузится либо упал. */
 private fun ProjectUiState.contentOrNull(): ProjectUiState.Content? =
     this as? ProjectUiState.Content
-
-/**
- * Модель, на которой экран остановится: сохранённая, если она в списке, иначе
- * дефолт бэкенда, иначе первая доступная. Список гарантированно непустой.
- */
-private fun List<GenerationModel>.resolveSelected(selected: String): String = when {
-    any { it.id == selected } -> selected
-    any { it.id == GenerationModel.DefaultId } -> GenerationModel.DefaultId
-    else -> first().id
-}
 
 /** Правка состояния, только если экран всё ещё показывает содержимое. */
 private inline fun MutableStateFlow<ProjectUiState>.updateContent(

@@ -87,6 +87,12 @@ internal class ProjectViewModelTest {
         ),
     )
 
+    /** Лента во время генерации: промпт и серверная заглушка активной задачи. */
+    private val stillGenerating = reloadedWithoutAnswer + ChatMessage.Pending(
+        id = "chat-2-assistant",
+        jobId = FakeChatRepository.JOB_ID,
+    )
+
     /** Лента, какой её отдаёт сервер после провала: промпт и запись об ошибке. */
     private val failedMessages = messages + listOf(
         ChatMessage.Outgoing(
@@ -619,6 +625,67 @@ internal class ProjectViewModelTest {
 
             assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
         }
+
+    @Test
+    fun `перезаход в чат во время генерации поднимает ожидание заново`() = runTest(dispatcher) {
+        // Опрос живёт в viewModelScope и уходом с экрана обрывается. При
+        // возврате незакрытую задачу видно по скелетону в самой ленте: пока
+        // задача считается, бэкенд отдаёт её заглушкой в истории.
+        chatRepository.chatResults += Result.success(chat.copy(messages = stillGenerating))
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedWithoutAnswer))
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        val viewModel = viewModel()
+
+        // Перечитывание ленты упирается в паузу между попытками — на ней и
+        // виден скелетон, поставленный на время ожидания.
+        runCurrent()
+        val waiting = contentOf(viewModel)
+        // Ровно один: серверный скелетон уже в ленте, своего сверху не ставим.
+        assertEquals(1, waiting.messages.filterIsInstance<ChatMessage.Pending>().size)
+        // Отправка заблокирована: второй POST /generate бэкенд всё равно отвергнет.
+        assertTrue(waiting.isSending)
+
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
+        assertEquals(reloadedMessages, content.messages)
+        assertFalse(content.isSending)
+    }
+
+    @Test
+    fun `после перезахода генерацию можно остановить`() = runTest(dispatcher) {
+        // Задача для кнопки остановки берётся из скелетона в ленте, поэтому
+        // работает и тогда, когда её job_id экран сам никогда не видел.
+        chatRepository.awaitGate = CompletableDeferred()
+        chatRepository.chatResult = Result.success(chat.copy(messages = stillGenerating))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(contentOf(viewModel).canCancel)
+
+        viewModel.cancelGeneration()
+        advanceUntilIdle()
+
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.cancelledJobIds)
+    }
+
+    @Test
+    fun `задача первичной генерации не дублирует скелетон из ленты`() = runTest(dispatcher) {
+        // Экран открыт формой создания, и та же задача уже пришла заглушкой в
+        // истории — ждём её один раз и одним скелетоном.
+        chatRepository.chatResult = Result.success(chat.copy(messages = stillGenerating))
+        val viewModel = viewModel(initialJobId = FakeChatRepository.JOB_ID)
+        runCurrent()
+
+        assertEquals(
+            1,
+            contentOf(viewModel).messages.filterIsInstance<ChatMessage.Pending>().size,
+        )
+
+        advanceUntilIdle()
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
+    }
 
     @Test
     fun `retry не запускает ожидание первичной генерации второй раз`() = runTest(dispatcher) {
