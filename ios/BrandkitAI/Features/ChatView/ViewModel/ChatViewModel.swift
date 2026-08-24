@@ -103,6 +103,7 @@ final class ChatViewModel {
     private var didLoad = false
     private var versionURLs: [UUID: URL] = [:]
     private var pendingMessages: [ChatCache.PendingMessage] = []
+    private var queueRetryTask: Task<Void, Never>?
     private let observerHolder = ChatObserverHolder()
 
     init(
@@ -678,6 +679,16 @@ final class ChatViewModel {
     /// неоднозначной отправки с историей чата.
     private static let ambiguousDeliverySkew: TimeInterval = 15 * 60
 
+    /// Паузы повторных вычиток истории после терминального статуса job:
+    /// статус появляется в Redis раньше записи в chat_history, а чтение
+    /// истории идёт со слейва (контракт — android/API.md).
+    private static let historyRefetchDelays: [Duration] = [.seconds(0.5), .seconds(1), .seconds(2)]
+
+    /// Автоповтор очереди, когда событие «сеть вернулась» не наступит
+    /// (сервер отвечал 408/429/5xx при живом сетевом пути): ограниченный
+    /// backoff, дальше — только сеть/плашка/переоткрытие чата.
+    private static let queueRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
+
     /// Опрашивает статус фоновой задачи генерации через long-polling.
     /// При `pending`/`cancelling` переоткрывает соединение не чаще, чем раз
     /// в секунду. При разрыве делает retry с backoff, при оффлайне ждёт
@@ -843,15 +854,37 @@ final class ChatViewModel {
     /// принята бэкендом, поэтому вызывающий снимает промпт с очереди до
     /// этого вызова.
     private func refreshChatAfterGenerate(jobID: String, generatedURL: URL?) async throws {
-        let remoteMessages = try await service.fetchChat(projectID: projectID)
+        // Бэкенд делает статус терминальным в Redis ДО записи результата в
+        // chat_history (Postgres, best-effort), а история читается со слейва —
+        // первая вычитка может не содержать сообщения завершившейся job
+        // (контракт описан в android/API.md). Перечитываем с паузами, пока
+        // запись не появится; не дождавшись — ленту не подменяем: пустая
+        // история стёрла бы и промпт, не показав результат.
+        var remoteMessages = try await service.fetchChat(projectID: projectID)
+
+        if !Self.hasTerminalRecord(jobID: jobID, in: remoteMessages) {
+            for delay in Self.historyRefetchDelays {
+                try? await Task.sleep(for: delay)
+                if Task.isCancelled { return }
+                remoteMessages = try await service.fetchChat(projectID: projectID)
+                if Self.hasTerminalRecord(jobID: jobID, in: remoteMessages) { break }
+            }
+        }
+
+        if isOffline { isOffline = false }
+
+        guard Self.hasTerminalRecord(jobID: jobID, in: remoteMessages) else {
+            // Записи об исходе на сервере может не быть вообще (best-effort).
+            // Ленту не трогаем: скелетон снимет isGenerating, а текст ошибки
+            // уже показал pollAndRefresh.
+            return
+        }
 
         if let generatedURL {
             // Версия определяется строго по сообщению завершившейся job:
             // «последняя версия истории» могла появиться от другой генерации
             // (другой клиент) между завершением job и этим fetchChat — ей
-            // нельзя назначать чужой URL и греть под неё кеш. Если сообщение
-            // job'ы ещё не видно (реплика чтения отстаёт) — пропускаем
-            // разогрев: картинка подтянется лениво через versionURL(for:).
+            // нельзя назначать чужой URL и греть под неё кеш.
             let versionID = remoteMessages.reversed().first {
                 $0.jobID == jobID && $0.versionID != nil
             }?.versionID
@@ -863,12 +896,28 @@ final class ChatViewModel {
         }
 
         applyRemoteMessages(remoteMessages)
-        if isOffline { isOffline = false }
         await ChatCache.shared.save(
             projectID: projectID,
             messages: remoteMessages,
             isPublic: privacy == .publicShowcase
         )
+    }
+
+    /// Терминальная запись job в истории: assistant-сообщение с этим jobID,
+    /// не являющееся живым placeholder'ом (status pending/cancelling).
+    /// Формы записей — append_assistant_*.sql на бэкенде: done = version_id,
+    /// error = error, cancelled = status "cancelled"; user-сообщения job
+    /// (AppendUserMessage) отбрасываются требованием роли assistant.
+    private static func hasTerminalRecord(
+        jobID: String,
+        in messages: [RemoteChatMessage]
+    ) -> Bool {
+        messages.contains { message in
+            message.role.lowercased() == "assistant"
+                && message.jobID == jobID
+                && message.status != "pending"
+                && message.status != "cancelling"
+        }
     }
 
     private func restorePendingMessages(_ messages: [ChatCache.PendingMessage]) {
@@ -946,6 +995,29 @@ final class ChatViewModel {
         ))
         updatePendingCount()
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+        scheduleQueueRetry()
+    }
+
+    /// Отложенный автоповтор очереди: flush дёргается не только событием
+    /// возврата сети, которого может не быть (NWPathMonitor считал путь
+    /// живым, а сервер отвечал 408/429/5xx). Одно ограниченное расписание
+    /// на постановку в очередь — без перезапуска из flush, иначе цепочка
+    /// попыток становилась бы бесконечной.
+    private func scheduleQueueRetry() {
+        guard queueRetryTask == nil else { return }
+        queueRetryTask = Task { [weak self] in
+            defer { self?.queueRetryTask = nil }
+            for delay in Self.queueRetryDelays {
+                try? await Task.sleep(for: delay)
+                guard let self, !Task.isCancelled, !self.pollAbortRequested else { return }
+                guard self.pendingMessages.contains(where: { $0.deliveryState == .pending }) else {
+                    return
+                }
+                if !self.isGenerating {
+                    await self.flushPendingMessages()
+                }
+            }
+        }
     }
 
     private func updatePendingCount() {
@@ -971,7 +1043,12 @@ final class ChatViewModel {
             // Разрыв соединения транзиентен по природе (типичен при
             // VPN-переключениях) — сообщение должно ждать сеть, а не
             // помечаться «not sent» после первой же неудачи.
-            .networkConnectionLost
+            .networkConnectionLost,
+            // Таймаут не означает отказ сервера: запрос мог быть принят,
+            // а ответ потерян. Такая попытка помечается ambiguousSince
+            // (isPossiblyDelivered) и перед повторным POST сверяется
+            // с историей — иначе ручной retry запускал бы вторую генерацию.
+            .timedOut
         ].contains(urlError.code)
     }
 
