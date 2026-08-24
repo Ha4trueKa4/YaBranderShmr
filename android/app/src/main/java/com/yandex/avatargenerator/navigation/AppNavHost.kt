@@ -115,8 +115,8 @@ fun AppNavHost(
         composable(Destination.CreateProject.route) {
             CreateProjectScreen(
                 onBack = { navController.popBackStack() },
-                onProjectCreated = { projectId ->
-                    navController.navigate(Destination.Project.createRoute(projectId)) {
+                onProjectCreated = { projectId, jobId ->
+                    navController.navigate(Destination.Project.createRoute(projectId, jobId)) {
                         popUpTo(Destination.CreateProject.route) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -161,12 +161,22 @@ fun AppNavHost(
 
         composable(
             route = Destination.Project.route,
-            arguments = listOf(navArgument(Destination.ARG_PROJECT_ID) { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument(Destination.ARG_PROJECT_ID) { type = NavType.StringType },
+                navArgument(Destination.ARG_JOB_ID) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString(Destination.ARG_PROJECT_ID).orEmpty()
+            // Без orEmpty: экрану нужен именно null — «ждать нечего».
+            val jobId = backStackEntry.arguments?.getString(Destination.ARG_JOB_ID)
             // TODO: WebView-редактор сверху — пока экран проекта это только чат с ИИ.
             ProjectScreen(
                 projectId = projectId,
+                jobId = jobId,
                 onBackClick = { navController.popBackStack() },
                 // Скачивание живёт на витрине проекта — своих кнопок выгрузки
                 // у чата нет, поэтому ведём на неё же, что и лента.

@@ -48,9 +48,12 @@ internal class CreateProjectViewModel(
 
     /**
      * Создаёт проект и отправляет [CreateProjectEffect.NavigateToProject] с его
-     * настоящим id. Пустой промпт блокирует запуск (кнопка и так неактивна —
-     * это страховка на случай гонки с последней рекомпозицией) и заодно
-     * экономит заведомо ошибочный запрос: пустой промпт бэкенд отвергает 400.
+     * настоящим id и id запущенной первичной генерации — ждать её будет уже
+     * экран проекта, форма для этого живёт слишком мало.
+     *
+     * Пустой промпт блокирует запуск (кнопка и так неактивна — это страховка на
+     * случай гонки с последней рекомпозицией) и заодно экономит заведомо
+     * ошибочный запрос: пустой промпт бэкенд отвергает 400.
      *
      * Репозиторий не бросает, а отдаёт [Result] — своего `runCatching` здесь
      * не нужно. Ошибка не роняет корутину: снимаем
@@ -77,7 +80,12 @@ internal class CreateProjectViewModel(
             )
                 .onSuccess { creation ->
                     updateState { copy(isSubmitting = false) }
-                    sendEffect(CreateProjectEffect.NavigateToProject(creation.project.id))
+                    sendEffect(
+                        CreateProjectEffect.NavigateToProject(
+                            projectId = creation.project.id,
+                            jobId = creation.jobId,
+                        ),
+                    )
                 }
                 .onFailure {
                     updateState { copy(isSubmitting = false, hasError = true) }

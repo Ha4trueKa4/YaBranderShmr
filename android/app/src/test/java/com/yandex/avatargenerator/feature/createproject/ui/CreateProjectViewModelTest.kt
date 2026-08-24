@@ -89,8 +89,12 @@ internal class CreateProjectViewModelTest {
         assertEquals("Minimal fox mascot", repository.lastCreatedPrompt)
         assertEquals("Orion Labs", repository.lastCreatedName)
         assertEquals("Deep space violet", repository.lastCreatedDescription)
-        // В навигацию уходит id из ответа сервера, а не то, что ввёл пользователь.
-        assertEquals(listOf(CreateProjectEffect.NavigateToProject("project-42")), effects)
+        // В навигацию уходит id из ответа сервера, а не то, что ввёл пользователь,
+        // и вместе с ним — задача первичной генерации: ждать её будет экран проекта.
+        assertEquals(
+            listOf(CreateProjectEffect.NavigateToProject("project-42", "job-1")),
+            effects,
+        )
         assertFalse(viewModel.state.value.isSubmitting)
 
         collector.cancel()

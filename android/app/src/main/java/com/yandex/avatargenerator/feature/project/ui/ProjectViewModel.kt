@@ -40,6 +40,11 @@ import java.util.UUID
  * бэкенд доводит генерацию до конца сам и кладёт результат в историю, так что
  * при возврате экран перечитает ленту и увидит его. Ни `WorkManager`, ни
  * хранение `job_id` на диске ради этого не заводим.
+ *
+ * Экран можно открыть с уже запущенной задачей первичной генерации
+ * ([initialJobId]) — так на него уходит форма создания проекта, получив от
+ * `POST /projects` ответ `202` с `job_id`. Тогда экран сразу показывает
+ * скелетон ответа и ждёт результат, не заставляя перезаходить.
  */
 internal class ProjectViewModel(
     private val chatRepository: ChatRepository,
@@ -47,7 +52,11 @@ internal class ProjectViewModel(
     private val projectRepository: ProjectRepository,
     private val generationModelRepository: GenerationModelRepository,
     private val projectId: String,
+    initialJobId: String? = null,
 ) : ViewModel() {
+
+    /** Задача первичной генерации, с которой экран открыли. Ждём её один раз. */
+    private var pendingInitialJobId: String? = initialJobId
 
     private val _uiState = MutableStateFlow<ProjectUiState>(ProjectUiState.Loading)
     val uiState: StateFlow<ProjectUiState> = _uiState.asStateFlow()
@@ -463,6 +472,18 @@ internal class ProjectViewModel(
                 },
                 onFailure = { ProjectUiState.Error },
             )
+
+            // Только по успешной загрузке: на Error ждать некуда — скелетон
+            // и ответ рисует Content, а задачу подхватит retry().
+            // Обнуляем до вызова, а не после: retry() зовёт тот же load(), и
+            // иначе повторная загрузка запустила бы ожидание второй раз.
+            if (_uiState.value is ProjectUiState.Content) {
+                pendingInitialJobId?.let { jobId ->
+                    pendingInitialJobId = null
+                    _uiState.updateContent { it.copy(isSending = true) }
+                    awaitGeneration(jobId)
+                }
+            }
         }
     }
 }

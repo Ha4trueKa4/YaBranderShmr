@@ -224,7 +224,11 @@ API_INTEGRATION=1 ./gradlew :app:testDebugUnitTest --tests '*AuthApiIntegrationT
 уже виден, потому что бэкенд записал его в историю синхронно. Само ожидание —
 `GET /projects/{id}/generate/{job_id}`, тот же эндпоинт и та же обвязка
 (`ChatRepository.awaitGeneration`), что у правок в чате — живёт на экране
-проекта, в его `viewModelScope`.
+проекта, в его `viewModelScope`. Сам `job_id` доезжает туда навигацией:
+у маршрута `Destination.Project` он необязательный **query**-аргумент
+(`project/{projectId}?jobId={jobId}`) — из списка чатов и из профиля на тот же
+экран приходят без него. `ProjectViewModel` получает его параметром
+(`initialJobId`) и ждёт ровно один раз, в конце первой загрузки ленты.
 
 **Создание живёт здесь, а не в `feature/createproject`.** У формы создания
 своего репозитория нет: ответ `POST /projects` — это тот же `ProjectDto` и та

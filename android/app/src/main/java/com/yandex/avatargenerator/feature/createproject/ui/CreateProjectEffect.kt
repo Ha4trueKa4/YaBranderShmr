@@ -9,8 +9,14 @@ import com.yandex.avatargenerator.core.mvi.BaseEffect
  */
 internal sealed interface CreateProjectEffect : BaseEffect {
 
-    /** Проект создан; открыть его экран по [projectId]. */
-    data class NavigateToProject(val projectId: String) : CreateProjectEffect
+    /**
+     * Проект создан; открыть его экран по [projectId].
+     *
+     * @param jobId задача первичной генерации, запущенной созданием; `null` —
+     *  сервер её не прислал (старый бэкенд или ветка копирования), тогда экрану
+     *  проекта нечего ждать.
+     */
+    data class NavigateToProject(val projectId: String, val jobId: String?) : CreateProjectEffect
 
     data object NavigateBack : CreateProjectEffect
 }
