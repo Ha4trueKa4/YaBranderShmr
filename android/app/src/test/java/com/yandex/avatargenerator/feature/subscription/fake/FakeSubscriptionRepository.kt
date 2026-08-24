@@ -24,6 +24,12 @@ internal class FakeSubscriptionRepository : SubscriptionRepository {
     var unsubscribeCallCount: Int = 0
         private set
 
+    /** Сколько раз запрашивали каждый список — по ним видно перезагрузки. */
+    var followersCallCount: Int = 0
+        private set
+    var followingCallCount: Int = 0
+        private set
+
     override suspend fun subscribe(userId: String): Result<Unit> {
         subscribeCallCount++
         return if (subscribeFails) Result.failure(RuntimeException("boom")) else Result.success(Unit)
@@ -35,11 +41,13 @@ internal class FakeSubscriptionRepository : SubscriptionRepository {
     }
 
     override suspend fun getFollowers(userId: String): List<SubscriptionUser> {
+        followersCallCount++
         listFailure?.let { throw it }
         return followers
     }
 
     override suspend fun getFollowing(userId: String): List<SubscriptionUser> {
+        followingCallCount++
         listFailure?.let { throw it }
         return following
     }

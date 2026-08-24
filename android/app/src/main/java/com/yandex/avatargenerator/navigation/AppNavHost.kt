@@ -230,14 +230,12 @@ fun AppNavHost(
                 initialTab = tab,
                 onBack = { navController.popBackStack() },
                 onUserClick = { clickedUserId ->
-                    // Тап по своей строке в списке ведёт на свой профиль (вкладку с
-                    // кнопкой «Редактировать»), а не на чужой профиль с «Подписаться».
-                    if (clickedUserId == currentUserId) {
-                        navController.openOwnProfileTab()
-                    } else {
-                        navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
-                    }
+                    navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
                 },
+                // Тап по своей строке в списке ведёт на свой профиль (вкладку с
+                // кнопкой «Редактировать»), а не на чужой профиль с «Подписаться».
+                // Кто в списке «свой», знает ViewModel — она и разводит эффекты.
+                onOpenOwnProfile = { navController.openOwnProfileTab() },
                 currentUserId = currentUserId,
                 modifier = Modifier.fillMaxSize(),
             )
