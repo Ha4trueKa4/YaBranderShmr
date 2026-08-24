@@ -17,9 +17,12 @@ struct AppRouteView: View {
         case .projectCreate:
             ProjectCreateView(
                 onBack: { router.pop() },
-                onGenerate: { project in
+                onGenerate: { result in
                     router.popToRoot(.create)
-                    router.push(.chat(projectID: project.id, title: project.name), in: .create)
+                    router.push(
+                        .chat(projectID: result.project.id, title: result.project.name),
+                        in: .create
+                    )
                 }
             )
 

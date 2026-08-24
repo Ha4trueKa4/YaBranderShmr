@@ -9,6 +9,7 @@ struct FormTextEditor: View {
     @Binding var text: String
 
     var minHeight: CGFloat = 180
+    var errorMessage: String?
 
     @FocusState private var isFocused: Bool
 
@@ -16,7 +17,11 @@ struct FormTextEditor: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(
+                    errorMessage == nil
+                        ? AnyShapeStyle(.secondary)
+                        : AnyShapeStyle(Color(.error))
+                )
 
             TextEditor(text: $text)
                 .focused($isFocused)
@@ -37,24 +42,35 @@ struct FormTextEditor: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(
-                            isFocused ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(.separator)),
+                            errorMessage != nil
+                                ? AnyShapeStyle(Color(.error))
+                                : isFocused
+                                    ? AnyShapeStyle(.tint)
+                                    : AnyShapeStyle(Color(.separator)),
                             lineWidth: 1
                         )
                 }
                 .animation(.easeOut(duration: 0.15), value: isFocused)
                 .contentShape(.rect)
                 .onTapGesture { isFocused = true }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(Color(.error))
+                    .accessibilityElement(children: .combine)
+            }
         }
     }
 }
 
 #Preview {
-    @Previewable @State var brief = ""
+    @Previewable @State var prompt = ""
 
     FormTextEditor(
-        label: "BRAND DESCRIPTION & BRIEF",
-        placeholder: "Describe your brand values, target audience, preferred color scheme, visual mood.",
-        text: $brief
+        label: "PROMPT",
+        placeholder: "Describe the brandkit you want to create.",
+        text: $prompt
     )
     .padding(24)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
