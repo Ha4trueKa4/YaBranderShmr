@@ -258,6 +258,20 @@ final class ChatViewModel {
                 prompt: text,
                 modelID: modelID
             )
+        } catch NetworkError.generationInProgress(let existingJobID) where lostJobIDs.contains(existingJobID) {
+            // Известная зависшая job: сервер продолжит отвечать 409 с её id,
+            // ждать её повторно (ещё один grace-таймаут) бессмысленно.
+            isGenerating = false
+            markMessageFailed(id: chatMessage.id)
+            await queuePendingMessage(
+                id: chatMessage.id,
+                text: text,
+                createdAt: chatMessage.date,
+                modelID: modelID,
+                deliveryState: .failed
+            )
+            sendErrorMessage = Self.stuckGenerationMessage
+            return
         } catch NetworkError.generationInProgress(let existingJobID) {
             removeMessage(id: chatMessage.id)
             restorePrompt = text
@@ -318,11 +332,12 @@ final class ChatViewModel {
         /// ожидание продолжаем только по внешнему триггеру (возврат сети,
         /// переоткрытие чата).
         var consecutiveConflicts = 0
+        var networkRetries = 0
 
         while let pendingIndex = pendingMessages.firstIndex(where: {
             $0.deliveryState == .pending
         }) {
-            if Task.isCancelled { break }
+            if Task.isCancelled || pollAbortRequested { break }
             let prompt = pendingMessages[pendingIndex]
             guard prompt.text.count <= Self.maxPromptLength else {
                 pendingMessages[pendingIndex].deliveryState = .failed
@@ -338,6 +353,15 @@ final class ChatViewModel {
                     prompt: prompt.text,
                     modelID: prompt.modelID
                 )
+            } catch NetworkError.generationInProgress(let existingJobID)
+                where lostJobIDs.contains(existingJobID) {
+                // Известная зависшая job: не цепляемся к ней повторно —
+                // честная ошибка вместо вечного pending в очереди.
+                pendingMessages[pendingIndex].deliveryState = .failed
+                updatePendingCount()
+                markPendingMessageFailed(prompt)
+                sendErrorMessage = Self.stuckGenerationMessage
+                break
             } catch NetworkError.generationInProgress(let existingJobID) {
                 activeJobID = existingJobID
                 isCancelling = false
@@ -355,6 +379,16 @@ final class ChatViewModel {
                     if indicatesOffline(error) {
                         isOffline = true
                     }
+                    // Путь уже поднялся, а запрос упал (сеть «едет» после
+                    // VPN-переключения): без повторов очередь до рестарта
+                    // никто больше не дёрнет — нотификация приходит один раз.
+                    if networkRetries < Self.networkRetryDelays.count,
+                       NetworkMonitor.shared.isConnected {
+                        try? await Task.sleep(for: Self.networkRetryDelays[networkRetries])
+                        networkRetries += 1
+                        if Task.isCancelled || pollAbortRequested { break }
+                        continue
+                    }
                     break
                 }
                 pendingMessages[pendingIndex].deliveryState = .failed
@@ -365,6 +399,7 @@ final class ChatViewModel {
             }
 
             consecutiveConflicts = 0
+            networkRetries = 0
             pendingMessages.remove(at: pendingIndex)
             updatePendingCount()
             sendErrorMessage = nil
@@ -489,6 +524,16 @@ final class ChatViewModel {
     /// оставаться «cancelling» неограниченно долго — держать ввод
     /// заблокированным всё это время нельзя.
     private static let cancelGracePeriod: Duration = .seconds(30)
+
+    /// Сервер отвечает 409 с id job, уже пережившей grace-таймаут
+    /// (см. lostJobIDs): новые генерации проекта заблокированы зависшей
+    /// job — ждём её повторно бессмысленно, честно сообщаем об этом.
+    private static let stuckGenerationMessage =
+        "The server is busy with a stuck generation. Please try again in a few minutes."
+
+    /// Паузы повторных попыток отправки, когда сетевой путь уже поднялся,
+    /// а запросы ещё падают (сеть «едет» после VPN-переключений).
+    private static let networkRetryDelays: [Duration] = [.seconds(3), .seconds(6), .seconds(12)]
 
     /// Опрашивает статус фоновой задачи генерации через long-polling.
     /// При `pending`/`cancelling` переоткрывает соединение не чаще, чем раз
@@ -766,7 +811,11 @@ final class ChatViewModel {
             .cannotFindHost,
             .cannotConnectToHost,
             .dnsLookupFailed,
-            .dataNotAllowed
+            .dataNotAllowed,
+            // Разрыв соединения транзиентен по природе (типичен при
+            // VPN-переключениях) — сообщение должно ждать сеть, а не
+            // помечаться «not sent» после первой же неудачи.
+            .networkConnectionLost
         ].contains(urlError.code)
     }
 

@@ -16,6 +16,7 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var messageText = ""
     @State private var didFinishInitialLoad = false
+    @State private var didScrollInitially = false
     @State private var isPrivacyPickerPresented = false
     @State private var isModelPickerPresented = false
     @State private var isModelControlVisible = false
@@ -143,7 +144,12 @@ struct ChatView: View {
             .task {
                 await viewModel.load()
                 await Task.yield()
-                scrollToBottom(using: proxy, animated: false)
+                if !didScrollInitially {
+                    // Fallback: контент не появился ни разу (пустой чат) либо
+                    // onChange не сработал — скроллим по завершении load().
+                    didScrollInitially = true
+                    scrollToBottom(using: proxy, animated: false)
+                }
                 didFinishInitialLoad = true
             }
             .task {
@@ -161,7 +167,21 @@ struct ChatView: View {
                 viewModel.consumeRestorePrompt()
             }
             .onChange(of: viewModel.lastMessageID) { _, newMessageID in
-                guard didFinishInitialLoad, newMessageID != nil else { return }
+                guard newMessageID != nil else { return }
+
+                if !didScrollInitially {
+                    // Первый контент: скроллим сразу, не дожидаясь конца
+                    // load() — при активной генерации load() внутри ждёт
+                    // опрос job (до grace-таймаута), и прокрутка опоздала бы
+                    // на десятки секунд.
+                    didScrollInitially = true
+                    Task { @MainActor in
+                        await Task.yield()
+                        scrollToBottom(using: proxy, animated: false)
+                    }
+                    return
+                }
+                guard didFinishInitialLoad else { return }
 
                 Task { @MainActor in
                     await Task.yield()
