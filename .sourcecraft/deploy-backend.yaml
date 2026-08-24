@@ -117,7 +117,7 @@ deploy:
         docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env \
           -e http_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
           -e https_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
-          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis \
+          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis,service-redis-sentinel \
           $REGISTRY/$IMAGE:latest
         docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
           echo "WARNING: service-redis не запущен!"
