@@ -133,8 +133,16 @@ extension NetworkClient {
         _ endpoint: APIEndpoint,
         authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?,
-        timeout: TimeInterval?
+        timeout: TimeInterval?,
+        retries: Bool = true
     ) async throws -> Response {
-        try await request(method, path: endpoint.path, authorization: authorization, body: body, timeout: timeout)
+        try await request(
+            method,
+            path: endpoint.path,
+            authorization: authorization,
+            body: body,
+            timeout: timeout,
+            retries: retries
+        )
     }
 }

@@ -147,6 +147,11 @@ struct ChatView: View {
                 scrollToBottom(using: proxy, animated: false)
                 didFinishInitialLoad = true
             }
+            .onAppear {
+                // Если restorePrompt установили, пока вьюха была закрыта
+                // другим экраном, onChange не сработал — применяем теперь.
+                applyPendingRestorePrompt()
+            }
             .onChange(of: viewModel.restorePrompt) { _, prompt in
                 guard let prompt else { return }
                 isRestoringText = true
@@ -497,6 +502,13 @@ struct ChatView: View {
             return "Message is too long (maximum 5000 characters)."
         }
         return viewModel.sendErrorMessage
+    }
+
+    private func applyPendingRestorePrompt() {
+        guard let prompt = viewModel.restorePrompt else { return }
+        isRestoringText = true
+        messageText = prompt
+        viewModel.consumeRestorePrompt()
     }
 
     private func sendMessage() {

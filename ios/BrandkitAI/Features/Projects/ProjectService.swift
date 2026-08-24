@@ -100,12 +100,16 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
     }
 
     func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        // Без NetworkClient-retry: retry-политикой опроса владеет
+        // ChatViewModel.pollGeneration — иначе попытки двух слоёв
+        // перемножаются и ожидание растягивается на десятки минут.
         try await client.request(
             .get,
             .generateStatus(projectID: projectID, jobID: jobID),
             authorization: .required,
             body: Optional<String>.none,
-            timeout: 60
+            timeout: 60,
+            retries: false
         )
     }
 

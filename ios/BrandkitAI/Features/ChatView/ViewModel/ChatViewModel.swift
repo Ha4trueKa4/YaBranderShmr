@@ -88,6 +88,10 @@ final class ChatViewModel {
     private var pollAbortRequested = false
     var privacy = ProjectPrivacy.privateProject
 
+    /// jobID, чей статус сервер уже не отдаёт (404). Не резюмируются при
+    /// `reload()` — см. `ChatCache.CachedChat.lostJobIDs`.
+    private var lostJobIDs: Set<String> = []
+
     private let service: any ProjectServiceProtocol
     private var didLoad = false
     private var versionURLs: [UUID: URL] = [:]
@@ -109,9 +113,10 @@ final class ChatViewModel {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                guard let self else { return }
-                self.isOffline = false
-                await self.flushPendingMessages()
+                // isOffline сознательно не сбрасываем: плашка гаснет по
+                // факту успешного запроса (pollGeneration/flush), а не по
+                // факту «сеть вроде появилась» — она может и не заработать.
+                await self?.flushPendingMessages()
             }
         }
     }
@@ -122,7 +127,7 @@ final class ChatViewModel {
     }
 
     var hasUnsentMessage: Bool {
-        !pendingMessages.isEmpty
+        pendingMessages.contains { $0.deliveryState == .pending }
     }
 
     func loadModels(force: Bool = false) async {
@@ -166,12 +171,15 @@ final class ChatViewModel {
             replaceMessages(cached.messages)
             privacy = ProjectPrivacy(isPublic: cached.isPublic)
             restorePendingMessages(cached.pendingMessages)
+            lostJobIDs = cached.lostJobIDs
         }
         await reload()
     }
 
     func retry() async {
-        guard !isLoading else { return }
+        // Во время генерации reload перезаписал бы историю и затёр летящий
+        // optimistic-баббл (его нет ни на сервере, ни в pending-очереди).
+        guard !isLoading, !isGenerating else { return }
         didLoad = false
         await reload()
     }
@@ -290,6 +298,11 @@ final class ChatViewModel {
         isGenerating = true
         defer { isGenerating = false }
 
+        /// Защита от бесконечного цикла 409: после повторного конфликта
+        /// ожидание продолжаем только по внешнему триггеру (возврат сети,
+        /// переоткрытие чата).
+        var consecutiveConflicts = 0
+
         while let pendingIndex = pendingMessages.firstIndex(where: {
             $0.deliveryState == .pending
         }) {
@@ -315,9 +328,18 @@ final class ChatViewModel {
                 await pollAndRefresh(jobID: existingJobID)
                 activeJobID = nil
                 isCancelling = false
-                break
+                // Блокирующая job только что завершилась — сразу пробуем
+                // отправить следующее сообщение, но не бесконечно.
+                consecutiveConflicts += 1
+                if consecutiveConflicts >= 2 { break }
+                continue
             } catch {
                 if shouldKeepPending(after: error) {
+                    // Очередь остаётся на потом; если сеть на самом деле
+                    // пропала — показываем плашку офлайна.
+                    if indicatesOffline(error) {
+                        isOffline = true
+                    }
                     break
                 }
                 pendingMessages[pendingIndex].deliveryState = .failed
@@ -327,6 +349,7 @@ final class ChatViewModel {
                 continue
             }
 
+            consecutiveConflicts = 0
             pendingMessages.remove(at: pendingIndex)
             updatePendingCount()
             sendErrorMessage = nil
@@ -365,7 +388,10 @@ final class ChatViewModel {
     }
 
     func restoreUnsentMessage() async {
-        guard !isGenerating, let pending = pendingMessages.last else { return }
+        guard !isGenerating,
+              let pending = pendingMessages.last(where: { $0.deliveryState == .pending })
+                  ?? pendingMessages.last(where: { $0.deliveryState == .failed })
+        else { return }
 
         pendingMessages.removeAll { $0.id == pending.id }
         updatePendingCount()
@@ -418,18 +444,31 @@ final class ChatViewModel {
     }
 
     private static let maxPollRetries = 10
-    private static let pollMinDelayNs: UInt64 = 1_000_000_000        // 1 sec
-    private static let pollMaxDelayNs: UInt64 = 15 * 1_000_000_000   // 15 sec
+    private static let pollMinDelay: Duration = .seconds(1)
+    private static let pollMaxDelay: Duration = .seconds(15)
+
+    /// Суммарный бюджет ожидания одной job. Ограничивает худшие сценарии
+    /// (умножение retry-пауз, длинный офлайн) — по исчерпании клиент
+    /// отвязывается от опроса и освобождает ввод; результат подхватит
+    /// placeholder в истории при следующем `reload()`.
+    private static let pollDeadline: Duration = .seconds(5 * 60)
+
+    /// Минимальный интервал между соседними запросами статуса. Настоящий
+    /// long-poll держит соединение десятки секунд; мгновенный ответ —
+    /// признак деградации сервера, без этой паузы клиент уходит в hot-loop.
+    private static let pollMinRequestInterval: Duration = .seconds(1)
 
     /// Опрашивает статус фоновой задачи генерации через long-polling.
-    /// При `pending`/`cancelling` немедленно открывает новое соединение.
-    /// При разрыве делает retry с backoff, при оффлайне ждёт восстановления.
-    /// После ~10 неудачных попыток или 404 (задача потеряна) выбрасывает ошибку.
+    /// При `pending`/`cancelling` переоткрывает соединение не чаще, чем раз
+    /// в секунду. При разрыве делает retry с backoff, при оффлайне ждёт
+    /// восстановления. После ~10 неудачных попыток, 404 (задача потеряна)
+    /// или исчерпания общего дедлайна завершается ошибкой.
     /// Прерывается локально (без ошибки) по `pollAbortRequested` — см. поле выше.
     private func pollGeneration(jobID: String) async throws -> GenerationOutcome {
         pollAbortRequested = false
         var attempt = 0
-        var delayNs = Self.pollMinDelayNs
+        var delay = Self.pollMinDelay
+        let deadline = ContinuousClock.now + Self.pollDeadline
 
         while true {
             if pollAbortRequested {
@@ -437,14 +476,22 @@ final class ChatViewModel {
                 return .cancelled
             }
             try Task.checkCancellation()
+            if ContinuousClock.now >= deadline {
+                return .error(message: "Generation is taking too long. Please refresh the chat in a moment.")
+            }
 
             do {
+                let requestStart = ContinuousClock.now
                 let status = try await service.generateStatus(projectID: projectID, jobID: jobID)
                 isOffline = false
                 switch status {
                 case .pending, .cancelling:
                     attempt = 0
-                    delayNs = Self.pollMinDelayNs
+                    delay = Self.pollMinDelay
+                    let elapsed = ContinuousClock.now - requestStart
+                    if elapsed < Self.pollMinRequestInterval {
+                        try await Task.sleep(for: Self.pollMinRequestInterval - elapsed)
+                    }
                     continue
                 case .done(let url):
                     guard let url else {
@@ -468,8 +515,8 @@ final class ChatViewModel {
                     isOffline = true
                     await waitForNetworkRecovery()
                 } else {
-                    try await Task.sleep(nanoseconds: delayNs)
-                    delayNs = min(Self.pollMaxDelayNs, UInt64(Double(delayNs) * 2))
+                    try await Task.sleep(for: delay)
+                    delay = min(Self.pollMaxDelay, delay * 2)
                 }
                 attempt += 1
             }
@@ -495,6 +542,10 @@ final class ChatViewModel {
         } catch {
             if Self.isJobLost(error) {
                 // job_id живёт в памяти бэкенда и не переживает его перезапуск.
+                // Запоминаем потерянную job, чтобы каждое последующее
+                // открытие чата не заканчивалось этой ошибкой снова.
+                lostJobIDs.insert(jobID)
+                await ChatCache.shared.markJobLost(jobID, projectID: projectID)
                 sendErrorMessage = "Generation status is unavailable. Please refresh the chat."
             } else {
                 sendErrorMessage = failureMessage(for: error)
@@ -504,6 +555,7 @@ final class ChatViewModel {
     }
 
     /// Ждёт восстановления сети до 60 секунд, проверяя раз в секунду.
+    /// Суммарное ожидание ограничено общим дедлайном опроса.
     private func waitForNetworkRecovery() async {
         if NetworkMonitor.shared.isConnected { return }
         for _ in 0..<60 {
@@ -698,7 +750,10 @@ final class ChatViewModel {
             async let remoteMessages = service.fetchChat(projectID: projectID)
             let (fetchedProject, fetchedMessages) = try await (project, remoteMessages)
             privacy = ProjectPrivacy(isPublic: fetchedProject.isPublic)
-            activeGeneration = findActiveGeneration(in: fetchedMessages)
+            activeGeneration = findActiveGeneration(
+                in: fetchedMessages,
+                excluding: lostJobIDs
+            )
             applyRemoteMessages(fetchedMessages)
             didLoad = true
             await ChatCache.shared.save(
@@ -725,13 +780,16 @@ final class ChatViewModel {
     /// Находит активную генерацию по виртуальному assistant-placeholder'у
     /// (status "pending"/"cancelling"), который бэкенд дописывает в историю
     /// чата на время выполнения job'ы. Возвращает job_id и признак отмены.
+    /// Потерянные job (404 в прошлом) пропускаются — их опрос бессмыслен.
     private func findActiveGeneration(
-        in remoteMessages: [RemoteChatMessage]
+        in remoteMessages: [RemoteChatMessage],
+        excluding lostJobIDs: Set<String>
     ) -> (jobID: String, cancelling: Bool)? {
         for message in remoteMessages.reversed() {
             guard message.role.lowercased() == "assistant", let jobID = message.jobID else {
                 continue
             }
+            guard !lostJobIDs.contains(jobID) else { continue }
             if message.status == "pending" { return (jobID, false) }
             if message.status == "cancelling" { return (jobID, true) }
         }

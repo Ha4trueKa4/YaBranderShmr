@@ -7,6 +7,18 @@ struct ChatMessageView: View {
     private let assistantContent: AnyView
     private let onRetry: (() -> Void)?
 
+    /// Кеш ширин статус-бейджей доставки: вариантов текста всего два
+    /// («Pending»/«Not sent»), а замер через NSString/UIImage раньше
+    /// выполнялся на каждый ререндер каждого баббла. Ключ включает кегль
+    /// шрифта, чтобы кеш инвалидовался при смене Dynamic Type.
+    private struct DeliveryStatusWidthKey: Hashable {
+        let title: String
+        let systemImage: String
+        let fontPointSize: CGFloat
+    }
+
+    private static var deliveryStatusWidthCache: [DeliveryStatusWidthKey: CGFloat] = [:]
+
     init(
         message: ChatMessage,
         timeTitle: String,
@@ -206,6 +218,15 @@ struct ChatMessageView: View {
 
         let preferredFont = UIFont.preferredFont(forTextStyle: .caption2)
         let font = UIFont.systemFont(ofSize: preferredFont.pointSize, weight: .medium)
+        let key = DeliveryStatusWidthKey(
+            title: title,
+            systemImage: systemImage,
+            fontPointSize: font.pointSize
+        )
+        if let cached = Self.deliveryStatusWidthCache[key] {
+            return cached
+        }
+
         let textWidth = (title as NSString).size(withAttributes: [.font: font]).width
         let symbolConfiguration = UIImage.SymbolConfiguration(font: font)
         let iconWidth = UIImage(
@@ -213,7 +234,9 @@ struct ChatMessageView: View {
             withConfiguration: symbolConfiguration
         )?.size.width ?? font.pointSize
 
-        return iconWidth + 4 + textWidth
+        let width = iconWidth + 4 + textWidth
+        Self.deliveryStatusWidthCache[key] = width
+        return width
     }
 
     private func maximumLineWidth(for text: String, maxWidth: CGFloat) -> CGFloat {
