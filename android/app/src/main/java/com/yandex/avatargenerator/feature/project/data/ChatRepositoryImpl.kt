@@ -94,10 +94,11 @@ class ChatRepositoryImpl(
     override suspend fun startGeneration(
         projectId: String,
         prompt: String,
+        model: String?,
     ): Result<String> = apiResult {
         val started = apiCall {
             client.post(generatePath(projectId)) {
-                setBody(GenerateProjectRequestDto(prompt = prompt))
+                setBody(GenerateProjectRequestDto(prompt = prompt, model = model))
             }.body<GenerationStartedDto>()
         }
         // Без job_id опрашивать нечего: контракт разошёлся с бэкендом.

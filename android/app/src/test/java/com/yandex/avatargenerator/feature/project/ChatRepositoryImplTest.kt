@@ -389,6 +389,16 @@ class ChatRepositoryImplTest {
     }
 
     @Test
+    fun `выбранная модель уходит в теле коротким именем`() = runTest {
+        // Именно короткое: префикс `gpt://<каталог>/` бэкенд клеит сам, а по
+        // полному URI он не опознал бы и OpenAI-модель.
+        repository().startGeneration("p-1", "Violet logo", model = "gpt-5.6-luna")
+
+        val body = Json.parseToJsonElement(sentBodies.single()) as JsonObject
+        assertEquals("gpt-5.6-luna", body.getValue("model").jsonPrimitive.content)
+    }
+
+    @Test
     fun `400 на пустой или слишком длинный промпт — ClientError`() = runTest {
         val repository = repository(
             generate = { respondError(HttpStatusCode.BadRequest, """{"message":"Prompt too long"}""") },

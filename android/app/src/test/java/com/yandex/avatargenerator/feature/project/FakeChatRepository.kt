@@ -32,6 +32,9 @@ internal class FakeChatRepository(
      */
     val sentPrompts: MutableList<String> = mutableListOf()
 
+    /** Модели, с которыми ушли промпты, — по одной на каждый [sentPrompts]. */
+    val sentModels: MutableList<String?> = mutableListOf()
+
     /** Задачи, результат которых ждали: по ним видно, что опрос запускался. */
     val awaitedJobIds: MutableList<String> = mutableListOf()
 
@@ -47,8 +50,13 @@ internal class FakeChatRepository(
         return if (chatResults.isEmpty()) chatResult else chatResults.removeAt(0)
     }
 
-    override suspend fun startGeneration(projectId: String, prompt: String): Result<String> {
+    override suspend fun startGeneration(
+        projectId: String,
+        prompt: String,
+        model: String?,
+    ): Result<String> {
         sentPrompts += prompt
+        sentModels += model
         startError?.let { return Result.failure(it) }
         return Result.success(JOB_ID)
     }
