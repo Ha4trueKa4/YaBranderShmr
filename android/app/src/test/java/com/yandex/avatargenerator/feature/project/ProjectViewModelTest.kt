@@ -9,6 +9,7 @@ import com.yandex.avatargenerator.feature.project.fake.FakeGenerationModelReposi
 import com.yandex.avatargenerator.feature.project.ui.MaxPromptBytes
 import com.yandex.avatargenerator.feature.project.ui.ProjectUiState
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -96,6 +97,20 @@ internal class ProjectViewModelTest {
         ChatMessage.Failed(
             id = "chat-2-assistant",
             text = "Invalid SVG",
+            sentAt = Instant.parse("2026-08-12T11:32:20Z"),
+            jobId = FakeChatRepository.JOB_ID,
+        ),
+    )
+
+    /** Лента, какой её отдаёт сервер после отмены: промпт и запись об отмене. */
+    private val cancelledMessages = messages + listOf(
+        ChatMessage.Outgoing(
+            id = "chat-1-user",
+            text = "Make it rounder",
+            sentAt = Instant.parse("2026-08-12T11:32:00Z"),
+        ),
+        ChatMessage.Cancelled(
+            id = "chat-2-assistant",
             sentAt = Instant.parse("2026-08-12T11:32:20Z"),
             jobId = FakeChatRepository.JOB_ID,
         ),
@@ -616,6 +631,134 @@ internal class ProjectViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
+    }
+
+    @Test
+    fun `остановка шлёт отмену по идущей задаче, не трогая скелетон`() = runTest(dispatcher) {
+        // Скелетон снимет исход, который принесёт всё тот же опрос статуса:
+        // задача останавливается не мгновенно, и убрать его раньше — соврать.
+        chatRepository.chatResult = Result.success(chat)
+        val gate = CompletableDeferred<Unit>()
+        chatRepository.awaitGate = gate
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+        viewModel.cancelGeneration()
+        advanceUntilIdle()
+
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.cancelledJobIds)
+        val content = contentOf(viewModel)
+        assertTrue(content.isCancelling)
+        assertFalse("отмену не повторяем", content.canCancel)
+        assertEquals(1, content.messages.filterIsInstance<ChatMessage.Pending>().size)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `вторая остановка подряд второго запроса не шлёт`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val gate = CompletableDeferred<Unit>()
+        chatRepository.awaitGate = gate
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+        viewModel.cancelGeneration()
+        viewModel.cancelGeneration()
+        advanceUntilIdle()
+
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.cancelledJobIds)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `остановка без идущей генерации ничего не шлёт`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.cancelGeneration()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), chatRepository.cancelledJobIds)
+    }
+
+    @Test
+    fun `неудачная отмена снимает только свой флаг — ожидание продолжается`() =
+        runTest(dispatcher) {
+            chatRepository.chatResult = Result.success(chat)
+            chatRepository.cancelError = NetworkException.NotFound()
+            val gate = CompletableDeferred<Unit>()
+            chatRepository.awaitGate = gate
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.onDraftChange("Make it rounder")
+            viewModel.send()
+            advanceUntilIdle()
+            viewModel.cancelGeneration()
+            advanceUntilIdle()
+
+            val content = contentOf(viewModel)
+            assertFalse(content.isCancelling)
+            assertTrue(content.isSending)
+            // Нажать «остановить» можно ещё раз.
+            assertTrue(content.canCancel)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun `отменённая генерация показывается перечитанной лентой`() = runTest(dispatcher) {
+        // Запись об отмене бэкенд пишет в историю — после перезахода экран
+        // выглядит так же.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        chatRepository.awaitResult = Result.success(GenerationOutcome.Cancelled)
+        chatRepository.chatResult = Result.success(chat.copy(messages = cancelledMessages))
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        assertEquals(cancelledMessages, content.messages)
+        assertEquals(false, content.isSending)
+        assertEquals(false, content.isCancelling)
+    }
+
+    @Test
+    fun `отмена без записи в истории рисуется локальной пилюлей`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        chatRepository.awaitResult = Result.success(GenerationOutcome.Cancelled)
+        chatRepository.chatResult = Result.failure(IllegalStateException("network is down"))
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val content = contentOf(viewModel)
+        // Промпт остался: на сервере он есть, версии отмена не создала.
+        assertEquals(
+            "Make it rounder",
+            content.messages.filterIsInstance<ChatMessage.Outgoing>().last().text,
+        )
+        assertEquals(1, content.messages.filterIsInstance<ChatMessage.Cancelled>().size)
+        assertEquals(emptyList<ChatMessage.Pending>(), content.messages.filterIsInstance<ChatMessage.Pending>())
+        assertEquals(false, content.isSending)
     }
 
     @Test

@@ -3,7 +3,7 @@ package com.yandex.avatargenerator.feature.project.domain.model
 /**
  * Чем закончилось ожидание фоновой генерации.
  *
- * Все три варианта — это **успешно доведённое до конца ожидание**, поэтому они
+ * Все варианты — это **успешно доведённое до конца ожидание**, поэтому они
  * едут в `Result.success`. `Result.failure` у
  * [com.yandex.avatargenerator.feature.project.domain.ChatRepository.awaitGeneration]
  * остаётся за случаями, когда опрос сорвался сам (403, неразобранный ответ) и о
@@ -30,6 +30,14 @@ sealed interface GenerationOutcome {
      *  не прислали, подпись возьмёт UI из `strings.xml`.
      */
     data class Failed(val message: String?) : GenerationOutcome
+
+    /**
+     * Генерацию прервали через `POST .../generate/{job_id}/cancel`. Как и
+     * провал, это исход, о котором знает сервер: в истории лежит запись
+     * `role = assistant` со `status = cancelled`, поэтому экран после отмены и
+     * после перезахода выглядит одинаково. Версии такая генерация не создаёт.
+     */
+    data object Cancelled : GenerationOutcome
 
     /**
      * Вышел общий дедлайн опроса. Это **не** провал генерации: задача на сервере

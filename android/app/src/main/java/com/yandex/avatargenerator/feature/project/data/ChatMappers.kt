@@ -4,9 +4,13 @@ import com.yandex.avatargenerator.core.data.toInstantOrNull
 import com.yandex.avatargenerator.feature.project.data.dto.ChatMessageDto
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
+import java.time.Instant
 
 private const val UserRole = "user"
 private const val AssistantRole = "assistant"
+
+/** Единственный статус ответа ИИ, который лежит в базе: генерацию прервали. */
+private const val CancelledStatus = "cancelled"
 
 /** Ключ системной пилюли: она в ленте одна, индекс ей не нужен. */
 private const val ProjectCreatedId = "system-created"
@@ -14,9 +18,9 @@ private const val ProjectCreatedId = "system-created"
 /**
  * Собирает ленту экрана из истории диалога.
  *
- * Кривую запись — неизвестная роль, промпт без текста, ответ без `version_id` и
- * без `error` — пропускаем, а не роняем разбор: одна плохая строка не должна
- * стоить пользователю всего экрана.
+ * Кривую запись — неизвестная роль, промпт без текста, ответ без `version_id`,
+ * `error` и `status` — пропускаем, а не роняем разбор: одна плохая строка не
+ * должна стоить пользователю всего экрана.
  *
  * Промпт без ответа под ним ошибкой не считается: бэкенд пишет его в историю
  * сразу при старте задачи, так что пока генерация идёт, он там лежит один.
@@ -56,14 +60,11 @@ internal fun buildChatTimeline(
             AssistantRole -> {
                 val versionId = record.versionId
                 if (versionId == null) {
-                    val error = record.error ?: return@forEachIndexed
                     add(
-                        ChatMessage.Failed(
+                        record.assistantWithoutVersion(
                             id = "chat-$index-$AssistantRole",
-                            text = error,
-                            sentAt = createdAt,
-                            jobId = record.jobId,
-                        ),
+                            createdAt = createdAt,
+                        ) ?: return@forEachIndexed,
                     )
                     return@forEachIndexed
                 }
@@ -91,6 +92,23 @@ internal fun buildChatTimeline(
 }
 
 /**
+ * Ответ ИИ, за которым не стоит версии: провал генерации либо её отмена.
+ *
+ * `null` — показывать нечего: либо запись кривая, либо это служебная заглушка
+ * идущей задачи (`status = pending`/`cancelling`), которую бэкенд подставляет
+ * в конец ленты на лету. Скелетон ожидания экран рисует сам, по своему
+ * `job_id`, — чужую заглушку в ленту не пускаем.
+ */
+private fun ChatMessageDto.assistantWithoutVersion(
+    id: String,
+    createdAt: Instant?,
+): ChatMessage? = when {
+    error != null -> ChatMessage.Failed(id = id, text = error, sentAt = createdAt, jobId = jobId)
+    status == CancelledStatus -> ChatMessage.Cancelled(id = id, sentAt = createdAt, jobId = jobId)
+    else -> null
+}
+
+/**
  * Ищет в истории ответ ИИ на задачу [jobId].
  *
  * Нужен, когда статус-ручка отвечает 404: задача живёт в памяти бэкенда, и его
@@ -106,6 +124,8 @@ internal fun List<ChatMessageDto>.findGenerationOutcome(jobId: String): Generati
         when {
             record.versionId != null -> GenerationOutcome.Done(previewUrl = null)
             record.error != null -> GenerationOutcome.Failed(message = record.error)
+            record.status == CancelledStatus -> GenerationOutcome.Cancelled
+            // Служебная заглушка pending/cancelling: задача ещё идёт, исхода нет.
             else -> null
         }
     }

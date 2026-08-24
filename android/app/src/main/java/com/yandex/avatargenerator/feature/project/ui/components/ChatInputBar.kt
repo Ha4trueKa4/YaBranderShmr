@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -43,6 +44,9 @@ private val SendButtonSize = 40.dp
 private val SendIconSize = 20.dp
 private val SendProgressStroke = 2.dp
 
+/** Квадрат остановки внутри кольца прогресса — заметно меньше него. */
+private val StopIconSize = 12.dp
+
 /** Прозрачность неактивной кнопки: черновик пуст либо генерация ещё идёт. */
 private const val DisabledAlpha = 0.4f
 
@@ -60,8 +64,13 @@ private const val DisabledAlpha = 0.4f
  *
  * @param modelTitle имя выбранной модели генерации — подпись чипа над полем.
  * @param onModelClick тап по чипу: открыть шторку выбора модели.
+ * @param onCancelClick тап по кнопке остановки: прервать идущую генерацию.
  * @param isSending идёт генерация по прошлому промпту — отправка заблокирована,
- *  на кнопке вместо стрелки крутится индикатор. Печатать при этом можно.
+ *  на кнопке вместо стрелки крутится индикатор с квадратом остановки внутри.
+ *  Печатать при этом можно.
+ * @param canCancel генерацию можно прервать: `job_id` уже известен и отмену ещё
+ *  не запрашивали. Пока это не так, кнопка на время генерации неактивна —
+ *  прерывать нечего.
  */
 @Composable
 internal fun ChatInputBar(
@@ -70,8 +79,10 @@ internal fun ChatInputBar(
     onSendClick: () -> Unit,
     modelTitle: String,
     onModelClick: () -> Unit,
+    onCancelClick: () -> Unit,
     modifier: Modifier = Modifier,
     isSending: Boolean = false,
+    canCancel: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -96,10 +107,11 @@ internal fun ChatInputBar(
                     onDraftChange = onDraftChange,
                     modifier = Modifier.weight(1f),
                 )
-                ChatInputSendButton(
-                    enabled = draft.isNotBlank() && !isSending,
+                ChatInputActionButton(
                     isSending = isSending,
-                    onClick = onSendClick,
+                    enabled = if (isSending) canCancel else draft.isNotBlank(),
+                    onSendClick = onSendClick,
+                    onCancelClick = onCancelClick,
                 )
             }
         }
@@ -143,11 +155,18 @@ private fun ChatInputDraftField(
     }
 }
 
+/**
+ * Одна кнопка на два действия: пока генерации нет — отправка, пока идёт —
+ * остановка. Отдельной кнопки для отмены нет намеренно: генерация в проекте
+ * может идти только одна, так что и осмысленное действие в этот момент ровно
+ * одно, а вторая круглая кнопка рядом только сбивала бы с толку.
+ */
 @Composable
-private fun ChatInputSendButton(
-    enabled: Boolean,
+private fun ChatInputActionButton(
     isSending: Boolean,
-    onClick: () -> Unit,
+    enabled: Boolean,
+    onSendClick: () -> Unit,
+    onCancelClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val contentAlpha = if (enabled) 1f else DisabledAlpha
@@ -156,14 +175,22 @@ private fun ChatInputSendButton(
             .size(SendButtonSize)
             .clip(CircleShape)
             .background(AppColors.Accent.copy(alpha = contentAlpha))
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled, onClick = if (isSending) onCancelClick else onSendClick),
         contentAlignment = Alignment.Center,
     ) {
         if (isSending) {
+            // Кольцо говорит, что генерация идёт, квадрат внутри — что её можно
+            // прервать; кольцо крутится и с неактивной кнопкой (отмена уже ушла).
             CircularProgressIndicator(
-                color = AppColors.OnAccent,
+                color = AppColors.OnAccent.copy(alpha = contentAlpha),
                 strokeWidth = SendProgressStroke,
                 modifier = Modifier.size(SendIconSize),
+            )
+            Icon(
+                imageVector = Icons.Filled.Stop,
+                contentDescription = stringResource(R.string.project_cancel_description),
+                tint = AppColors.OnAccent.copy(alpha = contentAlpha),
+                modifier = Modifier.size(StopIconSize),
             )
         } else {
             Icon(
@@ -184,6 +211,7 @@ private fun ChatInputBarEmptyPreview() {
             draft = "",
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             modelTitle = "DeepSeek V4 Flash",
             onModelClick = {},
         )
@@ -198,6 +226,7 @@ private fun ChatInputBarFilledPreview() {
             draft = "Make the mark rounder and try a cyan accent",
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             modelTitle = "DeepSeek V4 Flash",
             onModelClick = {},
         )
@@ -212,9 +241,29 @@ private fun ChatInputBarSendingPreview() {
             draft = "",
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             modelTitle = "DeepSeek V4 Flash",
             onModelClick = {},
             isSending = true,
+            canCancel = true,
+        )
+    }
+}
+
+/** Отмена уже ушла на сервер: кольцо крутится, кнопка не нажимается. */
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ChatInputBarCancellingPreview() {
+    AvatarGeneratorTheme {
+        ChatInputBar(
+            draft = "",
+            onDraftChange = {},
+            onSendClick = {},
+            onCancelClick = {},
+            modelTitle = "DeepSeek V4 Flash",
+            onModelClick = {},
+            isSending = true,
+            canCancel = false,
         )
     }
 }
@@ -228,6 +277,7 @@ private fun ChatInputBarLongModelPreview() {
             draft = "",
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             modelTitle = "Qwen3 235B A22B FP8 Instruct Preview",
             onModelClick = {},
         )

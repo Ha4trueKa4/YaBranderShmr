@@ -3,6 +3,7 @@ package com.yandex.avatargenerator.feature.project
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Репозиторий-подделка для тестов ViewModel.
@@ -41,6 +42,20 @@ internal class FakeChatRepository(
     /** Ошибка [startGeneration]; `null` — задача поставлена. */
     var startError: Throwable? = null
 
+    /** Задачи, отмену которых запрашивали. */
+    val cancelledJobIds: MutableList<String> = mutableListOf()
+
+    /** Ошибка [cancelGeneration]; `null` — отмена ушла на сервер. */
+    var cancelError: Throwable? = null
+
+    /**
+     * Ворота ожидания: пока они не открыты, [awaitGeneration] не возвращается.
+     * Нужны тестам отмены — иначе скелетон и `isSending` живут ровно до
+     * ближайшего `advanceUntilIdle`, и подсмотреть состояние «генерация идёт»
+     * нечем.
+     */
+    var awaitGate: CompletableDeferred<Unit>? = null
+
     /** Чем закончится ожидание. По умолчанию — удачная генерация. */
     var awaitResult: Result<GenerationOutcome> =
         Result.success(GenerationOutcome.Done(previewUrl = GENERATED_URL))
@@ -66,7 +81,13 @@ internal class FakeChatRepository(
         jobId: String,
     ): Result<GenerationOutcome> {
         awaitedJobIds += jobId
+        awaitGate?.await()
         return awaitResult
+    }
+
+    override suspend fun cancelGeneration(projectId: String, jobId: String): Result<Unit> {
+        cancelledJobIds += jobId
+        return cancelError?.let { Result.failure(it) } ?: Result.success(Unit)
     }
 
     companion object {

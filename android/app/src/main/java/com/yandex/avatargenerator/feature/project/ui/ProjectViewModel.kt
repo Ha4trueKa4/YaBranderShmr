@@ -141,6 +141,27 @@ internal class ProjectViewModel(
     }
 
     /**
+     * Просит сервер прервать идущую генерацию.
+     *
+     * Скелетон в ленте при этом остаётся: ждём мы всё тем же опросом статуса, и
+     * убрать его раньше исхода значило бы соврать — задача останавливается не
+     * мгновенно, а сама отмена может и не дойти. До исхода экран показывает
+     * промежуточное «останавливаем» ([ProjectUiState.Content.isCancelling]).
+     *
+     * Не прошло — снимаем только этот флаг: ожидание идёт своим чередом, и
+     * нажать «остановить» можно ещё раз.
+     */
+    fun cancelGeneration() {
+        val jobId = _uiState.value.contentOrNull()?.takeIf { it.canCancel }?.pendingJobId ?: return
+
+        _uiState.updateContent { it.copy(isCancelling = true) }
+        viewModelScope.launch {
+            chatRepository.cancelGeneration(projectId, jobId)
+                .onFailure { _uiState.updateContent { content -> content.copy(isCancelling = false) } }
+        }
+    }
+
+    /**
      * Общий путь отправки: оптимистичный пузырь промпта → старт задачи →
      * скелетон ответа → ожидание результата.
      *
@@ -157,7 +178,7 @@ internal class ProjectViewModel(
             sentAt = Instant.now(),
         )
         _uiState.updateContent {
-            it.copy(messages = it.messages + prompt, isSending = true)
+            it.copy(messages = it.messages + prompt, isSending = true, isCancelling = false)
         }
 
         viewModelScope.launch {
@@ -188,6 +209,7 @@ internal class ProjectViewModel(
                 when (outcome) {
                     is GenerationOutcome.Done -> showAnswer(skeleton, jobId)
                     is GenerationOutcome.Failed -> showFailure(skeleton, jobId, outcome.message)
+                    GenerationOutcome.Cancelled -> showCancelled(skeleton, jobId)
                     GenerationOutcome.TimedOut -> showStillRunning(skeleton)
                 }
             },
@@ -253,6 +275,24 @@ internal class ProjectViewModel(
     }
 
     /**
+     * Генерацию прервали — показываем это записью из перечитанной ленты, а если
+     * бэкенд ещё не дописал её, то локальной пилюлей на месте скелетона.
+     * Промпт не трогаем: на сервере он есть, версии отменённая генерация не
+     * создала.
+     */
+    private suspend fun showCancelled(skeleton: ChatMessage.Pending, jobId: String) {
+        val chat = reloadUntilAnswered(jobId)
+        if (chat != null) {
+            applyChat(chat)
+            return
+        }
+        replaceSkeleton(
+            skeleton,
+            ChatMessage.Cancelled(id = skeleton.id, sentAt = Instant.now()),
+        )
+    }
+
+    /**
      * Дедлайн вышел — это не провал: задача могла остаться считаться. Убираем
      * скелетон и говорим об этом пилюлей, промпт в ленте оставляем.
      */
@@ -269,6 +309,7 @@ internal class ProjectViewModel(
             content.copy(
                 messages = content.messages.map { if (it.id == skeleton.id) replacement else it },
                 isSending = false,
+                isCancelling = false,
             )
         }
     }
@@ -285,6 +326,7 @@ internal class ProjectViewModel(
                 messages = content.messages.filterNot { it.id == pending.id },
                 draft = if (content.draft.isEmpty()) text else content.draft,
                 isSending = false,
+                isCancelling = false,
             )
         }
     }
@@ -298,6 +340,7 @@ internal class ProjectViewModel(
             content.copy(
                 messages = content.messages.filterNot { it.id == skeleton.id },
                 isSending = false,
+                isCancelling = false,
             )
         }
     }
@@ -314,6 +357,7 @@ internal class ProjectViewModel(
                 isPublic = chat.isPublic,
                 messages = chat.messages.withKnownPreviews(),
                 isSending = false,
+                isCancelling = false,
             )
         }
     }
@@ -494,11 +538,12 @@ private const val ReloadAttempts = 3
 /** Пауза между перечитываниями: даём бэкенду дописать историю. */
 private const val ReloadRetryDelayMillis = 500L
 
-/** Есть ли в ленте ответ ИИ на задачу [jobId] — удачный или с ошибкой. */
+/** Есть ли в ленте ответ ИИ на задачу [jobId] — удачный, с ошибкой или отменённый. */
 private fun List<ChatMessage>.hasAnswerFor(jobId: String): Boolean = any { message ->
     when (message) {
         is ChatMessage.Incoming -> message.jobId == jobId
         is ChatMessage.Failed -> message.jobId == jobId
+        is ChatMessage.Cancelled -> message.jobId == jobId
         else -> false
     }
 }

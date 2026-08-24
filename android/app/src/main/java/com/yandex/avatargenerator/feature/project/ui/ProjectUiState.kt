@@ -28,6 +28,10 @@ internal sealed interface ProjectUiState {
      *  результат опросом статус-ручки). Пока флаг поднят, кнопка отправки и
      *  «Повторить» неактивны: повторное нажатие создало бы вторую фоновую
      *  задачу и вторую пару сообщений в истории.
+     * @property isCancelling отмена запрошена, но задача ещё не остановилась.
+     *  Флаг снимается вместе с [isSending] — исход отменённой генерации всё
+     *  равно приносит идущий опрос статуса. Пока он поднят, кнопка остановки
+     *  неактивна: второй `POST .../cancel` ничего не ускорит.
      * @property modelPicker выбор модели генерации — чип над полем ввода и
      *  шторка со справочником; см. [ModelPickerState].
      */
@@ -37,8 +41,26 @@ internal sealed interface ProjectUiState {
         val messages: List<ChatMessage>,
         val draft: String = "",
         val isSending: Boolean = false,
+        val isCancelling: Boolean = false,
         val modelPicker: ModelPickerState = ModelPickerState(),
-    ) : ProjectUiState
+    ) : ProjectUiState {
+
+        /**
+         * Задача, которую сейчас можно прервать: та, чей скелетон стоит в ленте.
+         * `null` — генерации нет либо `POST /generate` ещё не ответил `job_id`,
+         * и отменять пока нечего.
+         *
+         * Считается из ленты, а не хранится полем: скелетон и так появляется и
+         * исчезает ровно на границах ожидания, и второй источник правды о том
+         * же разъезжался бы с ним.
+         */
+        val pendingJobId: String?
+            get() = messages.filterIsInstance<ChatMessage.Pending>().lastOrNull()?.jobId
+
+        /** Остановка доступна: задача известна и отмену ещё не запрашивали. */
+        val canCancel: Boolean
+            get() = isSending && !isCancelling && pendingJobId != null
+    }
 
     /** Загрузка не удалась; пользователю доступен повтор. */
     data object Error : ProjectUiState

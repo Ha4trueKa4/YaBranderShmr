@@ -53,6 +53,12 @@ class MockChatRepository(
         return Result.success(GenerationOutcome.Done(previewUrl = null))
     }
 
+    /** Отменять у мока нечего — задачи нет; отвечаем успехом. */
+    override suspend fun cancelGeneration(projectId: String, jobId: String): Result<Unit> {
+        delay(sendDelayMillis)
+        return Result.success(Unit)
+    }
+
     companion object {
 
         const val DEFAULT_TITLE: String = "Orion Brand AI"
@@ -112,6 +118,21 @@ class MockChatRepository(
                     sentAt = now.minus(1, ChronoUnit.MINUTES),
                 ),
                 ChatMessage.Pending(id = "pending-1", jobId = MOCK_JOB_ID),
+            )
+
+        /** Лента с прерванной генерацией: промпт и пилюля «генерация отменена». */
+        fun cancelledMessages(now: Instant = Instant.now()): List<ChatMessage> =
+            defaultMessages(now) + listOf(
+                ChatMessage.Outgoing(
+                    id = "out-3",
+                    text = "Now try a darker background.",
+                    sentAt = now.minus(2, ChronoUnit.MINUTES),
+                ),
+                ChatMessage.Cancelled(
+                    id = "cancelled-1",
+                    sentAt = now.minus(1, ChronoUnit.MINUTES),
+                    jobId = MOCK_JOB_ID,
+                ),
             )
 
         /** Лента с провалившейся генерацией: пузырь ошибки с «Повторить». */

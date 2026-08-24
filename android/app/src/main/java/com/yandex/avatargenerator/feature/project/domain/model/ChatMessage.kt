@@ -86,6 +86,24 @@ sealed interface ChatMessage {
     ) : ChatMessage
 
     /**
+     * Прерванная генерация: пилюля «генерация отменена» на месте ответа ИИ.
+     *
+     * Такая же запись лежит в истории на сервере (`role = assistant`,
+     * `status = cancelled`), так что после перезахода она остаётся на месте —
+     * в отличие от [System.GenerationStillRunning], который живёт только на
+     * экране. Своего текста у неё нет, как и у [Incoming]: подпись возьмёт UI
+     * из `strings.xml`.
+     *
+     * @property jobId задача, которую прервали; `null` — записи старого
+     *  формата. См. [Incoming.jobId].
+     */
+    data class Cancelled(
+        override val id: String,
+        val sentAt: Instant?,
+        val jobId: String? = null,
+    ) : ChatMessage
+
+    /**
      * Системные события ленты: своего текста не несут — UI подставит строку
      * из `strings.xml` по типу события.
      *

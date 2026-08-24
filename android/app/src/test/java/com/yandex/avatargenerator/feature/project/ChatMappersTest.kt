@@ -87,6 +87,47 @@ class ChatMappersTest {
     }
 
     @Test
+    fun `ответ со status cancelled становится пилюлей отмены`() {
+        val messages = timeline(
+            ChatMessageDto(role = "user", text = "Violet logo", jobId = "job-1"),
+            ChatMessageDto(role = "assistant", status = "cancelled", jobId = "job-1"),
+        )
+
+        assertEquals(
+            ChatMessage.Cancelled(id = "chat-1-assistant", sentAt = null, jobId = "job-1"),
+            messages.last(),
+        )
+    }
+
+    @Test
+    fun `отмена не создаёт разделителя версии`() {
+        // Версии отменённая генерация не создала — нумерацию она не двигает.
+        val messages = timeline(
+            ChatMessageDto(role = "assistant", status = "cancelled", jobId = "job-1"),
+            ChatMessageDto(role = "assistant", versionId = "v-2", jobId = "job-2"),
+        )
+
+        assertEquals(
+            listOf("1"),
+            messages.filterIsInstance<ChatMessage.System.VersionSaved>().map { it.version },
+        )
+    }
+
+    @Test
+    fun `служебная заглушка идущей задачи в ленту не попадает`() {
+        // Бэкенд подставляет её в конец ленты на лету; скелетон ожидания экран
+        // рисует сам, по своему job_id, — иначе их было бы два.
+        val messages = timeline(
+            ChatMessageDto(role = "user", text = "Violet logo", jobId = "job-1"),
+            ChatMessageDto(role = "assistant", status = "pending", jobId = "job-1"),
+            ChatMessageDto(role = "assistant", status = "cancelling", jobId = "job-1"),
+        )
+
+        assertTrue("лента: $messages", messages.none { it is ChatMessage.Cancelled })
+        assertEquals("Violet logo", (messages.last() as ChatMessage.Outgoing).text)
+    }
+
+    @Test
     fun `промпт без ответа — это идущая генерация, а не мусор`() {
         // Бэкенд пишет промпт в историю сразу при старте задачи.
         val messages = timeline(ChatMessageDto(role = "user", text = "Violet logo", jobId = "job-1"))
@@ -118,6 +159,25 @@ class ChatMappersTest {
             GenerationOutcome.Failed(message = "Invalid SVG"),
             history.findGenerationOutcome("job-1"),
         )
+    }
+
+    @Test
+    fun `поиск по job_id находит отмену`() {
+        val history = listOf(
+            ChatMessageDto(role = "assistant", status = "cancelled", jobId = "job-1"),
+        )
+
+        assertEquals(GenerationOutcome.Cancelled, history.findGenerationOutcome("job-1"))
+    }
+
+    @Test
+    fun `заглушка pending за исход задачи не считается`() {
+        // Задача ещё идёт: отдать по ней исход значило бы соврать экрану.
+        val history = listOf(
+            ChatMessageDto(role = "assistant", status = "cancelling", jobId = "job-1"),
+        )
+
+        assertNull(history.findGenerationOutcome("job-1"))
     }
 
     @Test

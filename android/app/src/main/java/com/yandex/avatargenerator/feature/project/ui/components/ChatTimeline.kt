@@ -117,6 +117,15 @@ internal fun ChatTimeline(
                     )
                 }
 
+                // Отменённая генерация версии не создала — показываем пилюлей,
+                // а не пузырём: своего содержимого у такого ответа нет.
+                is ChatMessage.Cancelled -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    ChatSystemTag(text = stringResource(R.string.project_generation_cancelled))
+                }
+
                 is ChatMessage.System.ProjectCreated -> Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
