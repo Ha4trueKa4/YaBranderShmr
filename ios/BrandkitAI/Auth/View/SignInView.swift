@@ -19,7 +19,7 @@ struct SignInView: View {
             VStack(spacing: 16) {
                 FormTextField(
                     label: String(localized: "Email"),
-                    placeholder: "hello@brandkit.ai",
+                    placeholder: "hello@yabrander.ai",
                     text: $viewModel.email,
                     textContentType: .emailAddress,
                     keyboardType: .emailAddress,
