@@ -5,7 +5,8 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
-import coil3.svg.SvgDecoder
+import coil3.util.DebugLogger
+import com.yandex.avatargenerator.core.image.RepairingSvgDecoder
 import com.yandex.avatargenerator.di.appModules
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -35,9 +36,13 @@ class AvatarGeneratorApplication : Application(), SingletonImageLoader.Factory, 
         ImageLoader.Builder(context)
             .components {
                 // Превью проектов приходят SVG (последняя версия из S3) — без
-                // этого декодера Coil качает файл, но не рисует его.
-                add(SvgDecoder.Factory())
+                // этого декодера Coil качает файл, но не рисует его. Обёртка
+                // вместо голого SvgDecoder — чтобы битая разметка от генератора
+                // не оставляла карточку без картинки.
+                add(RepairingSvgDecoder.Factory())
                 add(OkHttpNetworkFetcherFactory(okHttpClient))
             }
+            // Иначе провал декодирования виден только как серая плашка.
+            .apply { if (BuildConfig.DEBUG) logger(DebugLogger()) }
             .build()
 }
