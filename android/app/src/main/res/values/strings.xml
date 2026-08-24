@@ -128,11 +128,13 @@
     <!-- Создание проекта -->
     <string name="create_project_title">New Project</string>
     <string name="create_project_back_description">Back</string>
-    <string name="create_project_name_label">Project name</string>
+    <string name="create_project_prompt_label">Generation prompt</string>
+    <string name="create_project_prompt_placeholder">A minimal fox mascot for a fintech startup, flat vector, deep blue and mint…</string>
+    <string name="create_project_name_label">Project name (optional)</string>
     <string name="create_project_name_placeholder">My Startup Brand</string>
-    <string name="create_project_description_label">Brand description &amp; brief</string>
+    <string name="create_project_description_label">Brand description &amp; brief (optional)</string>
     <string name="create_project_description_placeholder">Describe your brand values, target audience, preferred color scheme, visual mood…</string>
-    <string name="create_project_hint">Our AI will generate brand assets, palettes, and typography presets.</string>
+    <string name="create_project_hint">Describe the shapes, colors, and mood you want — the more specific the prompt, the closer the result.</string>
     <string name="create_project_submit">Generate Brandkit</string>
     <string name="create_project_submitting">Generating brand assets…</string>
     <string name="create_project_error">Couldn\'t generate brand assets. Please try again.</string>

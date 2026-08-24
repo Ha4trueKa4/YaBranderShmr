@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.model.Project
+import com.yandex.avatargenerator.feature.project.domain.model.ProjectCreation
 
 /**
  * Репозиторий-подделка для тестов ViewModel — и экрана проекта, и формы
@@ -15,7 +16,7 @@ import com.yandex.avatargenerator.feature.project.domain.model.Project
  */
 internal class FakeProjectRepository(
     var projectResult: Result<Project> = Result.success(DEFAULT_PROJECT),
-    var createResult: Result<Project> = Result.success(DEFAULT_PROJECT),
+    var createResult: Result<ProjectCreation> = Result.success(DEFAULT_CREATION),
     var updateResult: Result<Unit> = Result.success(Unit),
 ) : ProjectRepository {
 
@@ -30,6 +31,8 @@ internal class FakeProjectRepository(
         private set
     var lastCreatedDescription: String? = null
         private set
+    var lastCreatedPrompt: String? = null
+        private set
 
     var updateProjectCallCount: Int = 0
         private set
@@ -38,10 +41,15 @@ internal class FakeProjectRepository(
     var lastUpdatedIsPublic: Boolean? = null
         private set
 
-    override suspend fun createProject(name: String, description: String): Result<Project> {
+    override suspend fun createProject(
+        name: String,
+        description: String,
+        prompt: String,
+    ): Result<ProjectCreation> {
         createProjectCallCount++
         lastCreatedName = name
         lastCreatedDescription = description
+        lastCreatedPrompt = prompt
         return createResult
     }
 
@@ -73,5 +81,7 @@ internal class FakeProjectRepository(
             url = null,
             data = null,
         )
+
+        val DEFAULT_CREATION = ProjectCreation(DEFAULT_PROJECT, jobId = "job-1")
     }
 }

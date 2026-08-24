@@ -5,6 +5,8 @@ import com.yandex.avatargenerator.core.mvi.BaseIntent
 /** Всё, что пользователь может сделать на форме создания проекта. */
 internal sealed interface CreateProjectIntent : BaseIntent {
 
+    data class OnPromptChange(val value: String) : CreateProjectIntent
+
     data class OnNameChange(val value: String) : CreateProjectIntent
 
     data class OnDescriptionChange(val value: String) : CreateProjectIntent

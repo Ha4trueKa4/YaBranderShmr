@@ -126,11 +126,13 @@
     <!-- Создание проекта -->
     <string name="create_project_title">Новый проект</string>
     <string name="create_project_back_description">Назад</string>
-    <string name="create_project_name_label">Название проекта</string>
+    <string name="create_project_prompt_label">Промпт для генерации</string>
+    <string name="create_project_prompt_placeholder">Минималистичный лис-маскот для финтех-стартапа, плоский вектор, глубокий синий и мятный…</string>
+    <string name="create_project_name_label">Название проекта (необязательно)</string>
     <string name="create_project_name_placeholder">Мой бренд</string>
-    <string name="create_project_description_label">Описание бренда и бриф</string>
+    <string name="create_project_description_label">Описание бренда и бриф (необязательно)</string>
     <string name="create_project_description_placeholder">Опишите ценности бренда, целевую аудиторию, предпочтительную цветовую гамму, визуальное настроение…</string>
-    <string name="create_project_hint">ИИ сгенерирует элементы фирменного стиля, палитры и типографику.</string>
+    <string name="create_project_hint">Опишите формы, цвета и настроение — чем конкретнее промпт, тем ближе результат.</string>
     <string name="create_project_submit">Сгенерировать брендбук</string>
     <string name="create_project_submitting">Генерация фирменного стиля…</string>
     <string name="create_project_error">Не удалось сгенерировать фирменный стиль. Попробуйте ещё раз.</string>

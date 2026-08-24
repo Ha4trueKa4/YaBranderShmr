@@ -62,6 +62,18 @@ internal fun CreateProjectContent(
                 .padding(AppSpacing.m),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.l),
         ) {
+            // Промпт — первым: это единственное обязательное поле и главное
+            // действие экрана, название с описанием под ним необязательны.
+            BrandTextField(
+                label = stringResource(R.string.create_project_prompt_label),
+                value = state.prompt,
+                onValueChange = { onIntent(CreateProjectIntent.OnPromptChange(it)) },
+                placeholder = stringResource(R.string.create_project_prompt_placeholder),
+                singleLine = false,
+                height = 140.dp,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            )
+
             BrandTextField(
                 label = stringResource(R.string.create_project_name_label),
                 value = state.name,
@@ -174,7 +186,11 @@ private fun CreateProjectContentEmptyPreview() {
 private fun CreateProjectContentSubmittingPreview() {
     AvatarGeneratorTheme {
         CreateProjectContent(
-            state = CreateProjectState(name = "Nova", isSubmitting = true),
+            state = CreateProjectState(
+                prompt = "Minimal fox mascot, flat vector, deep blue",
+                name = "Nova",
+                isSubmitting = true,
+            ),
             onIntent = {},
         )
     }
@@ -185,7 +201,11 @@ private fun CreateProjectContentSubmittingPreview() {
 private fun CreateProjectContentErrorPreview() {
     AvatarGeneratorTheme {
         CreateProjectContent(
-            state = CreateProjectState(name = "Nova", hasError = true),
+            state = CreateProjectState(
+                prompt = "Minimal fox mascot, flat vector, deep blue",
+                name = "Nova",
+                hasError = true,
+            ),
             onIntent = {},
         )
     }

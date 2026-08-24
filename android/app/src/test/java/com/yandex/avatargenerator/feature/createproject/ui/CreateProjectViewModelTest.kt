@@ -2,6 +2,7 @@ package com.yandex.avatargenerator.feature.createproject.ui
 
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.project.FakeProjectRepository
+import com.yandex.avatargenerator.feature.project.domain.model.ProjectCreation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -36,24 +37,29 @@ internal class CreateProjectViewModelTest {
     }
 
     @Test
-    fun `submit is disabled while the name is blank`() = runTest(dispatcher) {
+    fun `submit is disabled while the prompt is blank`() = runTest(dispatcher) {
         val viewModel = CreateProjectViewModel(repository)
 
         assertFalse(viewModel.state.value.canSubmit)
 
         // Интенты обрабатываются в корутине BaseViewModel, поэтому после каждой
         // пачки нужно прокрутить диспетчер — иначе state ещё старый.
-        viewModel.onIntent(CreateProjectIntent.OnNameChange("   "))
+        viewModel.onIntent(CreateProjectIntent.OnPromptChange("   "))
         advanceUntilIdle()
         assertFalse(viewModel.state.value.canSubmit)
 
+        // Одно название кнопку не включает — бэкенду оно больше не нужно.
         viewModel.onIntent(CreateProjectIntent.OnNameChange("Orion Labs"))
+        advanceUntilIdle()
+        assertFalse(viewModel.state.value.canSubmit)
+
+        viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
         advanceUntilIdle()
         assertTrue(viewModel.state.value.canSubmit)
     }
 
     @Test
-    fun `submit with a blank name does not create a project`() = runTest(dispatcher) {
+    fun `submit with a blank prompt does not create a project`() = runTest(dispatcher) {
         val viewModel = CreateProjectViewModel(repository)
 
         viewModel.onIntent(CreateProjectIntent.OnSubmitClick)
@@ -65,9 +71,10 @@ internal class CreateProjectViewModelTest {
     @Test
     fun `submit creates a project and emits navigation effect with its id`() = runTest(dispatcher) {
         repository.createResult = Result.success(
-            FakeProjectRepository.DEFAULT_PROJECT.copy(id = "project-42"),
+            ProjectCreation(FakeProjectRepository.DEFAULT_PROJECT.copy(id = "project-42"), "job-1"),
         )
         val viewModel = CreateProjectViewModel(repository)
+        viewModel.onIntent(CreateProjectIntent.OnPromptChange("  Minimal fox mascot  "))
         viewModel.onIntent(CreateProjectIntent.OnNameChange("  Orion Labs  "))
         viewModel.onIntent(CreateProjectIntent.OnDescriptionChange("  Deep space violet  "))
 
@@ -78,7 +85,8 @@ internal class CreateProjectViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, repository.createProjectCallCount)
-        // Название и описание доходят до репозитория обрезанными.
+        // Промпт, название и описание доходят до репозитория обрезанными.
+        assertEquals("Minimal fox mascot", repository.lastCreatedPrompt)
         assertEquals("Orion Labs", repository.lastCreatedName)
         assertEquals("Deep space violet", repository.lastCreatedDescription)
         // В навигацию уходит id из ответа сервера, а не то, что ввёл пользователь.
@@ -93,6 +101,7 @@ internal class CreateProjectViewModelTest {
         runTest(dispatcher) {
             repository.createResult = Result.failure(NetworkException.NoConnection())
             val viewModel = CreateProjectViewModel(repository)
+            viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
             viewModel.onIntent(CreateProjectIntent.OnNameChange("Orion Labs"))
             viewModel.onIntent(CreateProjectIntent.OnDescriptionChange("Deep space violet"))
 
@@ -108,11 +117,16 @@ internal class CreateProjectViewModelTest {
             assertTrue(state.canSubmit)
             assertTrue(effects.isEmpty())
             // Введённое пользователем не теряется — повтор не заставит набирать заново.
+            assertEquals("Minimal fox mascot", state.prompt)
             assertEquals("Orion Labs", state.name)
             assertEquals("Deep space violet", state.description)
 
-            // Правка имени сбрасывает ошибку.
+            // Ошибку сбрасывает правка промпта — именно его отвергает сервер.
             viewModel.onIntent(CreateProjectIntent.OnNameChange("Orion Labs 2"))
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.hasError)
+
+            viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal owl mascot"))
             advanceUntilIdle()
             assertFalse(viewModel.state.value.hasError)
 
@@ -122,7 +136,7 @@ internal class CreateProjectViewModelTest {
     @Test
     fun `a double tap creates a single project`() = runTest(dispatcher) {
         val viewModel = CreateProjectViewModel(repository)
-        viewModel.onIntent(CreateProjectIntent.OnNameChange("Orion Labs"))
+        viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
         advanceUntilIdle()
 
         // Два тапа подряд, без прокрутки диспетчера между ними: isSubmitting должен
@@ -132,6 +146,61 @@ internal class CreateProjectViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, repository.createProjectCallCount)
+    }
+
+    @Test
+    fun `the prompt reaches the repository trimmed`() = runTest(dispatcher) {
+        val viewModel = CreateProjectViewModel(repository)
+        viewModel.onIntent(
+            CreateProjectIntent.OnPromptChange("\n  Minimal fox mascot, flat vector  \n"),
+        )
+
+        viewModel.onIntent(CreateProjectIntent.OnSubmitClick)
+        advanceUntilIdle()
+
+        assertEquals("Minimal fox mascot, flat vector", repository.lastCreatedPrompt)
+    }
+
+    @Test
+    fun `a blank name is replaced with the default one`() = runTest(dispatcher) {
+        val viewModel = CreateProjectViewModel(repository)
+        viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
+        viewModel.onIntent(CreateProjectIntent.OnNameChange("   "))
+
+        viewModel.onIntent(CreateProjectIntent.OnSubmitClick)
+        advanceUntilIdle()
+
+        // Иначе проект уехал бы на сервер с пустым именем и встал безымянным
+        // и в списке чатов, и в шапке своего экрана.
+        assertEquals("Untitled project", repository.lastCreatedName)
+    }
+
+    @Test
+    fun `a prompt longer than the limit is trimmed in the state`() = runTest(dispatcher) {
+        val viewModel = CreateProjectViewModel(repository)
+
+        viewModel.onIntent(
+            CreateProjectIntent.OnPromptChange("a".repeat(MaxCreatePromptLength + 100)),
+        )
+        advanceUntilIdle()
+
+        assertEquals(MaxCreatePromptLength, viewModel.state.value.prompt.length)
+    }
+
+    @Test
+    fun `a surrogate pair is not cut in half`() = runTest(dispatcher) {
+        val viewModel = CreateProjectViewModel(repository)
+
+        // Эмодзи — две UTF-16 char-ы на одну кодовую точку: обрезка по char-ам
+        // оставила бы половинку суррогатной пары и отправила её на сервер.
+        viewModel.onIntent(
+            CreateProjectIntent.OnPromptChange(Fox.repeat(MaxCreatePromptLength + 10)),
+        )
+        advanceUntilIdle()
+
+        val prompt = viewModel.state.value.prompt
+        assertEquals(Fox.repeat(MaxCreatePromptLength), prompt)
+        assertEquals(MaxCreatePromptLength, prompt.codePointCount(0, prompt.length))
     }
 
     @Test
@@ -145,5 +214,10 @@ internal class CreateProjectViewModelTest {
 
         assertEquals(listOf(CreateProjectEffect.NavigateBack), effects)
         collector.cancel()
+    }
+
+    private companion object {
+        /** Эмодзи из суррогатной пары: две UTF-16 char-ы на одну кодовую точку. */
+        const val Fox = "\uD83E\uDD8A"
     }
 }
