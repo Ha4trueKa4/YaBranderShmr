@@ -6,6 +6,13 @@ import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import kotlinx.coroutines.launch
 
 /**
+ * Имя, под которым проект уедет на сервер, если пользователь не ввёл своё.
+ * В `strings.xml` не выносим сознательно: имя уезжает на сервер и там
+ * застывает, локализовать его на момент создания смысла нет.
+ */
+private const val DefaultProjectName = "Untitled project"
+
+/**
  * ViewModel формы создания проекта: держит поля ввода, валидирует их и по
  * [CreateProjectIntent.OnSubmitClick] создаёт проект через `POST /projects`
  * ([ProjectRepository] из `feature/project` — своего репозитория у экрана нет,
@@ -19,10 +26,15 @@ internal class CreateProjectViewModel(
 
     override suspend fun handleIntent(intent: CreateProjectIntent, state: CreateProjectState) {
         when (intent) {
-            // Правка названия гасит ошибку: старое сообщение относилось к прошлой
-            // попытке. Описание на ошибку не влияет — его бэкенд не отвергает.
+            // Правка промпта гасит ошибку: старое сообщение относилось к прошлой
+            // попытке, а отвергает сервер именно промпт. Название и описание на
+            // ошибку не влияют — их бэкенд принимает любыми.
+            is CreateProjectIntent.OnPromptChange -> updateState {
+                copy(prompt = limitCreatePrompt(intent.value), hasError = false)
+            }
+
             is CreateProjectIntent.OnNameChange -> updateState {
-                copy(name = intent.value, hasError = false)
+                copy(name = intent.value)
             }
 
             is CreateProjectIntent.OnDescriptionChange -> updateState {
@@ -36,9 +48,9 @@ internal class CreateProjectViewModel(
 
     /**
      * Создаёт проект и отправляет [CreateProjectEffect.NavigateToProject] с его
-     * настоящим id. Пустое название блокирует запуск (кнопка и так неактивна —
+     * настоящим id. Пустой промпт блокирует запуск (кнопка и так неактивна —
      * это страховка на случай гонки с последней рекомпозицией) и заодно
-     * экономит заведомо ошибочный запрос: пустое имя бэкенд отвергает 400.
+     * экономит заведомо ошибочный запрос: пустой промпт бэкенд отвергает 400.
      *
      * Репозиторий не бросает, а отдаёт [Result] — своего `runCatching` здесь
      * не нужно. Ошибка не роняет корутину: снимаем
@@ -58,14 +70,29 @@ internal class CreateProjectViewModel(
 
         updateState { copy(isSubmitting = true, hasError = false) }
         viewModelScope.launch {
-            repository.createProject(state.name.trim(), state.description.trim())
-                .onSuccess { project ->
+            repository.createProject(
+                name = effectiveName(state),
+                description = state.description.trim(),
+                prompt = state.prompt.trim(),
+            )
+                .onSuccess { creation ->
                     updateState { copy(isSubmitting = false) }
-                    sendEffect(CreateProjectEffect.NavigateToProject(project.id))
+                    sendEffect(CreateProjectEffect.NavigateToProject(creation.project.id))
                 }
                 .onFailure {
                     updateState { copy(isSubmitting = false, hasError = true) }
                 }
         }
     }
+
+    /**
+     * Название для запроса: введённое пользователем либо [DefaultProjectName].
+     *
+     * Пустое имя бэкенд примет и запишет как `""` — проект встал бы безымянным
+     * и в списке чатов, и в шапке своего экрана. Учить чужие экраны рисовать
+     * плейсхолдер вместо пустого имени — это правки в чужих фичах; подмена
+     * здесь дешевле и живёт в одном месте.
+     */
+    private fun effectiveName(state: CreateProjectState): String =
+        state.name.trim().ifBlank { DefaultProjectName }
 }

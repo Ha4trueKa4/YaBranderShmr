@@ -7,6 +7,7 @@ import com.yandex.avatargenerator.feature.project.data.dto.ProjectDto
 import com.yandex.avatargenerator.feature.project.data.dto.UpdateProjectRequestDto
 import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.model.Project
+import com.yandex.avatargenerator.feature.project.domain.model.ProjectCreation
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -27,14 +28,25 @@ class ProjectRepositoryImpl(
     private val client: HttpClient,
 ) : ProjectRepository {
 
-    override suspend fun createProject(name: String, description: String): Result<Project> =
-        apiResult {
-            apiCall {
-                client.post(ProjectsPath) {
-                    setBody(CreateProjectRequestDto(name = name, description = description))
-                }.body<ProjectDto>()
-            }.toDomain()
+    override suspend fun createProject(
+        name: String,
+        description: String,
+        prompt: String,
+    ): Result<ProjectCreation> = apiResult {
+        val dto = apiCall {
+            client.post(ProjectsPath) {
+                setBody(
+                    CreateProjectRequestDto(
+                        name = name,
+                        description = description,
+                        prompt = prompt,
+                    ),
+                )
+            }.body<ProjectDto>()
         }
+        // Пустую строку в job_id считаем отсутствием задачи: ждать нечего.
+        ProjectCreation(dto.toDomain(), dto.jobId?.takeIf { it.isNotBlank() })
+    }
 
     override suspend fun getProject(id: String): Result<Project> = apiResult {
         apiCall { client.get(projectPath(id)).body<ProjectDto>() }.toDomain()

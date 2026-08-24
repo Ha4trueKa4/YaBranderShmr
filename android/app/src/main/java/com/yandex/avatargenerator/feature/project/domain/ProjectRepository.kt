@@ -1,6 +1,7 @@
 package com.yandex.avatargenerator.feature.project.domain
 
 import com.yandex.avatargenerator.feature.project.domain.model.Project
+import com.yandex.avatargenerator.feature.project.domain.model.ProjectCreation
 
 /**
  * Создание, чтение и изменение проекта: `POST /projects` плюс
@@ -13,18 +14,27 @@ import com.yandex.avatargenerator.feature.project.domain.model.Project
 interface ProjectRepository {
 
     /**
-     * `POST /projects` — создаёт пустой проект и отдаёт его целиком (в ответе
-     * тот же `Project`, что и у [getProject], только без `url`: SVG появится
-     * после первой генерации). Требует `Bearer`.
+     * `POST /projects` — создаёт проект и сразу запускает его первичную
+     * генерацию: ответ `202`, в нём весь `Project` и `job_id` фоновой задачи
+     * (см. [ProjectCreation]). Ждут её тем же [ChatRepository.awaitGeneration],
+     * что и правки в чате. Требует `Bearer`.
      *
      * Экран создания живёт в `feature/createproject`, но своего репозитория не
      * заводит: ответ — та же доменная модель, а DTO выше `data/` своей фичи не
      * поднимаются, поэтому метод здесь.
      *
-     * @param description бриф бренда; пустая строка допустима — бэкенд читает
-     *  поле с дефолтом `""`. Пустой [name] бэкенд отвергает как `ClientError(400)`.
+     * @param prompt что генерировать; обязателен, до 5000 UTF-8 символов.
+     *  Бэкенд пишет его в историю чата синхронно с созданием, поэтому первый же
+     *  `getChat` на экране проекта его вернёт. Пустой промпт — `ClientError(400)`.
+     * @param name название проекта; пустая строка допустима — бэкенд читает
+     *  поле с дефолтом `""`.
+     * @param description бриф бренда; тоже опционален, дефолт `""`.
      */
-    suspend fun createProject(name: String, description: String): Result<Project>
+    suspend fun createProject(
+        name: String,
+        description: String,
+        prompt: String,
+    ): Result<ProjectCreation>
 
     /**
      * `GET /projects/{id}`. Авторизация опциональна: публичный проект доступен

@@ -20,4 +20,6 @@ data class ProjectDto(
     @SerialName("url") val url: String? = null,
     /** SVG-разметка проекта одной строкой; отсутствует у пустого проекта. */
     @SerialName("data") val data: String? = null,
+    /** Только в ответе `POST /projects`: id фоновой задачи первичной генерации. */
+    @SerialName("job_id") val jobId: String? = null,
 )
