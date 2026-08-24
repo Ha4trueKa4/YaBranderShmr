@@ -505,26 +505,21 @@ std::string ProjectManagerComponent::StartGenerationJob(
         std::string version_id;
         JobStatus outcome;
         std::string error_message;
+        std::exception_ptr caught_exception;
         try {
             std::shared_lock<userver::engine::CancellableSemaphore> semaphore_lock(generation_semaphore_);
             version_id = run_core_generation(job_id);
             outcome = JobStatus::kDone;
-        } catch (const std::exception& e) {
-            if (IsCancelRequested(job_id)) {
-                outcome = JobStatus::kCancelled;
-                // cancel_requested — это флаг "отмену запросили", а не "именно
-                // это исключение вызвано отменой": если поймана НЕ связанная с
-                // отменой ошибка (LLM/S3/БД) в узком окне гонки с конкурентным
-                // CancelGeneration, она будет классифицирована как "cancelled"
-                // и e.what() не попадёт в AppendAssistantError — поэтому
-                // логируем его здесь отдельно, чтобы не потерять для мониторинга.
-                LOG_INFO() << "Generation job " << job_id << " for project_id=" << project_id
-                           << " cancelled (underlying exception: " << e.what() << ")";
-            } else {
-                outcome = JobStatus::kError;
-                error_message = e.what();
-                LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
-            }
+        } catch (...) {
+            // Ловим и откладываем классификацию: если run_core_generation
+            // прервана отменой, RequestCancel() уже вызван на ЭТОЙ же
+            // корутине, а отмена в userver не одноразовая — она продолжает
+            // действовать на все последующие точки ожидания той же задачи.
+            // Поэтому ничего блокирующего (в т.ч. сам IsCancelRequested ниже)
+            // нельзя делать раньше, чем поставлен TaskCancellationBlocker —
+            // std::current_exception() блокирующим не является, только он
+            // безопасен прямо здесь.
+            caught_exception = std::current_exception();
         }
 
         // Watcher больше не нужен — исход уже определён локально. Он либо
@@ -536,21 +531,43 @@ std::string ProjectManagerComponent::StartGenerationJob(
         cancel_watcher.RequestCancel();
         cancel_watcher.Get();
 
+        // TaskCancellationBlocker обязателен именно здесь, ДО любых
+        // блокирующих вызовов ниже (IsCancelRequested, WriteTerminalJob,
+        // AppendAssistant*): без него первый же такой вызов (Eval/Hget/поход в
+        // Postgres) тут же прервался бы с "Task was cancelled" на всё ещё
+        // активной отмене этой корутины, необработанным исключением — и job
+        // навсегда остался бы висеть в pending, так и не записав финальный
+        // статус. Проверено вживую curl'ом, именно так и происходило.
+        userver::engine::TaskCancellationBlocker cancellation_blocker;
+
+        if (caught_exception) {
+            try {
+                std::rethrow_exception(caught_exception);
+            } catch (const std::exception& e) {
+                if (IsCancelRequested(job_id)) {
+                    outcome = JobStatus::kCancelled;
+                    // cancel_requested — это флаг "отмену запросили", а не
+                    // "именно это исключение вызвано отменой": если поймана НЕ
+                    // связанная с отменой ошибка (LLM/S3/БД) в узком окне
+                    // гонки с конкурентным CancelGeneration, она будет
+                    // классифицирована как "cancelled" и e.what() не попадёт в
+                    // AppendAssistantError — поэтому логируем его здесь
+                    // отдельно, чтобы не потерять для мониторинга.
+                    LOG_INFO() << "Generation job " << job_id << " for project_id=" << project_id
+                               << " cancelled (underlying exception: " << e.what() << ")";
+                } else {
+                    outcome = JobStatus::kError;
+                    error_message = e.what();
+                    LOG_ERROR() << "Generation job " << job_id << " for project_id=" << project_id << " failed: " << e.what();
+                }
+            }
+        }
+
         WriteTerminalJob(job_id, project_id, outcome, version_id, error_message);
 
         // Без ретраев: при падении реальный исход (версия сохранена / job
         // отменён) не меняется — просто не появится записью в chat_history.
         // Громко логируем, чтобы это было видно в мониторинге.
-        //
-        // TaskCancellationBlocker обязателен именно здесь: если outcome ==
-        // kCancelled, значит RequestCancel() уже вызван на ЭТОЙ же корутине, а
-        // отмена в userver не одноразовая — она продолжает действовать на
-        // все последующие точки ожидания той же задачи. Без блокировки
-        // следующий же поход в Postgres (сам этот AppendAssistant*) тут же
-        // прервался бы с "Task was cancelled before trying to get a
-        // connection", и запись в chat_history так и не появлялась бы —
-        // проверено вживую curl'ом, именно так и происходило.
-        userver::engine::TaskCancellationBlocker cancellation_blocker;
         try {
             switch (outcome) {
                 case JobStatus::kDone:
