@@ -114,17 +114,53 @@ class ChatMappersTest {
     }
 
     @Test
-    fun `служебная заглушка идущей задачи в ленту не попадает`() {
-        // Бэкенд подставляет её в конец ленты на лету; скелетон ожидания экран
-        // рисует сам, по своему job_id, — иначе их было бы два.
+    fun `заглушка идущей задачи — скелетон, а не запись об отмене`() {
+        // Бэкенд подставляет её в конец ленты на лету. Отменой её считать
+        // нельзя: у прерванной генерации статус cancelled и своя запись в базе.
         val messages = timeline(
             ChatMessageDto(role = "user", text = "Violet logo", jobId = "job-1"),
-            ChatMessageDto(role = "assistant", status = "pending", jobId = "job-1"),
             ChatMessageDto(role = "assistant", status = "cancelling", jobId = "job-1"),
         )
 
         assertTrue("лента: $messages", messages.none { it is ChatMessage.Cancelled })
-        assertEquals("Violet logo", (messages.last() as ChatMessage.Outgoing).text)
+        assertEquals(ChatMessage.Pending(id = "chat-1-assistant", jobId = "job-1"), messages.last())
+    }
+
+    @Test
+    fun `заглушка активной задачи становится скелетоном ответа`() {
+        // В БД такой записи нет — бэкенд дописывает её в ответ, пока задача
+        // считается. Раньше маппер выбрасывал её как ответ без version_id и
+        // error, и перезаход в чат во время генерации терял анимацию.
+        val messages = timeline(
+            ChatMessageDto(role = "user", text = "Make it rounder", jobId = "job-2"),
+            ChatMessageDto(role = "assistant", status = "pending", jobId = "job-2"),
+        )
+
+        assertEquals(ChatMessage.Pending(id = "chat-1-assistant", jobId = "job-2"), messages.last())
+    }
+
+    @Test
+    fun `заглушка без job_id пропускается, а не роняет ленту`() {
+        val messages = timeline(
+            ChatMessageDto(role = "user", text = "Make it rounder", jobId = "job-2"),
+            ChatMessageDto(role = "assistant", status = "pending"),
+        )
+
+        assertTrue(messages.filterIsInstance<ChatMessage.Pending>().isEmpty())
+        assertTrue(messages.last() is ChatMessage.Outgoing)
+    }
+
+    @Test
+    fun `скелетон не двигает нумерацию версий`() {
+        val messages = timeline(
+            ChatMessageDto(role = "user", text = "Violet logo", jobId = "job-1"),
+            ChatMessageDto(role = "assistant", versionId = "v-1", jobId = "job-1"),
+            ChatMessageDto(role = "user", text = "Make it rounder", jobId = "job-2"),
+            ChatMessageDto(role = "assistant", status = "pending", jobId = "job-2"),
+        )
+
+        val versions = messages.filterIsInstance<ChatMessage.System.VersionSaved>()
+        assertEquals(listOf("1"), versions.map { it.version })
     }
 
     @Test

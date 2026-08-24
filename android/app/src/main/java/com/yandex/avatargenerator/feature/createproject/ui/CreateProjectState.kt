@@ -1,6 +1,7 @@
 package com.yandex.avatargenerator.feature.createproject.ui
 
 import com.yandex.avatargenerator.core.mvi.BaseState
+import com.yandex.avatargenerator.feature.project.ui.ModelPickerState
 
 /**
  * Состояние формы создания проекта.
@@ -15,6 +16,9 @@ import com.yandex.avatargenerator.core.mvi.BaseState
  * @property isSubmitting идёт создание проекта (генерация) — блокирует кнопку.
  * @property hasError последняя попытка генерации сорвалась; экран показывает
  *  сообщение об ошибке, кнопка снова активна для повтора.
+ * @property modelPicker выбор модели генерации — тот же вложенный кусок
+ *  состояния, что у экрана проекта: пикер один и тот же, и первичная генерация
+ *  уходит на выбранной здесь модели.
  */
 internal data class CreateProjectState(
     val prompt: String = "",
@@ -22,6 +26,7 @@ internal data class CreateProjectState(
     val description: String = "",
     val isSubmitting: Boolean = false,
     val hasError: Boolean = false,
+    val modelPicker: ModelPickerState = ModelPickerState(),
 ) : BaseState {
 
     /**

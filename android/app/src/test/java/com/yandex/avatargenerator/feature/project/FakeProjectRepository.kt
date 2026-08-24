@@ -34,6 +34,10 @@ internal class FakeProjectRepository(
     var lastCreatedPrompt: String? = null
         private set
 
+    /** Модель, с которой ушло создание; `null` — форма её не прислала. */
+    var lastCreatedModel: String? = null
+        private set
+
     var updateProjectCallCount: Int = 0
         private set
 
@@ -45,11 +49,13 @@ internal class FakeProjectRepository(
         name: String,
         description: String,
         prompt: String,
+        model: String?,
     ): Result<ProjectCreation> {
         createProjectCallCount++
         lastCreatedName = name
         lastCreatedDescription = description
         lastCreatedPrompt = prompt
+        lastCreatedModel = model
         return createResult
     }
 

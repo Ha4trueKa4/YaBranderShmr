@@ -14,4 +14,14 @@ internal sealed interface CreateProjectIntent : BaseIntent {
     data object OnSubmitClick : CreateProjectIntent
 
     data object OnBackClick : CreateProjectIntent
+
+    /** Тап по чипу модели — открыть шторку выбора. */
+    data object OnModelPickerOpen : CreateProjectIntent
+
+    data object OnModelPickerDismiss : CreateProjectIntent
+
+    data class OnModelSelect(val id: String) : CreateProjectIntent
+
+    /** Повтор загрузки справочника моделей после ошибки. */
+    data object OnModelsRetry : CreateProjectIntent
 }

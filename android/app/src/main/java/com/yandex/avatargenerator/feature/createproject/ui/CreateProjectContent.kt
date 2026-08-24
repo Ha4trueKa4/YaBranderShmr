@@ -28,6 +28,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.R
+import com.yandex.avatargenerator.feature.project.ui.ModelPickerState
+import com.yandex.avatargenerator.feature.project.ui.components.ModelChip
+import com.yandex.avatargenerator.feature.project.ui.components.ModelPickerSheet
+import com.yandex.avatargenerator.feature.project.ui.util.modelTitle
 import com.yandex.avatargenerator.ui.components.BrandPrimaryButton
 import com.yandex.avatargenerator.ui.components.BrandTextField
 import com.yandex.avatargenerator.ui.theme.AppColors
@@ -54,6 +58,15 @@ internal fun CreateProjectContent(
     ) {
         CreateProjectTopBar(onBack = { onIntent(CreateProjectIntent.OnBackClick) })
 
+        if (state.modelPicker.isSheetVisible) {
+            ModelPickerSheet(
+                state = state.modelPicker,
+                onSelect = { onIntent(CreateProjectIntent.OnModelSelect(it)) },
+                onRetry = { onIntent(CreateProjectIntent.OnModelsRetry) },
+                onDismiss = { onIntent(CreateProjectIntent.OnModelPickerDismiss) },
+            )
+        }
+
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -72,6 +85,13 @@ internal fun CreateProjectContent(
                 singleLine = false,
                 height = 140.dp,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            )
+
+            // Чип модели — под промптом: он про то, чем этот промпт будут
+            // рисовать, а не про название с описанием.
+            CreateProjectModelField(
+                selectedModelId = state.modelPicker.selectedModelId,
+                onClick = { onIntent(CreateProjectIntent.OnModelPickerOpen) },
             )
 
             BrandTextField(
@@ -142,6 +162,29 @@ internal fun CreateProjectContent(
     }
 }
 
+/**
+ * Поле выбора модели: подпись как у [BrandTextField] плюс чип-«таблетка» —
+ * тот же [ModelChip], что над полем ввода в чате проекта.
+ */
+@Composable
+private fun CreateProjectModelField(
+    selectedModelId: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.create_project_model_label),
+            style = AppTypography.label,
+        )
+        ModelChip(
+            title = modelTitle(selectedModelId),
+            onClick = onClick,
+            modifier = Modifier.padding(top = AppSpacing.xs),
+        )
+    }
+}
+
 /** Шапка экрана: кнопка «назад» и заголовок с нижней границей. */
 @Composable
 private fun CreateProjectTopBar(
@@ -190,6 +233,20 @@ private fun CreateProjectContentSubmittingPreview() {
                 prompt = "Minimal fox mascot, flat vector, deep blue",
                 name = "Nova",
                 isSubmitting = true,
+            ),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun CreateProjectContentPickedModelPreview() {
+    AvatarGeneratorTheme {
+        CreateProjectContent(
+            state = CreateProjectState(
+                prompt = "Minimal fox mascot, flat vector, deep blue",
+                modelPicker = ModelPickerState(selectedModelId = "gpt-oss-120b/latest"),
             ),
             onIntent = {},
         )

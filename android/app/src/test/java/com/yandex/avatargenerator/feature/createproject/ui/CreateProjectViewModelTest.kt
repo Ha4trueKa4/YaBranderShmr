@@ -2,7 +2,9 @@ package com.yandex.avatargenerator.feature.createproject.ui
 
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.project.FakeProjectRepository
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationModel
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectCreation
+import com.yandex.avatargenerator.feature.project.fake.FakeGenerationModelRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -24,11 +26,13 @@ internal class CreateProjectViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: FakeProjectRepository
+    private lateinit var models: FakeGenerationModelRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = FakeProjectRepository()
+        models = FakeGenerationModelRepository()
     }
 
     @After
@@ -38,7 +42,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `submit is disabled while the prompt is blank`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
 
         assertFalse(viewModel.state.value.canSubmit)
 
@@ -60,7 +64,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `submit with a blank prompt does not create a project`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
 
         viewModel.onIntent(CreateProjectIntent.OnSubmitClick)
         advanceUntilIdle()
@@ -73,7 +77,7 @@ internal class CreateProjectViewModelTest {
         repository.createResult = Result.success(
             ProjectCreation(FakeProjectRepository.DEFAULT_PROJECT.copy(id = "project-42"), "job-1"),
         )
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
         viewModel.onIntent(CreateProjectIntent.OnPromptChange("  Minimal fox mascot  "))
         viewModel.onIntent(CreateProjectIntent.OnNameChange("  Orion Labs  "))
         viewModel.onIntent(CreateProjectIntent.OnDescriptionChange("  Deep space violet  "))
@@ -104,7 +108,7 @@ internal class CreateProjectViewModelTest {
     fun `failed creation surfaces error, re-enables submit and emits no effect`() =
         runTest(dispatcher) {
             repository.createResult = Result.failure(NetworkException.NoConnection())
-            val viewModel = CreateProjectViewModel(repository)
+            val viewModel = CreateProjectViewModel(repository, models)
             viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
             viewModel.onIntent(CreateProjectIntent.OnNameChange("Orion Labs"))
             viewModel.onIntent(CreateProjectIntent.OnDescriptionChange("Deep space violet"))
@@ -139,7 +143,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `a double tap creates a single project`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
         viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
         advanceUntilIdle()
 
@@ -154,7 +158,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `the prompt reaches the repository trimmed`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
         viewModel.onIntent(
             CreateProjectIntent.OnPromptChange("\n  Minimal fox mascot, flat vector  \n"),
         )
@@ -167,7 +171,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `a blank name is replaced with the default one`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
         viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
         viewModel.onIntent(CreateProjectIntent.OnNameChange("   "))
 
@@ -181,7 +185,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `a prompt longer than the limit is trimmed in the state`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
 
         viewModel.onIntent(
             CreateProjectIntent.OnPromptChange("a".repeat(MaxCreatePromptLength + 100)),
@@ -193,7 +197,7 @@ internal class CreateProjectViewModelTest {
 
     @Test
     fun `a surrogate pair is not cut in half`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
 
         // Эмодзи — две UTF-16 char-ы на одну кодовую точку: обрезка по char-ам
         // оставила бы половинку суррогатной пары и отправила её на сервер.
@@ -208,8 +212,96 @@ internal class CreateProjectViewModelTest {
     }
 
     @Test
+    fun `the saved model reaches the repository and the chip without opening the sheet`() =
+        runTest(dispatcher) {
+            models.selectedModelId = FakeGenerationModelRepository.LUNA_ID
+            val viewModel = CreateProjectViewModel(repository, models)
+            viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
+            advanceUntilIdle()
+
+            // Чип рисует сохранённый выбор, а за справочником не ходим: он
+            // тянется лениво, при первом открытии шторки.
+            assertEquals(
+                FakeGenerationModelRepository.LUNA_ID,
+                viewModel.state.value.modelPicker.selectedModelId,
+            )
+            assertEquals(0, models.modelsCallCount)
+
+            viewModel.onIntent(CreateProjectIntent.OnSubmitClick)
+            advanceUntilIdle()
+
+            assertEquals(FakeGenerationModelRepository.LUNA_ID, repository.lastCreatedModel)
+        }
+
+    @Test
+    fun `the sheet loads models once and the pick is saved globally`() = runTest(dispatcher) {
+        val viewModel = CreateProjectViewModel(repository, models)
+
+        viewModel.onIntent(CreateProjectIntent.OnModelPickerOpen)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.modelPicker.isSheetVisible)
+        assertEquals(FakeGenerationModelRepository.MODELS, viewModel.state.value.modelPicker.models)
+        assertEquals(1, models.modelsCallCount)
+
+        // Второе открытие справочник не перезапрашивает.
+        viewModel.onIntent(CreateProjectIntent.OnModelPickerDismiss)
+        viewModel.onIntent(CreateProjectIntent.OnModelPickerOpen)
+        advanceUntilIdle()
+        assertEquals(1, models.modelsCallCount)
+
+        viewModel.onIntent(CreateProjectIntent.OnModelSelect(FakeGenerationModelRepository.LUNA_ID))
+        advanceUntilIdle()
+
+        val picker = viewModel.state.value.modelPicker
+        assertEquals(FakeGenerationModelRepository.LUNA_ID, picker.selectedModelId)
+        assertFalse(picker.isSheetVisible)
+        // Выбор глобальный: его же увидит чат проекта.
+        assertEquals(listOf(FakeGenerationModelRepository.LUNA_ID), models.savedModelIds)
+    }
+
+    @Test
+    fun `an empty model list is an error inside the sheet, not a blocked form`() =
+        runTest(dispatcher) {
+            models.modelsResult = Result.success(emptyList())
+            val viewModel = CreateProjectViewModel(repository, models)
+            viewModel.onIntent(CreateProjectIntent.OnPromptChange("Minimal fox mascot"))
+
+            viewModel.onIntent(CreateProjectIntent.OnModelPickerOpen)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.modelPicker.hasError)
+            assertTrue(viewModel.state.value.canSubmit)
+
+            // Ретрай поднимает справочник, ошибка гаснет.
+            models.modelsResult = Result.success(FakeGenerationModelRepository.MODELS)
+            viewModel.onIntent(CreateProjectIntent.OnModelsRetry)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.state.value.modelPicker.hasError)
+            assertEquals(2, models.modelsCallCount)
+        }
+
+    @Test
+    fun `a saved model missing from the list falls back to the backend default`() =
+        runTest(dispatcher) {
+            models.selectedModelId = "model-from-another-app-version"
+            val viewModel = CreateProjectViewModel(repository, models)
+
+            viewModel.onIntent(CreateProjectIntent.OnModelPickerOpen)
+            advanceUntilIdle()
+
+            assertEquals(
+                GenerationModel.DefaultId,
+                viewModel.state.value.modelPicker.selectedModelId,
+            )
+            // Расхождение перезаписано, чтобы не всплыло ещё раз.
+            assertEquals(listOf(GenerationModel.DefaultId), models.savedModelIds)
+        }
+
+    @Test
     fun `back is a one-shot effect, not state`() = runTest(dispatcher) {
-        val viewModel = CreateProjectViewModel(repository)
+        val viewModel = CreateProjectViewModel(repository, models)
         val effects = mutableListOf<CreateProjectEffect>()
         val collector = launch { viewModel.effect.toList(effects) }
 
