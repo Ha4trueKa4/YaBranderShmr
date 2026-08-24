@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <fmt/format.h>
 #include <cstdlib>
+#include <optional>
 
 namespace ya_brander::components {
 
@@ -28,6 +29,10 @@ constexpr std::string_view kPolisherGenerateInstructions = R"PROMPT(
 2. ТОЛЬКО СУТЬ: Сохрани только оригинальную идею пользователя. Если он просит просто «логотип кофейни» — так и передай, не додумывай, как она должна выглядеть.
 3. ОЧИСТКА: Убери слова-паразиты, опечатки, сленг, приветствия и воду. Сделай текст грамотным, понятным и прямым.
 4. ЭТИКА: Не реагируй на запрещённый/эротический контент.
+
+МОДЕРАЦИЯ (ВАЖНО):
+Если суть запроса (не формулировка, а то, что именно просят нарисовать) нарушает базовые нормы — явная порнография или сексуализация несовершеннолетних, сцены реального насилия и жестокости, нацистская/экстремистская символика, пропаганда терроризма, разжигание ненависти по признаку расы, религии или национальности — НЕ полируй и не пытайся смягчить или додумать "безобидную" версию. Вместо этого верни ТОЛЬКО одну строку строго в формате:
+МОДЕРАЦИЯ_ОТКАЗ: <краткая причина на русском, 3-7 слов>
 
 ФОРМАТ ОТВЕТА:
 1-2 коротких предложения. Начинай с глагола («Нарисуй...», «Создай...», «Сгенерируй...»). Верни ТОЛЬКО очищенный текст промпта, без приветствий и пояснений.
@@ -48,9 +53,61 @@ constexpr std::string_view kPolisherEditInstructions = R"PROMPT(
 4. НИКАКОГО КОДА: Не диктуй ИИ-редактору, как именно менять SVG-код. Не упоминай координаты, теги или названия слоев, если пользователь сам их не назвал.
 5. ЭТИКА: Не реагируй на запрещённый/эротический контент, и контент 18+.
 
+МОДЕРАЦИЯ (ВАЖНО):
+Если суть правки (не формулировка, а то, что именно просят изменить) нарушает базовые нормы — явная порнография или сексуализация несовершеннолетних, сцены реального насилия и жестокости, нацистская/экстремистская символика, пропаганда терроризма, разжигание ненависти по признаку расы, религии или национальности — НЕ полируй и не пытайся смягчить или додумать "безобидную" версию. Вместо этого верни ТОЛЬКО одну строку строго в формате:
+МОДЕРАЦИЯ_ОТКАЗ: <краткая причина на русском, 3-7 слов>
+
 ФОРМАТ ОТВЕТА:
 1-2 коротких предложения. Начинай с глагола («Измени...», «Увеличь...», «Перекрась...», «Удали...»). Верни ТОЛЬКО очищенный текст правки, без приветствий и пояснений.
 )PROMPT";
+
+constexpr std::string_view kModerationRejectMarker = "МОДЕРАЦИЯ_ОТКАЗ:";
+
+// Модель полировщика не всегда следует формату из инструкций для явно
+// небезопасных запросов — вместо МОДЕРАЦИЯ_ОТКАЗ: часто срабатывает её
+// собственный встроенный safety-отказ в свободной форме ("Я не могу
+// обсуждать эту тему..."). Такой ответ не начинается с глагола-команды (как
+// требует ФОРМАТ ОТВЕТА) и никогда не должен использоваться как "очищенный
+// промпт" — поэтому ловим и его тоже, по характерным фразам отказа.
+constexpr std::string_view kNaturalRefusalPhrases[] = {
+    "не могу обсуждать", "не могу помочь с эт", "не могу выполнить эт",
+    "не могу создать", "не могу сгенерировать", "не буду создавать",
+    "давайте поговорим о ",
+};
+
+std::optional<std::string> ExtractPolisherOutputText(const nlohmann::json& response_json) {
+    for (const auto& output_item : response_json["output"]) {
+        if (output_item.contains("content") && output_item["content"].is_array() && !output_item["content"].empty()) {
+            for (const auto& content_item : output_item["content"]) {
+                if (content_item.contains("text") && content_item["text"].is_string()) {
+                    return content_item["text"].get<std::string>();
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::string TrimLeft(std::string_view s) {
+    auto start = s.find_first_not_of(" \t\n\r:");
+    return start == std::string_view::npos ? std::string{} : std::string(s.substr(start));
+}
+
+// Возвращает причину отказа, если ответ полировщика — отказ (по формату
+// МОДЕРАЦИЯ_ОТКАЗ: или по характерным фразам естественного отказа модели),
+// иначе nullopt.
+std::optional<std::string> DetectModerationRejection(std::string_view polished) {
+    if (polished.rfind(kModerationRejectMarker, 0) == 0) {
+        std::string reason = TrimLeft(polished.substr(kModerationRejectMarker.size()));
+        return reason.empty() ? "Запрос отклонён модерацией." : reason;
+    }
+    for (auto phrase : kNaturalRefusalPhrases) {
+        if (polished.find(phrase) != std::string_view::npos) {
+            return "Запрос отклонён: содержание нарушает политику безопасности.";
+        }
+    }
+    return std::nullopt;
+}
 }
 
 PromptPolisherComponent::PromptPolisherComponent(
@@ -86,32 +143,28 @@ std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_promp
 
     request.data(json_data);
 
+    std::optional<std::string> polished;
     try {
         auto response = request.perform();
         if (response->status_code() != 200) {
             LOG_WARNING() << "Polisher API returned non-200 code: " << response->status_code()
                           << ". Falling back to raw prompt.";
-            return raw_prompt;
-        }
-
-        auto response_json = nlohmann::json::parse(response->body());
-
-        for (const auto& output_item : response_json["output"]) {
-            if (output_item.contains("content") && output_item["content"].is_array() && !output_item["content"].empty()) {
-                for (const auto& content_item : output_item["content"]) {
-                    if (content_item.contains("text") && content_item["text"].is_string()) {
-                        std::string polished = content_item["text"].get<std::string>();
-                        LOG_DEBUG() << "Prompt polished successfully: " << polished;
-                        return polished;
-                    }
-                }
-            }
+        } else {
+            polished = ExtractPolisherOutputText(nlohmann::json::parse(response->body()));
         }
     } catch (const std::exception& e) {
         LOG_WARNING() << "Polisher failed (" << e.what() << "). Falling back to raw prompt.";
     }
 
-    return raw_prompt;
+    if (!polished.has_value()) {
+        return raw_prompt;
+    }
+    if (auto reason = DetectModerationRejection(*polished)) {
+        throw std::runtime_error(*reason);
+    }
+
+    LOG_DEBUG() << "Prompt polished successfully: " << *polished;
+    return *polished;
 }
 
 std::string PromptPolisherComponent::PolishEdit(const std::string& raw_prompt) const {
@@ -133,32 +186,28 @@ std::string PromptPolisherComponent::PolishEdit(const std::string& raw_prompt) c
 
     request.data(json_data);
 
+    std::optional<std::string> polished;
     try {
         auto response = request.perform();
         if (response->status_code() != 200) {
             LOG_WARNING() << "Polisher API returned non-200 code: " << response->status_code()
                           << ". Falling back to raw prompt.";
-            return raw_prompt;
-        }
-
-        auto response_json = nlohmann::json::parse(response->body());
-
-        for (const auto& output_item : response_json["output"]) {
-            if (output_item.contains("content") && output_item["content"].is_array() && !output_item["content"].empty()) {
-                for (const auto& content_item : output_item["content"]) {
-                    if (content_item.contains("text") && content_item["text"].is_string()) {
-                        std::string polished = content_item["text"].get<std::string>();
-                        LOG_DEBUG() << "Prompt polished successfully: " << polished;
-                        return polished;
-                    }
-                }
-            }
+        } else {
+            polished = ExtractPolisherOutputText(nlohmann::json::parse(response->body()));
         }
     } catch (const std::exception& e) {
         LOG_WARNING() << "Polisher failed (" << e.what() << "). Falling back to raw prompt.";
     }
 
-    return raw_prompt;
+    if (!polished.has_value()) {
+        return raw_prompt;
+    }
+    if (auto reason = DetectModerationRejection(*polished)) {
+        throw std::runtime_error(*reason);
+    }
+
+    LOG_DEBUG() << "Prompt polished successfully: " << *polished;
+    return *polished;
 }
 
 userver::yaml_config::Schema PromptPolisherComponent::GetStaticConfigSchema() {
