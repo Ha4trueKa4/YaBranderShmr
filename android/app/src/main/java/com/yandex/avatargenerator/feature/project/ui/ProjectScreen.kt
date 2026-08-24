@@ -41,6 +41,9 @@ import org.koin.core.parameter.parametersOf
  * `projectId` известен только при открытии экрана — передаём его параметром
  * ([parametersOf]), как в `ProfileScreen`; граф — в `feature/project/di/ProjectModule.kt`.
  *
+ * @param jobId задача первичной генерации, если экран открыли сразу после
+ *  создания проекта. Опционален: из списка чатов и из профиля сюда приходят без
+ *  него — ждать тогда нечего, лента уже полная.
  * @param onBackClick возврат на предыдущий экран.
  * @param onDownloadClick тап по картинке в ответе ИИ — переход на витрину
  *  проекта, откуда его скачивают в PNG/SVG: своих кнопок выгрузки у чата нет.
@@ -48,10 +51,11 @@ import org.koin.core.parameter.parametersOf
 @Composable
 internal fun ProjectScreen(
     projectId: String,
+    jobId: String? = null,
     onBackClick: () -> Unit,
     onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ProjectViewModel = koinViewModel { parametersOf(projectId) },
+    viewModel: ProjectViewModel = koinViewModel { parametersOf(projectId, jobId) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

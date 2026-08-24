@@ -14,6 +14,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -121,12 +122,14 @@ internal class ProjectViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ProjectViewModel(
+    /** [initialJobId] с дефолтом — остальным тестам ждать нечего. */
+    private fun viewModel(initialJobId: String? = null) = ProjectViewModel(
         chatRepository,
         versionsRepository,
         projectRepository,
         modelRepository,
         PROJECT_ID,
+        initialJobId,
     )
 
     @Test
@@ -545,6 +548,75 @@ internal class ProjectViewModelTest {
             // Ленту не перечитывали: результата всё равно ещё нет.
             assertEquals(1, chatRepository.getChatCallCount)
         }
+
+    @Test
+    fun `экран, открытый с задачей первичной генерации, ждёт её и перечитывает ленту`() =
+        runTest(dispatcher) {
+            // Так на экран уходит форма создания: промпт бэкенд записал в историю
+            // сам, экрану остаётся показать скелетон ответа и дождаться его.
+            chatRepository.chatResults += Result.success(chat)
+            chatRepository.chatResults += Result.success(chat.copy(messages = reloadedWithoutAnswer))
+            chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+            val viewModel = viewModel(initialJobId = FakeChatRepository.JOB_ID)
+
+            // Перечитывание ленты упирается в паузу между попытками — на ней и
+            // виден скелетон, поставленный на время ожидания.
+            runCurrent()
+            val waiting = contentOf(viewModel)
+            assertEquals(1, waiting.messages.filterIsInstance<ChatMessage.Pending>().size)
+            assertTrue(waiting.isSending)
+
+            advanceUntilIdle()
+
+            val content = contentOf(viewModel)
+            assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
+            assertEquals(reloadedMessages, content.messages)
+            assertFalse(content.isSending)
+        }
+
+    @Test
+    fun `без задачи первичной генерации экран ничего не ждёт`() = runTest(dispatcher) {
+        // Обычный заход из списка чатов: лента уже полная, ждать нечего.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), chatRepository.awaitedJobIds)
+        assertFalse(contentOf(viewModel).isSending)
+    }
+
+    @Test
+    fun `сорвавшаяся первая загрузка не съедает задачу первичной генерации`() =
+        runTest(dispatcher) {
+            // Ждать на Error некуда: скелетон и ответ рисует только Content.
+            // Значит задача должна дожить до успешного retry, а не пропасть.
+            chatRepository.chatResults += Result.failure(IllegalStateException("network is down"))
+            val viewModel = viewModel(initialJobId = FakeChatRepository.JOB_ID)
+            advanceUntilIdle()
+
+            assertEquals(ProjectUiState.Error, viewModel.uiState.value)
+            assertEquals(emptyList<String>(), chatRepository.awaitedJobIds)
+
+            chatRepository.chatResult = Result.success(chat)
+            viewModel.retry()
+            advanceUntilIdle()
+
+            assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
+        }
+
+    @Test
+    fun `retry не запускает ожидание первичной генерации второй раз`() = runTest(dispatcher) {
+        // retry() зовёт тот же load(), а задача уже отжидана.
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel(initialJobId = FakeChatRepository.JOB_ID)
+        advanceUntilIdle()
+
+        viewModel.retry()
+        advanceUntilIdle()
+
+        assertEquals(listOf(FakeChatRepository.JOB_ID), chatRepository.awaitedJobIds)
+    }
 
     @Test
     fun `Повторить отправляет промпт, стоящий над пузырём ошибки`() = runTest(dispatcher) {

@@ -17,7 +17,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * сервера, когда у проекта уже есть настоящий id.
  *
  * @param onBack закрыть экран (стрелка «назад»).
- * @param onProjectCreated проект создан — открыть его экран по id.
+ * @param onProjectCreated проект создан — открыть его экран по id; вторым
+ *  аргументом идёт задача первичной генерации (`null`, если сервер её не
+ *  прислал), чтобы экран проекта сразу показал скелетон ответа.
  *
  * ViewModel берётся из Koin ([koinViewModel]); граф — в
  * `feature/createproject/di/CreateProjectModule.kt`.
@@ -25,7 +27,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 internal fun CreateProjectScreen(
     onBack: () -> Unit,
-    onProjectCreated: (projectId: String) -> Unit,
+    onProjectCreated: (projectId: String, jobId: String?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CreateProjectViewModel = koinViewModel(),
 ) {
@@ -33,7 +35,8 @@ internal fun CreateProjectScreen(
 
     CollectEffects(viewModel.effect) { effect ->
         when (effect) {
-            is CreateProjectEffect.NavigateToProject -> onProjectCreated(effect.projectId)
+            is CreateProjectEffect.NavigateToProject ->
+                onProjectCreated(effect.projectId, effect.jobId)
             CreateProjectEffect.NavigateBack -> onBack()
         }
     }

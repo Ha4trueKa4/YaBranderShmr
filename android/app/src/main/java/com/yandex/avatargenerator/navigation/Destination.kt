@@ -48,9 +48,19 @@ sealed class Destination(val route: String) {
      */
     data object Settings : Destination("settings")
 
-    /** Экран проекта (WebView-редактор + чат). Аргумент — id проекта. */
-    data object Project : Destination("project/{$ARG_PROJECT_ID}") {
-        fun createRoute(projectId: String): String = "project/${Uri.encode(projectId)}"
+    /**
+     * Экран проекта (WebView-редактор + чат). Аргумент пути — id проекта.
+     *
+     * `job_id` — **необязательный query-аргумент**, а не второй сегмент пути:
+     * его знает только форма создания, а на этот же экран ходят ещё из списка
+     * чатов и из профиля. Сегмент сделал бы маршрут без задачи невалидным и
+     * потребовал бы править все те вызовы; с query они остаются
+     * `createRoute(projectId)`.
+     */
+    data object Project : Destination("project/{$ARG_PROJECT_ID}?$ARG_JOB_ID={$ARG_JOB_ID}") {
+        fun createRoute(projectId: String, jobId: String? = null): String =
+            "project/${Uri.encode(projectId)}" +
+                jobId?.let { "?$ARG_JOB_ID=${Uri.encode(it)}" }.orEmpty()
     }
 
     /**
@@ -79,6 +89,7 @@ sealed class Destination(val route: String) {
 
     companion object {
         const val ARG_PROJECT_ID = "projectId"
+        const val ARG_JOB_ID = "jobId"
         const val ARG_USER_ID = "userId"
         const val ARG_SUBSCRIPTIONS_TAB = "tab"
     }
