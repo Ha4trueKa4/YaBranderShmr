@@ -19,7 +19,7 @@
     <string name="auth_field_email">Email</string>
     <string name="auth_field_password">Password</string>
     <string name="auth_placeholder_full_name">John Doe</string>
-    <string name="auth_placeholder_email">hello@brandkit.ai</string>
+    <string name="auth_placeholder_email">hello@ya.brander</string>
     <string name="auth_placeholder_password">Enter your password</string>
     <string name="auth_no_account">No account?</string>
     <string name="auth_register">Register</string>
@@ -95,7 +95,6 @@
 
     <!-- Лента -->
     <string name="feed_brand_name">Brandkit</string>
-    <string name="feed_brand_name_accent">AI</string>
     <string name="feed_search_description">Search</string>
 
     <string name="feed_tab_all">All</string>

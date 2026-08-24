@@ -93,7 +93,6 @@
 
     <!-- Лента -->
     <string name="feed_brand_name">Brandkit</string>
-    <string name="feed_brand_name_accent">AI</string>
     <string name="feed_search_description">Поиск</string>
 
     <string name="feed_tab_all">Все</string>

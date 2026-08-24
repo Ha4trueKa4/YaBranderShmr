@@ -14,25 +14,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AppSpacing
-import com.yandex.avatargenerator.ui.theme.AppTypography
 
 /**
- * Верхняя панель ленты: лого «Brandkit AI» слева и круглая кнопка поиска справа.
+ * Верхняя панель ленты: словомарка бренда слева и круглая кнопка поиска справа.
+ * Словомарка выбирается по теме: белый текст для тёмного фона, тёмный — для светлого.
  */
 @Composable
 fun FeedTopBar(
@@ -47,27 +42,14 @@ fun FeedTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_logo),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = buildAnnotatedString {
-                    append(stringResource(R.string.feed_brand_name))
-                    append(" ")
-                    withStyle(SpanStyle(color = AppColors.AccentText)) {
-                        append(stringResource(R.string.feed_brand_name_accent))
-                    }
-                },
-                // В макете ExtraBold, но такого начертания Inter в res/font нет — см. AppFont.
-                style = AppTypography.heading3.copy(fontWeight = FontWeight.Bold),
-            )
-        }
+        Image(
+            painter = painterResource(
+                if (AppColors.IsDark) R.drawable.ic_brand_logo_dark
+                else R.drawable.ic_brand_logo_light
+            ),
+            contentDescription = stringResource(R.string.feed_brand_name),
+            modifier = Modifier.height(24.dp),
+        )
 
         Box(
             modifier = Modifier
