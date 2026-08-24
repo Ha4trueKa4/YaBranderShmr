@@ -217,11 +217,15 @@ private fun PublicProjectHero(
         contentAlignment = Alignment.BottomStart,
     ) {
         if (previewUrl != null) {
+            // Fit, а не Crop: превью — аватарка/логотип, обрезка по краям
+            // срезала бы часть той самой картинки, которую тут и скачивают.
             AsyncImage(
                 model = previewUrl,
                 contentDescription = title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(AppSpacing.m),
             )
         }
         // «Стекло» имитируем полупрозрачной подложкой и тонким светлым бордером —
@@ -431,8 +435,10 @@ private fun PublicProjectRelatedCard(
                 AsyncImage(
                     model = item.previewUrl,
                     contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(AppSpacing.xs),
                 )
             }
         }
