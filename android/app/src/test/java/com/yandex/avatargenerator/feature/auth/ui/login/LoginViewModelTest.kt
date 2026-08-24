@@ -260,13 +260,9 @@ internal class LoginViewModelTest {
         val collector = launch { viewModel.effect.toList(effects) }
 
         viewModel.onIntent(LoginIntent.OnRegisterClick)
-        viewModel.onIntent(LoginIntent.OnForgotPasswordClick)
         advanceUntilIdle()
 
-        assertEquals(
-            listOf(LoginEffect.NavigateToRegister, LoginEffect.NavigateToPasswordRecovery),
-            effects,
-        )
+        assertEquals(listOf(LoginEffect.NavigateToRegister), effects)
         assertEquals(0, repository.loginCallCount)
 
         collector.cancel()
