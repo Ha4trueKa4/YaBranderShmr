@@ -161,6 +161,7 @@
     <string name="project_visibility_public_subtitle">Любой по ссылке сможет просматривать</string>
     <string name="project_input_placeholder">Опишите, что изменить…</string>
     <string name="project_send_description">Отправить сообщение</string>
+    <string name="project_cancel_description">Остановить генерацию</string>
 
     <!-- Выбор модели генерации: чип над полем ввода и шторка со справочником -->
     <string name="project_model_open_description">Сменить модель генерации</string>
@@ -188,6 +189,7 @@
     <string name="project_generation_failed">Не удалось сгенерировать. Попробуйте ещё раз.</string>
     <string name="project_generation_retry">Повторить</string>
     <string name="project_generation_still_running">Генерация ещё идёт — загляните позже</string>
+    <string name="project_generation_cancelled">Генерация отменена</string>
 
     <!-- Экран публичного проекта -->
     <string name="public_project_follow">Подписаться</string>

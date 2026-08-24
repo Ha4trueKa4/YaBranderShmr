@@ -75,4 +75,24 @@ interface ChatRepository {
      *  экран показывает свой пузырь ошибки.
      */
     suspend fun awaitGeneration(projectId: String, jobId: String): Result<GenerationOutcome>
+
+    /**
+     * Просит сервер прервать задачу [jobId]
+     * (`POST /projects/{id}/generate/{job_id}/cancel`).
+     *
+     * Отвечает сразу и **не дожидается** фактической остановки: бэкенд успевает
+     * ответить `cancelling`, пока фоновая задача ещё не заметила запрос. Исход
+     * по-прежнему приносит идущий [awaitGeneration] — он увидит `cancelled` и
+     * вернёт [GenerationOutcome.Cancelled]. Так у экрана остаётся один источник
+     * правды об исходе, а не два конкурирующих ответа на один скелетон.
+     *
+     * Отмена — это тоже завершение генерации: сервер дописывает в историю чата
+     * запись со `status = cancelled` и тем же `job_id`, что у промпта.
+     *
+     * @return `Result.failure` с
+     *  [com.yandex.avatargenerator.core.domain.NetworkException]: 403 — чужой
+     *  проект, 404 — задачи уже нет (бэкенд перезапустился либо она давно
+     *  завершилась). Отмена не состоялась, ожидание идёт дальше своим чередом.
+     */
+    suspend fun cancelGeneration(projectId: String, jobId: String): Result<Unit>
 }

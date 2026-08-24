@@ -66,6 +66,7 @@ internal fun ProjectScreen(
         onRetry = viewModel::retry,
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::send,
+        onCancelClick = viewModel::cancelGeneration,
         onPreviewNeeded = viewModel::onPreviewNeeded,
         onRetryGeneration = viewModel::retryGeneration,
         onVisibilityChange = viewModel::setVisibility,
@@ -94,6 +95,7 @@ private fun ProjectContent(
     onRetry: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onCancelClick: () -> Unit,
     onPreviewNeeded: (String) -> Unit,
     onRetryGeneration: (String) -> Unit,
     onVisibilityChange: (Boolean) -> Unit,
@@ -179,7 +181,9 @@ private fun ProjectContent(
                     onSendClick = onSendClick,
                     modelTitle = modelTitle(uiState.modelPicker.selectedModelId),
                     onModelClick = onModelPickerOpen,
+                    onCancelClick = onCancelClick,
                     isSending = uiState.isSending,
+                    canCancel = uiState.canCancel,
                 )
             }
         }
@@ -218,6 +222,7 @@ private fun ProjectScreenContentPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
@@ -245,6 +250,7 @@ private fun ProjectScreenEmptyChatPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
@@ -267,6 +273,7 @@ private fun ProjectScreenLoadingPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
@@ -295,6 +302,66 @@ private fun ProjectScreenGeneratingPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
+            onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
+        )
+    }
+}
+
+/** Отмена уже ушла на сервер: кнопка остановки погашена, скелетон ещё на месте. */
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ProjectScreenCancellingPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.generatingMessages(),
+                draft = "",
+                isSending = true,
+                isCancelling = true,
+            ),
+            onBackClick = {},
+            onDownloadClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onCancelClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
+            onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ProjectScreenCancelledGenerationPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.cancelledMessages(),
+                draft = "",
+            ),
+            onBackClick = {},
+            onDownloadClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
@@ -322,6 +389,7 @@ private fun ProjectScreenFailedGenerationPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
@@ -344,6 +412,7 @@ private fun ProjectScreenErrorPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
@@ -377,6 +446,7 @@ private fun ProjectScreenModelPickerPreview() {
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
+            onCancelClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},

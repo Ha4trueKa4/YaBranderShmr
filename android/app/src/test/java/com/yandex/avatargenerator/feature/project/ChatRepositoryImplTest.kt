@@ -122,6 +122,7 @@ class ChatRepositoryImplTest {
         versions: Responder = { respondJson(VersionsJson) },
         generate: Responder = { respondJson(GenerateJson) },
         status: Responder = { respondJson("""{"status":"done","url":"$GeneratedUrl"}""") },
+        cancel: Responder = { respondJson("""{"status":"cancelling"}""") },
     ): ChatRepositoryImpl {
         val client = HttpClient(
             MockEngine { request ->
@@ -133,6 +134,7 @@ class ChatRepositoryImplTest {
                     path.endsWith("/chat") -> chat()
                     path.endsWith("/versions") -> versions()
                     path.endsWith("/generate") -> generate()
+                    path.endsWith("/cancel") -> cancel()
                     path.contains("/generate/") -> status()
                     else -> project()
                 }
@@ -420,6 +422,33 @@ class ChatRepositoryImplTest {
         assertTrue("получили $error", error is NetworkException.Forbidden)
     }
 
+    @Test
+    fun `отмена уходит POST-ом по своему пути, сегменты кодируются`() = runTest {
+        repository().cancelGeneration("a b", "job 1")
+
+        assertEquals(
+            listOf("/api/v1/projects/a%20b/generate/job%201/cancel"),
+            requestedPaths.toList(),
+        )
+        assertEquals(listOf(HttpMethod.Post), requestedMethods.toList())
+    }
+
+    @Test
+    fun `ответ на отмену не разбирается — исход принесёт опрос`() = runTest {
+        // cancelling — не финальный статус, и второго источника правды об
+        // исходе у экрана быть не должно.
+        assertTrue(repository().cancelGeneration("p-1", JobId).isSuccess)
+    }
+
+    @Test
+    fun `404 на отмене — ошибка, задачи уже нет`() = runTest {
+        val repository = repository(cancel = { respondError(HttpStatusCode.NotFound) })
+
+        val error = repository.cancelGeneration("p-1", JobId).exceptionOrNull()
+
+        assertTrue("получили $error", error is NetworkException.NotFound)
+    }
+
     /*
      * Тесты опроса идут на runBlocking, а не runTest: виртуальные часы runTest
      * перематываются вперёд, как только на тест-диспетчере не осталось задач, —
@@ -572,6 +601,54 @@ class ChatRepositoryImplTest {
         assertTrue("получили $error", error is NetworkException.NotFound)
         // Пара попыток: запись в историю могла отстать от рестарта.
         assertEquals(2, requestedPaths.count { it.endsWith("/chat") })
+    }
+
+    @Test
+    fun `cancelled — это доведённое до конца ожидание, а не ошибка`() = runBlocking {
+        val repository = repository(status = { respondJson("""{"status":"cancelled"}""") })
+
+        assertEquals(
+            GenerationOutcome.Cancelled,
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+    }
+
+    @Test
+    fun `cancelling опрашивается дальше — финальный статус ещё впереди`() = runBlocking {
+        // Между запросом отмены и остановкой фоновой задачи проходит время.
+        val repository = repository(
+            status = statuses(
+                { respondJson("""{"status":"cancelling"}""") },
+                { respondJson("""{"status":"cancelled"}""") },
+            ),
+        )
+
+        assertEquals(
+            GenerationOutcome.Cancelled,
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
+        assertEquals(2, requestedPaths.size)
+    }
+
+    @Test
+    fun `404 находит в истории и отмену`() = runBlocking {
+        val repository = repository(
+            status = { respondError(HttpStatusCode.NotFound) },
+            chat = {
+                respondJson(
+                    """
+                    {"chat_history": [
+                      {"role": "assistant", "status": "cancelled", "job_id": "$JobId"}
+                    ]}
+                    """,
+                )
+            },
+        )
+
+        assertEquals(
+            GenerationOutcome.Cancelled,
+            repository.awaitGeneration("p-1", JobId).getOrThrow(),
+        )
     }
 
     @Test

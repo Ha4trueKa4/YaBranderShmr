@@ -28,9 +28,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 private const val ProjectsPath = "projects"
 private const val ChatSegment = "chat"
 private const val GenerateSegment = "generate"
+private const val CancelSegment = "cancel"
 
 private const val DoneStatus = "done"
 private const val ErrorStatus = "error"
+private const val CancelledStatus = "cancelled"
 
 /** Сколько раз перечитать историю, потеряв задачу: запись в неё могла отстать. */
 private const val FallbackAttempts = 2
@@ -49,7 +51,8 @@ private const val FallbackAttempts = 2
  *
  * Генерация асинхронная: `POST /generate` только ставит задачу и отвечает
  * `job_id`, а результат забирает опрос статус-ручки (long polling) — см.
- * [awaitGeneration].
+ * [awaitGeneration]. Отмена ([cancelGeneration]) в этот опрос и приходит:
+ * своего исхода она не отдаёт.
  *
  * **Деградация вместо ошибки.** `Result.failure` у [getChat] возвращается только
  * когда упал `GET /projects/{id}` — без него у экрана нет даже заголовка. Ошибки
@@ -155,7 +158,9 @@ class ChatRepositoryImpl(
                 when (dto.status) {
                     DoneStatus -> return Result.success(GenerationOutcome.Done(dto.url))
                     ErrorStatus -> return Result.success(GenerationOutcome.Failed(dto.message))
-                    // pending и любой незнакомый статус — просто спрашиваем ещё раз.
+                    CancelledStatus -> return Result.success(GenerationOutcome.Cancelled)
+                    // pending, переходный cancelling и любой незнакомый статус —
+                    // просто спрашиваем ещё раз.
                     else -> delay(polling.guardMillis)
                 }
             }
@@ -177,6 +182,22 @@ class ChatRepositoryImpl(
      * Экрану это различие важно — по `Failed` он перечитывает ленту, а тут
      * читать нечего.
      */
+    /**
+     * Ответ ручки не разбираем и не отдаём наружу: исход всё равно принесёт
+     * идущий [awaitGeneration], а два источника правды на один скелетон
+     * разъехались бы (`cancelling` в ответе на отмену — не финальный статус).
+     * Здесь важно только, дошёл ли запрос до сервера.
+     *
+     * Ретрая нет по той же причине, что и у старта: `POST` не подпадает под
+     * `isRetryable`. Повтор отмены, впрочем, безобиден — но и смысла в нём нет,
+     * ожидание никуда не денется, а пользователь может нажать ещё раз.
+     */
+    override suspend fun cancelGeneration(projectId: String, jobId: String): Result<Unit> =
+        apiResult {
+            apiCall { client.post(cancelPath(projectId, jobId)) }
+            Unit
+        }
+
     private suspend fun fromHistory(
         projectId: String,
         jobId: String,
@@ -203,6 +224,9 @@ class ChatRepositoryImpl(
 
     private fun statusPath(projectId: String, jobId: String): String =
         "${generatePath(projectId)}/${jobId.encodeURLPathPart()}"
+
+    private fun cancelPath(projectId: String, jobId: String): String =
+        "${statusPath(projectId, jobId)}/$CancelSegment"
 
     private fun projectPath(projectId: String, segment: String): String =
         "$ProjectsPath/${projectId.encodeURLPathPart()}/$segment"
