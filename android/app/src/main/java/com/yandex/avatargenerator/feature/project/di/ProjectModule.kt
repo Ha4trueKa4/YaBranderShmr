@@ -11,7 +11,7 @@ import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.PublicProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
-import com.yandex.avatargenerator.feature.project.ui.PublicProjectViewModel
+import com.yandex.avatargenerator.feature.project.ui.publicproject.PublicProjectViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module

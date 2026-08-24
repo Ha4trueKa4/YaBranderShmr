@@ -82,6 +82,16 @@
   text-decoration: none;
 }
 
+.referenceButton {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.referenceButtonSelected {
+  border-color: var(--color-accent-primary);
+}
+
 .author span,
 .meta time {
   overflow: hidden;

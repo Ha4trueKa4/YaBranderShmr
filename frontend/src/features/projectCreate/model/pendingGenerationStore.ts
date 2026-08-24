@@ -1,28 +1,24 @@
 import { makeAutoObservable } from 'mobx'
 
-export interface ProjectDraft {
-  description: string
-  model: string
-  name: string
-}
+const pendingGenerationPromptStorageKey = 'brandkit:pending-generation-prompt'
 
 class PendingGenerationStore {
-  draft: ProjectDraft | null = null
+  prompt: string | null = localStorage.getItem(
+    pendingGenerationPromptStorageKey,
+  )
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true })
   }
 
-  save(draft: ProjectDraft) {
-    this.draft = draft
+  save(prompt: string) {
+    this.prompt = prompt
+    localStorage.setItem(pendingGenerationPromptStorageKey, prompt)
   }
 
-  take() {
-    const draft = this.draft
-
-    this.draft = null
-
-    return draft
+  clear() {
+    this.prompt = null
+    localStorage.removeItem(pendingGenerationPromptStorageKey)
   }
 }
 

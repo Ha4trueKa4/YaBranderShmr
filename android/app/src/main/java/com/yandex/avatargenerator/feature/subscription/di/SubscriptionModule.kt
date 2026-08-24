@@ -9,7 +9,9 @@ import org.koin.dsl.module
 
 val subscriptionModule = module {
     single<SubscriptionRepository> { NetworkSubscriptionRepository(get()) }
-    viewModel { (userId: String, initialTab: SubscriptionsTab, currentUserId: String?) ->
-        SubscriptionsViewModel(get(), userId, initialTab, currentUserId)
+    // currentUserId сюда не передаём: он приезжает из потока уже после создания
+    // ViewModel и подаётся экраном интентом.
+    viewModel { (userId: String, initialTab: SubscriptionsTab) ->
+        SubscriptionsViewModel(get(), userId, initialTab)
     }
 }

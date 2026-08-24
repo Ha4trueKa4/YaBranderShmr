@@ -10,11 +10,10 @@
 #include <userver/components/component_context.hpp>
 #include <userver/components/loggable_component_base.hpp>
 #include <userver/concurrent/background_task_storage.hpp>
-#include <userver/engine/condition_variable.hpp>
-#include <userver/engine/mutex.hpp>
 #include <userver/engine/semaphore.hpp>
 #include <userver/engine/task/cancel.hpp>
 #include <userver/storages/postgres/cluster.hpp>
+#include <userver/storages/redis/client_fwd.hpp>
 #include <userver/formats/json/value.hpp>
 
 #include "../models/generation_job.hpp"
@@ -79,10 +78,10 @@ public:
   ///        которые сами по себе конкурентно-безопасны).
   /// @throws GenerationInProgressError структурно недостижимо здесь: у
   ///         только что созданного project_id не может быть записи в
-  ///         active_job_by_project_ — вызывающему не нужно его ловить.
+  ///         active_job:{project_id} в Redis — вызывающему не нужно его ловить.
   /// @throws std::exception если не удалось создать job (например, недоступна
   ///         БД при записи сообщения пользователя) — в этом случае job_id
-  ///         никому не отдаётся и в jobs_ ничего не остаётся; строка проекта
+  ///         никому не отдаётся и в Redis ничего не остаётся; строка проекта
   ///         и плейсхолдер-версия (kDefaultSvg) при этом уже закоммичены
   ///         CreateProject — проект остаётся в "легаси"-состоянии и правится
   ///         дальше через StartEditGeneration как обычно.
@@ -106,7 +105,7 @@ public:
   ///         другой job (не больше одной генерации на проект одновременно).
   /// @throws std::exception если не удалось создать job (например, недоступна
   ///         БД при записи сообщения пользователя) — в этом случае job_id
-  ///         никому не отдаётся и в jobs_ ничего не остаётся.
+  ///         никому не отдаётся и в Redis ничего не остаётся (см. ReleaseReservedJob).
   std::string StartEditGeneration(const std::string& project_id, const std::string& prompt,
                                   const std::string& model);
 
@@ -145,7 +144,7 @@ public:
   ///          presigned-ссылкой (та имеет срок годности) — резолвинг
   ///          version_id в ссылку живёт в отдельном (не этом) эндпоинте.
   ///          Пока для проекта выполняется активная генерация (см.
-  ///          active_job_by_project_), в конец на лету (без записи в БД)
+  ///          active_job:{project_id} в Redis), в конец на лету (без записи в БД)
   ///          подставляется {"role":"assistant","status":"pending"|"cancelling","job_id":...} —
   ///          чтобы фронту не нужно было отдельно опрашивать статус генерации
   ///          только ради индикации "проект делается" в самом чате.
@@ -154,43 +153,15 @@ public:
 private:
   enum class JobStatus { kPending, kDone, kError, kCancelled };
 
-  /// @brief Состояние одной фоновой задачи генерации. Хранится в jobs_ по
-  ///        shared_ptr, чтобы фоновая корутина и WaitForGeneration могли
-  ///        безопасно обращаться к нему независимо от того, жив ли ещё
-  ///        соответствующий элемент карты jobs_.
-  //
-  // TODO(redis, multi-instance): все поля ниже сейчас предполагают, что
-  // CancelGeneration/WaitForGeneration и сама фоновая корутина живут в одном
-  // процессе. С несколькими инстансами за балансировщиком это не так:
-  //  - mutex/cv — межпроцессный long-poll на std::condition_variable не
-  //    работает; на Redis это обычно Pub/Sub-канал per job_id (WaitForGeneration
-  //    подписывается и параллельно на всякий случай поллит с таймаутом) либо
-  //    BLPOP/BRPOPLPUSH, а не WaitFor().
-  //  - cancel_token (engine::TaskCancellationToken) — валиден только внутри
-  //    процесса, который реально выполняет корутину. Если запрос POST
-  //    .../cancel прилетел на ДРУГОЙ инстанс, чем тот, что тянет job, вызвать
-  //    RequestCancel() напрямую нельзя — нужно, чтобы владеющий инстанс сам
-  //    подписался на "запрос отмены" (тот же Pub/Sub-канал/публикация
-  //    cancel_requested в Redis) и вызвал RequestCancel() у себя локально.
-  //  - cancel_requested должен читаться не из локальной памяти, а из Redis
-  //    (иначе WaitForGeneration/CancelGeneration на инстансе-не-владельце не
-  //    увидят актуальное значение).
-  struct JobEntry {
+  /// @brief Снимок состояния job'а, прочитанный из Redis (см. job:{job_id}
+  ///        ниже) — в отличие от старой in-process JobEntry, не хранится
+  ///        нигде между вызовами: любой инстанс перечитывает его заново.
+  struct JobSnapshot {
     std::string project_id;
-    std::chrono::steady_clock::time_point created_at = std::chrono::steady_clock::now();
-    userver::engine::Mutex mutex;
-    userver::engine::ConditionVariable cv;
     JobStatus status = JobStatus::kPending;
     std::string result_version_id;
     std::string error_message;
-
-    // Токен для запроса отмены фоновой корутины извне (из CancelGeneration).
-    // Выставляется самой корутиной в самом начале (engine::current_task::
-    // GetCancellationToken()), поэтому в первые мгновения после старта может
-    // быть ещё не установлен — на этот случай cancel_requested выставляется
-    // отдельно и проверяется корутиной сразу после установки токена.
     bool cancel_requested = false;
-    std::optional<userver::engine::TaskCancellationToken> cancel_token;
   };
 
   /// @brief Сырой project.chat_history одним запросом (jsonb напрямую, без
@@ -226,8 +197,8 @@ private:
 
   /// @brief Общая асинхронная "обвязка" job'а генерации, используемая и
   ///        StartInitialGeneration, и StartEditGeneration: генерация job_id,
-  ///        атомарное резервирование/освобождение active_job_by_project_,
-  ///        синхронная запись сообщения пользователя (с откатом резервации
+  ///        атомарное резервирование/освобождение active_job:{project_id} в
+  ///        Redis, синхронная запись сообщения пользователя (с откатом резервации
   ///        при ошибке), запуск фоновой корутины на bts_ с cancellation
   ///        token'ом и generation_semaphore_, классификация исхода
   ///        (done/error/cancelled) и соответствующая запись в chat_history.
@@ -265,22 +236,45 @@ private:
   std::string RunEditGeneration(const std::string& project_id, const std::string& prompt,
                                 const std::string& model, const std::string& job_id);
 
-  /// @brief Удаляет из jobs_ завершённые job'ы старше kJobRetention, а
-  ///        зависшие в kPending (задача так и не запустилась/не завершилась,
-  ///        например из-за перегрузки task processor'а) — старше
-  ///        kStuckPendingRetention. Без второго условия такой job остался бы
-  ///        в jobs_ навсегда, так как обычное условие смотрит только на
-  ///        завершённые статусы. Заодно чистит active_job_by_project_ от
-  ///        ссылки на удаляемый job — иначе зависший job навсегда заблокировал
-  ///        бы новые генерации для своего проекта даже после того, как сам он
-  ///        уже вычищен из jobs_. Вызывается под jobs_mutex_.
-  //
-  // TODO(redis): при переезде jobs_/active_job_by_project_ на Redis эта
-  // функция должна исчезнуть целиком — вместо ручного скана и удаления по
-  // возрасту используется TTL на ключах (EXPIRE/PEXPIRE при записи, продление
-  // TTL, пока job kPending), Redis чистит протухшие записи сам. Сохранять её
-  // "просто на всякий случай" не нужно — TTL и есть замена, а не дополнение.
-  void PruneOldJobsLocked();
+  /// @brief Читает job:{job_id} из Redis. @returns std::nullopt, если хэш
+  ///        не существует (job никогда не было или его TTL истёк).
+  std::optional<JobSnapshot> ReadJob(const std::string& job_id);
+
+  /// @brief Резервирует "не больше одной активной генерации на проект":
+  ///        SET active_job:{project_id} {job_id} NX. @returns std::nullopt
+  ///        при успехе; иначе — job_id уже идущей генерации (для
+  ///        GenerationInProgressError).
+  std::optional<std::string> ReserveActiveJob(const std::string& project_id, const std::string& job_id);
+
+  /// @brief Откатывает ReserveActiveJob/WriteInitialJob, если после них не
+  ///        удалось записать сообщение пользователя (см. StartGeneration) —
+  ///        job ещё нигде не был отдан наружу, поэтому просто удаляет оба
+  ///        ключа без дополнительных проверок.
+  void ReleaseReservedJob(const std::string& project_id, const std::string& job_id);
+
+  void WriteInitialJob(const std::string& job_id, const std::string& project_id);
+
+  void SetCancelRequested(const std::string& job_id);
+
+  bool IsCancelRequested(const std::string& job_id);
+
+  /// @brief Атомарно (Lua-скрипт) снимает active_job:{project_id} (если он
+  ///        всё ещё указывает на этот job_id) и записывает финальный статус
+  ///        job:{job_id} — простая последовательность из двух отдельных
+  ///        команд отсюда не годится: клиент, получивший финальный статус из
+  ///        WaitForGeneration сразу после HSET, мог бы тут же словить
+  ///        спурьезный 409 на POST .../generate, если DEL слота ещё не
+  ///        применился.
+  void WriteTerminalJob(const std::string& job_id, const std::string& project_id, JobStatus status,
+                        const std::string& result_version_id, const std::string& error_message);
+
+  models::GenerationJob ToGenerationJob(const std::string& job_id, const std::string& project_id,
+                                         const JobSnapshot& snapshot);
+
+  static std::string JobKey(const std::string& job_id);
+  static std::string ActiveJobKey(const std::string& project_id);
+  static std::string JobStatusToString(JobStatus status);
+  static JobStatus JobStatusFromString(const std::string& value);
 
   /// @brief Резолвит id референс-проектов (не более 2, лишние игнорируются
   ///        вызывающим на уровне хендлера) в содержимое их последних SVG для
@@ -300,28 +294,15 @@ private:
   PromptConstructorComponent& prompt_constructor_;
   PromptPolisherComponent& prompt_polisher_;
 
-  // TODO(redis, multi-instance): jobs_/active_job_by_project_/jobs_mutex_ —
-  // вся эта пара карт in-process и не переживает ни рестарт процесса, ни
-  // наличие второго инстанса за балансировщиком (каждый видит только свои
-  // job'ы). Целевая схема на Redis:
-  //   job:{job_id}          — хэш {project_id, status, result_version_id,
-  //                            error_message, created_at}, TTL = kJobRetention
-  //                            (или kStuckPendingRetention, пока pending)
-  //   active_job:{project_id} — job_id активного job'а, TTL как у job:{job_id}
-  // "Не больше одной активной генерации на проект" на Redis — это
-  // SET active_job:{project_id} {job_id} NX (атомарный check-and-reserve одной
-  // командой, замена связки "find + emplace под одним mutex" ниже). Освобождать
-  // слот — DEL active_job:{project_id}, тоже одной командой, без раздельных
-  // критических секций (см. TODO у блока erase/NotifyAll в .cpp).
-  userver::engine::Mutex jobs_mutex_;
-  std::unordered_map<std::string, std::shared_ptr<JobEntry>> jobs_;
-
-  // project_id -> job_id незавершённого job'а этого проекта (если есть).
-  // Не больше одной активной генерации на проект: StartGenerationJob
-  // проверяет и резервирует запись здесь атомарно, под тем же jobs_mutex_,
-  // что и вставку в jobs_ — иначе два конкурентных запроса могли бы оба
-  // проскочить проверку до того, как любой из них зарезервирует слот.
-  std::unordered_map<std::string, std::string> active_job_by_project_;
+  // Источник истины для состояния job'ов — Redis, общий для всех инстансов
+  // за балансировщиком (см. Reserve/Read/Write* выше): job:{job_id} (хэш) и
+  // active_job:{project_id} (job_id активной генерации, если есть). Долгий
+  // опрос (WaitForGeneration) и обнаружение отмены на инстансе-владельце
+  // корутины сделаны периодическим поллингом Redis (kWaitPollInterval /
+  // kCancelPollInterval), а не Pub/Sub — простой и на первое время
+  // достаточный вариант; задержка реакции ограничена сверху этими
+  // интервалами.
+  userver::storages::redis::ClientPtr redis_client_;
 
   // Ограничивает число одновременно выполняющихся генераций (SendPrompt к
   // LLM + SaveVersion), чтобы всплеск запросов не перегрузил bg-task-processor
@@ -341,7 +322,7 @@ private:
 
   // Должен быть объявлен последним: при разрушении компонента фоновые задачи
   // должны быть отменены/дожданы раньше, чем уничтожатся поля выше, которые
-  // эти задачи используют (pg_cluster_, jobs_ и т.д.).
+  // эти задачи используют (pg_cluster_, redis_client_ и т.д.).
   userver::concurrent::BackgroundTaskStorage bts_;
 };
 

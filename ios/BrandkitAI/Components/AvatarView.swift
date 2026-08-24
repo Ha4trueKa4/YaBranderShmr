@@ -10,7 +10,7 @@ struct AvatarView: View {
             .font(.system(size: 0.27 * size + 4.5, weight: .bold))
             .foregroundStyle(Color(.onAccent))
             .frame(width: size, height: size)
-            .background(Color(.endGradient), in: .circle)
+            .background(Color(.accent), in: .circle)
             .overlay {
                 if strokeWidth > 0 {
                     Circle().stroke(Color(.background), lineWidth: strokeWidth)

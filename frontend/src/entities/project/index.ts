@@ -19,6 +19,11 @@ export {
   useUserSubscribersQuery,
   useUserSubscriptionsQuery,
 } from './api/queries'
+export type { ProjectReference } from './model/projectReferencesStore'
+export {
+  maxProjectReferences,
+  projectReferencesStore,
+} from './model/projectReferencesStore'
 export type { FeedProject, PublicProfileProject } from './model/types'
 export type { FeedProjectCardProps } from './ui/feedProjectCard'
 export { FeedProjectCard } from './ui/feedProjectCard'

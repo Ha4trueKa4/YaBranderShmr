@@ -83,6 +83,51 @@ services:
     networks:
       - postgres
 
+  redis:
+    container_name: service-redis
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    # Порт на хост не публикуется: ya_brander-container достаёт service-redis
+    # по имени внутри docker-сети postgres, доступ с хоста не нужен. С пустым
+    # паролем (см. .env.example) публиковать порт на всех интерфейсах было бы
+    # небезопасно.
+    networks:
+      - postgres
+
+  redis-sentinel:
+    container_name: service-redis-sentinel
+    image: redis:7
+    # userver's Redis-компонент общается по протоколу Sentinel даже с одним
+    # мастером (нужен для discovery), поэтому голого redis-server недостаточно —
+    # рядом должен крутиться настоящий redis-sentinel, который его мониторит.
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        cat > /tmp/sentinel.conf <<EOF
+        port 26379
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel monitor master0 service-redis 6379 1
+        sentinel down-after-milliseconds master0 5000
+        sentinel failover-timeout master0 60000
+        sentinel parallel-syncs master0 1
+        EOF
+        exec redis-server /tmp/sentinel.conf --sentinel
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - postgres
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.159.0
     container_name: service-otel-collector
@@ -137,6 +182,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}
       - YANDEX_OAUTH_CLIENT_SECRET=${YANDEX_OAUTH_CLIENT_SECRET}
+      - SECDIST_CONFIG=${SECDIST_CONFIG}
       - GC_ENABLED=${GC_ENABLED}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - MONIUM_PROJECT=${MONIUM_PROJECT}
@@ -154,6 +200,10 @@ services:
         condition: service_completed_successfully
       migrate-vector:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      redis-sentinel:
+        condition: service_healthy
       otel-collector-healthcheck:
         condition: service_completed_successfully
     networks:

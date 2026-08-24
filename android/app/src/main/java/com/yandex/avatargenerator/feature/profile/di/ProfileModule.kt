@@ -8,7 +8,7 @@ import org.koin.dsl.module
 
 val profileModule = module {
     single<ProfileRepository> { NetworkProfileRepository(get()) }
-    viewModel { (userId: String, isOwnProfile: Boolean) ->
-        ProfileViewModel(get(), get(), userId, isOwnProfile)
+    viewModel { (userId: String, isOwnProfile: Boolean, showBack: Boolean, showSettings: Boolean) ->
+        ProfileViewModel(get(), get(), userId, isOwnProfile, showBack, showSettings)
     }
 }

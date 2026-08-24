@@ -5,4 +5,5 @@ enum ChatMessageAttachment: Equatable {
     case version(id: UUID, url: URL?)
     case error(message: String)
     case cancelled
+    case mock
 }

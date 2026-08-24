@@ -1148,9 +1148,37 @@ final class ChatViewModel {
                 jobID: remoteMessage.jobID
             )
         }
-        messages = mapped
-        sections = makeSections(from: mapped)
-        lastMessageID = mapped.last?.id
+        applyMessages(mapped)
+    }
+
+    private func applyMessages(_ newMessages: [ChatMessage]) {
+        messages = newMessages
+        sections = makeSections(from: newMessages)
+        lastMessageID = newMessages.last?.id
+    }
+
+    /// Наполненный демо-чат для онбординга: без сети, `load()` сразу выходит
+    /// из-за выставленного `didLoad`.
+    static func makeDemo(projectID: UUID = UUID()) -> ChatViewModel {
+        let viewModel = ChatViewModel(projectID: projectID)
+        let now = Date()
+
+        viewModel.applyMessages([
+            ChatMessage(
+                type: .user,
+                text: "Make the background darker",
+                date: now.addingTimeInterval(-60)
+            ),
+            ChatMessage(
+                type: .assistant,
+                text: "Generated a new version.",
+                date: now.addingTimeInterval(-59),
+                attachment: .mock
+            ),
+        ])
+        viewModel.privacy = .privateProject
+        viewModel.didLoad = true
+        return viewModel
     }
 
     private func appendMessage(_ message: ChatMessage) {

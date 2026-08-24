@@ -1,34 +1,16 @@
 package com.yandex.avatargenerator.feature.subscription.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.yandex.avatargenerator.R
-import com.yandex.avatargenerator.feature.subscription.ui.components.SubscriptionUserRow
-import com.yandex.avatargenerator.ui.components.BrandTopBar
-import com.yandex.avatargenerator.ui.components.BrandEmptyState
-import com.yandex.avatargenerator.ui.components.BrandErrorState
-import com.yandex.avatargenerator.ui.components.BrandListItemSkeleton
-import com.yandex.avatargenerator.ui.theme.AppColors
-import com.yandex.avatargenerator.ui.theme.AppSpacing
+import com.yandex.avatargenerator.core.mvi.CollectEffects
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -38,12 +20,18 @@ import org.koin.core.parameter.parametersOf
  * запрос зависят от вкладки; переключателя на экране нет — на второй список
  * возвращаются через профиль.
  *
- * Навигация отдана наружу коллбэками; ViewModel — из Koin. `userId`/`initialTab`
- * известны только при открытии — передаём их параметрами ([parametersOf]); граф —
- * в `feature/subscription/di/SubscriptionModule.kt`.
+ * Навигация отдана наружу коллбэками, а внутри она приходит эффектом
+ * [SubscriptionsEffect]: куда ведёт тап по строке — в чужой профиль или на свою
+ * вкладку — решает ViewModel, у которой есть id текущего пользователя.
+ *
+ * `userId`/`initialTab`/`currentUserId` известны только при открытии — передаём
+ * их параметрами ([parametersOf]); граф — в
+ * `feature/subscription/di/SubscriptionModule.kt`.
  *
  * @param onBack закрыть экран (стрелка «назад»).
  * @param onUserClick открыть профиль пользователя из списка по его id.
+ * @param onOpenOwnProfile переключиться на вкладку своего профиля — тап по
+ *   собственной строке в списке.
  * @param currentUserId id текущего пользователя — его строка показывается без
  *   кнопки подписки (на себя не подписываются); `null`, если id недоступен.
  */
@@ -53,101 +41,47 @@ fun SubscriptionsScreen(
     initialTab: SubscriptionsTab,
     onBack: () -> Unit,
     onUserClick: (userId: String) -> Unit,
+    onOpenOwnProfile: () -> Unit,
     modifier: Modifier = Modifier,
     currentUserId: String? = null,
-    viewModel: SubscriptionsViewModel = koinViewModel { parametersOf(userId, initialTab, currentUserId) },
+    viewModel: SubscriptionsViewModel = koinViewModel { parametersOf(userId, initialTab) },
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Перезагружаем список при возврате на экран (кроме первого входа — там уже
-    // грузит init): пока ходили в чужой профиль, там могли подписаться/отписаться.
+    // id приезжает из потока и на первом кадре всегда null, поэтому отдаём его
+    // интентом, а не параметром конструктора: тот вызывается ровно раз и
+    // заморозил бы null.
+    LaunchedEffect(currentUserId) {
+        viewModel.onIntent(SubscriptionsIntent.OnCurrentUserResolved(currentUserId))
+    }
+
+    // Возврат на экран: пока ходили в чужой профиль, там могли подписаться или
+    // отписаться.
+    //
+    // Первый резюм пропускаем — список уже грузится из init ViewModel. Флаг живёт
+    // в композиции и намеренно не `rememberSaveable`: при повороте композиция
+    // пересоздаётся, ViewModel с уже загруженным списком — нет, и сброс флага
+    // избавляет от лишнего запроса на каждый поворот.
     var isFirstResume by remember { mutableStateOf(true) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (isFirstResume) isFirstResume = false else viewModel.refresh()
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(AppColors.Background),
-    ) {
-        BrandTopBar(
-            title = stringResource(
-                when (state.tab) {
-                    SubscriptionsTab.Followers -> R.string.subscriptions_title_followers
-                    SubscriptionsTab.Following -> R.string.subscriptions_title_following
-                },
-            ),
-            backContentDescription = stringResource(R.string.subscriptions_back_description),
-            onBackClick = onBack,
-        )
-
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            when (val list = state.list) {
-                is SubscriptionsListState.Loading ->
-                    LoadingList(modifier = Modifier.fillMaxSize())
-
-                is SubscriptionsListState.Error ->
-                    BrandErrorState(
-                        title = stringResource(R.string.subscriptions_error_title),
-                        retryLabel = stringResource(R.string.subscriptions_error_retry),
-                        onRetry = viewModel::retry,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-
-                is SubscriptionsListState.Content ->
-                    if (list.users.isEmpty()) {
-                        EmptyList(tab = state.tab, modifier = Modifier.align(Alignment.Center))
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(AppSpacing.m),
-                            verticalArrangement = Arrangement.spacedBy(AppSpacing.s),
-                        ) {
-                            items(items = list.users, key = { it.id }) { user ->
-                                SubscriptionUserRow(
-                                    user = user,
-                                    isSelf = user.id == currentUserId,
-                                    onClick = { onUserClick(user.id) },
-                                    onToggleFollow = { viewModel.toggleFollow(user) },
-                                )
-                            }
-                        }
-                    }
-            }
+        if (isFirstResume) {
+            isFirstResume = false
+        } else {
+            viewModel.onIntent(SubscriptionsIntent.OnScreenResumed)
         }
     }
-}
 
-@Composable
-private fun LoadingList(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.padding(horizontal = AppSpacing.m),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.l),
-    ) {
-        repeat(SKELETON_ROWS) {
-            BrandListItemSkeleton(modifier = Modifier.padding(top = AppSpacing.s))
+    CollectEffects(viewModel.effect) { effect ->
+        when (effect) {
+            SubscriptionsEffect.NavigateBack -> onBack()
+            is SubscriptionsEffect.OpenUserProfile -> onUserClick(effect.userId)
+            SubscriptionsEffect.OpenOwnProfile -> onOpenOwnProfile()
         }
     }
-}
 
-@Composable
-private fun EmptyList(tab: SubscriptionsTab, modifier: Modifier = Modifier) {
-    BrandEmptyState(
-        title = stringResource(
-            when (tab) {
-                SubscriptionsTab.Followers -> R.string.subscriptions_empty_followers_title
-                SubscriptionsTab.Following -> R.string.subscriptions_empty_following_title
-            },
-        ),
-        subtitle = stringResource(
-            when (tab) {
-                SubscriptionsTab.Followers -> R.string.subscriptions_empty_followers_subtitle
-                SubscriptionsTab.Following -> R.string.subscriptions_empty_following_subtitle
-            },
-        ),
+    SubscriptionsContent(
+        state = state,
+        onIntent = viewModel::onIntent,
         modifier = modifier,
     )
 }
-
-private const val SKELETON_ROWS = 8

@@ -4,6 +4,10 @@ import { useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { DEFAULT_GENERATION_MODEL, ModelSelect } from '../modelSelect'
+import {
+  type ReferenceAttachment,
+  ReferenceAttachments,
+} from '../referenceAttachments'
 import styles from './GenerationPrompt.module.css'
 
 const MAX_PROMPT_LENGTH = 1500
@@ -18,7 +22,9 @@ interface GenerationPromptComposerProps {
   onCancel?: () => void
   onGenerate: () => void
   onModelChange: (model: string) => void
+  onRemoveReference?: (id: string) => void
   onUnauthorizedModelSelect?: () => void
+  references?: ReferenceAttachment[]
 }
 
 export function GenerationPromptComposer({
@@ -31,7 +37,9 @@ export function GenerationPromptComposer({
   onCancel,
   onGenerate,
   onModelChange,
+  onRemoveReference,
   onUnauthorizedModelSelect,
+  references = [],
 }: GenerationPromptComposerProps) {
   const { t } = useTranslation()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -56,10 +64,38 @@ export function GenerationPromptComposer({
           disabled={isGenerating}
           onChange={(event) => onDescriptionChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            const isNewLineShortcut = event.metaKey || event.ctrlKey
+
+            if (event.key === 'Enter' && isNewLineShortcut) {
+              const { selectionEnd, selectionStart } = event.currentTarget
+              const nextDescription = `${description.slice(0, selectionStart)}\n${description.slice(selectionEnd)}`
+
               event.preventDefault()
-              onGenerate()
+
+              if (nextDescription.length > MAX_PROMPT_LENGTH) {
+                return
+              }
+
+              onDescriptionChange(nextDescription)
+              requestAnimationFrame(() => {
+                textareaRef.current?.setSelectionRange(
+                  selectionStart + 1,
+                  selectionStart + 1,
+                )
+              })
+              return
             }
+
+            if (
+              event.key !== 'Enter' ||
+              event.shiftKey ||
+              event.nativeEvent.isComposing
+            ) {
+              return
+            }
+
+            event.preventDefault()
+            onGenerate()
           }}
           maxLength={MAX_PROMPT_LENGTH}
           placeholder={t(
@@ -67,6 +103,10 @@ export function GenerationPromptComposer({
           )}
           ref={textareaRef}
           value={description}
+        />
+        <ReferenceAttachments
+          onRemove={(referenceId) => onRemoveReference?.(referenceId)}
+          references={references}
         />
         <div className={styles.actions}>
           <span className={styles.characterCounter}>

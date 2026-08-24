@@ -127,7 +127,7 @@
   .content {
     grid-template-columns: 1fr;
     gap: var(--space-4);
-    padding: 0 0 var(--space-4);
+    padding: 0 var(--space-4) var(--space-4);
   }
 
   .avatar {

@@ -5,10 +5,13 @@ import {
   zPostProjectsResponse,
 } from '@shared/api/types'
 
-type CreateProjectRequest = Omit<PostProjectsData['body'], 'prompt'> & {
-  data?: string
-  prompt?: string
-}
+type CreateProjectRequest =
+  | PostProjectsData['body']
+  | {
+      data: string
+      name?: string
+      references?: PostProjectsData['body']['references']
+    }
 
 export async function createProject(
   body: CreateProjectRequest,

@@ -1,9 +1,39 @@
+import json
 import pathlib
 import pytest
 
 from testsuite.databases.pgsql import discover
 
-pytest_plugins = ['pytest_userver.plugins.postgresql']
+pytest_plugins = [
+    'pytest_userver.plugins.postgresql',
+    'pytest_userver.plugins.redis',
+]
+
+
+@pytest.fixture(scope='session')
+def service_env(redis_sentinels) -> dict:
+    """Передаёт тестовому сервису свой SECDIST_CONFIG поверх унаследованного
+    из окружения контейнера (там лежит секдист для локального dev-Redis без
+    Sentinel — testsuite ждёт именно Sentinel-протокол, см. redis_sentinels).
+    У userver переменная окружения (environment-secrets-key) имеет приоритет
+    над файловым секдистом, поэтому патчить статик-конфиг через
+    service_secdist_path бесполезно — секдист нужно передавать сюда."""
+    secdist = {
+        'redis_settings': {
+            'ya_brander_jobs': {
+                'password': '',
+                'sentinels': [
+                    {'host': redis_sentinels[0]['host'], 'port': redis_sentinels[0]['port']},
+                ],
+                # Тестовый Sentinel (testsuite/databases/redis) мониторит мастеров
+                # под именами test_master0/test_master1 (см. redis_sentinel.conf.tpl) —
+                # имя шарда здесь ОБЯЗАНО совпадать, иначе SENTINEL get-master-addr-by-name
+                # не находит мастера и Redis-компонент сервиса зависает в переподключениях.
+                'shards': [{'name': 'test_master0'}],
+            },
+        },
+    }
+    return {'SECDIST_CONFIG': json.dumps(secdist)}
 
 
 @pytest.fixture(scope='session')
