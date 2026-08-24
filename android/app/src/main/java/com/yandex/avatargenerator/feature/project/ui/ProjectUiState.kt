@@ -28,6 +28,8 @@ internal sealed interface ProjectUiState {
      *  результат опросом статус-ручки). Пока флаг поднят, кнопка отправки и
      *  «Повторить» неактивны: повторное нажатие создало бы вторую фоновую
      *  задачу и вторую пару сообщений в истории.
+     * @property modelPicker выбор модели генерации — чип над полем ввода и
+     *  шторка со справочником; см. [ModelPickerState].
      */
     data class Content(
         val title: String,
@@ -35,6 +37,7 @@ internal sealed interface ProjectUiState {
         val messages: List<ChatMessage>,
         val draft: String = "",
         val isSending: Boolean = false,
+        val modelPicker: ModelPickerState = ModelPickerState(),
     ) : ProjectUiState
 
     /** Загрузка не удалась; пользователю доступен повтор. */

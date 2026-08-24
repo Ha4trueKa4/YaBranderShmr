@@ -159,6 +159,18 @@
     <string name="project_input_placeholder">Опишите, что изменить…</string>
     <string name="project_send_description">Отправить сообщение</string>
 
+    <!-- Выбор модели генерации: чип над полем ввода и шторка со справочником -->
+    <string name="project_model_open_description">Сменить модель генерации</string>
+    <string name="project_model_title">Модель генерации</string>
+    <string name="project_model_subtitle">Выберите движок, который нарисует следующую версию.</string>
+    <string name="project_model_error">Не удалось загрузить список моделей</string>
+    <string name="project_model_retry">Повторить</string>
+    <!-- Имена моделей из allow-list бэкенда: в ответе /models их нет, только id -->
+    <string name="project_model_deepseek_v4_flash">DeepSeek V4 Flash</string>
+    <string name="project_model_gpt_oss_120b">GPT OSS 120B</string>
+    <string name="project_model_qwen3_235b">Qwen3 235B</string>
+    <string name="project_model_gpt_5_6_luna">GPT-5.6 Luna</string>
+
     <!-- Своего текста у ответа ИИ нет: в истории чата лежит только ссылка на версию -->
     <string name="project_assistant_message">Готово — вот новая версия:</string>
 

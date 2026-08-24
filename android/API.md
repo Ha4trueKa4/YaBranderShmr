@@ -356,11 +356,12 @@ UI версий в этом PR нет — только сетевой слой; 
 `awaitGeneration`: экран должен показать скелетон ответа сразу по `job_id`, не
 дожидаясь картинки.
 
-**Шаг 1 — старт.** `POST /projects/{id}/generate`, тело `{prompt}`, ответ
+**Шаг 1 — старт.** `POST /projects/{id}/generate`, тело `{prompt, model}`, ответ
 **202** `{job_id}`. Отвечает за миллисекунды — своего таймаута у запроса нет,
-общих 30 с хватает. Поле `model` в DTO есть, но не заполняется:
-`explicitNulls = false` выкидывает его из JSON, и бэкенд подставляет свой дефолт
-(`deepseek-v4-flash/latest`).
+общих 30 с хватает. Поле `model` заполняется выбранной в чате моделью —
+**коротким** именем без префикса `gpt://` (см. `GET /models`). При `null`
+`explicitNulls = false` выкидывает поле из JSON, и бэкенд подставляет свой
+дефолт `deepseek-v4-flash/latest` (`generate_project.cpp:31`).
 
 | Код | Что значит |
 | --- | --- |
@@ -452,6 +453,82 @@ UI версий в этом PR нет — только сетевой слой; 
 Контракт покрыт `ChatRepositoryImplTest` на `MockEngine` (202, `pending`→`done`,
 `error`, все три ветки 404-фолбэка, обрыв сети между опросами, дедлайн).
 
+### Список моделей: `GET /models`
+
+`GenerationModelRepository` (`feature/project`): `getAvailableModels`,
+`getSelectedModelId`, `selectModel` — справочник и настройка в одном
+репозитории, это одно понятие «модель генерации». Авторизация **не требуется**:
+блока `auth:` у ручки в `static_config.yaml` нет.
+
+Ответ — `{object, data: [{id, object, owned_by, created}]}`:
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "id": "gpt://b1gttnvmtpd0tagdlb7o/deepseek-v4-flash/latest",
+      "object": "model", "owned_by": "DeepSeek", "created": 0 },
+    { "id": "gpt://openai/gpt-5.6-luna", "owned_by": "OpenAI" }
+  ]
+}
+```
+
+**Гарантирован только `id`.** `required` в swagger не проставлен (общее правило,
+см. «Известные расхождения»), а сам ответ — отфильтрованный проброс Yandex AI
+Studio плюс опциональная запись OpenAI, у которой есть лишь `id` и `owned_by`,
+без `object`/`created`. Поэтому в DTO nullable всё, а записи без `id` маппер
+отсеивает.
+
+**Список короткий, и пустой — валидный ответ.** Бэкенд фильтрует ответ Studio
+allow-list'ом из трёх яндексовых моделей (`get_models.cpp:57-78`):
+`deepseek-v4-flash/latest`, `gpt-oss-120b/latest`, `qwen3-235b-a22b-fp8/latest`.
+Запись OpenAI (`gpt://openai/gpt-5.6-luna`) дописывается сверху, только если у
+процесса выставлен `OPENAI_API_KEY` (`get_models.cpp:80-91`). Итого длина
+списка — от 0 до 4: разойдётся allow-list с тем, что отдаёт Studio, — `data`
+придёт пустым.
+
+**`id` отсюда нельзя слать в `generate` как есть — префикс нужно срезать.**
+`/models` отдаёт полные URI, а генерация ждёт **короткое** имя и клеит префикс
+сама (`LLMClientComponent.cpp:456-457`):
+
+```cpp
+const bool is_openai = IsOpenAIModel(model);
+request_body["model"] = is_openai ? model : "gpt://b1gttnvmtpd0tagdlb7o/" + model;
+```
+
+а `IsOpenAIModel()` (`llm_models.hpp:11`) сравнивает с голым `gpt-5.6-luna`.
+Проброс `id` как есть ломает обе ветки:
+
+| `id` из `/models` | если прислать как есть | что нужно прислать |
+| --- | --- | --- |
+| `gpt://b1gttnvmtpd0tagdlb7o/deepseek-v4-flash/latest` | двойной префикс `gpt://…/gpt://…` | `deepseek-v4-flash/latest` |
+| `gpt://openai/gpt-5.6-luna` | `IsOpenAIModel` = false → уедет в Yandex API | `gpt-5.6-luna` |
+
+Правило одно на обе ветки: **срезать `gpt://` и первый сегмент после него**.
+Срезка живёт в маппере `data/`, наружу репозиторий отдаёт уже готовый к
+отправке короткий `id` — полный URI выше `data/` не поднимается. Завязка на
+формат `gpt://<folder>/<model>` при этом остаётся: сменит бэкенд схему URI —
+сломается молча, и промпт уедет с мусорным именем модели.
+
+**Ответ приезжает под `application/octet-stream`, а не `application/json`.**
+`GetModels` — единственная используемая приложением ручка на `HttpHandlerBase`
+вместо `HttpHandlerJsonBase` (`get_models.hpp`), и `SetResponseContentType` в ней
+не вызывается, поэтому userver ставит свой дефолт. Ktor'овский
+`ContentNegotiation` такой ответ конвертеру не отдаёт вовсе, так что
+`GenerationModelRepositoryImpl` читает тело `bodyAsText()` и разбирает его
+`ApiJson` сам. Проверено на стенде 2026-08-24; починят заголовок на бэкенде —
+разбор не сломается. Регрессия закрыта тестом
+`octet-stream от бэкенда разбирается наравне с json`.
+
+**Человекочитаемого имени модели в ответе нет** — ни `name`, ни `title`, только
+`id` и необязательный `owned_by`. Тайтлы выводит клиент, поэтому новая модель на
+бэкенде даст разные подписи на Android и iOS, пока обе платформы не дописать.
+
+**`POST /projects` тоже принимает `model`** (`create_project.cpp:20`), но в
+`CreateProjectRequestDto` его нет — первая генерация нового проекта остаётся на
+серверном дефолте, и выбранная в чате модель на неё не влияет. Осознанно: поле
+в DTO и пикер в форме создания — отдельным тикетом.
+
 ### `GET /users/{id}` — профиль и список проектов
 
 Одна ручка на два экрана: профиль (`NetworkProfileRepository`) и список чатов
@@ -537,6 +614,16 @@ DTO готовы, репозиториев и вызовов пока нет. П
   не-nullable. В остальных схемах поля формально опциональны, поэтому в Kotlin
   они nullable: приукрашивать контракт значениями по умолчанию не стоит, иначе
   отсутствие поля замаскируется нулём.
+- **`/models` отдаёт JSON под `application/octet-stream`.** Ручка на
+  `HttpHandlerBase` не выставляет content type, а `ContentNegotiation` разбирает
+  только объявленный `application/json` — `body<T>()` падал бы ошибкой разбора
+  на исправном ответе. Тело читаем строкой и парсим `ApiJson` вручную, см.
+  `GET /models`.
+- **`id` из `/models` непригоден для `generate` как есть.** Справочник отдаёт
+  полные URI (`gpt://<folder>/<model>`), а генерация ждёт короткое имя и клеит
+  префикс сама: яндексовая модель уехала бы с двойным `gpt://…/gpt://…`, а
+  запись OpenAI не прошла бы `IsOpenAIModel` и ушла бы в Yandex API. Клиент
+  срезает `gpt://` и первый сегмент после него — см. `GET /models`.
 - **Нет обновления токена.** `refresh_token` в контракте отсутствует, токен
   назван долгоживущим. Когда он всё-таки протухнет, клиент получит 401 —
   обработка (разлогин и уход на экран входа) появится вместе с экранами.

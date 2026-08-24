@@ -6,9 +6,10 @@ import kotlinx.serialization.Serializable
 /**
  * Тело `POST /projects/{id}/generate` — промпт для ИИ.
  *
- * @property model выбор модели. Не заполняем: бэкенд подставит свой дефолт, а
+ * @property model короткое имя выбранной модели — **без** префикса `gpt://…`,
+ *  бэкенд клеит его сам. `null` (модель не выбирали) не уедет в теле вовсе:
  *  `explicitNulls = false` в [com.yandex.avatargenerator.core.network.ApiJson]
- *  выкинет поле из JSON. Заведено под будущий выбор модели в UI.
+ *  выкинет поле из JSON, и модель подставит бэкенд.
  */
 @Serializable
 data class GenerateProjectRequestDto(

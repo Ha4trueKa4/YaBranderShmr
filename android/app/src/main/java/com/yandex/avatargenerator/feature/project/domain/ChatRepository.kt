@@ -39,13 +39,21 @@ interface ChatRepository {
      * Ретраев у вызова нет и быть не должно: повтор создал бы вторую задачу и
      * вторую пару сообщений в истории.
      *
+     * @param model короткое имя модели генерации (см.
+     *  [com.yandex.avatargenerator.feature.project.domain.model.GenerationModel]).
+     *  `null` — поле не уедет в теле вовсе и модель подставит бэкенд.
+     *
      * @return `job_id` фоновой задачи. `Result.failure` с
      *  [com.yandex.avatargenerator.core.domain.NetworkException]: 400 — промпт
      *  пуст или длиннее 1500 байт, 403 — чужой проект либо просроченный токен,
      *  404 — проекта нет, `Serialization` — сервер не прислал `job_id`. Только в
      *  этом случае промпт до сервера не дошёл.
      */
-    suspend fun startGeneration(projectId: String, prompt: String): Result<String>
+    suspend fun startGeneration(
+        projectId: String,
+        prompt: String,
+        model: String? = null,
+    ): Result<String>
 
     /**
      * Дожидается результата задачи [jobId] опросом статус-ручки
