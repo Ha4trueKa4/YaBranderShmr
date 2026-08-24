@@ -101,7 +101,7 @@ struct ProfileView: View {
         
         return GeometryReader { proxy in
             LinearGradient(
-                colors: [Color(.startGradient), Color(.endGradient)],
+                colors: [Color(.startGradient), Color(.profileEndGradient)],
                 startPoint: .leading,
                 endPoint: .trailing
             )
