@@ -55,6 +55,10 @@ fun BrandTextField(
     val isError = errorMessage != null
     val borderColor = if (isError) AppColors.Error else AppColors.Border
     val contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart
+    val verticalPadding = if (singleLine) 0.dp else AppSpacing.s
+    // Высоту держит само поле ввода, а не рамка вокруг: тогда нажатие в любой
+    // точке поля попадает в BasicTextField, а не только в строку с текстом.
+    val fieldHeight = height - verticalPadding * 2
 
     Column(modifier = modifier) {
         Text(text = label, style = AppTypography.label)
@@ -62,31 +66,37 @@ fun BrandTextField(
             modifier = Modifier
                 .padding(top = AppSpacing.xs)
                 .fillMaxWidth()
-                .then(if (singleLine) Modifier.height(height) else Modifier.heightIn(min = height))
                 .background(AppColors.SurfaceVariant, RoundedCornerShape(AppShape.m))
                 .border(1.dp, borderColor, RoundedCornerShape(AppShape.m))
-                .padding(horizontal = AppSpacing.m, vertical = if (singleLine) 0.dp else AppSpacing.s),
-            contentAlignment = contentAlignment
+                .padding(horizontal = AppSpacing.m, vertical = verticalPadding)
         ) {
             Row(
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
             ) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = contentAlignment) {
-                    if (value.isEmpty()) {
-                        Text(text = placeholder, color = AppColors.TextMuted, fontSize = 14.sp)
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = singleLine,
+                    textStyle = TextStyle(color = AppColors.TextPrimary, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AppColors.Accent),
+                    keyboardOptions = keyboardOptions,
+                    visualTransformation = visualTransformation,
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (singleLine) Modifier.height(fieldHeight)
+                            else Modifier.heightIn(min = fieldHeight)
+                        ),
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = contentAlignment) {
+                            if (value.isEmpty()) {
+                                Text(text = placeholder, color = AppColors.TextMuted, fontSize = 14.sp)
+                            }
+                            innerTextField()
+                        }
                     }
-                    BasicTextField(
-                        value = value,
-                        onValueChange = onValueChange,
-                        singleLine = singleLine,
-                        textStyle = TextStyle(color = AppColors.TextPrimary, fontSize = 14.sp),
-                        cursorBrush = SolidColor(AppColors.Accent),
-                        keyboardOptions = keyboardOptions,
-                        visualTransformation = visualTransformation,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                )
                 if (trailingIcon != null) {
                     trailingIcon()
                 }
