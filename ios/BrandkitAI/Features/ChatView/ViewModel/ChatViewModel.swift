@@ -121,9 +121,20 @@ final class ChatViewModel {
         ) { [weak self] _ in
             Task { @MainActor in
                 // isOffline сознательно не сбрасываем: плашка гаснет по
-                // факту успешного запроса (pollGeneration/flush), а не по
-                // факту «сеть вроде появилась» — она может и не заработать.
-                await self?.flushPendingMessages()
+                // факту успешного запроса, а не по факту «сеть вроде
+                // появилась» — она может и не заработать.
+                guard let self, !self.isGenerating else {
+                    // Активный опрос сам переживает офлайн через
+                    // waitForNetworkRecovery — ничего не дёргаем.
+                    return
+                }
+                if self.pendingMessages.contains(where: { $0.deliveryState == .pending }) {
+                    await self.flushPendingMessages()
+                } else {
+                    // Опрос мог исчерпать дедлайн/ретраи во время офлайна и
+                    // отвязаться от активной job — восстанавливаем по истории.
+                    await self.recoverAfterNetworkDrop()
+                }
             }
         }
     }
@@ -218,10 +229,13 @@ final class ChatViewModel {
         updatePendingCount()
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
         removeMessage(id: id)
-        await sendMessage(text)
+        await sendMessage(text, reuseRequestID: id)
     }
 
-    func sendMessage(_ text: String) async {
+    /// `reuseRequestID` сохраняет исходный uuid баббла при повторной
+    /// отправке: он уходит на сервер как client_request_id и делает попытки
+    /// одного сообщения идемпотентными, когда бэкенд это поддержит.
+    func sendMessage(_ text: String, reuseRequestID: UUID? = nil) async {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isGenerating else { return }
         guard text.count <= Self.maxPromptLength else {
@@ -230,7 +244,12 @@ final class ChatViewModel {
         }
 
         sendErrorMessage = nil
-        let chatMessage = ChatMessage(type: .user, text: text, date: Date())
+        let chatMessage = ChatMessage(
+            id: reuseRequestID ?? UUID(),
+            type: .user,
+            text: text,
+            date: Date()
+        )
         let modelID = selectedModel.id
         appendMessage(chatMessage)
 
@@ -256,7 +275,8 @@ final class ChatViewModel {
             jobID = try await service.generate(
                 projectID: projectID,
                 prompt: text,
-                modelID: modelID
+                modelID: modelID,
+                clientRequestID: chatMessage.id.uuidString
             )
         } catch NetworkError.generationInProgress(let existingJobID) where lostJobIDs.contains(existingJobID) {
             // Известная зависшая job: сервер продолжит отвечать 409 с её id,
@@ -295,7 +315,8 @@ final class ChatViewModel {
                     id: chatMessage.id,
                     text: text,
                     createdAt: chatMessage.date,
-                    modelID: modelID
+                    modelID: modelID,
+                    ambiguousSince: Self.isPossiblyDelivered(error) ? Date() : nil
                 )
                 sendErrorMessage = "Message is pending and will be sent when the connection recovers."
             } else {
@@ -334,7 +355,7 @@ final class ChatViewModel {
         var consecutiveConflicts = 0
         var networkRetries = 0
 
-        while let pendingIndex = pendingMessages.firstIndex(where: {
+        flushLoop: while let pendingIndex = pendingMessages.firstIndex(where: {
             $0.deliveryState == .pending
         }) {
             if Task.isCancelled || pollAbortRequested { break }
@@ -342,8 +363,25 @@ final class ChatViewModel {
             guard prompt.text.count <= Self.maxPromptLength else {
                 pendingMessages[pendingIndex].deliveryState = .failed
                 updatePendingCount()
+                await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
                 markPendingMessageFailed(prompt)
                 continue
+            }
+
+            // Попытка с неизвестным исходом (ответ потерян, но сервер мог
+            // принять запрос): перед повторным POST сверяемся с историей —
+            // вслепую можно запустить вторую генерацию с тем же промптом.
+            if prompt.ambiguousSince != nil {
+                switch await reconcileAmbiguousDelivery(prompt) {
+                case .delivered:
+                    continue
+                case .notDelivered:
+                    break
+                case .unavailable:
+                    // Историю прочитать не удалось: отправлять вслепую
+                    // нельзя, очередь дождётся следующего триггера.
+                    break flushLoop
+                }
             }
 
             let jobID: String
@@ -351,7 +389,8 @@ final class ChatViewModel {
                 jobID = try await service.generate(
                     projectID: projectID,
                     prompt: prompt.text,
-                    modelID: prompt.modelID
+                    modelID: prompt.modelID,
+                    clientRequestID: prompt.id.uuidString
                 )
             } catch NetworkError.generationInProgress(let existingJobID)
                 where lostJobIDs.contains(existingJobID) {
@@ -359,6 +398,7 @@ final class ChatViewModel {
                 // честная ошибка вместо вечного pending в очереди.
                 pendingMessages[pendingIndex].deliveryState = .failed
                 updatePendingCount()
+                await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
                 markPendingMessageFailed(prompt)
                 sendErrorMessage = Self.stuckGenerationMessage
                 break
@@ -379,6 +419,13 @@ final class ChatViewModel {
                     if indicatesOffline(error) {
                         isOffline = true
                     }
+                    // Попытка могла дойти до сервера — следующая отправка
+                    // обязана свериться с историей, прежде чем POSTить снова.
+                    if Self.isPossiblyDelivered(error),
+                       let index = pendingMessages.firstIndex(where: { $0.id == prompt.id }) {
+                        pendingMessages[index].ambiguousSince = Date()
+                        await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+                    }
                     // Путь уже поднялся, а запрос упал (сеть «едет» после
                     // VPN-переключения): без повторов очередь до рестарта
                     // никто больше не дёрнет — нотификация приходит один раз.
@@ -393,6 +440,7 @@ final class ChatViewModel {
                 }
                 pendingMessages[pendingIndex].deliveryState = .failed
                 updatePendingCount()
+                await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
                 markPendingMessageFailed(prompt)
                 sendErrorMessage = failureMessage(for: error)
                 continue
@@ -402,6 +450,10 @@ final class ChatViewModel {
             networkRetries = 0
             pendingMessages.remove(at: pendingIndex)
             updatePendingCount()
+            // Пишем на диск сразу: pollAndRefresh может идти минутами, а
+            // незаписанное удаление превращается в повторную отправку уже
+            // принятого сообщения после перезапуска приложения.
+            await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
             sendErrorMessage = nil
             activeJobID = jobID
             isCancelling = false
@@ -448,6 +500,93 @@ final class ChatViewModel {
         removeMessage(id: pending.id)
         sendErrorMessage = nil
         restorePrompt = pending.text
+    }
+
+    /// Исход сверки неоднозначной отправки с серверной историей.
+    private enum AmbiguousDeliveryResolution {
+        /// Сервер уже принял это сообщение (видно в истории): из очереди
+        /// удалено, история обновлена, активная job подхвачена опросом.
+        case delivered
+        /// В истории сообщения нет — безопасно отправлять.
+        case notDelivered
+        /// Историю прочитать не удалось — отправлять вслепую нельзя.
+        case unavailable
+    }
+
+    /// Сверяет попытку с неизвестным исходом (ответ потерян после того, как
+    /// запрос мог дойти) с серверной историей. Бэкенд пишет user-сообщение
+    /// в chat_history синхронно с приёмом job (с job_id, ещё до ответа 202),
+    /// поэтому принятый запрос всегда оставляет след. Окно — с запасом на
+    /// расхождение часов; ложное срабатывание требует отправки двух
+    /// одинаковых промптов внутри окна — редкий случай с малой ценой ошибки.
+    private func reconcileAmbiguousDelivery(
+        _ pending: ChatCache.PendingMessage
+    ) async -> AmbiguousDeliveryResolution {
+        guard let attemptedAt = pending.ambiguousSince else { return .notDelivered }
+
+        let remoteMessages: [RemoteChatMessage]
+        do {
+            remoteMessages = try await service.fetchChat(projectID: projectID)
+        } catch {
+            if indicatesOffline(error) {
+                isOffline = true
+            }
+            return .unavailable
+        }
+
+        let windowStart = attemptedAt.addingTimeInterval(-Self.ambiguousDeliverySkew)
+        let delivered = remoteMessages.contains { message in
+            message.role.lowercased() == "user"
+                && message.jobID != nil
+                && message.text == pending.text
+                && message.createdAt >= windowStart
+        }
+        guard delivered else { return .notDelivered }
+
+        if let index = pendingMessages.firstIndex(where: { $0.id == pending.id }) {
+            pendingMessages.remove(at: index)
+            updatePendingCount()
+            await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
+        }
+        applyRemoteMessages(remoteMessages)
+        if isOffline { isOffline = false }
+        await ChatCache.shared.save(
+            projectID: projectID,
+            messages: remoteMessages,
+            isPublic: privacy == .publicShowcase
+        )
+        if let active = findActiveGeneration(in: remoteMessages, excluding: lostJobIDs) {
+            // Принятая job ещё выполняется — подхватываем её опросом, как
+            // ветка 409 выше (resumeGeneration не годится: он guard'ится по
+            // isGenerating, который уже держит flush).
+            activeJobID = active.jobID
+            isCancelling = active.cancelling
+            cancellingSince = active.cancelling ? ContinuousClock.now : nil
+            await pollAndRefresh(jobID: active.jobID)
+            clearActiveJobState()
+        }
+        return .delivered
+    }
+
+    /// Возврат сети после того, как опрос активной генерации отвязался
+    /// (исчерпаны дедлайн/ретраи во время офлайна): подтягиваем историю и
+    /// возобновляем найденную активную job, не дожидаясь ручного reload
+    /// или переоткрытия чата.
+    private func recoverAfterNetworkDrop() async {
+        guard !isGenerating, !isLoading, !pollAbortRequested else { return }
+        guard let remoteMessages = try? await service.fetchChat(projectID: projectID) else {
+            return
+        }
+        applyRemoteMessages(remoteMessages)
+        if isOffline { isOffline = false }
+        await ChatCache.shared.save(
+            projectID: projectID,
+            messages: remoteMessages,
+            isPublic: privacy == .publicShowcase
+        )
+        if let active = findActiveGeneration(in: remoteMessages, excluding: lostJobIDs) {
+            await resumeGeneration(jobID: active.jobID, cancelling: active.cancelling)
+        }
     }
 
     private func clearActiveJobState() {
@@ -534,6 +673,10 @@ final class ChatViewModel {
     /// Паузы повторных попыток отправки, когда сетевой путь уже поднялся,
     /// а запросы ещё падают (сеть «едет» после VPN-переключений).
     private static let networkRetryDelays: [Duration] = [.seconds(3), .seconds(6), .seconds(12)]
+
+    /// Запас на расхождение часов устройства и сервера при сверке
+    /// неоднозначной отправки с историей чата.
+    private static let ambiguousDeliverySkew: TimeInterval = 15 * 60
 
     /// Опрашивает статус фоновой задачи генерации через long-polling.
     /// При `pending`/`cancelling` переоткрывает соединение не чаще, чем раз
@@ -633,13 +776,13 @@ final class ChatViewModel {
             let outcome = try await pollGeneration(jobID: jobID)
             switch outcome {
             case .done(let generatedURL):
-                try? await refreshChatAfterGenerate(generatedURL: generatedURL)
+                try? await refreshChatAfterGenerate(jobID: jobID, generatedURL: generatedURL)
             case .error(let message):
                 sendErrorMessage = message
-                try? await refreshChatAfterGenerate(generatedURL: nil)
+                try? await refreshChatAfterGenerate(jobID: jobID, generatedURL: nil)
             case .cancelled:
                 sendErrorMessage = nil
-                try? await refreshChatAfterGenerate(generatedURL: nil)
+                try? await refreshChatAfterGenerate(jobID: jobID, generatedURL: nil)
             }
         } catch is CancellationError {
             // Таска отменена — не показываем ошибку.
@@ -654,7 +797,7 @@ final class ChatViewModel {
             } else {
                 sendErrorMessage = failureMessage(for: error)
             }
-            try? await refreshChatAfterGenerate(generatedURL: nil)
+            try? await refreshChatAfterGenerate(jobID: jobID, generatedURL: nil)
         }
     }
 
@@ -694,18 +837,29 @@ final class ChatViewModel {
         ].contains(urlError.code)
     }
 
-    /// Read-шаг после успешной генерации: подтягивает свежую историю чата,
-    /// маппит URL новой версии, разогревает кеш SVG и сохраняет состояние.
-    /// Ошибки `fetchChat` здесь некритичны — генерация уже принята бэкендом,
-    /// поэтому вызывающий снимает промпт с очереди до этого вызова.
-    private func refreshChatAfterGenerate(generatedURL: URL?) async throws {
+    /// Read-шаг после завершённой генерации: подтягивает свежую историю
+    /// чата, маппит URL новой версии, разогревает кеш SVG и сохраняет
+    /// состояние. Ошибки `fetchChat` здесь некритичны — генерация уже
+    /// принята бэкендом, поэтому вызывающий снимает промпт с очереди до
+    /// этого вызова.
+    private func refreshChatAfterGenerate(jobID: String, generatedURL: URL?) async throws {
         let remoteMessages = try await service.fetchChat(projectID: projectID)
 
-        if let generatedURL,
-           let versionID = remoteMessages.reversed().compactMap(\.versionID).first {
-            versionURLs[versionID] = generatedURL
-            let cacheKey = SVGCache.versionKey(projectID: projectID, versionID: versionID)
-            _ = try? await SVGCache.shared.data(for: generatedURL, key: cacheKey)
+        if let generatedURL {
+            // Версия определяется строго по сообщению завершившейся job:
+            // «последняя версия истории» могла появиться от другой генерации
+            // (другой клиент) между завершением job и этим fetchChat — ей
+            // нельзя назначать чужой URL и греть под неё кеш. Если сообщение
+            // job'ы ещё не видно (реплика чтения отстаёт) — пропускаем
+            // разогрев: картинка подтянется лениво через versionURL(for:).
+            let versionID = remoteMessages.reversed().first {
+                $0.jobID == jobID && $0.versionID != nil
+            }?.versionID
+            if let versionID {
+                versionURLs[versionID] = generatedURL
+                let cacheKey = SVGCache.versionKey(projectID: projectID, versionID: versionID)
+                _ = try? await SVGCache.shared.data(for: generatedURL, key: cacheKey)
+            }
         }
 
         applyRemoteMessages(remoteMessages)
@@ -779,14 +933,16 @@ final class ChatViewModel {
         text: String,
         createdAt: Date,
         modelID: String,
-        deliveryState: ChatCache.PendingMessage.DeliveryState = .pending
+        deliveryState: ChatCache.PendingMessage.DeliveryState = .pending,
+        ambiguousSince: Date? = nil
     ) async {
         pendingMessages.append(ChatCache.PendingMessage(
             id: id,
             text: text,
             createdAt: createdAt,
             modelID: modelID,
-            deliveryState: deliveryState
+            deliveryState: deliveryState,
+            ambiguousSince: ambiguousSince
         ))
         updatePendingCount()
         await ChatCache.shared.savePendingMessages(pendingMessages, for: projectID)
@@ -817,6 +973,13 @@ final class ChatViewModel {
             // помечаться «not sent» после первой же неудачи.
             .networkConnectionLost
         ].contains(urlError.code)
+    }
+
+    /// Ошибки, при которых сервер мог успеть принять POST до разрыва:
+    /// повторная отправка без сверки с историей рискует второй генерацией.
+    private static func isPossiblyDelivered(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        return urlError.code == .networkConnectionLost || urlError.code == .timedOut
     }
 
     private func indicatesOffline(_ error: Error) -> Bool {

@@ -8,7 +8,7 @@ nonisolated protocol ProjectServiceProtocol: Sendable {
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
     func fetchModels() async throws -> [GenerationModel]
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> String
+    func generate(projectID: UUID, prompt: String, modelID: String, clientRequestID: String?) async throws -> String
     func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus
     func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL
@@ -87,12 +87,21 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         }
     }
 
-    func generate(projectID: UUID, prompt: String, modelID: String) async throws -> String {
+    func generate(
+        projectID: UUID,
+        prompt: String,
+        modelID: String,
+        clientRequestID: String?
+    ) async throws -> String {
         let response: GenerateResponseDTO = try await client.request(
             .post,
             .generate(projectID: projectID),
             authorization: .required,
-            body: GenerateProjectRequest(prompt: prompt, model: modelID),
+            body: GenerateProjectRequest(
+                prompt: prompt,
+                model: modelID,
+                clientRequestId: clientRequestID
+            ),
             timeout: 180
         )
         guard let jobID = response.jobID else { throw NetworkError.invalidResponse }
@@ -196,6 +205,17 @@ private nonisolated struct UpdateVisibilityRequest: Encodable, Sendable {
 private nonisolated struct GenerateProjectRequest: Encodable, Sendable {
     let prompt: String
     let model: String
+    /// Стабильный идентификатор логической отправки (uuid баббла сообщения):
+    /// одинаков при всех повторных попытках одного сообщения. Сервер поле
+    /// пока игнорирует; когда бэкенд поддержит идемпотентность по нему,
+    /// повторный POST вернёт существующую job вместо второй генерации.
+    let clientRequestId: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case prompt
+        case model
+        case clientRequestId = "client_request_id"
+    }
 }
 
 private nonisolated struct ModelsResponseDTO: Decodable, Sendable {

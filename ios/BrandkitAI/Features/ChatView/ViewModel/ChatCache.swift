@@ -14,19 +14,26 @@ actor ChatCache {
         let createdAt: Date
         let modelID: String
         var deliveryState: DeliveryState
+        /// Момент попытки отправки с неизвестным исходом: соединение
+        /// оборвалось после того, как запрос мог дойти до сервера. Перед
+        /// повторной отправкой такая попытка сверяется с историей чата —
+        /// повторный POST мог бы запустить вторую генерацию с тем же промптом.
+        var ambiguousSince: Date?
 
         init(
             id: UUID,
             text: String,
             createdAt: Date,
             modelID: String,
-            deliveryState: DeliveryState = .pending
+            deliveryState: DeliveryState = .pending,
+            ambiguousSince: Date? = nil
         ) {
             self.id = id
             self.text = text
             self.createdAt = createdAt
             self.modelID = modelID
             self.deliveryState = deliveryState
+            self.ambiguousSince = ambiguousSince
         }
 
         init(from decoder: Decoder) throws {
@@ -40,6 +47,10 @@ actor ChatCache {
                 DeliveryState.self,
                 forKey: .deliveryState
             ) ?? .pending
+            ambiguousSince = try container.decodeIfPresent(
+                Date.self,
+                forKey: .ambiguousSince
+            )
         }
     }
 
