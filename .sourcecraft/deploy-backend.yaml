@@ -122,15 +122,18 @@ deploy:
         # его и ждём готовности ДО старта ya-brander, иначе тот зависнет на старте
         # в бесконечных попытках подключиться к ещё не существующему sentinel.
         docker rm -f service-redis-sentinel 2>/dev/null || true
-        # rm -rf (не -f): если /tmp/sentinel.conf на хосте ещё не создан к моменту
-        # docker run с -v, Docker сам создаёт по этому пути директорию, а не файл —
-        # тогда printf/rm -f на нём молча ломаются на всех последующих деплоях.
-        rm -rf /tmp/sentinel.conf
-        printf 'port 26379\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel auth-pass master0 %s\nsentinel monitor master0 service-redis 6379 1\nsentinel down-after-milliseconds master0 5000\nsentinel failover-timeout master0 60000\nsentinel parallel-syncs master0 1\n' '$REDIS_PASSWORD' > /tmp/sentinel.conf
+        # mktemp вместо фиксированного /tmp/sentinel.conf: если docker run -v
+        # выполняется раньше, чем на хосте появился файл, Docker сам создаёт по
+        # этому пути root-owned директорию. На /tmp со sticky bit её потом не
+        # удалить обычным пользователем деплоя даже через rm -rf (Operation not
+        # permitted — sticky bit проверяет владельца, а не флаги rm). Поэтому
+        # просто не переиспользуем один и тот же путь между запусками.
+        SENTINEL_CONF_PATH=\$(mktemp)
+        printf 'port 26379\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel auth-pass master0 %s\nsentinel monitor master0 service-redis 6379 1\nsentinel down-after-milliseconds master0 5000\nsentinel failover-timeout master0 60000\nsentinel parallel-syncs master0 1\n' '$REDIS_PASSWORD' > \$SENTINEL_CONF_PATH
         docker run -d --name service-redis-sentinel --restart unless-stopped --network ya-brander-net \
-          -v /tmp/sentinel.conf:/etc/redis/sentinel.conf:ro \
+          -v \$SENTINEL_CONF_PATH:/etc/redis/sentinel.conf:ro \
           redis:7 redis-server /etc/redis/sentinel.conf --sentinel
-        rm -rf /tmp/sentinel.conf
+        rm -f \$SENTINEL_CONF_PATH
         for i in \$(seq 1 30); do
           docker exec service-redis-sentinel redis-cli -p 26379 ping >/dev/null 2>&1 && break
           sleep 1
