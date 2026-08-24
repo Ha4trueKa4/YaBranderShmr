@@ -369,6 +369,7 @@ private fun ProjectScreenModelPickerPreview() {
                 ),
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
