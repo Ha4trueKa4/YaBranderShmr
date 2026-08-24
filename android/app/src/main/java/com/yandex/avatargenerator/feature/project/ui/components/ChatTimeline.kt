@@ -36,12 +36,15 @@ import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
  *  пачкой при открытии. Повторные вызовы по одной версии отсекает ViewModel.
  * @param onRetry «Повторить» на пузыре провалившейся генерации; параметр — id
  *  этого пузыря, промпт для повтора ViewModel найдёт над ним сама.
+ * @param onPreviewClick тап по картинке ответа ИИ — ведёт на витрину проекта,
+ *  где его скачивают в PNG/SVG. Своих кнопок выгрузки у чата нет.
  */
 @Composable
 internal fun ChatTimeline(
     messages: List<ChatMessage>,
     onPreviewNeeded: (String) -> Unit,
     onRetry: (String) -> Unit,
+    onPreviewClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -89,6 +92,8 @@ internal fun ChatTimeline(
                             isOutgoing = false,
                             imageUrl = message.previewUrl,
                             imageCacheKey = message.versionId,
+                            imageContentDescription = stringResource(R.string.project_download_description),
+                            onImageClick = onPreviewClick,
                             timeLabel = rememberMessageTimeLabel(message.sentAt),
                         )
                     }
@@ -144,6 +149,7 @@ private fun ChatTimelinePreview() {
             messages = MockChatRepository.defaultMessages(),
             onPreviewNeeded = {},
             onRetry = {},
+            onPreviewClick = {},
         )
     }
 }

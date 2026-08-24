@@ -38,11 +38,14 @@ import org.koin.core.parameter.parametersOf
  * ([parametersOf]), как в `ProfileScreen`; граф — в `feature/project/di/ProjectModule.kt`.
  *
  * @param onBackClick возврат на предыдущий экран.
+ * @param onDownloadClick тап по картинке в ответе ИИ — переход на витрину
+ *  проекта, откуда его скачивают в PNG/SVG: своих кнопок выгрузки у чата нет.
  */
 @Composable
 internal fun ProjectScreen(
     projectId: String,
     onBackClick: () -> Unit,
+    onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProjectViewModel = koinViewModel { parametersOf(projectId) },
 ) {
@@ -51,6 +54,7 @@ internal fun ProjectScreen(
     ProjectContent(
         uiState = uiState,
         onBackClick = onBackClick,
+        onDownloadClick = onDownloadClick,
         onRetry = viewModel::retry,
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::send,
@@ -74,6 +78,7 @@ internal fun ProjectScreen(
 private fun ProjectContent(
     uiState: ProjectUiState,
     onBackClick: () -> Unit,
+    onDownloadClick: () -> Unit,
     onRetry: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
@@ -136,6 +141,7 @@ private fun ProjectContent(
                     messages = uiState.messages,
                     onPreviewNeeded = onPreviewNeeded,
                     onRetry = onRetryGeneration,
+                    onPreviewClick = onDownloadClick,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -179,6 +185,7 @@ private fun ProjectScreenContentPreview() {
                 draft = "",
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
@@ -201,6 +208,7 @@ private fun ProjectScreenEmptyChatPreview() {
                 draft = "Coral logo for an AI startup",
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
@@ -218,6 +226,7 @@ private fun ProjectScreenLoadingPreview() {
         ProjectContent(
             uiState = ProjectUiState.Loading,
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
@@ -241,6 +250,7 @@ private fun ProjectScreenGeneratingPreview() {
                 isSending = true,
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
@@ -263,6 +273,7 @@ private fun ProjectScreenFailedGenerationPreview() {
                 draft = "",
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
@@ -280,6 +291,7 @@ private fun ProjectScreenErrorPreview() {
         ProjectContent(
             uiState = ProjectUiState.Error,
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
