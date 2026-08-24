@@ -145,6 +145,7 @@
     <!-- Экран проекта (чат с ИИ) -->
     <string name="project_title_placeholder">Проект</string>
     <string name="project_back_description">Назад</string>
+    <string name="project_download_description">Скачать проект</string>
     <string name="project_history_description">История версий</string>
     <string name="project_share_description">Поделиться проектом</string>
 

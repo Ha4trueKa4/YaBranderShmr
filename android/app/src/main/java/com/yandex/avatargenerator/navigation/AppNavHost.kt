@@ -168,6 +168,13 @@ fun AppNavHost(
             ProjectScreen(
                 projectId = projectId,
                 onBackClick = { navController.popBackStack() },
+                // Скачивание живёт на витрине проекта — своих кнопок выгрузки
+                // у чата нет, поэтому ведём на неё же, что и лента.
+                onDownloadClick = {
+                    navController.navigate(Destination.PublicProject.createRoute(projectId)) {
+                        launchSingleTop = true
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         }
