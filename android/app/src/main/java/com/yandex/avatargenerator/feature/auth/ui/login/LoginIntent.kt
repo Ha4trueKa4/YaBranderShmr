@@ -13,9 +13,6 @@ internal sealed interface LoginIntent : BaseIntent {
 
     data object OnSubmitClick : LoginIntent
 
-    /** Восстановление пароля: ручки в API нет, экран только уводит наружу. */
-    data object OnForgotPasswordClick : LoginIntent
-
     data object OnRegisterClick : LoginIntent
 
     /** Тап по «Войти через Яндекс» — открыть экран согласия. */

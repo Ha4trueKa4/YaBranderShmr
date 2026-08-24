@@ -12,6 +12,4 @@ internal sealed interface LoginEffect : BaseEffect {
     data object NavigateToApp : LoginEffect
 
     data object NavigateToRegister : LoginEffect
-
-    data object NavigateToPasswordRecovery : LoginEffect
 }

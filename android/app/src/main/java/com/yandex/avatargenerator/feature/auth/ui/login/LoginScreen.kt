@@ -16,8 +16,6 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * @param onSignedIn вход прошёл успешно — пускаем в приложение.
  * @param onNavigateToRegister переход на регистрацию.
- * @param onForgotPasswordClick восстановление пароля: ручки в API нет, поэтому
- *  по умолчанию ничего не делает (см. AUTH_PLAN.md, раздел «вне скоупа»).
  *
  * ViewModel берётся из Koin ([koinViewModel]); граф — в
  * `feature/auth/di/AuthModule.kt`.
@@ -27,7 +25,6 @@ internal fun LoginScreen(
     onSignedIn: () -> Unit,
     onNavigateToRegister: () -> Unit,
     modifier: Modifier = Modifier,
-    onForgotPasswordClick: () -> Unit = {},
     viewModel: LoginViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -36,7 +33,6 @@ internal fun LoginScreen(
         when (effect) {
             LoginEffect.NavigateToApp -> onSignedIn()
             LoginEffect.NavigateToRegister -> onNavigateToRegister()
-            LoginEffect.NavigateToPasswordRecovery -> onForgotPasswordClick()
         }
     }
 

@@ -21,14 +21,13 @@
     <string name="auth_placeholder_full_name">John Doe</string>
     <string name="auth_placeholder_email">hello@brandkit.ai</string>
     <string name="auth_placeholder_password">Enter your password</string>
-    <string name="auth_forgot_password">Forgot password?</string>
     <string name="auth_no_account">No account?</string>
     <string name="auth_register">Register</string>
     <string name="auth_have_account">Already have an account?</string>
     <string name="auth_signing_in">Signing in…</string>
     <string name="auth_creating_account">Creating account…</string>
     <string name="auth_or_divider">or</string>
-    <string name="auth_sign_in_with_yandex">Sign in with Yandex</string>
+    <string name="auth_sign_in_with_yandex">Sign in with Yandex ID</string>
     <string name="auth_yandex_close">Close</string>
 
     <!-- Вход и регистрация: ошибки. Сообщения бэкенда пользователю не показываем -->

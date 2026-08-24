@@ -53,11 +53,10 @@ fun AppNavHost(
         modifier = modifier,
     ) {
         composable(Destination.Onboarding.route) {
-            // Вход отсюда не открывается: ссылка «войти» есть на самом экране
-            // регистрации, а в макете онбординга её нет.
+            // После онбординга — вход: регистрация открывается уже с него.
             OnboardingScreen(
                 onFinish = {
-                    navController.navigate(Destination.Register.route) {
+                    navController.navigate(Destination.Login.route) {
                         popUpTo(Destination.Onboarding.route) { inclusive = true }
                         launchSingleTop = true
                     }

@@ -19,14 +19,13 @@
     <string name="auth_placeholder_full_name">Иван Иванов</string>
     <string name="auth_placeholder_email">hello@brandkit.ai</string>
     <string name="auth_placeholder_password">Введите пароль</string>
-    <string name="auth_forgot_password">Забыли пароль?</string>
     <string name="auth_no_account">Нет аккаунта?</string>
     <string name="auth_register">Зарегистрироваться</string>
     <string name="auth_have_account">Уже есть аккаунт?</string>
     <string name="auth_signing_in">Вход…</string>
     <string name="auth_creating_account">Создание аккаунта…</string>
     <string name="auth_or_divider">или</string>
-    <string name="auth_sign_in_with_yandex">Войти через Яндекс</string>
+    <string name="auth_sign_in_with_yandex">Войти через Яндекс ID</string>
     <string name="auth_yandex_close">Закрыть</string>
 
     <!-- Вход и регистрация: ошибки. Сообщения бэкенда пользователю не показываем -->

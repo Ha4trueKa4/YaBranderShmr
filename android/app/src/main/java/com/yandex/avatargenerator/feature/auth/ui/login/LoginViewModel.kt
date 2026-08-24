@@ -55,7 +55,6 @@ internal class LoginViewModel(
             }
 
             LoginIntent.OnSubmitClick -> submit(state)
-            LoginIntent.OnForgotPasswordClick -> sendEffect(LoginEffect.NavigateToPasswordRecovery)
             LoginIntent.OnRegisterClick -> sendEffect(LoginEffect.NavigateToRegister)
 
             LoginIntent.OnYandexClick -> if (!state.isBusy && state.isYandexAvailable) {
