@@ -114,22 +114,31 @@ deploy:
         docker run --rm --network ya-brander-net curlimages/curl:8.10.1 -sf http://otel-collector:13133 >/dev/null 2>&1 \
           && echo 'otel-collector is ready' \
           || echo 'WARNING: otel-collector not ready after 30s, starting ya-brander anyway'
-        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env \
-          -e http_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
-          -e https_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
-          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis,service-redis-sentinel \
-          $REGISTRY/$IMAGE:latest
         docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
           echo "WARNING: service-redis не запущен!"
         # Redis-компонент userver общается по протоколу Sentinel даже с одним
         # мастером (нужен для discovery топологии) — голого redis-server
-        # недостаточно, рядом должен крутиться настоящий redis-sentinel.
+        # недостаточно, рядом должен крутиться настоящий redis-sentinel. Поднимаем
+        # его и ждём готовности ДО старта ya-brander, иначе тот зависнет на старте
+        # в бесконечных попытках подключиться к ещё не существующему sentinel.
         docker rm -f service-redis-sentinel 2>/dev/null || true
         printf 'port 26379\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel auth-pass master0 %s\nsentinel monitor master0 service-redis 6379 1\nsentinel down-after-milliseconds master0 5000\nsentinel failover-timeout master0 60000\nsentinel parallel-syncs master0 1\n' '$REDIS_PASSWORD' > /tmp/sentinel.conf
         docker run -d --name service-redis-sentinel --restart unless-stopped --network ya-brander-net \
           -v /tmp/sentinel.conf:/etc/redis/sentinel.conf:ro \
           redis:7 redis-server /etc/redis/sentinel.conf --sentinel
         rm -f /tmp/sentinel.conf
+        for i in \$(seq 1 30); do
+          docker exec service-redis-sentinel redis-cli -p 26379 ping >/dev/null 2>&1 && break
+          sleep 1
+        done
+        docker exec service-redis-sentinel redis-cli -p 26379 ping >/dev/null 2>&1 \
+          && echo 'service-redis-sentinel is ready' \
+          || echo 'WARNING: service-redis-sentinel not ready after 30s, starting ya-brander anyway'
+        docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env \
+          -e http_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
+          -e https_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
+          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis,service-redis-sentinel \
+          $REGISTRY/$IMAGE:latest
       "
 
     # --- 6. Проверка работоспособности бэкенда ---
@@ -153,6 +162,7 @@ deploy:
         echo "POST /api/v1/auth/yandex -> HTTP $CODE"
         if [ "$CODE" != "400" ]; then
           echo "ERROR: expected HTTP 400 from /api/v1/auth/yandex (OAuth handler), got $CODE" >&2
+          docker logs --tail 100 ya-brander >&2 || true
           exit 1
         fi
         echo "ya-brander OAuth handler is live"
