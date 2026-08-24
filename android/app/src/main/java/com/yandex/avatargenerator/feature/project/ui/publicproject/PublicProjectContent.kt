@@ -1,7 +1,5 @@
-package com.yandex.avatargenerator.feature.project.ui
+package com.yandex.avatargenerator.feature.project.ui.publicproject
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,8 +22,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,17 +29,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.project.data.MockPublicProjectRepository
@@ -65,8 +56,6 @@ import com.yandex.avatargenerator.ui.theme.AppSpacing
 import com.yandex.avatargenerator.ui.theme.AppTypography
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
 import com.yandex.avatargenerator.ui.theme.LocalAppColorScheme
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 // Декоративный градиент hero-баннера (коралл → мягкий коралл, слева направо):
 // виден, пока грузится превью проекта или если превью нет. Собран целиком на
@@ -97,38 +86,16 @@ private val RelatedPreviewHeight = 100.dp
 private val ActionIconSize = 18.dp
 
 /**
- * Экран публичного проекта: грузит проект по [projectId] через
- * [PublicProjectViewModel] и показывает Loading/Error/Content.
- *
- * Точка входа — тап по проекту в ленте (`Destination.PublicProject`), поэтому
- * сверху [BrandBackTopBar]: на системную кнопку «назад» как на единственный путь
- * возврата полагаться нельзя. `projectId` известен только при открытии, так
- * что передаём его параметром ([parametersOf]), как в `ProjectScreen`.
+ * Вёрстка экрана публичного проекта без ViewModel: всё, что рисуется, приходит
+ * в [state], всё, что делает пользователь, уходит одним [onIntent] — так экран
+ * рисуется в `@Preview`, не ходя в репозиторий.
  */
 @Composable
-internal fun PublicProjectScreen(
-    projectId: String,
-    onBackClick: () -> Unit,
-    onAuthorClick: (String) -> Unit,
-    onRelatedClick: (String) -> Unit,
+internal fun PublicProjectContent(
+    state: PublicProjectState,
+    onIntent: (PublicProjectIntent) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: PublicProjectViewModel = koinViewModel { parametersOf(projectId) },
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Тост с результатом выгрузки. Событие одноразовое (Channel во ViewModel).
-    // Собираем только пока экран STARTED — событие, пришедшее в фоне, буфер
-    // Channel придержит до возврата, тост не всплывёт мимо переднего плана.
-    LaunchedEffect(viewModel, lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.exportEvents.collect { event ->
-                Toast.makeText(context, event.message(context), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -137,70 +104,40 @@ internal fun PublicProjectScreen(
         // Заголовок дублирует название под hero намеренно: оно уезжает со
         // скроллом, а шапка остаётся. Пока проект грузится, названия ещё нет.
         BrandBackTopBar(
-            onBackClick = onBackClick,
-            title = (uiState as? PublicProjectUiState.Content)?.project?.title,
+            onBackClick = { onIntent(PublicProjectIntent.OnBackClick) },
+            title = state.project?.title,
         )
 
-        when (val state = uiState) {
-            PublicProjectUiState.Loading -> PublicProjectSkeleton(Modifier.weight(1f))
+        // Порядок веток и есть взаимоисключение состояний: скелетон поверх
+        // всего, ошибка важнее проекта, тело — последним.
+        when {
+            state.isLoading -> PublicProjectSkeleton(Modifier.weight(1f))
 
-            PublicProjectUiState.Error -> PublicProjectCenteredBox(Modifier.weight(1f)) {
+            state.hasError -> PublicProjectCenteredBox(Modifier.weight(1f)) {
                 BrandErrorState(
                     title = stringResource(R.string.public_project_error_title),
                     retryLabel = stringResource(R.string.public_project_error_retry),
-                    onRetry = viewModel::retry,
+                    onRetry = { onIntent(PublicProjectIntent.OnRetryClick) },
                 )
             }
 
-            is PublicProjectUiState.Content -> PublicProjectContent(
+            state.project != null -> PublicProjectBody(
                 project = state.project,
-                onAuthorClick = { onAuthorClick(state.project.author.id) },
-                onFollowClick = viewModel::toggleFollow,
-                onDownloadPngClick = { viewModel.export(ExportFormat.PNG) },
-                onDownloadSvgClick = { viewModel.export(ExportFormat.SVG) },
-                onRelatedClick = onRelatedClick,
+                onIntent = onIntent,
                 modifier = Modifier.weight(1f),
             )
+
+            // Проекта нет, но и грузить его никто не начинал — рисовать нечего.
+            else -> Unit
         }
     }
 }
 
-/** Текст тоста по результату выгрузки. Имя формата — из ресурсов, без литералов. */
-private fun ExportEvent.message(context: Context): String = when (this) {
-    is ExportEvent.Success -> {
-        // PNG уходит в галерею, SVG — в «Загрузки»; сообщение подсказывает, где искать.
-        val template = when (format) {
-            ExportFormat.PNG -> R.string.public_project_download_saved_gallery
-            ExportFormat.SVG -> R.string.public_project_download_saved
-        }
-        context.getString(template, context.getString(format.labelRes))
-    }
-
-    is ExportEvent.Failure ->
-        context.getString(R.string.public_project_download_failed, context.getString(format.labelRes))
-
-    ExportEvent.NothingToExport ->
-        context.getString(R.string.public_project_download_empty)
-}
-
-private val ExportFormat.labelRes: Int
-    get() = when (this) {
-        ExportFormat.PNG -> R.string.export_format_png
-        ExportFormat.SVG -> R.string.export_format_svg
-    }
-
-/**
- * Вёрстка экрана без ViewModel: проект приходит параметром. Так экран рисуется в
- * `@Preview`, не ходя в репозиторий (ср. `ProjectContent`).
- */
+/** Собственно проект: hero, автор, действия и работы автора. */
 @Composable
-private fun PublicProjectContent(
+private fun PublicProjectBody(
     project: PublicProject,
-    onAuthorClick: () -> Unit,
-    onFollowClick: () -> Unit,
-    onDownloadPngClick: () -> Unit,
-    onDownloadSvgClick: () -> Unit,
-    onRelatedClick: (String) -> Unit,
+    onIntent: (PublicProjectIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -223,8 +160,7 @@ private fun PublicProjectContent(
         ) {
             PublicProjectAuthorRow(
                 author = project.author,
-                onAuthorClick = onAuthorClick,
-                onFollowClick = onFollowClick,
+                onIntent = onIntent,
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs)) {
@@ -235,16 +171,13 @@ private fun PublicProjectContent(
                 )
             }
 
-            PublicProjectActions(
-                onDownloadPngClick = onDownloadPngClick,
-                onDownloadSvgClick = onDownloadSvgClick,
-            )
+            PublicProjectActions(onIntent = onIntent)
 
             HorizontalDivider(thickness = 1.dp, color = AppColors.Border)
 
             PublicProjectRelated(
                 items = project.related,
-                onRelatedClick = onRelatedClick,
+                onIntent = onIntent,
             )
         }
     }
@@ -321,8 +254,7 @@ private fun PublicProjectHero(
 @Composable
 private fun PublicProjectAuthorRow(
     author: PublicProjectAuthor,
-    onAuthorClick: () -> Unit,
-    onFollowClick: () -> Unit,
+    onIntent: (PublicProjectIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -333,7 +265,7 @@ private fun PublicProjectAuthorRow(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(AppShape.s))
-                .clickable(onClick = onAuthorClick),
+                .clickable { onIntent(PublicProjectIntent.OnAuthorClick) },
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -358,7 +290,10 @@ private fun PublicProjectAuthorRow(
                 }
             }
         }
-        PublicProjectFollowButton(isFollowing = author.isFollowing, onClick = onFollowClick)
+        PublicProjectFollowButton(
+            isFollowing = author.isFollowing,
+            onClick = { onIntent(PublicProjectIntent.OnFollowClick) },
+        )
     }
 }
 
@@ -405,8 +340,7 @@ private fun PublicProjectFollowButton(
 /** Пара кнопок экспорта: акцентная «Download PNG» и нейтральная «Download SVG». */
 @Composable
 private fun PublicProjectActions(
-    onDownloadPngClick: () -> Unit,
-    onDownloadSvgClick: () -> Unit,
+    onIntent: (PublicProjectIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -415,7 +349,7 @@ private fun PublicProjectActions(
     ) {
         BrandPrimaryButton(
             text = stringResource(R.string.public_project_download_png),
-            onClick = onDownloadPngClick,
+            onClick = { onIntent(PublicProjectIntent.OnExportClick(ExportFormat.PNG)) },
             fullWidth = true,
             leadingIcon = {
                 Icon(
@@ -427,7 +361,7 @@ private fun PublicProjectActions(
         )
         BrandTonalButton(
             text = stringResource(R.string.public_project_download_svg),
-            onClick = onDownloadSvgClick,
+            onClick = { onIntent(PublicProjectIntent.OnExportClick(ExportFormat.SVG)) },
             fullWidth = true,
             leadingIcon = {
                 Icon(
@@ -444,7 +378,7 @@ private fun PublicProjectActions(
 @Composable
 private fun PublicProjectRelated(
     items: List<PublicProjectRelatedItem>,
-    onRelatedClick: (String) -> Unit,
+    onIntent: (PublicProjectIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -462,7 +396,7 @@ private fun PublicProjectRelated(
                 rowItems.forEach { item ->
                     PublicProjectRelatedCard(
                         item = item,
-                        onClick = { onRelatedClick(item.id) },
+                        onClick = { onIntent(PublicProjectIntent.OnRelatedClick(item.id)) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -537,12 +471,11 @@ private fun PublicProjectRelatedCard(
 private fun PublicProjectContentPreview() {
     AvatarGeneratorTheme {
         PublicProjectContent(
-            project = MockPublicProjectRepository.sample(),
-            onAuthorClick = {},
-            onFollowClick = {},
-            onDownloadPngClick = {},
-            onDownloadSvgClick = {},
-            onRelatedClick = {},
+            state = PublicProjectState(
+                isLoading = false,
+                project = MockPublicProjectRepository.sample(),
+            ),
+            onIntent = {},
         )
     }
 }
@@ -553,12 +486,11 @@ private fun PublicProjectContentFollowingPreview() {
     AvatarGeneratorTheme {
         val sample = MockPublicProjectRepository.sample()
         PublicProjectContent(
-            project = sample.copy(author = sample.author.copy(isFollowing = true)),
-            onAuthorClick = {},
-            onFollowClick = {},
-            onDownloadPngClick = {},
-            onDownloadSvgClick = {},
-            onRelatedClick = {},
+            state = PublicProjectState(
+                isLoading = false,
+                project = sample.copy(author = sample.author.copy(isFollowing = true)),
+            ),
+            onIntent = {},
         )
     }
 }

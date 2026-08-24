@@ -23,7 +23,7 @@ import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingScreen
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
-import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
+import com.yandex.avatargenerator.feature.project.ui.publicproject.PublicProjectScreen
 import com.yandex.avatargenerator.feature.settings.ui.SettingsScreen
 import com.yandex.avatargenerator.feature.subscription.ui.SubscriptionsScreen
 import com.yandex.avatargenerator.feature.subscription.ui.SubscriptionsTab
