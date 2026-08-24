@@ -2,14 +2,16 @@ import SwiftUI
 
 struct ProjectCreateView: View {
     var onBack: (() -> Void)?
-    var onGenerate: (Project) -> Void = { _ in }
+    var onGenerate: (ProjectCreationResult) -> Void = { _ in }
 
     @State private var viewModel: ProjectCreateViewModel
     @State private var isModelPickerPresented = false
+    @State private var didLeaveScreen = false
+    @State private var submitTask: Task<Void, Never>?
 
     init(
         onBack: (() -> Void)? = nil,
-        onGenerate: @escaping (Project) -> Void = { _ in },
+        onGenerate: @escaping (ProjectCreationResult) -> Void = { _ in },
         service: any ProjectServiceProtocol = ProjectService()
     ) {
         self.onBack = onBack
@@ -26,7 +28,8 @@ struct ProjectCreateView: View {
                     label: "PROJECT NAME",
                     placeholder: "My Startup Brand",
                     text: $viewModel.name,
-                    autocapitalization: .words
+                    autocapitalization: .words,
+                    errorMessage: viewModel.nameValidationMessage
                 )
 
                 FormTextEditor(
@@ -48,13 +51,16 @@ struct ProjectCreateView: View {
                 }
 
                 PrimaryButton(
-                    title: viewModel.isLoading ? "Creating..." : "Generate Brandkit",
-                    isEnabled: viewModel.canSubmit && !viewModel.isLoading,
-                    fill: AnyShapeStyle(.brand)
+                    title: viewModel.isLoading ? "Creating..." : "Generate",
+                    isEnabled: viewModel.canSubmit,
+                    fill: AnyShapeStyle(Color.accentColor)
                 ) {
-                    Task {
-                        if let project = await viewModel.submit() {
-                            onGenerate(project)
+                    guard submitTask == nil else { return }
+                    submitTask = Task { @MainActor in
+                        defer { submitTask = nil }
+                        if let result = await viewModel.submit() {
+                            guard !didLeaveScreen else { return }
+                            onGenerate(result)
                         }
                     }
                 }
@@ -66,7 +72,12 @@ struct ProjectCreateView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .brandBackground()
-        .customNavigationBar(title: viewModel.title, onBack: onBack)
+        .customNavigationBar(
+            title: viewModel.title,
+            onBack: onBack,
+            isBackEnabled: submitTask == nil
+        )
+        .navigationSwipeBackDisabled(submitTask != nil)
         .sheet(isPresented: $isModelPickerPresented) {
             ModelPickerSheet(
                 availableModels: viewModel.availableModels,
@@ -79,6 +90,9 @@ struct ProjectCreateView: View {
         }
         .task {
             await viewModel.loadModels()
+        }
+        .onDisappear {
+            didLeaveScreen = true
         }
     }
 

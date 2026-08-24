@@ -1,15 +1,22 @@
 import Foundation
 
+nonisolated struct ProjectCreationResult: Sendable {
+    let project: Project
+    let jobID: String
+}
+
 nonisolated protocol ProjectServiceProtocol: Sendable {
     func fetchProjects(for userID: UUID) async throws -> [Project]
     func fetchProject(id: UUID) async throws -> Project
-    func createProject(name: String, prompt: String, modelID: String) async throws -> Project
+    func createProject(name: String, description: String) async throws -> Project
+    func createProject(name: String, prompt: String, modelID: String) async throws -> ProjectCreationResult
     func deleteProject(id: UUID) async throws
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
     func fetchModels() async throws -> [GenerationModel]
     func generate(projectID: UUID, prompt: String, modelID: String) async throws -> String
     func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus
+    func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL
 }
 
@@ -33,19 +40,38 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
         let dto: ProjectDTO = try await client.request(
             .get,
             .project(id: id),
-            authorization: .required
+            authorization: .optional
         )
         return Project(dto: dto)
     }
 
-    func createProject(name: String, prompt: String, modelID: String) async throws -> Project {
+    func createProject(name: String, description: String) async throws -> Project {
         let dto: ProjectDTO = try await client.request(
             .post,
             .projects,
             authorization: .required,
-            body: CreateProjectRequest(name: name, prompt: prompt, model: modelID)
+            body: CreateProjectRequest(name: name, description: description)
         )
         return Project(dto: dto)
+    }
+
+    func createProject(
+        name: String,
+        prompt: String,
+        modelID: String
+    ) async throws -> ProjectCreationResult {
+        let dto: ProjectDTO = try await client.request(
+            .post,
+            .projects,
+            authorization: .required,
+            body: CreateProjectWithGenerationRequest(
+                name: name,
+                prompt: prompt,
+                model: modelID
+            )
+        )
+        guard let jobID = dto.jobID else { throw NetworkError.invalidResponse }
+        return ProjectCreationResult(project: Project(dto: dto), jobID: jobID)
     }
 
     func deleteProject(id: UUID) async throws {
@@ -99,12 +125,24 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
     }
 
     func generateStatus(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        // Без NetworkClient-retry: retry-политикой опроса владеет
+        // ChatViewModel.pollGeneration — иначе попытки двух слоёв
+        // перемножаются и ожидание растягивается на десятки минут.
         try await client.request(
             .get,
-            .generationStatus(projectID: projectID, jobID: jobID),
+            .generateStatus(projectID: projectID, jobID: jobID),
             authorization: .required,
             body: Optional<String>.none,
-            timeout: 35
+            timeout: 60,
+            retries: false
+        )
+    }
+
+    func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus {
+        try await client.request(
+            .post,
+            .cancelGeneration(projectID: projectID, jobID: jobID),
+            authorization: .required
         )
     }
 
@@ -147,20 +185,6 @@ nonisolated struct RemoteChatMessage: Sendable, Codable {
     }
 }
 
-nonisolated struct GenerationStatus: Decodable, Sendable {
-    enum State: String, Decodable, Sendable {
-        case pending
-        case done
-        case error
-        case cancelling
-        case cancelled
-    }
-
-    let status: State
-    let url: URL?
-    let message: String?
-}
-
 private nonisolated struct UserProjectsResponseDTO: Decodable, Sendable {
     let projects: [ProjectDTO]?
 }
@@ -173,6 +197,7 @@ private nonisolated struct ProjectDTO: Decodable, Sendable {
     let isPublic: Bool?
     let createdAt: String?
     let url: URL?
+    let jobID: String?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -182,10 +207,16 @@ private nonisolated struct ProjectDTO: Decodable, Sendable {
         case isPublic
         case createdAt
         case url
+        case jobID = "jobId"
     }
 }
 
 private nonisolated struct CreateProjectRequest: Encodable, Sendable {
+    let name: String
+    let description: String
+}
+
+private nonisolated struct CreateProjectWithGenerationRequest: Encodable, Sendable {
     let name: String
     let prompt: String
     let model: String
@@ -214,6 +245,47 @@ private nonisolated struct GenerateResponseDTO: Decodable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case jobID = "jobId"
+    }
+}
+
+nonisolated enum GenerationStatus: Decodable, Sendable {
+    enum Status: String, Decodable, Sendable {
+        case pending
+        case done
+        case error
+        case cancelling
+        case cancelled
+    }
+
+    case pending
+    case done(url: URL?)
+    case error(message: String)
+    case cancelling
+    case cancelled
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let status = try container.decode(Status.self, forKey: .status)
+        switch status {
+        case .pending:
+            self = .pending
+        case .done:
+            let url = try container.decodeIfPresent(URL.self, forKey: .url)
+            self = .done(url: url)
+        case .error:
+            let message = try container.decodeIfPresent(String.self, forKey: .message) ?? "Generation failed."
+            self = .error(message: message)
+        case .cancelling:
+            self = .cancelling
+        case .cancelled:
+            self = .cancelled
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case status
+        case url
+        case message
     }
 }
 

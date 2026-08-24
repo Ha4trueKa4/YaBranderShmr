@@ -16,4 +16,5 @@ enum NetworkError: Error, Sendable {
     case serverValidation(statusCode: Int, code: String?, field: String?)
     case decodingError
     case encodingError
+    case generationInProgress(jobID: String)
 }

@@ -4,16 +4,29 @@ actor ChatCache {
     static let shared = ChatCache()
 
     struct PendingMessage: Codable, Equatable {
+        enum DeliveryState: String, Codable {
+            case pending
+            case failed
+        }
+
         let id: UUID
         let text: String
         let createdAt: Date
         let modelID: String
+        var deliveryState: DeliveryState
 
-        init(id: UUID, text: String, createdAt: Date, modelID: String) {
+        init(
+            id: UUID,
+            text: String,
+            createdAt: Date,
+            modelID: String,
+            deliveryState: DeliveryState = .pending
+        ) {
             self.id = id
             self.text = text
             self.createdAt = createdAt
             self.modelID = modelID
+            self.deliveryState = deliveryState
         }
 
         init(from decoder: Decoder) throws {
@@ -23,6 +36,10 @@ actor ChatCache {
             createdAt = try container.decode(Date.self, forKey: .createdAt)
             modelID = try container.decodeIfPresent(String.self, forKey: .modelID)
                 ?? GenerationModel.defaultID
+            deliveryState = try container.decodeIfPresent(
+                DeliveryState.self,
+                forKey: .deliveryState
+            ) ?? .pending
         }
     }
 
@@ -30,15 +47,22 @@ actor ChatCache {
         let messages: [RemoteChatMessage]
         let isPublic: Bool
         var pendingMessages: [PendingMessage]
+        /// jobID генераций, чей статус сервер уже не отдаёт (404 — job живёт
+        /// в памяти бэкенда и не переживает его перезапуск). Опрос таких job
+        /// не возобновляется, чтобы каждое открытие чата не заканчивалось
+        /// ошибкой «Generation status is unavailable».
+        var lostJobIDs: Set<String>
 
         init(
             messages: [RemoteChatMessage],
             isPublic: Bool,
-            pendingMessages: [PendingMessage] = []
+            pendingMessages: [PendingMessage] = [],
+            lostJobIDs: Set<String> = []
         ) {
             self.messages = messages
             self.isPublic = isPublic
             self.pendingMessages = pendingMessages
+            self.lostJobIDs = lostJobIDs
         }
 
         init(from decoder: Decoder) throws {
@@ -49,8 +73,16 @@ actor ChatCache {
                 [PendingMessage].self,
                 forKey: .pendingMessages
             ) ?? []
+            lostJobIDs = try container.decodeIfPresent(
+                Set<String>.self,
+                forKey: .lostJobIDs
+            ) ?? []
         }
     }
+
+    /// Верхняя граница списка потерянных job: защиты от бессрочного роста
+    /// (записи не имеют TTL — просто срезаем хвост).
+    private static let lostJobIDsLimit = 50
 
     private let directory: URL
 
@@ -69,7 +101,8 @@ actor ChatCache {
         let cache = CachedChat(
             messages: messages,
             isPublic: isPublic,
-            pendingMessages: existing?.pendingMessages ?? []
+            pendingMessages: existing?.pendingMessages ?? [],
+            lostJobIDs: existing?.lostJobIDs ?? []
         )
         write(cache, projectID: projectID)
     }
@@ -77,6 +110,16 @@ actor ChatCache {
     func savePendingMessages(_ pendingMessages: [PendingMessage], for projectID: UUID) {
         var cache = load(projectID: projectID) ?? CachedChat(messages: [], isPublic: false)
         cache.pendingMessages = pendingMessages
+        write(cache, projectID: projectID)
+    }
+
+    func markJobLost(_ jobID: String, projectID: UUID) {
+        var cache = load(projectID: projectID) ?? CachedChat(messages: [], isPublic: false)
+        guard !cache.lostJobIDs.contains(jobID) else { return }
+        cache.lostJobIDs.insert(jobID)
+        if cache.lostJobIDs.count > Self.lostJobIDsLimit {
+            cache.lostJobIDs = Set(cache.lostJobIDs.suffix(Self.lostJobIDsLimit))
+        }
         write(cache, projectID: projectID)
     }
 

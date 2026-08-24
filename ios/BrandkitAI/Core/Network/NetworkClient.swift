@@ -33,7 +33,7 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         longConfig.timeoutIntervalForResource = 300
         self.longSession = URLSession(configuration: longConfig)
     }
-    
+
     static let shared = NetworkClient(baseURL: APIConfig.baseURL)
 
     func request<Response: Decodable & Sendable>(
@@ -99,7 +99,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         path: String,
         authorization: AuthorizationRequirement,
         body: (some Encodable & Sendable)?,
-        timeout: TimeInterval?
+        timeout: TimeInterval?,
+        retries: Bool = true
     ) async throws -> Response {
         let bodyData = try encode(body)
         let data = try await execute(
@@ -107,7 +108,8 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
             path: path,
             authorization: authorization,
             body: bodyData,
-            timeout: timeout
+            timeout: timeout,
+            retries: retries
         )
         return try decode(Response.self, from: data)
     }
@@ -191,9 +193,10 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
         path: String,
         authorization: AuthorizationRequirement,
         body: Data?,
-        timeout: TimeInterval? = nil
+        timeout: TimeInterval? = nil,
+        retries: Bool = true
     ) async throws -> Data {
-        let shouldRetry = method == .get
+        let shouldRetry = retries && method == .get
         if !shouldRetry {
             return try await rawRequest(
                 method: method,
@@ -257,6 +260,13 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let serverError = try? Self.jsonDecoder.decode(ServerErrorResponse.self, from: data)
+            // «Генерация уже идёт» выводим из статус-кода + jobId, а не из тела:
+            // иначе любой ответ с jobId в теле (или 409, к которому бэкенд
+            // допишет code) уедет в serverValidation/httpError вместо
+            // прицепления к существующей job.
+            if httpResponse.statusCode == 409, let jobID = serverError?.jobId {
+                throw NetworkError.generationInProgress(jobID: jobID)
+            }
             if serverError?.code != nil || serverError?.field != nil {
                 throw NetworkError.serverValidation(
                     statusCode: httpResponse.statusCode,
@@ -314,4 +324,6 @@ nonisolated final class NetworkClient: NetworkClientProtocol, Sendable {
 nonisolated private struct ServerErrorResponse: Decodable, Sendable {
     let code: String?
     let field: String?
+    let message: String?
+    let jobId: String?
 }

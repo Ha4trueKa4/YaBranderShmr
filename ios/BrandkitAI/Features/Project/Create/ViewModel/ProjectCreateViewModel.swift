@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 @Observable
 final class ProjectCreateViewModel {
+    static let maxNameLength = 255
     static let maxPromptLength = 5_000
 
     var name = ""
@@ -13,6 +14,7 @@ final class ProjectCreateViewModel {
     private(set) var availableModels: [GenerationModel] = []
     private(set) var isLoadingModels = false
     private(set) var modelsLoadFailed = false
+    private(set) var submissionIsUncertain = false
     private(set) var selectedModelID: String
 
     let title = "New Project"
@@ -36,13 +38,25 @@ final class ProjectCreateViewModel {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmedName.isEmpty
+            && trimmedName.unicodeScalars.count <= Self.maxNameLength
             && !trimmedPrompt.isEmpty
-            && trimmedPrompt.count <= Self.maxPromptLength
+            && trimmedPrompt.unicodeScalars.count <= Self.maxPromptLength
+            && !isLoading
+            && !isLoadingModels
+            && !modelsLoadFailed
+            && !submissionIsUncertain
+            && availableModels.contains(where: { $0.id == selectedModelID })
+    }
+
+    var nameValidationMessage: String? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedName.unicodeScalars.count > Self.maxNameLength else { return nil }
+        return "Project name is too long (maximum 255 characters)."
     }
 
     var promptValidationMessage: String? {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedPrompt.count > Self.maxPromptLength else { return nil }
+        guard trimmedPrompt.unicodeScalars.count > Self.maxPromptLength else { return nil }
         return "Prompt is too long (maximum 5000 characters)."
     }
 
@@ -74,8 +88,8 @@ final class ProjectCreateViewModel {
         persistSelectedModel()
     }
 
-    func submit() async -> Project? {
-        guard canSubmit, !isLoading else { return nil }
+    func submit() async -> ProjectCreationResult? {
+        guard canSubmit else { return nil }
 
         isLoading = true
         errorMessage = nil
@@ -88,6 +102,9 @@ final class ProjectCreateViewModel {
                 modelID: selectedModel.id
             )
         } catch {
+            if Self.isUncertainSubmission(error) {
+                submissionIsUncertain = true
+            }
             errorMessage = message(for: error)
             return nil
         }
@@ -98,6 +115,9 @@ final class ProjectCreateViewModel {
     }
 
     private func message(for error: Error) -> String {
+        if Self.isUncertainSubmission(error) {
+            return "The result is uncertain. Return to the project list and refresh before trying again."
+        }
         if case NetworkError.httpError(let statusCode) = error,
            statusCode == 400 {
             return "Enter a prompt up to 5000 characters."
@@ -114,5 +134,19 @@ final class ProjectCreateViewModel {
             return "Enter a prompt up to 5000 characters."
         }
         return "Unable to create the project."
+    }
+
+    private static func isUncertainSubmission(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError {
+            return [.timedOut, .networkConnectionLost, .cancelled].contains(urlError.code)
+        }
+        guard let networkError = error as? NetworkError else { return false }
+        switch networkError {
+        case .decodingError, .invalidResponse:
+            return true
+        default:
+            return false
+        }
     }
 }

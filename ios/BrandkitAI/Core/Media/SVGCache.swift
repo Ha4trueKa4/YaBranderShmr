@@ -61,7 +61,7 @@ actor SVGCache {
             else {
                 throw NetworkError.invalidResponse
             }
-            await self.store(data, for: key)
+            self.store(data, for: key)
             return data
         }
         inFlight[key] = task
