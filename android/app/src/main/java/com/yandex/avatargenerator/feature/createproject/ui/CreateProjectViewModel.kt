@@ -1,61 +1,98 @@
 package com.yandex.avatargenerator.feature.createproject.ui
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yandex.avatargenerator.core.mvi.BaseViewModel
 import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
+ * Имя, под которым проект уедет на сервер, если пользователь не ввёл своё.
+ * В `strings.xml` не выносим сознательно: имя уезжает на сервер и там
+ * застывает, локализовать его на момент создания смысла нет.
+ */
+private const val DefaultProjectName = "Untitled project"
+
+/**
  * ViewModel формы создания проекта: держит поля ввода, валидирует их и по
- * запросу создаёт проект через `POST /projects` ([ProjectRepository] из
- * `feature/project` — своего репозитория у экрана нет, см. KDoc метода),
- * после чего шлёт событие навигации на экран проекта.
+ * [CreateProjectIntent.OnSubmitClick] создаёт проект через `POST /projects`
+ * ([ProjectRepository] из `feature/project` — своего репозитория у экрана нет,
+ * см. KDoc метода), после чего шлёт эффект навигации на экран проекта.
  */
 internal class CreateProjectViewModel(
     private val repository: ProjectRepository,
-) : ViewModel() {
+) : BaseViewModel<CreateProjectIntent, CreateProjectState, CreateProjectEffect>(
+    CreateProjectState(),
+) {
 
-    private val _uiState = MutableStateFlow(CreateProjectUiState())
-    val uiState: StateFlow<CreateProjectUiState> = _uiState.asStateFlow()
+    override suspend fun handleIntent(intent: CreateProjectIntent, state: CreateProjectState) {
+        when (intent) {
+            // Правка промпта гасит ошибку: старое сообщение относилось к прошлой
+            // попытке, а отвергает сервер именно промпт. Название и описание на
+            // ошибку не влияют — их бэкенд принимает любыми.
+            is CreateProjectIntent.OnPromptChange -> updateState {
+                copy(prompt = limitCreatePrompt(intent.value), hasError = false)
+            }
 
-    private val _events = Channel<CreateProjectEvent>(Channel.BUFFERED)
-    val events = _events.receiveAsFlow()
+            is CreateProjectIntent.OnNameChange -> updateState {
+                copy(name = intent.value)
+            }
 
-    fun onNameChange(value: String) = _uiState.update { it.copy(name = value, hasError = false) }
+            is CreateProjectIntent.OnDescriptionChange -> updateState {
+                copy(description = intent.value)
+            }
 
-    fun onDescriptionChange(value: String) = _uiState.update { it.copy(description = value) }
+            CreateProjectIntent.OnSubmitClick -> submit(state)
+            CreateProjectIntent.OnBackClick -> sendEffect(CreateProjectEffect.NavigateBack)
+        }
+    }
 
     /**
-     * Создаёт проект и отправляет [CreateProjectEvent.ProjectCreated] с его
-     * настоящим id. Пустое название блокирует запуск (кнопка и так неактивна —
+     * Создаёт проект и отправляет [CreateProjectEffect.NavigateToProject] с его
+     * настоящим id. Пустой промпт блокирует запуск (кнопка и так неактивна —
      * это страховка на случай гонки с последней рекомпозицией) и заодно
-     * экономит заведомо ошибочный запрос: пустое имя бэкенд отвергает 400.
+     * экономит заведомо ошибочный запрос: пустой промпт бэкенд отвергает 400.
      *
      * Репозиторий не бросает, а отдаёт [Result] — своего `runCatching` здесь
      * не нужно. Ошибка не роняет корутину: снимаем
-     * [CreateProjectUiState.isSubmitting] и показываем ошибку, введённые поля
+     * [CreateProjectState.isSubmitting] и показываем ошибку, введённые поля
      * остаются на месте, чтобы пользователь мог повторить.
+     *
+     * Запрос уходит отдельной корутиной, а не прямо в `handleIntent`: иначе
+     * очередь интентов встала бы на всё время генерации и набранный текст
+     * перестал бы появляться в полях.
+     *
+     * `isSubmitting` поднимаем **до** `launch`, а не внутри: цикл интентов не
+     * приостанавливается, пока в канале есть следующий интент, и второй тап по
+     * кнопке успел бы увидеть `isSubmitting = false` и создать второй проект.
      */
-    fun onSubmit() {
-        val state = _uiState.value
+    private fun submit(state: CreateProjectState) {
         if (!state.canSubmit) return
 
+        updateState { copy(isSubmitting = true, hasError = false) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSubmitting = true, hasError = false) }
-            repository.createProject(state.name.trim(), state.description.trim())
-                .onSuccess { project ->
-                    _uiState.update { it.copy(isSubmitting = false) }
-                    _events.send(CreateProjectEvent.ProjectCreated(project.id))
+            repository.createProject(
+                name = effectiveName(state),
+                description = state.description.trim(),
+                prompt = state.prompt.trim(),
+            )
+                .onSuccess { creation ->
+                    updateState { copy(isSubmitting = false) }
+                    sendEffect(CreateProjectEffect.NavigateToProject(creation.project.id))
                 }
                 .onFailure {
-                    _uiState.update { it.copy(isSubmitting = false, hasError = true) }
+                    updateState { copy(isSubmitting = false, hasError = true) }
                 }
         }
     }
+
+    /**
+     * Название для запроса: введённое пользователем либо [DefaultProjectName].
+     *
+     * Пустое имя бэкенд примет и запишет как `""` — проект встал бы безымянным
+     * и в списке чатов, и в шапке своего экрана. Учить чужие экраны рисовать
+     * плейсхолдер вместо пустого имени — это правки в чужих фичах; подмена
+     * здесь дешевле и живёт в одном месте.
+     */
+    private fun effectiveName(state: CreateProjectState): String =
+        state.name.trim().ifBlank { DefaultProjectName }
 }

@@ -32,10 +32,11 @@ FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(jwt-cpp)
 
 # Adding userver dependency
-find_package(userver COMPONENTS core postgresql otlp QUIET)
+find_package(userver COMPONENTS core postgresql redis otlp QUIET)
 if (NOT userver_FOUND)  # Fallback to subdirectory usage
     # Enable userver libraries that are needed in this project
     set(USERVER_FEATURE_POSTGRESQL ON CACHE BOOL "" FORCE)
+    set(USERVER_FEATURE_REDIS ON CACHE BOOL "" FORCE)
 
     # Compatibility mode: some systems don't support these features
     set(USERVER_FEATURE_CRYPTOPP_BLAKE2 OFF CACHE BOOL "" FORCE)
@@ -72,8 +73,12 @@ add_library(${PROJECT_NAME}_objs OBJECT
         src/handlers/auth/login_handler.cpp
         src/handlers/auth/password_hasher.hpp
         src/handlers/auth/password_hasher.cpp
+        src/handlers/auth/yandex_profile_client.hpp
+        src/handlers/auth/yandex_profile_client.cpp
         src/handlers/auth/yandex_oauth_handler.hpp
         src/handlers/auth/yandex_oauth_handler.cpp
+        src/handlers/auth/link_yandex_handler.hpp
+        src/handlers/auth/link_yandex_handler.cpp
         src/handlers/auth/auth_method_handler.hpp
         src/handlers/auth/auth_method_handler.cpp
         src/handlers/auth/set_password_handler.hpp
@@ -137,6 +142,7 @@ add_library(${PROJECT_NAME}_objs OBJECT
 
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC
         userver::postgresql
+        userver::redis
         ${PROJECT_NAME}_sql
         userver::otlp
         nlohmann_json::nlohmann_json

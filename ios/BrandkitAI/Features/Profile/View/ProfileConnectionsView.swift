@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileConnectionsView: View {
+    private let session: SessionStore
     @State private var viewModel: ProfileConnectionsViewModel
 
     let kind: ProfileConnectionsKind
@@ -14,6 +15,7 @@ struct ProfileConnectionsView: View {
         onBack: @escaping () -> Void,
         onOpenProfile: @escaping (UUID) -> Void = { _ in }
     ) {
+        self.session = session
         self.kind = kind
         self.onBack = onBack
         self.onOpenProfile = onOpenProfile
@@ -30,7 +32,7 @@ struct ProfileConnectionsView: View {
             .customNavigationBar(title: kind.title, onBack: onBack)
             .toolbarBackground(Color(.background), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .task { await viewModel.load() }
+            .task(id: session.state) { await viewModel.load() }
     }
 
     @ViewBuilder
@@ -64,34 +66,22 @@ struct ProfileConnectionsView: View {
     }
 
     private func connectionRow(_ user: ProfileConnection) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                onOpenProfile(user.id)
-            } label: {
-                HStack(spacing: 12) {
-                    AvatarView(initials: user.name.initials, size: 56)
-
-                    Text(user.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if viewModel.canFollow(user), let isSubscribed = user.isSubscribed {
+        ProfileConnectionRow(
+            name: user.name,
+            onOpenProfile: { onOpenProfile(user.id) }
+        ) {
+            if viewModel.showsFollowButton(for: user) {
                 FollowButton(
-                    isSubscribed: isSubscribed,
+                    isSubscribed: user.isSubscribed ?? false,
                     isBusy: viewModel.busyUserIDs.contains(user.id),
-                    action: { viewModel.toggleFollowing(userID: user.id) }
+                    action: {
+                        session.performAuthenticated { [viewModel] in
+                            viewModel.requestFollowToggle(userID: user.id)
+                        }
+                    }
                 )
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, minHeight: 88)
-        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 14))
     }
 
     private var emptyDescription: String {

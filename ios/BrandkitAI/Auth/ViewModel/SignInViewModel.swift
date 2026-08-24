@@ -23,9 +23,13 @@ final class SignInViewModel {
     }
 
     var isLoading: Bool { session.isLoading }
+    var isPasswordLoading: Bool { session.isLoading && session.activeOperation == .signIn }
+    var isYandexLoading: Bool { session.isLoading && session.activeOperation == .yandexSignIn }
     var errorMessage: String? { session.errorMessage }
     var errorField: SessionStore.AuthField? { session.errorField }
-    var didSucceed: Bool { session.lastSuccessfulOperation == .signIn }
+    var didSucceed: Bool {
+        session.lastSuccessfulOperation == .signIn || session.lastSuccessfulOperation == .yandexSignIn
+    }
 
     var emailError: String? {
         let localError = didAttemptSubmit ? AuthValidation.email(email) : nil
@@ -51,6 +55,10 @@ final class SignInViewModel {
             email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
             password: password
         )
+    }
+
+    func signInWithYandex() {
+        session.signInWithYandex()
     }
 
     func clearError() {

@@ -23,7 +23,7 @@ import com.yandex.avatargenerator.feature.feed.ui.FeedScreen
 import com.yandex.avatargenerator.feature.onboarding.ui.OnboardingScreen
 import com.yandex.avatargenerator.feature.profile.ui.ProfileScreen
 import com.yandex.avatargenerator.feature.project.ui.ProjectScreen
-import com.yandex.avatargenerator.feature.project.ui.PublicProjectScreen
+import com.yandex.avatargenerator.feature.project.ui.publicproject.PublicProjectScreen
 import com.yandex.avatargenerator.feature.settings.ui.SettingsScreen
 import com.yandex.avatargenerator.feature.subscription.ui.SubscriptionsScreen
 import com.yandex.avatargenerator.feature.subscription.ui.SubscriptionsTab
@@ -168,6 +168,13 @@ fun AppNavHost(
             ProjectScreen(
                 projectId = projectId,
                 onBackClick = { navController.popBackStack() },
+                // Скачивание живёт на витрине проекта — своих кнопок выгрузки
+                // у чата нет, поэтому ведём на неё же, что и лента.
+                onDownloadClick = {
+                    navController.navigate(Destination.PublicProject.createRoute(projectId)) {
+                        launchSingleTop = true
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -230,14 +237,12 @@ fun AppNavHost(
                 initialTab = tab,
                 onBack = { navController.popBackStack() },
                 onUserClick = { clickedUserId ->
-                    // Тап по своей строке в списке ведёт на свой профиль (вкладку с
-                    // кнопкой «Редактировать»), а не на чужой профиль с «Подписаться».
-                    if (clickedUserId == currentUserId) {
-                        navController.openOwnProfileTab()
-                    } else {
-                        navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
-                    }
+                    navController.navigate(Destination.UserProfile.createRoute(clickedUserId))
                 },
+                // Тап по своей строке в списке ведёт на свой профиль (вкладку с
+                // кнопкой «Редактировать»), а не на чужой профиль с «Подписаться».
+                // Кто в списке «свой», знает ViewModel — она и разводит эффекты.
+                onOpenOwnProfile = { navController.openOwnProfileTab() },
                 currentUserId = currentUserId,
                 modifier = Modifier.fillMaxSize(),
             )

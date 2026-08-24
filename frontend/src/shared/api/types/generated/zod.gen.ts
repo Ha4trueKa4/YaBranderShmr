@@ -176,6 +176,13 @@ export const zPostAuthYandexBody = zYandexAuthRequest
  */
 export const zPostAuthYandexResponse = zAuthResponse
 
+export const zPostAuthYandexLinkBody = zYandexAuthRequest
+
+/**
+ * Yandex ID привязан (или уже был привязан к этому же аккаунту)
+ */
+export const zPostAuthYandexLinkResponse = zMessageResponse
+
 /**
  * Текущий способ(-ы) входа пользователя
  */

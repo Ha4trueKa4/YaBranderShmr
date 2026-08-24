@@ -36,7 +36,11 @@ class MockChatRepository(
      * Новую версию мок не создаёт: генерация — задача бэкенда, а `@Preview`
      * ленту всё равно не перезапрашивает. Отдаём выдуманный `job_id`.
      */
-    override suspend fun startGeneration(projectId: String, prompt: String): Result<String> {
+    override suspend fun startGeneration(
+        projectId: String,
+        prompt: String,
+        model: String?,
+    ): Result<String> {
         delay(sendDelayMillis)
         return Result.success(MOCK_JOB_ID)
     }

@@ -1,20 +1,16 @@
 package com.yandex.avatargenerator.feature.subscription.ui
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yandex.avatargenerator.core.mvi.BaseViewModel
 import com.yandex.avatargenerator.feature.subscription.domain.SubscriptionRepository
 import com.yandex.avatargenerator.feature.subscription.domain.model.SubscriptionUser
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel экрана подписок. Грузит список подписчиков или подписок пользователя
- * [userId] — какой именно, задаёт [tab] (та вкладка, по которой пришли с профиля;
+ * [userId] — какой именно, задаёт `tab` (та вкладка, по которой пришли с профиля;
  * на самом экране она не переключается, только определяет заголовок и запрос).
  *
  * Кнопка Follow/Unfollow в строке работает оптимистично: перекрашиваем сразу,
@@ -23,20 +19,15 @@ import kotlinx.coroutines.launch
 class SubscriptionsViewModel(
     private val repository: SubscriptionRepository,
     private val userId: String,
-    private val tab: SubscriptionsTab,
-    // id текущего пользователя: на себя не подписываются, тап по своей кнопке
-    // (защита на случай, если UI её всё же покажет) игнорируем. null — id недоступен.
-    private val currentUserId: String? = null,
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(
-        SubscriptionsUiState(tab = tab, list = SubscriptionsListState.Loading),
-    )
-    val uiState: StateFlow<SubscriptionsUiState> = _uiState.asStateFlow()
+    tab: SubscriptionsTab,
+) : BaseViewModel<SubscriptionsIntent, SubscriptionsState, SubscriptionsEffect>(
+    SubscriptionsState(tab = tab),
+) {
 
     // Пользователи, для которых запрос подписки уже в полёте: повторные тапы по
     // их кнопке игнорируем, иначе встречные subscribe/unsubscribe и их откаты
-    // разъехались бы с isFollowing.
+    // разъехались бы с isFollowing. В состоянии этому не место — экран
+    // подсветки «в полёте» не рисует, это чистый гвард.
     private val followInFlight = mutableSetOf<String>()
 
     private var loadJob: Job? = null
@@ -45,19 +36,32 @@ class SubscriptionsViewModel(
         load()
     }
 
-    /** Повторная загрузка списка (кнопка «Retry» в состоянии ошибки). */
-    fun retry() {
-        _uiState.update { it.copy(list = SubscriptionsListState.Loading) }
-        load()
-    }
+    override suspend fun handleIntent(intent: SubscriptionsIntent, state: SubscriptionsState) {
+        when (intent) {
+            SubscriptionsIntent.OnRetryClick -> {
+                updateState { copy(isLoading = true, hasError = false) }
+                load()
+            }
 
-    /**
-     * Фоновая перезагрузка при возврате на экран: пока пользователь ходил в чужой
-     * профиль, он мог там подписаться/отписаться, и список подписок устарел.
-     * Скелет не показываем — текущий список остаётся на экране до новых данных.
-     */
-    fun refresh() {
-        load()
+            // Скелет не показываем — текущий список остаётся на экране до
+            // новых данных.
+            SubscriptionsIntent.OnScreenResumed -> load()
+
+            is SubscriptionsIntent.OnCurrentUserResolved ->
+                updateState { copy(currentUserId = intent.userId) }
+
+            SubscriptionsIntent.OnBackClick -> sendEffect(SubscriptionsEffect.NavigateBack)
+
+            is SubscriptionsIntent.OnUserClick -> sendEffect(
+                if (intent.userId == state.currentUserId) {
+                    SubscriptionsEffect.OpenOwnProfile
+                } else {
+                    SubscriptionsEffect.OpenUserProfile(intent.userId)
+                },
+            )
+
+            is SubscriptionsIntent.OnFollowClick -> toggleFollow(state, intent.user)
+        }
     }
 
     /**
@@ -65,9 +69,9 @@ class SubscriptionsViewModel(
      * /users/{id}/subscribe`. UI обновляем оптимистично и откатываем, если запрос
      * не прошёл. Пока запрос в полёте, повторные тапы по этой строке игнорируем.
      */
-    fun toggleFollow(user: SubscriptionUser) {
-        if (user.id == currentUserId) return
-        if (_uiState.value.list !is SubscriptionsListState.Content) return
+    private fun toggleFollow(state: SubscriptionsState, user: SubscriptionUser) {
+        if (user.id == state.currentUserId) return
+        if (state.users.none { it.id == user.id }) return
         if (!followInFlight.add(user.id)) return
 
         val following = !user.isFollowing
@@ -96,31 +100,28 @@ class SubscriptionsViewModel(
         // бы поверх свежего.
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            val list = try {
-                val users = when (tab) {
+            try {
+                val users = when (state.value.tab) {
                     SubscriptionsTab.Followers -> repository.getFollowers(userId)
                     SubscriptionsTab.Following -> repository.getFollowing(userId)
                 }
-                SubscriptionsListState.Content(users)
+                updateState { copy(isLoading = false, users = users, hasError = false) }
             } catch (cancellation: CancellationException) {
-                // Отмена — не ошибка: пробрасываем, иначе записали бы Error поверх
+                // Отмена — не ошибка: пробрасываем, иначе записали бы ошибку поверх
                 // актуального списка.
                 throw cancellation
             } catch (failure: Exception) {
-                SubscriptionsListState.Error
+                updateState { copy(isLoading = false, hasError = true) }
             }
-            _uiState.update { it.copy(list = list) }
         }
     }
 
-    private inline fun updateUser(id: String, transform: (SubscriptionUser) -> SubscriptionUser) {
-        _uiState.update { state ->
-            val content = state.list as? SubscriptionsListState.Content ?: return@update state
-            state.copy(
-                list = content.copy(
-                    users = content.users.map { if (it.id == id) transform(it) else it },
-                ),
-            )
+    private inline fun updateUser(
+        id: String,
+        crossinline transform: (SubscriptionUser) -> SubscriptionUser,
+    ) {
+        updateState {
+            copy(users = users.map { if (it.id == id) transform(it) else it })
         }
     }
 }

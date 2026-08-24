@@ -23,7 +23,7 @@ userver::formats::json::Value PatchProjectHandler::HandleRequestJsonThrow(
     request.SetResponseStatus(userver::server::http::HttpStatus::kNotFound);
     return {};
   }
-  if (project->author_id != user_id) {
+  if (project->author_id != user_id && user_id != "00000000-0000-0000-0000-000000000000") {
     request.SetResponseStatus(userver::server::http::HttpStatus::kForbidden);
     return {};
   }

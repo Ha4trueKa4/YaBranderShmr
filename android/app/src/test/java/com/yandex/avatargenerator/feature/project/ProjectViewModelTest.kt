@@ -2,8 +2,10 @@ package com.yandex.avatargenerator.feature.project
 
 import com.yandex.avatargenerator.core.domain.NetworkException
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationModel
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
+import com.yandex.avatargenerator.feature.project.fake.FakeGenerationModelRepository
 import com.yandex.avatargenerator.feature.project.ui.MaxPromptBytes
 import com.yandex.avatargenerator.feature.project.ui.ProjectUiState
 import com.yandex.avatargenerator.feature.project.ui.ProjectViewModel
@@ -16,6 +18,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -27,6 +31,7 @@ internal class ProjectViewModelTest {
     private lateinit var chatRepository: FakeChatRepository
     private lateinit var versionsRepository: FakeVersionsRepository
     private lateinit var projectRepository: FakeProjectRepository
+    private lateinit var modelRepository: FakeGenerationModelRepository
 
     private val messages = listOf<ChatMessage>(
         ChatMessage.System.ProjectCreated(id = "system-created"),
@@ -108,6 +113,7 @@ internal class ProjectViewModelTest {
         chatRepository = FakeChatRepository()
         versionsRepository = FakeVersionsRepository()
         projectRepository = FakeProjectRepository()
+        modelRepository = FakeGenerationModelRepository()
     }
 
     @After
@@ -115,8 +121,13 @@ internal class ProjectViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() =
-        ProjectViewModel(chatRepository, versionsRepository, projectRepository, PROJECT_ID)
+    private fun viewModel() = ProjectViewModel(
+        chatRepository,
+        versionsRepository,
+        projectRepository,
+        modelRepository,
+        PROJECT_ID,
+    )
 
     @Test
     fun `starts in loading state`() {
@@ -721,6 +732,194 @@ internal class ProjectViewModelTest {
 
         assertEquals(0, projectRepository.updateProjectCallCount)
     }
+
+
+    @Test
+    fun `справочник моделей тянется лениво — только при первом открытии шторки`() =
+        runTest(dispatcher) {
+            chatRepository.chatResult = Result.success(chat)
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            // `/models` — статический справочник, который можно и не открыть.
+            assertEquals(0, modelRepository.modelsCallCount)
+
+            viewModel.openModelPicker()
+            advanceUntilIdle()
+
+            assertEquals(1, modelRepository.modelsCallCount)
+            assertEquals(FakeGenerationModelRepository.MODELS, pickerOf(viewModel).models)
+            assertTrue(pickerOf(viewModel).isSheetVisible)
+        }
+
+    @Test
+    fun `второе открытие шторки за справочником не ходит`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+        viewModel.dismissModelPicker()
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+
+        assertEquals(1, modelRepository.modelsCallCount)
+    }
+
+    @Test
+    fun `сохранённая модель читается при старте, не дожидаясь справочника`() =
+        runTest(dispatcher) {
+            chatRepository.chatResult = Result.success(chat)
+            modelRepository.selectedModelId = FakeGenerationModelRepository.LUNA_ID
+            val viewModel = viewModel()
+
+            advanceUntilIdle()
+
+            // Иначе чип моргнул бы дефолтом до первого открытия шторки.
+            assertEquals(FakeGenerationModelRepository.LUNA_ID, pickerOf(viewModel).selectedModelId)
+            assertEquals(0, modelRepository.modelsCallCount)
+        }
+
+    @Test
+    fun `выбор модели закрывает шторку и уходит в настройки`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+
+        viewModel.selectModel(FakeGenerationModelRepository.LUNA_ID)
+        advanceUntilIdle()
+
+        assertEquals(FakeGenerationModelRepository.LUNA_ID, pickerOf(viewModel).selectedModelId)
+        assertFalse(pickerOf(viewModel).isSheetVisible)
+        assertEquals(listOf(FakeGenerationModelRepository.LUNA_ID), modelRepository.savedModelIds)
+    }
+
+    @Test
+    fun `промпт уходит с выбранной моделью`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+        viewModel.selectModel(FakeGenerationModelRepository.LUNA_ID)
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(listOf(FakeGenerationModelRepository.LUNA_ID), chatRepository.sentModels)
+    }
+
+    @Test
+    fun `сохранённой модели нет в справочнике — откат на дефолт с перезаписью`() =
+        runTest(dispatcher) {
+            // Бэкенд поменял allow-list либо выбор приехал с другой версии приложения.
+            chatRepository.chatResult = Result.success(chat)
+            modelRepository.selectedModelId = "retired-model/latest"
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.openModelPicker()
+            advanceUntilIdle()
+
+            assertEquals(GenerationModel.DefaultId, pickerOf(viewModel).selectedModelId)
+            assertEquals(listOf(GenerationModel.DefaultId), modelRepository.savedModelIds)
+        }
+
+    @Test
+    fun `нет в справочнике и дефолта — берём первую доступную`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        modelRepository.selectedModelId = "retired-model/latest"
+        modelRepository.modelsResult = Result.success(
+            listOf(GenerationModel(id = FakeGenerationModelRepository.LUNA_ID, owner = "OpenAI")),
+        )
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+
+        assertEquals(FakeGenerationModelRepository.LUNA_ID, pickerOf(viewModel).selectedModelId)
+        assertEquals(listOf(FakeGenerationModelRepository.LUNA_ID), modelRepository.savedModelIds)
+    }
+
+    @Test
+    fun `пустой справочник — та же ошибка шторки, что и провал запроса`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        modelRepository.modelsResult = Result.success(emptyList())
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+
+        assertTrue(pickerOf(viewModel).hasError)
+        assertEquals(emptyList<GenerationModel>(), pickerOf(viewModel).models)
+    }
+
+    @Test
+    fun `провал справочника не блокирует отправку промпта`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        chatRepository.chatResults += Result.success(chat.copy(messages = reloadedMessages))
+        modelRepository.modelsResult = Result.failure(NetworkException.NoConnection(null))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+        viewModel.dismissModelPicker()
+
+        viewModel.onDraftChange("Make it rounder")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertTrue(pickerOf(viewModel).hasError)
+        assertEquals(listOf("Make it rounder"), chatRepository.sentPrompts)
+        // В теле уедет сохранённый id — разбираться с ним будет сервер.
+        assertEquals(listOf(GenerationModel.DefaultId), chatRepository.sentModels)
+    }
+
+    @Test
+    fun `ретрай после ошибки справочника перечитывает список`() = runTest(dispatcher) {
+        chatRepository.chatResult = Result.success(chat)
+        modelRepository.modelsResult = Result.failure(NetworkException.NoConnection(null))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.openModelPicker()
+        advanceUntilIdle()
+
+        modelRepository.modelsResult = Result.success(FakeGenerationModelRepository.MODELS)
+        viewModel.retryModels()
+        advanceUntilIdle()
+
+        assertFalse(pickerOf(viewModel).hasError)
+        assertEquals(FakeGenerationModelRepository.MODELS, pickerOf(viewModel).models)
+    }
+
+    @Test
+    fun `retryGeneration берёт текущую модель, а не ту, на которой промпт упал`() =
+        runTest(dispatcher) {
+            // По контракту это новая задача и новая пара сообщений — повторить
+            // на другой модели осмысленно.
+            chatRepository.chatResult = Result.success(chat.copy(messages = failedMessages))
+            chatRepository.awaitResult = Result.success(GenerationOutcome.Done(previewUrl = null))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            viewModel.openModelPicker()
+            advanceUntilIdle()
+            viewModel.selectModel(FakeGenerationModelRepository.LUNA_ID)
+
+            viewModel.retryGeneration("chat-2-assistant")
+            advanceUntilIdle()
+
+            assertEquals(listOf("Make it rounder"), chatRepository.sentPrompts)
+            assertEquals(listOf(FakeGenerationModelRepository.LUNA_ID), chatRepository.sentModels)
+        }
+
+    private fun pickerOf(viewModel: ProjectViewModel) = contentOf(viewModel).modelPicker
 
     private fun contentOf(viewModel: ProjectViewModel): ProjectUiState.Content =
         viewModel.uiState.value as ProjectUiState.Content

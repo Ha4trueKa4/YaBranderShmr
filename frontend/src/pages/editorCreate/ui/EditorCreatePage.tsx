@@ -1,11 +1,12 @@
 import { authStore } from '@app/providers/auth'
 import {
+  deleteProject,
   getProjectSvg,
   projectQueryKey,
+  projectReferencesStore,
   projectSvgQueryKey,
 } from '@entities/project'
 import {
-  cancelGeneration,
   DEFAULT_GENERATION_MODEL,
   GenerationPollingCancelledError,
   GenerationPollingTimeoutError,
@@ -13,23 +14,30 @@ import {
   pollGenerationStatus,
 } from '@features/editorGenerate'
 import {
-  type ProjectDraft,
   pendingGenerationStore,
   useCreateProjectMutation,
 } from '@features/projectCreate'
-import { ApiError, getApiErrorMessage } from '@shared/api/api'
+import { getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { Footer } from '@widgets/footer'
 import { Header } from '@widgets/header'
 import { observer } from 'mobx-react-lite'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 import { EditorEmptyState } from './components/EditorEmptyState'
 import { EditorGeneratingState } from './components/EditorGeneratingState'
 import styles from './EditorCreatePage.module.css'
+
+interface ProjectDraft {
+  data?: string
+  description: string
+  model: string
+  name: string
+  references?: string[]
+}
 
 export const EditorCreatePage = observer(function EditorCreatePage() {
   const navigate = useNavigate()
@@ -50,30 +58,39 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
   const startGeneration = useCallback(
     async (draft: ProjectDraft) => {
       setCancelledDraft(null)
-      const controller = new AbortController()
-      generationAbortControllerRef.current = controller
       generationProcessStore.begin(draft)
-      pendingGenerationStore.save(draft)
+      let pollingController: AbortController | null = null
+      let createdProjectId: string | undefined
 
-      const cancelUnfinishedGeneration = async (
-        projectId: string | undefined,
-        jobId: string | undefined,
-      ) => {
-        if (!projectId || !jobId) {
+      const deleteCancelledProject = async (projectId: string | undefined) => {
+        if (!projectId) {
           return
         }
 
         try {
-          await cancelGeneration(projectId, jobId)
+          await deleteProject(projectId)
         } catch (error) {
-          console.error('Unable to cancel generation', error)
+          console.error('Unable to delete cancelled project', error)
         }
       }
 
       try {
         const project = await createProject({
-          body: { ...draft, prompt: draft.description },
-          signal: controller.signal,
+          body: draft.data
+            ? {
+                data: draft.data,
+                name: draft.name,
+                references: draft.references,
+              }
+            : {
+                model: draft.model,
+                name: draft.name,
+                prompt: draft.description,
+                references:
+                  draft.references && draft.references.length > 0
+                    ? draft.references
+                    : undefined,
+              },
         })
 
         if (!project.id) {
@@ -81,15 +98,19 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           return
         }
 
+        createdProjectId = project.id
         const jobId = project.job_id
 
-        if (controller.signal.aborted) {
-          await cancelUnfinishedGeneration(project.id, jobId)
+        // Не прерываем запрос создания проекта по AbortSignal: сервер мог уже
+        // создать проект, но клиент ещё не получил его id. В этом случае
+        // отменить fetch означало бы потерять возможность удалить проект.
+        if (generationProcessStore.isCancelling) {
+          await deleteCancelledProject(project.id)
           return
         }
 
         if (!jobId) {
-          pendingGenerationStore.take()
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -97,17 +118,19 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         }
 
         generationProcessStore.trackJob(project.id, jobId)
+        pollingController = new AbortController()
+        generationAbortControllerRef.current = pollingController
 
         const generatedProject = await pollGenerationStatus(
           queryClient,
           project.id,
           jobId,
           undefined,
-          controller.signal,
+          pollingController.signal,
         )
 
         if (generatedProject.status === 'error') {
-          pendingGenerationStore.take()
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -117,7 +140,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         const generatedProjectUrl = generatedProject.url
 
         if (!generatedProjectUrl) {
-          pendingGenerationStore.take()
+          await deleteCancelledProject(createdProjectId)
           toast.error(
             t('The generated project is unavailable. Please try again.'),
           )
@@ -132,36 +155,29 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           queryKey: projectSvgQueryKey(project.id, generatedProjectUrl),
           queryFn: () => getProjectSvg(generatedProjectUrl),
         })
-        pendingGenerationStore.take()
         navigate(`/projects/${project.id}`, { viewTransition: true })
       } catch (error) {
-        if (
-          controller.signal.aborted ||
-          error instanceof GenerationPollingCancelledError
-        ) {
-          await cancelUnfinishedGeneration(
-            generationProcessStore.projectId ?? undefined,
-            generationProcessStore.jobId ?? undefined,
+        if (error instanceof GenerationPollingCancelledError) {
+          await deleteCancelledProject(
+            createdProjectId ?? generationProcessStore.projectId ?? undefined,
           )
           return
         }
 
-        if (!(error instanceof ApiError && error.status === 401)) {
-          pendingGenerationStore.take()
-        }
-
+        await deleteCancelledProject(
+          createdProjectId ?? generationProcessStore.projectId ?? undefined,
+        )
         toast.error(
           error instanceof GenerationPollingTimeoutError
             ? t('Generation is taking too long. Please try again.')
             : getApiErrorMessage(error),
         )
       } finally {
-        if (controller.signal.aborted) {
-          pendingGenerationStore.take()
+        if (generationProcessStore.isCancelling) {
           setCancelledDraft(draft)
         }
 
-        if (generationAbortControllerRef.current === controller) {
+        if (generationAbortControllerRef.current === pollingController) {
           generationAbortControllerRef.current = null
         }
         generationProcessStore.reset()
@@ -174,13 +190,23 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
     setCancelledDraft(null)
 
     if (!isAuthorized) {
-      pendingGenerationStore.save(draft)
-      navigate('/auth', { viewTransition: true })
+      pendingGenerationStore.save(draft.description)
+      navigate('/auth', { state: { from: '/' }, viewTransition: true })
 
       return
     }
 
-    void startGeneration(draft)
+    pendingGenerationStore.clear()
+    void startGeneration({ ...draft, references: projectReferencesStore.ids })
+  }
+
+  function handleUpload(data: string) {
+    handleGenerate({
+      data,
+      description: '',
+      model: DEFAULT_GENERATION_MODEL,
+      name: t('Untitled project'),
+    })
   }
 
   function handleCancelGeneration() {
@@ -193,19 +219,6 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
       navigate('/auth', { viewTransition: true })
     }
   }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthorized is updated by MobX observer.
-  useEffect(() => {
-    if (!isAuthorized || generationProcessStore.isInProgress) {
-      return
-    }
-
-    const draft = pendingGenerationStore.take()
-
-    if (draft) {
-      void startGeneration(draft)
-    }
-  }, [isAuthorized, startGeneration])
 
   return (
     <div className={styles.page}>
@@ -220,9 +233,12 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
           />
         ) : (
           <EditorEmptyState
-            initialDescription={cancelledDraft?.description}
+            initialDescription={
+              cancelledDraft?.description ?? pendingGenerationStore.prompt ?? ''
+            }
             initialModel={cancelledDraft?.model}
             onGenerate={handleGenerate}
+            onUpload={handleUpload}
             onUnauthorizedModelSelect={
               isAuthorized ? undefined : handleUnauthorizedModelSelect
             }

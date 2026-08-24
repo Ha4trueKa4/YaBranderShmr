@@ -15,7 +15,8 @@ deploy:
     # --- 1. Подготовка ключа и переменных окружения ---
     - echo "$YC_SSH_PRIVATE_KEY" | base64 -d > /tmp/deploy_key && chmod 600 /tmp/deploy_key
     - >
-      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\nYANDEX_OAUTH_CLIENT_ID=%s\nYANDEX_OAUTH_CLIENT_SECRET=%s\nREDIS_PASSWORD=%s\nOPENAI_API_KEY=%s\nGC_ENABLED=%s\nMONIUM_PROJECT=%s\nMONIUM_API_KEY=%s\nADMIN_ID=%s\nADMIN_PASSWORD_HASH=%s\nADMIN_EMAIL=%s' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY" "$YANDEX_OAUTH_CLIENT_ID" "$YANDEX_OAUTH_CLIENT_SECRET" "$REDIS_PASSWORD" "$OPENAI_API_KEY" "$GC_ENABLED" "$MONIUM_PROJECT" "$MONIUM_API_KEY" "$ADMIN_ID" "$ADMIN_PASSWORD_HASH" "$ADMIN_EMAIL"
+      SECDIST_CONFIG_JSON=$(printf '{"redis_settings":{"ya_brander_jobs":{"password":"%s","sentinels":[{"host":"service-redis-sentinel","port":26379}],"shards":[{"name":"master0"}]}}}' "$REDIS_PASSWORD");
+      printf 'YANDEX_AI_API_KEY=%s\nJWT_SECRET_KEY=%s\nS3_ACCESS_KEY_ID=%s\nS3_SECRET_KEY=%s\nYANDEX_OAUTH_CLIENT_ID=%s\nYANDEX_OAUTH_CLIENT_SECRET=%s\nREDIS_PASSWORD=%s\nOPENAI_API_KEY=%s\nGC_ENABLED=%s\nMONIUM_PROJECT=%s\nMONIUM_API_KEY=%s\nADMIN_ID=%s\nADMIN_PASSWORD_HASH=%s\nADMIN_EMAIL=%s\nSECDIST_CONFIG=%s\n' "$YANDEX_AI_API_KEY" "$JWT_SECRET_KEY" "$S3_ACCESS_KEY_ID" "$S3_SECRET_KEY" "$YANDEX_OAUTH_CLIENT_ID" "$YANDEX_OAUTH_CLIENT_SECRET" "$REDIS_PASSWORD" "$OPENAI_API_KEY" "$GC_ENABLED" "$MONIUM_PROJECT" "$MONIUM_API_KEY" "$ADMIN_ID" "$ADMIN_PASSWORD_HASH" "$ADMIN_EMAIL" "$SECDIST_CONFIG_JSON"
       | base64 -w0 > /tmp/env_b64
     - >
       cat /tmp/env_b64 | ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no $YC_SERVER_USER@$YC_SERVER_IP
@@ -113,13 +114,45 @@ deploy:
         docker run --rm --network ya-brander-net curlimages/curl:8.10.1 -sf http://otel-collector:13133 >/dev/null 2>&1 \
           && echo 'otel-collector is ready' \
           || echo 'WARNING: otel-collector not ready after 30s, starting ya-brander anyway'
+        docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
+          echo "WARNING: service-redis не запущен!"
+        # Redis-компонент userver общается по протоколу Sentinel даже с одним
+        # мастером (нужен для discovery топологии) — голого redis-server
+        # недостаточно, рядом должен крутиться настоящий redis-sentinel. Поднимаем
+        # его и ждём готовности ДО старта ya-brander, иначе тот зависнет на старте
+        # в бесконечных попытках подключиться к ещё не существующему sentinel.
+        docker rm -f service-redis-sentinel 2>/dev/null || true
+        # mktemp вместо фиксированного /tmp/sentinel.conf: если docker run -v
+        # выполняется раньше, чем на хосте появился файл, Docker сам создаёт по
+        # этому пути root-owned директорию. На /tmp со sticky bit её потом не
+        # удалить обычным пользователем деплоя даже через rm -rf (Operation not
+        # permitted — sticky bit проверяет владельца, а не флаги rm). Поэтому
+        # просто не переиспользуем один и тот же путь между запусками.
+        SENTINEL_CONF_PATH=\$(mktemp)
+        printf 'port 26379\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel auth-pass master0 %s\nsentinel monitor master0 service-redis 6379 1\nsentinel down-after-milliseconds master0 5000\nsentinel failover-timeout master0 60000\nsentinel parallel-syncs master0 1\n' '$REDIS_PASSWORD' > \$SENTINEL_CONF_PATH
+        # mktemp даёт файлу права 0600 (только владелец-пользователь деплоя), а
+        # redis:7 внутри дропает привилегии на непривилегированного пользователя
+        # redis через штатный docker-entrypoint.sh. Sentinel к тому же сам
+        # переписывает свой конфиг на диск при рантейме (сохраняет состояние
+        # мониторинга) — поэтому нужен доступ и на чтение, и на запись, монтаж
+        # НЕ может быть :ro.
+        chmod 666 \$SENTINEL_CONF_PATH
+        docker run -d --name service-redis-sentinel --restart unless-stopped --network ya-brander-net \
+          -v \$SENTINEL_CONF_PATH:/etc/redis/sentinel.conf \
+          redis:7 redis-server /etc/redis/sentinel.conf --sentinel
+        rm -f \$SENTINEL_CONF_PATH
+        for i in \$(seq 1 30); do
+          docker exec service-redis-sentinel redis-cli -p 26379 ping >/dev/null 2>&1 && break
+          sleep 1
+        done
+        docker exec service-redis-sentinel redis-cli -p 26379 ping >/dev/null 2>&1 \
+          && echo 'service-redis-sentinel is ready' \
+          || echo 'WARNING: service-redis-sentinel not ready after 30s, starting ya-brander anyway'
         docker run -d --name ya-brander --restart unless-stopped --network ya-brander-net -p 8080:8080 --env-file ~/$REMOTE_APP_DIR/backend/.env \
           -e http_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
           -e https_proxy=http://backend:1YaBranderTheBest1@172.20.0.1:7890 \
-          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis \
+          -e no_proxy=localhost,127.0.0.1,service-postgres,service-vector-postgres,service-redis,service-redis-sentinel \
           $REGISTRY/$IMAGE:latest
-        docker ps --filter "name=service-redis" --filter "status=running" -q | grep -q . || \
-          echo "WARNING: service-redis не запущен!"
       "
 
     # --- 6. Проверка работоспособности бэкенда ---
@@ -143,6 +176,7 @@ deploy:
         echo "POST /api/v1/auth/yandex -> HTTP $CODE"
         if [ "$CODE" != "400" ]; then
           echo "ERROR: expected HTTP 400 from /api/v1/auth/yandex (OAuth handler), got $CODE" >&2
+          docker logs --tail 100 ya-brander >&2 || true
           exit 1
         fi
         echo "ya-brander OAuth handler is live"

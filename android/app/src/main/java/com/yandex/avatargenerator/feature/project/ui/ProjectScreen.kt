@@ -17,11 +17,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yandex.avatargenerator.R
 import com.yandex.avatargenerator.feature.project.data.MockChatRepository
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationModel
 import com.yandex.avatargenerator.feature.project.ui.components.ChatInputBar
 import com.yandex.avatargenerator.feature.project.ui.components.ChatTimeline
+import com.yandex.avatargenerator.feature.project.ui.components.ModelPickerSheet
 import com.yandex.avatargenerator.feature.project.ui.components.ProjectSkeleton
 import com.yandex.avatargenerator.feature.project.ui.components.ProjectTopBar
 import com.yandex.avatargenerator.feature.project.ui.components.ProjectVisibilitySheet
+import com.yandex.avatargenerator.feature.project.ui.util.modelTitle
 import com.yandex.avatargenerator.ui.components.BrandErrorState
 import com.yandex.avatargenerator.ui.theme.AppColors
 import com.yandex.avatargenerator.ui.theme.AvatarGeneratorTheme
@@ -32,17 +35,21 @@ import org.koin.core.parameter.parametersOf
  * Экран проекта: диалог с ИИ — шапка, лента сообщений и поле ввода.
  *
  * WebView-редактора сверху здесь пока нет намеренно (отложен). Видимость проекта
- * меняется чипом в шапке, открывающим шторку выбора.
+ * меняется чипом в шапке, модель генерации — чипом над полем ввода; оба
+ * открывают свою шторку выбора.
  *
  * `projectId` известен только при открытии экрана — передаём его параметром
  * ([parametersOf]), как в `ProfileScreen`; граф — в `feature/project/di/ProjectModule.kt`.
  *
  * @param onBackClick возврат на предыдущий экран.
+ * @param onDownloadClick тап по картинке в ответе ИИ — переход на витрину
+ *  проекта, откуда его скачивают в PNG/SVG: своих кнопок выгрузки у чата нет.
  */
 @Composable
 internal fun ProjectScreen(
     projectId: String,
     onBackClick: () -> Unit,
+    onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProjectViewModel = koinViewModel { parametersOf(projectId) },
 ) {
@@ -51,12 +58,17 @@ internal fun ProjectScreen(
     ProjectContent(
         uiState = uiState,
         onBackClick = onBackClick,
+        onDownloadClick = onDownloadClick,
         onRetry = viewModel::retry,
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::send,
         onPreviewNeeded = viewModel::onPreviewNeeded,
         onRetryGeneration = viewModel::retryGeneration,
         onVisibilityChange = viewModel::setVisibility,
+        onModelPickerOpen = viewModel::openModelPicker,
+        onModelPickerDismiss = viewModel::dismissModelPicker,
+        onModelSelect = viewModel::selectModel,
+        onModelsRetry = viewModel::retryModels,
         modifier = modifier,
     )
 }
@@ -74,12 +86,17 @@ internal fun ProjectScreen(
 private fun ProjectContent(
     uiState: ProjectUiState,
     onBackClick: () -> Unit,
+    onDownloadClick: () -> Unit,
     onRetry: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onPreviewNeeded: (String) -> Unit,
     onRetryGeneration: (String) -> Unit,
     onVisibilityChange: (Boolean) -> Unit,
+    onModelPickerOpen: () -> Unit,
+    onModelPickerDismiss: () -> Unit,
+    onModelSelect: (String) -> Unit,
+    onModelsRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Чип видимости есть только в состоянии Content, так что и шторка открывается
@@ -116,6 +133,17 @@ private fun ProjectContent(
             )
         }
 
+        // Видимость этой шторки, в отличие от соседней, живёт в состоянии VM:
+        // так её не придётся распутывать при переезде экрана на MVI.
+        if (content != null && content.modelPicker.isSheetVisible) {
+            ModelPickerSheet(
+                state = content.modelPicker,
+                onSelect = onModelSelect,
+                onRetry = onModelsRetry,
+                onDismiss = onModelPickerDismiss,
+            )
+        }
+
         when (uiState) {
             ProjectUiState.Loading -> ProjectSkeleton(
                 modifier = Modifier
@@ -136,6 +164,7 @@ private fun ProjectContent(
                     messages = uiState.messages,
                     onPreviewNeeded = onPreviewNeeded,
                     onRetry = onRetryGeneration,
+                    onPreviewClick = onDownloadClick,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -144,6 +173,8 @@ private fun ProjectContent(
                     draft = uiState.draft,
                     onDraftChange = onDraftChange,
                     onSendClick = onSendClick,
+                    modelTitle = modelTitle(uiState.modelPicker.selectedModelId),
+                    onModelClick = onModelPickerOpen,
                     isSending = uiState.isSending,
                 )
             }
@@ -179,12 +210,17 @@ private fun ProjectScreenContentPreview() {
                 draft = "",
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
         )
     }
 }
@@ -201,12 +237,17 @@ private fun ProjectScreenEmptyChatPreview() {
                 draft = "Coral logo for an AI startup",
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
         )
     }
 }
@@ -218,12 +259,17 @@ private fun ProjectScreenLoadingPreview() {
         ProjectContent(
             uiState = ProjectUiState.Loading,
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
         )
     }
 }
@@ -241,12 +287,17 @@ private fun ProjectScreenGeneratingPreview() {
                 isSending = true,
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
         )
     }
 }
@@ -263,12 +314,17 @@ private fun ProjectScreenFailedGenerationPreview() {
                 draft = "",
             ),
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
         )
     }
 }
@@ -280,12 +336,50 @@ private fun ProjectScreenErrorPreview() {
         ProjectContent(
             uiState = ProjectUiState.Error,
             onBackClick = {},
+            onDownloadClick = {},
             onRetry = {},
             onDraftChange = {},
             onSendClick = {},
             onPreviewNeeded = {},
             onRetryGeneration = {},
             onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ProjectScreenModelPickerPreview() {
+    AvatarGeneratorTheme {
+        ProjectContent(
+            uiState = ProjectUiState.Content(
+                title = MockChatRepository.DEFAULT_TITLE,
+                isPublic = false,
+                messages = MockChatRepository.defaultMessages(),
+                modelPicker = ModelPickerState(
+                    models = listOf(
+                        GenerationModel(GenerationModel.DefaultId, owner = "DeepSeek"),
+                        GenerationModel("gpt-5.6-luna", owner = "OpenAI"),
+                    ),
+                    isSheetVisible = true,
+                ),
+            ),
+            onBackClick = {},
+            onDownloadClick = {},
+            onRetry = {},
+            onDraftChange = {},
+            onSendClick = {},
+            onPreviewNeeded = {},
+            onRetryGeneration = {},
+            onVisibilityChange = {},
+            onModelPickerOpen = {},
+            onModelPickerDismiss = {},
+            onModelSelect = {},
+            onModelsRetry = {},
         )
     }
 }

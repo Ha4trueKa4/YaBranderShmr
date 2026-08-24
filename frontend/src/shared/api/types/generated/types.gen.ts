@@ -305,12 +305,12 @@ export type PostAuthYandexData = {
 
 export type PostAuthYandexErrors = {
   /**
-   * Не передано ни code, ни access_token, либо Yandex-приложение не запросило скоуп login:email и профиль пришёл без email.
+   * Не передано ни code, ни access_token; Yandex-приложение не запросило скоуп login:email и профиль пришёл без email; либо сам code/access_token невалиден, просрочен или (для access_token) не проходит проверку подписи JWT-профиля.
    *
    */
   400: ValidationError
   /**
-   * Email из профиля Yandex уже принадлежит существующему аккаунту без привязанного provider (например, зарегистрированному по паролю). Автоматическая привязка намеренно не выполняется — иначе аккаунт можно угнать, заранее зарегистрировав чужой email своим паролем. Пользователю нужно войти по паролю и привязать Yandex ID явно (отдельный флоу, пока не реализован).
+   * Email из профиля Yandex уже принадлежит существующему аккаунту без привязанного provider (например, зарегистрированному по паролю). Автоматическая привязка намеренно не выполняется — иначе аккаунт можно угнать, заранее зарегистрировав чужой email своим паролем. Пользователю нужно войти по паролю и привязать Yandex ID явно через POST /auth/yandex/link.
    *
    */
   409: ValidationError
@@ -319,7 +319,7 @@ export type PostAuthYandexErrors = {
    */
   500: unknown
   /**
-   * Yandex API недоступен, code невалиден/просрочен, access_token невалиден/просрочен/подпись JWT не сходится, либо не удалось получить профиль.
+   * Yandex API недоступен (сетевой сбой, 5xx) — в отличие от 400, здесь сам code/access_token мог быть валиден, просто Яндекс не ответил.
    *
    */
   502: ValidationError
@@ -337,6 +337,56 @@ export type PostAuthYandexResponses = {
 
 export type PostAuthYandexResponse =
   PostAuthYandexResponses[keyof PostAuthYandexResponses]
+
+export type PostAuthYandexLinkData = {
+  body: YandexAuthRequest
+  path?: never
+  query?: never
+  url: '/auth/yandex/link'
+}
+
+export type PostAuthYandexLinkErrors = {
+  /**
+   * Не передано ни code, ни access_token, либо сам code/access_token невалиден, просрочен или (для access_token) не проходит проверку подписи JWT-профиля.
+   *
+   */
+  400: ValidationError
+  /**
+   * Отсутствует или некорректен JWT
+   */
+  401: unknown
+  /**
+   * Пользователь не найден
+   */
+  404: Error
+  /**
+   * Конфликт привязки: либо у текущего пользователя уже привязан другой Yandex ID, либо этот Yandex-аккаунт уже привязан к другому пользователю.
+   *
+   */
+  409: ValidationError
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: unknown
+  /**
+   * Yandex API недоступен (сетевой сбой, 5xx) — в отличие от 400, здесь сам code/access_token мог быть валиден, просто Яндекс не ответил.
+   *
+   */
+  502: ValidationError
+}
+
+export type PostAuthYandexLinkError =
+  PostAuthYandexLinkErrors[keyof PostAuthYandexLinkErrors]
+
+export type PostAuthYandexLinkResponses = {
+  /**
+   * Yandex ID привязан (или уже был привязан к этому же аккаунту)
+   */
+  200: MessageResponse
+}
+
+export type PostAuthYandexLinkResponse =
+  PostAuthYandexLinkResponses[keyof PostAuthYandexLinkResponses]
 
 export type GetAuthMethodData = {
   body?: never

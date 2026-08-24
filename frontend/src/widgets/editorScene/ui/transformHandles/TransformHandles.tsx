@@ -29,7 +29,9 @@ import {
 import styles from './TransformHandles.module.css'
 
 const CORNER_HANDLE_SIZE = 6
+const MOBILE_CORNER_HANDLE_SIZE = 8
 const ROTATION_HANDLE_SIZE = 13
+const MOBILE_ROTATION_HANDLE_SIZE = 17
 const SIDE_HIT_AREA_SIZE = 16
 
 type PointerPosition = { x: number; y: number }
@@ -61,6 +63,7 @@ interface TransformHandlesProps {
   canvasX: number
   canvasY: number
   getEditableElement: (nodeId: string) => SVGGElement | undefined
+  isMobileLayout: boolean
   onDocumentChangeEnd: () => void
   onDocumentChangeStart: () => void
   onShapeTransformChange: (
@@ -251,6 +254,7 @@ export const TransformHandles = observer(function TransformHandles({
   canvasX,
   canvasY,
   getEditableElement,
+  isMobileLayout,
   onDocumentChangeEnd,
   onDocumentChangeStart,
   onShapeTransformChange,
@@ -547,8 +551,10 @@ export const TransformHandles = observer(function TransformHandles({
     canvasX,
     canvasY,
   )
-  const cornerHandleSize = CORNER_HANDLE_SIZE / zoom
-  const rotationHandleSize = ROTATION_HANDLE_SIZE / zoom
+  const cornerHandleSize =
+    (isMobileLayout ? MOBILE_CORNER_HANDLE_SIZE : CORNER_HANDLE_SIZE) / zoom
+  const rotationHandleSize =
+    (isMobileLayout ? MOBILE_ROTATION_HANDLE_SIZE : ROTATION_HANDLE_SIZE) / zoom
   const sideHitAreaSize = SIDE_HIT_AREA_SIZE / zoom
   const northWest = getHandlePosition(
     outline?.[0] ?? getCornerCenter(handleBounds, 'northWest'),

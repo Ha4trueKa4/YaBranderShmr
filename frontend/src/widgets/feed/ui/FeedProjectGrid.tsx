@@ -1,4 +1,9 @@
-import { type FeedProject, FeedProjectCard } from '@entities/project'
+import {
+  type FeedProject,
+  FeedProjectCard,
+  projectReferencesStore,
+} from '@entities/project'
+import { observer } from 'mobx-react-lite'
 
 import styles from './Feed.module.css'
 
@@ -12,7 +17,10 @@ interface FeedProjectGridProps {
   projects: FeedProject[]
 }
 
-export function FeedProjectGrid({ filters, projects }: FeedProjectGridProps) {
+export const FeedProjectGrid = observer(function FeedProjectGrid({
+  filters,
+  projects,
+}: FeedProjectGridProps) {
   const { searchQuery } = filters
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const visibleProjects = projects.filter((project) => {
@@ -25,8 +33,19 @@ export function FeedProjectGrid({ filters, projects }: FeedProjectGridProps) {
   return (
     <div className={styles.grid}>
       {visibleProjects.map((project) => (
-        <FeedProjectCard key={project.id} project={project} />
+        <FeedProjectCard
+          canAddReference={projectReferencesStore.canAddReference}
+          isReferenceSelected={projectReferencesStore.has(project.id)}
+          key={project.id}
+          onReferenceToggle={(referenceProject) =>
+            projectReferencesStore.toggle({
+              id: referenceProject.id,
+              name: referenceProject.name,
+            })
+          }
+          project={project}
+        />
       ))}
     </div>
   )
-}
+})

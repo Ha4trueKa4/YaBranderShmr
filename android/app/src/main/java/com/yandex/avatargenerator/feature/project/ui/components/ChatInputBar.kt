@@ -58,6 +58,8 @@ private const val DisabledAlpha = 0.4f
  * *внутри* — отступ поверх `background`, а не в переданном `modifier`, иначе
  * заливка до края экрана не дошла бы.
  *
+ * @param modelTitle имя выбранной модели генерации — подпись чипа над полем.
+ * @param onModelClick тап по чипу: открыть шторку выбора модели.
  * @param isSending идёт генерация по прошлому промпту — отправка заблокирована,
  *  на кнопке вместо стрелки крутится индикатор. Печатать при этом можно.
  */
@@ -66,6 +68,8 @@ internal fun ChatInputBar(
     draft: String,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    modelTitle: String,
+    onModelClick: () -> Unit,
     modifier: Modifier = Modifier,
     isSending: Boolean = false,
 ) {
@@ -75,23 +79,29 @@ internal fun ChatInputBar(
             .background(AppColors.Surface),
     ) {
         HorizontalDivider(thickness = 1.dp, color = AppColors.Border)
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(AppSpacing.m),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.s),
         ) {
-            ChatInputDraftField(
-                draft = draft,
-                onDraftChange = onDraftChange,
-                modifier = Modifier.weight(1f),
-            )
-            ChatInputSendButton(
-                enabled = draft.isNotBlank() && !isSending,
-                isSending = isSending,
-                onClick = onSendClick,
-            )
+            ModelChip(title = modelTitle, onClick = onModelClick)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.s),
+            ) {
+                ChatInputDraftField(
+                    draft = draft,
+                    onDraftChange = onDraftChange,
+                    modifier = Modifier.weight(1f),
+                )
+                ChatInputSendButton(
+                    enabled = draft.isNotBlank() && !isSending,
+                    isSending = isSending,
+                    onClick = onSendClick,
+                )
+            }
         }
 
         Spacer(
@@ -170,7 +180,13 @@ private fun ChatInputSendButton(
 @Composable
 private fun ChatInputBarEmptyPreview() {
     AvatarGeneratorTheme {
-        ChatInputBar(draft = "", onDraftChange = {}, onSendClick = {})
+        ChatInputBar(
+            draft = "",
+            onDraftChange = {},
+            onSendClick = {},
+            modelTitle = "DeepSeek V4 Flash",
+            onModelClick = {},
+        )
     }
 }
 
@@ -182,6 +198,8 @@ private fun ChatInputBarFilledPreview() {
             draft = "Make the mark rounder and try a cyan accent",
             onDraftChange = {},
             onSendClick = {},
+            modelTitle = "DeepSeek V4 Flash",
+            onModelClick = {},
         )
     }
 }
@@ -194,7 +212,24 @@ private fun ChatInputBarSendingPreview() {
             draft = "",
             onDraftChange = {},
             onSendClick = {},
+            modelTitle = "DeepSeek V4 Flash",
+            onModelClick = {},
             isSending = true,
+        )
+    }
+}
+
+/** Незнакомая модель: имя выводится из `id` и бывает длиннее чипа. */
+@Preview(showBackground = true, backgroundColor = 0xFF222A3A)
+@Composable
+private fun ChatInputBarLongModelPreview() {
+    AvatarGeneratorTheme {
+        ChatInputBar(
+            draft = "",
+            onDraftChange = {},
+            onSendClick = {},
+            modelTitle = "Qwen3 235B A22B FP8 Instruct Preview",
+            onModelClick = {},
         )
     }
 }

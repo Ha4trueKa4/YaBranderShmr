@@ -98,6 +98,7 @@ final class ProjectsViewModel {
                 )
             }
         } catch {
+            if error.isTaskCancellation { return }
             let nsError = error as NSError
             print("[ProjectsViewModel] Failed to load projects: \(error)")
             print("[ProjectsViewModel] NSError domain=\(nsError.domain), code=\(nsError.code), description=\(nsError.localizedDescription)")

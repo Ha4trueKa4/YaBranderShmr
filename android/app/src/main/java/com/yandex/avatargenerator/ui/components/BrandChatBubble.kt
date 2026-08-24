@@ -1,6 +1,7 @@
 package com.yandex.avatargenerator.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -56,6 +57,11 @@ private const val MaxImageHeightFraction = 0.5f
  *  бы одну и ту же картинку заново на каждом обновлении ленты.
  * @param textColor цвет текста поверх заливки. По умолчанию — контрастный к ней;
  *  переопределяют, чтобы подкрасить сообщение (например, ошибку генерации).
+ * @param onImageClick тап по картинке в пузыре; `null` — картинка некликабельна.
+ *  Вешается на саму картинку, а не на весь пузырь: подсветка нажатия тогда
+ *  повторяет её скругление, а текст и подпись времени остаются неинтерактивными.
+ * @param imageContentDescription описание картинки для TalkBack. Нужно, когда
+ *  задан [onImageClick] — иначе действие останется без названия.
  * @param action слот под текстом: место для действия по сообщению («Повторить»).
  *  Живёт внутри пузыря, чтобы кнопка была явно привязана к нему, а не висела
  *  отдельной строкой в ленте.
@@ -67,6 +73,8 @@ fun BrandChatBubble(
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
     imageCacheKey: String? = null,
+    imageContentDescription: String? = null,
+    onImageClick: (() -> Unit)? = null,
     timeLabel: String? = null,
     textColor: Color? = null,
     action: (@Composable ColumnScope.() -> Unit)? = null
@@ -102,13 +110,16 @@ fun BrandChatBubble(
                     .memoryCacheKey(imageCacheKey)
                     .diskCacheKey(imageCacheKey)
                     .build(),
-                contentDescription = null,
+                contentDescription = imageContentDescription,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = MinImageHeight, max = maxImageHeight)
                     .clip(RoundedCornerShape(AppShape.s))
                     .background(AppColors.SurfaceVariant)
+                    .then(
+                        if (onImageClick != null) Modifier.clickable(onClick = onImageClick) else Modifier,
+                    )
             )
         }
         if (action != null) {

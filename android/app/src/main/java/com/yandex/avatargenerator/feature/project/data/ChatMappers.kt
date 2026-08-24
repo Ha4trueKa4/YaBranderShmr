@@ -1,5 +1,6 @@
 package com.yandex.avatargenerator.feature.project.data
 
+import com.yandex.avatargenerator.core.data.toInstantOrNull
 import com.yandex.avatargenerator.feature.project.data.dto.ChatMessageDto
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome

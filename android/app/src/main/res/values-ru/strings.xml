@@ -121,15 +121,18 @@
 
     <string name="chats_error_title">Не удалось загрузить чаты</string>
     <string name="chats_error_retry">Повторить</string>
+    <string name="chats_refresh_error">Не удалось обновить</string>
 
     <!-- Создание проекта -->
     <string name="create_project_title">Новый проект</string>
     <string name="create_project_back_description">Назад</string>
-    <string name="create_project_name_label">Название проекта</string>
+    <string name="create_project_prompt_label">Промпт для генерации</string>
+    <string name="create_project_prompt_placeholder">Минималистичный лис-маскот для финтех-стартапа, плоский вектор, глубокий синий и мятный…</string>
+    <string name="create_project_name_label">Название проекта (необязательно)</string>
     <string name="create_project_name_placeholder">Мой бренд</string>
-    <string name="create_project_description_label">Описание бренда и бриф</string>
+    <string name="create_project_description_label">Описание бренда и бриф (необязательно)</string>
     <string name="create_project_description_placeholder">Опишите ценности бренда, целевую аудиторию, предпочтительную цветовую гамму, визуальное настроение…</string>
-    <string name="create_project_hint">ИИ сгенерирует элементы фирменного стиля, палитры и типографику.</string>
+    <string name="create_project_hint">Опишите формы, цвета и настроение — чем конкретнее промпт, тем ближе результат.</string>
     <string name="create_project_submit">Сгенерировать брендбук</string>
     <string name="create_project_submitting">Генерация фирменного стиля…</string>
     <string name="create_project_error">Не удалось сгенерировать фирменный стиль. Попробуйте ещё раз.</string>
@@ -142,6 +145,7 @@
     <!-- Экран проекта (чат с ИИ) -->
     <string name="project_title_placeholder">Проект</string>
     <string name="project_back_description">Назад</string>
+    <string name="project_download_description">Скачать проект</string>
     <string name="project_history_description">История версий</string>
     <string name="project_share_description">Поделиться проектом</string>
 
@@ -157,6 +161,18 @@
     <string name="project_visibility_public_subtitle">Любой по ссылке сможет просматривать</string>
     <string name="project_input_placeholder">Опишите, что изменить…</string>
     <string name="project_send_description">Отправить сообщение</string>
+
+    <!-- Выбор модели генерации: чип над полем ввода и шторка со справочником -->
+    <string name="project_model_open_description">Сменить модель генерации</string>
+    <string name="project_model_title">Модель генерации</string>
+    <string name="project_model_subtitle">Выберите движок, который нарисует следующую версию.</string>
+    <string name="project_model_error">Не удалось загрузить список моделей</string>
+    <string name="project_model_retry">Повторить</string>
+    <!-- Имена моделей из allow-list бэкенда: в ответе /models их нет, только id -->
+    <string name="project_model_deepseek_v4_flash">DeepSeek V4 Flash</string>
+    <string name="project_model_gpt_oss_120b">GPT OSS 120B</string>
+    <string name="project_model_qwen3_235b">Qwen3 235B</string>
+    <string name="project_model_gpt_5_6_luna">GPT-5.6 Luna</string>
 
     <!-- Своего текста у ответа ИИ нет: в истории чата лежит только ссылка на версию -->
     <string name="project_assistant_message">Готово — вот новая версия:</string>

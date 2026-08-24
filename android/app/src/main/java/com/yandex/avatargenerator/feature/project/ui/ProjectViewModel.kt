@@ -3,9 +3,11 @@ package com.yandex.avatargenerator.feature.project.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yandex.avatargenerator.feature.project.domain.ChatRepository
+import com.yandex.avatargenerator.feature.project.domain.GenerationModelRepository
 import com.yandex.avatargenerator.feature.project.domain.ProjectRepository
 import com.yandex.avatargenerator.feature.project.domain.VersionsRepository
 import com.yandex.avatargenerator.feature.project.domain.model.ChatMessage
+import com.yandex.avatargenerator.feature.project.domain.model.GenerationModel
 import com.yandex.avatargenerator.feature.project.domain.model.GenerationOutcome
 import com.yandex.avatargenerator.feature.project.domain.model.ProjectChat
 import kotlinx.coroutines.delay
@@ -30,6 +32,10 @@ import java.util.UUID
  * запрашивается по одной (`GET /projects/{id}/versions/{versionId}`) — и только
  * для тех пузырей, которые дошли до экрана (см. [onPreviewNeeded]).
  *
+ * Модель генерации выбирается чипом над полем ввода: сам выбор читается из
+ * [GenerationModelRepository] при открытии экрана, а справочник тянется лениво —
+ * при первом открытии шторки (см. [openModelPicker]).
+ *
  * **Ожидание генерации живёт в `viewModelScope`.** Ушёл с экрана — опрос умер;
  * бэкенд доводит генерацию до конца сам и кладёт результат в историю, так что
  * при возврате экран перечитает ленту и увидит его. Ни `WorkManager`, ни
@@ -39,6 +45,7 @@ internal class ProjectViewModel(
     private val chatRepository: ChatRepository,
     private val versionsRepository: VersionsRepository,
     private val projectRepository: ProjectRepository,
+    private val generationModelRepository: GenerationModelRepository,
     private val projectId: String,
 ) : ViewModel() {
 
@@ -132,6 +139,9 @@ internal class ProjectViewModel(
      * экран не должен выглядеть так, будто нажатие пропало.
      */
     private fun generate(text: String) {
+        // Модель фиксируем в момент отправки: пока идёт генерация, выбрать
+        // можно уже другую, и промпт не должен уехать не на той.
+        val model = _uiState.value.contentOrNull()?.modelPicker?.selectedModelId
         val prompt = ChatMessage.Outgoing(
             id = UUID.randomUUID().toString(),
             text = text,
@@ -142,7 +152,7 @@ internal class ProjectViewModel(
         }
 
         viewModelScope.launch {
-            chatRepository.startGeneration(projectId, text).fold(
+            chatRepository.startGeneration(projectId, text, model).fold(
                 onSuccess = { jobId -> awaitGeneration(jobId) },
                 // Единственный случай, когда промпт можно убрать из ленты и
                 // вернуть в поле: до сервера он не дошёл, в историю не попал.
@@ -300,6 +310,82 @@ internal class ProjectViewModel(
     }
 
     /**
+     * Открывает шторку выбора модели и при первом открытии тянет справочник.
+     *
+     * Лениво, а не при загрузке экрана: `/models` — статический справочник,
+     * который пользователь может и не открыть, а имя выбранной модели чип рисует
+     * из сохранённого `id` без сети.
+     */
+    fun openModelPicker() {
+        val picker = _uiState.value.contentOrNull()?.modelPicker ?: return
+
+        _uiState.updateModelPicker { it.copy(isSheetVisible = true) }
+        if (picker.models.isEmpty() && !picker.isLoading) loadModels()
+    }
+
+    fun dismissModelPicker() {
+        _uiState.updateModelPicker { it.copy(isSheetVisible = false) }
+    }
+
+    /**
+     * Запоминает выбор и закрывает шторку.
+     *
+     * Состояние правим сразу, не дожидаясь записи в настройки: промпт всё равно
+     * уходит с тем `id`, что лежит в состоянии, а запись — фоновая деталь.
+     */
+    fun selectModel(id: String) {
+        if (_uiState.value.contentOrNull() == null) return
+
+        _uiState.updateModelPicker { it.copy(selectedModelId = id, isSheetVisible = false) }
+        viewModelScope.launch { generationModelRepository.selectModel(id) }
+    }
+
+    /** Повтор после неудачной загрузки справочника. */
+    fun retryModels() {
+        val picker = _uiState.value.contentOrNull()?.modelPicker ?: return
+        if (picker.isLoading) return
+
+        loadModels()
+    }
+
+    /**
+     * Тянет справочник моделей.
+     *
+     * Пустой список от ошибки не отличаем: выбирать всё равно не из чего, а
+     * шторке с пустым списком нечего показать, кроме той же ошибки с ретраем.
+     * Отправку промптов ни то, ни другое не блокирует — в теле уедет сохранённый
+     * `id`, и разбираться с ним будет сервер.
+     *
+     * Сохранённой модели может не оказаться в списке (бэкенд поменял allow-list,
+     * либо выбор приехал с другой версии приложения) — тогда откатываемся на
+     * дефолт, а нет и его — на первую доступную, и перезаписываем настройку,
+     * чтобы расхождение не всплыло ещё раз.
+     */
+    private fun loadModels() {
+        _uiState.updateModelPicker { it.copy(isLoading = true, hasError = false) }
+        viewModelScope.launch {
+            val models = generationModelRepository.getAvailableModels().getOrNull().orEmpty()
+            if (models.isEmpty()) {
+                _uiState.updateModelPicker { it.copy(isLoading = false, hasError = true) }
+                return@launch
+            }
+
+            val selected = _uiState.value.contentOrNull()?.modelPicker?.selectedModelId
+                ?: GenerationModel.DefaultId
+            val resolved = models.resolveSelected(selected)
+            _uiState.updateModelPicker {
+                it.copy(
+                    models = models,
+                    selectedModelId = resolved,
+                    isLoading = false,
+                    hasError = false,
+                )
+            }
+            if (resolved != selected) generationModelRepository.selectModel(resolved)
+        }
+    }
+
+    /**
      * Пузырь версии [versionId] появился на экране — при первом показе идём за
      * ссылкой на превью.
      *
@@ -363,6 +449,8 @@ internal class ProjectViewModel(
     private fun load() {
         _uiState.value = ProjectUiState.Loading
         viewModelScope.launch {
+            // До сборки Content, иначе чип моргнул бы дефолтом при открытии.
+            val selectedModelId = generationModelRepository.getSelectedModelId()
             _uiState.value = chatRepository.getChat(projectId).fold(
                 onSuccess = { chat ->
                     rememberPreviews(chat.messages)
@@ -370,6 +458,7 @@ internal class ProjectViewModel(
                         title = chat.title,
                         isPublic = chat.isPublic,
                         messages = chat.messages.withKnownPreviews(),
+                        modelPicker = ModelPickerState(selectedModelId = selectedModelId),
                     )
                 },
                 onFailure = { ProjectUiState.Error },
@@ -403,7 +492,26 @@ private fun List<ChatMessage>.promptAbove(messageId: String): String? {
     return take(index).filterIsInstance<ChatMessage.Outgoing>().lastOrNull()?.text
 }
 
+/** Содержимое экрана или `null`, если он всё ещё грузится либо упал. */
+private fun ProjectUiState.contentOrNull(): ProjectUiState.Content? =
+    this as? ProjectUiState.Content
+
+/**
+ * Модель, на которой экран остановится: сохранённая, если она в списке, иначе
+ * дефолт бэкенда, иначе первая доступная. Список гарантированно непустой.
+ */
+private fun List<GenerationModel>.resolveSelected(selected: String): String = when {
+    any { it.id == selected } -> selected
+    any { it.id == GenerationModel.DefaultId } -> GenerationModel.DefaultId
+    else -> first().id
+}
+
 /** Правка состояния, только если экран всё ещё показывает содержимое. */
 private inline fun MutableStateFlow<ProjectUiState>.updateContent(
     crossinline block: (ProjectUiState.Content) -> ProjectUiState.Content,
 ) = update { state -> if (state is ProjectUiState.Content) block(state) else state }
+
+/** То же для вложенного состояния пикера модели. */
+private inline fun MutableStateFlow<ProjectUiState>.updateModelPicker(
+    crossinline block: (ModelPickerState) -> ModelPickerState,
+) = updateContent { content -> content.copy(modelPicker = block(content.modelPicker)) }

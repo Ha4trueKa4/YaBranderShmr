@@ -26,6 +26,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 
+private const val CreatedProjectJson = """
+{
+  "id": "p-1",
+  "author_id": "u-1",
+  "name": "Бренд кофейни",
+  "description": "тёмные тона",
+  "is_public": false,
+  "created_at": "2026-08-13T12:00:00Z",
+  "job_id": "job-7"
+}
+"""
+
 private const val ProjectJson = """
 {
   "id": "p-1",
@@ -57,7 +69,7 @@ class ProjectRepositoryImplTest {
         headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
     @Test
-    fun `createProject шлёт POST с name и description и разбирает 201`() = runTest {
+    fun `createProject шлёт POST с промптом и разбирает 202 вместе с job_id`() = runTest {
         var path: String? = null
         var method: HttpMethod? = null
         var body: String? = null
@@ -65,16 +77,22 @@ class ProjectRepositoryImplTest {
             path = request.url.encodedPath
             method = request.method
             body = (request.body as TextContent).text
-            respond(ProjectJson, status = HttpStatusCode.Created, headers = jsonHeaders())
+            respond(CreatedProjectJson, status = HttpStatusCode.Accepted, headers = jsonHeaders())
         }
 
-        val project = repository.createProject("Бренд кофейни", "тёмные тона").getOrThrow()
+        val creation = repository
+            .createProject("Бренд кофейни", "тёмные тона", "логотип кофейни")
+            .getOrThrow()
 
         assertEquals("/api/v1/projects", path)
         assertEquals(HttpMethod.Post, method)
-        assertEquals("""{"name":"Бренд кофейни","description":"тёмные тона"}""", body)
-        assertEquals("p-1", project.id)
-        assertEquals("Бренд кофейни", project.name)
+        assertEquals(
+            """{"name":"Бренд кофейни","description":"тёмные тона","prompt":"логотип кофейни"}""",
+            body,
+        )
+        assertEquals("p-1", creation.project.id)
+        assertEquals("Бренд кофейни", creation.project.name)
+        assertEquals("job-7", creation.jobId)
     }
 
     @Test
@@ -82,20 +100,42 @@ class ProjectRepositoryImplTest {
         var body: String? = null
         val repository = repository { request ->
             body = (request.body as TextContent).text
-            respond(ProjectJson, status = HttpStatusCode.Created, headers = jsonHeaders())
+            respond(CreatedProjectJson, status = HttpStatusCode.Accepted, headers = jsonHeaders())
         }
 
-        repository.createProject("X", "")
+        repository.createProject("X", "", "prompt")
 
         // Бэкенд читает description с дефолтом "", поэтому поле не опциональное.
-        assertEquals("""{"name":"X","description":""}""", body)
+        assertEquals("""{"name":"X","description":"","prompt":"prompt"}""", body)
+    }
+
+    @Test
+    fun `пустой и отсутствующий job_id одинаково означают «ждать нечего»`() = runTest {
+        val blank = repository {
+            respond(
+                """{"id":"p-1","name":"X","job_id":"  "}""",
+                status = HttpStatusCode.Accepted,
+                headers = jsonHeaders(),
+            )
+        }.createProject("X", "", "prompt").getOrThrow()
+        assertNull(blank.jobId)
+
+        val missing = repository {
+            respond(
+                """{"id":"p-1","name":"X"}""",
+                status = HttpStatusCode.Accepted,
+                headers = jsonHeaders(),
+            )
+        }.createProject("X", "", "prompt").getOrThrow()
+        assertNull(missing.jobId)
     }
 
     @Test
     fun `400 на createProject превращается в ClientError с кодом`() = runTest {
         val repository = repository { respondError(HttpStatusCode.BadRequest) }
 
-        val error = repository.createProject("", "").exceptionOrNull()
+        // Пустой промпт бэкенд отвергает — именно этим 400 и приходит.
+        val error = repository.createProject("X", "", "").exceptionOrNull()
 
         assertTrue("получили $error", error is NetworkException.ClientError)
         assertEquals(400, (error as NetworkException.ClientError).code)
@@ -105,7 +145,7 @@ class ProjectRepositoryImplTest {
     fun `401 на createProject превращается в Unauthorized`() = runTest {
         val repository = repository { respondError(HttpStatusCode.Unauthorized) }
 
-        val error = repository.createProject("X", "").exceptionOrNull()
+        val error = repository.createProject("X", "", "prompt").exceptionOrNull()
 
         assertTrue("получили $error", error is NetworkException.Unauthorized)
     }
@@ -113,10 +153,10 @@ class ProjectRepositoryImplTest {
     @Test
     fun `ответ createProject без id — это Serialization`() = runTest {
         val repository = repository {
-            respond("""{"name":"X"}""", status = HttpStatusCode.Created, headers = jsonHeaders())
+            respond("""{"name":"X"}""", status = HttpStatusCode.Accepted, headers = jsonHeaders())
         }
 
-        val error = repository.createProject("X", "").exceptionOrNull()
+        val error = repository.createProject("X", "", "prompt").exceptionOrNull()
 
         assertTrue("получили $error", error is NetworkException.Serialization)
     }
