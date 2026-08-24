@@ -13,12 +13,12 @@ struct SignInView: View {
         @Bindable var viewModel = viewModel
 
         FormScreenLayout {
-            ScreenHeader(title: "Sign in")
+            ScreenHeader(title: String(localized: "Sign in"))
                 .padding(.bottom, 32)
 
             VStack(spacing: 16) {
                 FormTextField(
-                    label: "Email",
+                    label: String(localized: "Email"),
                     placeholder: "hello@brandkit.ai",
                     text: $viewModel.email,
                     textContentType: .emailAddress,
@@ -27,8 +27,8 @@ struct SignInView: View {
                 )
 
                 FormTextField(
-                    label: "Password",
-                    placeholder: "Enter your password",
+                    label: String(localized: "Password"),
+                    placeholder: String(localized: "Enter your password"),
                     text: $viewModel.password,
                     isSecure: true,
                     textContentType: .password,
@@ -44,7 +44,7 @@ struct SignInView: View {
             }
 
             PrimaryButton(
-                title: "Sign in",
+                title: String(localized: "Sign in"),
                 isEnabled: !viewModel.isLoading,
                 isLoading: viewModel.isPasswordLoading,
                 fill: AnyShapeStyle(Color.accentColor),
@@ -63,7 +63,7 @@ struct SignInView: View {
             }
             .padding(.top, 12)
 
-            ScreenFooter(question: "No account?", actionTitle: "Register") {
+            ScreenFooter(question: String(localized: "No account?"), actionTitle: String(localized: "Register")) {
                 viewModel.clearError()
                 onSignUp()
             }

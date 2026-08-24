@@ -62,7 +62,10 @@ final class ProfileConnectionsViewModel {
         } catch {
             guard generation == loadGeneration, !error.isTaskCancellation else { return }
             pendingFollowUserID = nil
-            errorMessage = "Couldn't load \(kind.title.lowercased())."
+            errorMessage = switch kind {
+            case .followers: String(localized: "Couldn't load followers.")
+            case .following: String(localized: "Couldn't load following.")
+            }
         }
     }
 

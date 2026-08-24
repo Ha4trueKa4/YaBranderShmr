@@ -6,8 +6,8 @@ enum ProfileConnectionsKind: Hashable {
 
     var title: String {
         switch self {
-        case .followers: "Followers"
-        case .following: "Following"
+        case .followers: String(localized: "Followers")
+        case .following: String(localized: "connections.following.title", defaultValue: "Following")
         }
     }
 }

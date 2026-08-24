@@ -217,7 +217,7 @@ struct OnboardingView: View {
             .foregroundStyle(.white)
     }
     
-    func makeTextBlock(firstLine: String, secondLine: String, subtitle: String) -> some View {
+    func makeTextBlock(firstLine: LocalizedStringKey, secondLine: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
         return VStack(spacing: 13) {
             VStack(spacing: 0) {
                 Text(firstLine)

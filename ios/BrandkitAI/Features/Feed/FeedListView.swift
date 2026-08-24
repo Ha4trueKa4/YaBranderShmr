@@ -30,9 +30,9 @@ struct FeedListView: View {
             if viewModel.isLoading {
                 skeletonGrid
             } else if let message = viewModel.errorMessage {
-                stateMessage(message, actionTitle: "Retry")
+                stateMessage(message, actionTitle: String(localized: "Retry"))
             } else {
-                stateMessage("No projects yet", actionTitle: "Refresh")
+                stateMessage(String(localized: "No projects yet"), actionTitle: String(localized: "Refresh"))
             }
         } else {
             list

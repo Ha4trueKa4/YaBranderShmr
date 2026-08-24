@@ -21,7 +21,7 @@ struct PrimaryButton: View {
                         .tint(Color(.onAccent))
                 }
 
-                Text(isLoading ? "Please wait..." : title)
+                Text(isLoading ? String(localized: "Please wait...") : title)
                     .font(.headline)
             }
             .foregroundStyle(Color(.onAccent))
@@ -32,7 +32,7 @@ struct PrimaryButton: View {
         .disabled(!isEnabled || isLoading)
         .opacity(isEnabled || isLoading ? 1 : 0.5)
         .sensoryFeedback(.impact(weight: .light), trigger: feedbackTrigger)
-        .accessibilityLabel(isLoading ? "Loading" : title)
+        .accessibilityLabel(isLoading ? String(localized: "Loading") : title)
     }
 }
 

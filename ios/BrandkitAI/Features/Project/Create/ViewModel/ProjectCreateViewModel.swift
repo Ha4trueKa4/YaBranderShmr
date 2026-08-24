@@ -9,8 +9,8 @@ final class ProjectCreateViewModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
-    let title = "New Project"
-    let hint = "Our AI will generate brand assets, palettes, and typography presets."
+    let title = String(localized: "New Project")
+    let hint = String(localized: "Our AI will generate brand assets, palettes, and typography presets.")
 
     private let service: any ProjectServiceProtocol
 
@@ -42,12 +42,12 @@ final class ProjectCreateViewModel {
 
     private func message(for error: Error) -> String {
         if case NetworkError.httpError(let statusCode) = error {
-            return "Server error (\(statusCode))"
+            return String(localized: "Server error (\(statusCode))")
         }
         if case NetworkError.serverValidation(_, _, let field) = error,
            field == "name" {
-            return "Enter a valid project name."
+            return String(localized: "Enter a valid project name.")
         }
-        return "Unable to create the project."
+        return String(localized: "Unable to create the project.")
     }
 }

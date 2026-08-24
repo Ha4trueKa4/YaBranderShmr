@@ -7,7 +7,7 @@ struct ProjectVersionHistoryView: View {
         VStack(spacing: 16) {
             Text("Version History")
         }
-        .customNavigationBar(title: "Version History", onBack: onBack)
+        .customNavigationBar(title: String(localized: "Version History"), onBack: onBack)
     }
 }
 

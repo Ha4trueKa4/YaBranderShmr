@@ -513,9 +513,9 @@ struct ChatView: View {
 
     private var sendButtonAccessibilityLabel: String {
         switch sendButtonAction {
-        case .cancelGeneration: return "Cancel generation"
-        case .sendMessage: return "Send message"
-        case .restoreUnsent: return "Edit unsent message"
+        case .cancelGeneration: return String(localized: "Cancel generation")
+        case .sendMessage: return String(localized: "Send message")
+        case .restoreUnsent: return String(localized: "Edit unsent message")
         }
     }
 
@@ -529,7 +529,7 @@ struct ChatView: View {
     private var inputErrorMessage: String? {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.count > ChatViewModel.maxPromptLength {
-            return "Message is too long (maximum 5000 characters)."
+            return String(localized: "Message is too long (maximum 5000 characters).")
         }
         return viewModel.sendErrorMessage
     }

@@ -88,7 +88,7 @@ struct FormTextField: View {
                 .frame(width: 24, height: 24)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isRevealed ? "Hide password" : "Show password")
+        .accessibilityLabel(isRevealed ? String(localized: "Hide password") : String(localized: "Show password"))
     }
 }
 

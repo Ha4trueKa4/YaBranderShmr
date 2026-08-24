@@ -149,18 +149,18 @@ struct ProfileView: View {
 
     private var stats: some View {
         HStack(spacing: 8) {
-            stat(value: viewModel.projectsCount, title: "Projects")
+            stat(value: viewModel.projectsCount, title: String(localized: "Projects"))
             Text("·").foregroundStyle(.secondary)
             connectionStat(
                 value: viewModel.followersCount,
-                title: "Followers",
+                title: ProfileConnectionsKind.followers.title,
                 kind: .followers,
                 animated: true
             )
             Text("·").foregroundStyle(.secondary)
             connectionStat(
                 value: viewModel.followingCount,
-                title: "Following",
+                title: ProfileConnectionsKind.following.title,
                 kind: .following
             )
         }

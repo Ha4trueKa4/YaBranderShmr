@@ -48,7 +48,7 @@ struct ProfileConnectionsView: View {
             )
         } else if viewModel.users.isEmpty {
             ContentUnavailableView(
-                "No \(kind.title) Yet",
+                emptyTitle,
                 systemImage: "person.2",
                 description: Text(emptyDescription)
             )
@@ -84,12 +84,21 @@ struct ProfileConnectionsView: View {
         }
     }
 
+    private var emptyTitle: String {
+        switch kind {
+        case .followers:
+            String(localized: "No Followers Yet")
+        case .following:
+            String(localized: "No Following Yet")
+        }
+    }
+
     private var emptyDescription: String {
         switch kind {
         case .followers:
-            "Followers will appear here."
+            String(localized: "Followers will appear here.")
         case .following:
-            "Followed accounts will appear here."
+            String(localized: "Followed accounts will appear here.")
         }
     }
 }

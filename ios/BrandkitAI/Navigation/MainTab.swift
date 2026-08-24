@@ -9,9 +9,9 @@ enum MainTab: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .feed: "Feed"
-        case .create: "Create"
-        case .profile: "Profile"
+        case .feed: String(localized: "Feed")
+        case .create: String(localized: "Create")
+        case .profile: String(localized: "Profile")
         }
     }
 

@@ -79,7 +79,7 @@ struct ProjectsView: View {
                 } else if let errorMessage = viewModel.errorMessage {
                     stateMessage(errorMessage)
                 } else {
-                    stateMessage("No projects yet")
+                    stateMessage(String(localized: "No projects yet"))
                 }
             } else {
                 List {
@@ -224,7 +224,7 @@ private struct DeleteSwipeActionIcon: View {
                 .font: UIFont.systemFont(ofSize: 12),
                 .foregroundColor: UIColor.secondaryLabel.resolvedColor(with: traits)
             ]
-            let title = "Delete" as NSString
+            let title = String(localized: "Delete") as NSString
             let titleSize = title.size(withAttributes: attributes)
             title.draw(
                 at: CGPoint(x: (canvasSize.width - titleSize.width) / 2, y: 50),

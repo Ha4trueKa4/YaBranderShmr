@@ -132,7 +132,7 @@ final class ProfileViewModel {
         } catch {
             guard generation == loadGeneration, !error.isTaskCancellation else { return }
             pendingFollowToggle = false
-            errorMessage = "Couldn't load profile."
+            errorMessage = String(localized: "Couldn't load profile.")
         }
     }
 

@@ -129,9 +129,9 @@ final class SessionStore {
                 case YandexAuthError.cancelled:
                     break
                 case YandexAuthError.unavailable:
-                    self.errorMessage = "Yandex ID sign-in is not available right now."
+                    self.errorMessage = String(localized: "Yandex ID sign-in is not available right now.")
                 default:
-                    self.errorMessage = "Yandex authentication failed. Please try again."
+                    self.errorMessage = String(localized: "Yandex authentication failed. Please try again.")
                 }
             }
         }
@@ -262,47 +262,47 @@ final class SessionStore {
             case "EMAIL_EXISTS" where operation == .yandexSignIn:
                 // Автопривязки Yandex ID к парольному аккаунту нет намеренно —
                 // объясняем общей плашкой, поля email на этом пути нет.
-                return ("This email is already registered with a password. Sign in with your password instead.", nil)
+                return (String(localized: "This email is already registered with a password. Sign in with your password instead."), nil)
             case "EMAIL_EXISTS":
-                return ("An account with this email already exists.", .email)
+                return (String(localized: "An account with this email already exists."), .email)
             case "YANDEX_EMAIL_SCOPE_REQUIRED", "INVALID_REQUEST":
-                return ("Yandex authentication failed. Please try again.", nil)
+                return (String(localized: "Yandex authentication failed. Please try again."), nil)
             case "YANDEX_OAUTH_FAILED":
-                return ("Yandex authentication is temporarily unavailable. Try again later.", nil)
+                return (String(localized: "Yandex authentication is temporarily unavailable. Try again later."), nil)
             case "NICKNAME_EXISTS":
-                return ("This name is already in use.", .fullName)
+                return (String(localized: "This name is already in use."), .fullName)
             case "INVALID_EMAIL":
-                return ("Enter a valid email address.", .email)
+                return (String(localized: "Enter a valid email address."), .email)
             case "INVALID_PASSWORD":
-                return ("Choose a stronger password.", .password)
+                return (String(localized: "Choose a stronger password."), .password)
             case "INVALID_NICKNAME":
-                return ("Enter a valid name.", .fullName)
+                return (String(localized: "Enter a valid name."), .fullName)
             default:
-                return ("Please check your details and try again.", resolvedField)
+                return (String(localized: "Please check your details and try again."), resolvedField)
             }
         }
 
         if case NetworkError.httpError(let statusCode) = error {
             switch statusCode {
             case 401:
-                return ("Invalid email or password.", .none)
+                return (String(localized: "Invalid email or password."), .none)
             case 409:
-                return ("Email or name is already in use.", operation == .register ? .email : nil)
+                return (String(localized: "Email or name is already in use."), operation == .register ? .email : nil)
             case 400:
-                return ("Please check your details and try again.", nil)
+                return (String(localized: "Please check your details and try again."), nil)
             case 500...599:
-                return ("The service is temporarily unavailable. Try again later.", nil)
+                return (String(localized: "The service is temporarily unavailable. Try again later."), nil)
             default:
-                return ("Something went wrong. Try again later.", nil)
+                return (String(localized: "Something went wrong. Try again later."), nil)
             }
         }
         if case NetworkError.missingAccessToken = error {
-            return ("Please sign in again.", nil)
+            return (String(localized: "Please sign in again."), nil)
         }
         if case NetworkError.tokenStorageError = error {
-            return ("Unable to save the session. Try again.", nil)
+            return (String(localized: "Unable to save the session. Try again."), nil)
         }
-        return ("Unable to connect. Check your internet connection and try again.", nil)
+        return (String(localized: "Unable to connect. Check your internet connection and try again."), nil)
     }
 
     private func authField(for value: String?, operation: AuthOperation) -> AuthField? {
