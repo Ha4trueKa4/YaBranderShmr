@@ -130,6 +130,11 @@ deploy:
         # просто не переиспользуем один и тот же путь между запусками.
         SENTINEL_CONF_PATH=\$(mktemp)
         printf 'port 26379\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel auth-pass master0 %s\nsentinel monitor master0 service-redis 6379 1\nsentinel down-after-milliseconds master0 5000\nsentinel failover-timeout master0 60000\nsentinel parallel-syncs master0 1\n' '$REDIS_PASSWORD' > \$SENTINEL_CONF_PATH
+        # mktemp даёт файлу права 0600 (только владелец-пользователь деплоя), а
+        # redis:7 внутри дропает привилегии на непривилегированного пользователя
+        # redis через штатный docker-entrypoint.sh — без chmod он не сможет
+        # прочитать примонтированный файл ("Permission denied").
+        chmod 644 \$SENTINEL_CONF_PATH
         docker run -d --name service-redis-sentinel --restart unless-stopped --network ya-brander-net \
           -v \$SENTINEL_CONF_PATH:/etc/redis/sentinel.conf:ro \
           redis:7 redis-server /etc/redis/sentinel.conf --sentinel
