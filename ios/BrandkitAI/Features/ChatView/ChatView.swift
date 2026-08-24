@@ -138,7 +138,6 @@ struct ChatView: View {
                         .frame(maxWidth: .infinity, alignment: .top)
                     }
                     .scrollDismissesKeyboard(.interactively)
-                    .defaultScrollAnchor(.bottom)
                 }
             }
             .task {
@@ -146,6 +145,9 @@ struct ChatView: View {
                 await Task.yield()
                 scrollToBottom(using: proxy, animated: false)
                 didFinishInitialLoad = true
+            }
+            .task {
+                await viewModel.waitForViewRemoval()
             }
             .onAppear {
                 // Если restorePrompt установили, пока вьюха была закрыта

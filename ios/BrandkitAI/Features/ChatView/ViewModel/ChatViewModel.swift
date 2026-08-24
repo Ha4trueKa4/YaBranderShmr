@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Холдер для токена обсёрвера `NotificationCenter`. Вынесен из
@@ -87,6 +88,12 @@ final class ChatViewModel {
     /// (placeholder в истории) или при следующем `generate` (409).
     private var pollAbortRequested = false
     var privacy = ProjectPrivacy.privateProject
+
+    /// Момент, когда job перешла в состояние «cancelling» (сервер принял
+    /// отмену либо опрос впервые увидел этот статус). Через
+    /// `cancelGracePeriod` после этого клиент отвязывается от опроса —
+    /// см. `pollGeneration`.
+    private var cancellingSince: ContinuousClock.Instant?
 
     /// jobID, чей статус сервер уже не отдаёт (404). Не резюмируются при
     /// `reload()` — см. `ChatCache.CachedChat.lostJobIDs`.
@@ -184,6 +191,17 @@ final class ChatViewModel {
         await reload()
     }
 
+    /// Вызывается из `.task` на ChatView и живёт, пока экран находится в
+    /// иерархии. SwiftUI отменяет задачу при закрытии экрана — в этот момент
+    /// отвязываемся от опроса генерации: застрявшая на сервере job не должна
+    /// держать опрос (и ViewModel) живыми в фоне после ухода из чата.
+    func waitForViewRemoval() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(60))
+        }
+        pollAbortRequested = true
+    }
+
     func retryFailedMessage(id: ChatMessage.ID) async {
         guard !isGenerating,
               let message = messages.first(where: { $0.id == id && $0.isFailed })
@@ -248,8 +266,7 @@ final class ChatViewModel {
             isCancelling = false
             await pollAndRefresh(jobID: existingJobID)
             isGenerating = false
-            activeJobID = nil
-            isCancelling = false
+            clearActiveJobState()
             guard !Task.isCancelled else { return }
             await flushPendingMessages()
             return
@@ -285,8 +302,7 @@ final class ChatViewModel {
         isCancelling = false
         await pollAndRefresh(jobID: jobID)
         isGenerating = false
-        activeJobID = nil
-        isCancelling = false
+        clearActiveJobState()
         guard !Task.isCancelled else { return }
         await flushPendingMessages()
     }
@@ -326,8 +342,7 @@ final class ChatViewModel {
                 activeJobID = existingJobID
                 isCancelling = false
                 await pollAndRefresh(jobID: existingJobID)
-                activeJobID = nil
-                isCancelling = false
+                clearActiveJobState()
                 // Блокирующая job только что завершилась — сразу пробуем
                 // отправить следующее сообщение, но не бесконечно.
                 consecutiveConflicts += 1
@@ -356,8 +371,7 @@ final class ChatViewModel {
             activeJobID = jobID
             isCancelling = false
             await pollAndRefresh(jobID: jobID)
-            activeJobID = nil
-            isCancelling = false
+            clearActiveJobState()
             markPendingMessageSent(prompt)
         }
 
@@ -401,11 +415,23 @@ final class ChatViewModel {
         restorePrompt = pending.text
     }
 
+    private func clearActiveJobState() {
+        activeJobID = nil
+        isCancelling = false
+        cancellingSince = nil
+    }
+
     func cancelGeneration() async {
         guard let jobID = activeJobID, !isCancelling else { return }
         isCancelling = true
         do {
-            _ = try await service.cancelGeneration(projectID: projectID, jobID: jobID)
+            let status = try await service.cancelGeneration(projectID: projectID, jobID: jobID)
+            if case .cancelled = status {
+                // Сервер уже завершил job — выходим из опроса коротким путём.
+                pollAbortRequested = true
+            } else {
+                cancellingSince = ContinuousClock.now
+            }
         } catch {
             isCancelling = false
             // Cancel-запрос не дошёл до сервера — не держим пользователя
@@ -458,6 +484,12 @@ final class ChatViewModel {
     /// признак деградации сервера, без этой паузы клиент уходит в hot-loop.
     private static let pollMinRequestInterval: Duration = .seconds(1)
 
+    /// Сколько ждать терминального статуса после того, как job вошла в
+    /// «cancelling». На живом деплое cancel возвращает 200, но статус может
+    /// оставаться «cancelling» неограниченно долго — держать ввод
+    /// заблокированным всё это время нельзя.
+    private static let cancelGracePeriod: Duration = .seconds(30)
+
     /// Опрашивает статус фоновой задачи генерации через long-polling.
     /// При `pending`/`cancelling` переоткрывает соединение не чаще, чем раз
     /// в секунду. При разрыве делает retry с backoff, при оффлайне ждёт
@@ -479,15 +511,42 @@ final class ChatViewModel {
             if ContinuousClock.now >= deadline {
                 return .error(message: "Generation is taking too long. Please refresh the chat in a moment.")
             }
+            if let cancellingSince,
+               ContinuousClock.now >= cancellingSince + Self.cancelGracePeriod {
+                // Job в «cancelling» дольше grace-периода: сервер отмену
+                // принял, но до терминального статуса не довёл (замечено на
+                // живом деплое — статус остаётся «cancelling» бесконечно).
+                // Отвязываемся локально: результат, если сервер его всё же
+                // доделает, подтянет следующий reload(). Job запоминаем как
+                // «не резюмировать», чтобы каждое открытие чата не ждало
+                // grace-период заново.
+                lostJobIDs.insert(jobID)
+                await ChatCache.shared.markJobLost(jobID, projectID: projectID)
+                return .cancelled
+            }
 
             do {
                 let requestStart = ContinuousClock.now
                 let status = try await service.generateStatus(projectID: projectID, jobID: jobID)
-                isOffline = false
+                // Пишем только при изменении: @Observable инвалидирует
+                // SwiftUI при любой записи, а этот код выполняется на каждом
+                // опросе.
+                if isOffline { isOffline = false }
                 switch status {
-                case .pending, .cancelling:
+                case .pending:
                     attempt = 0
                     delay = Self.pollMinDelay
+                    let elapsed = ContinuousClock.now - requestStart
+                    if elapsed < Self.pollMinRequestInterval {
+                        try await Task.sleep(for: Self.pollMinRequestInterval - elapsed)
+                    }
+                    continue
+                case .cancelling:
+                    attempt = 0
+                    delay = Self.pollMinDelay
+                    if cancellingSince == nil {
+                        cancellingSince = ContinuousClock.now
+                    }
                     let elapsed = ContinuousClock.now - requestStart
                     if elapsed < Self.pollMinRequestInterval {
                         try await Task.sleep(for: Self.pollMinRequestInterval - elapsed)
@@ -605,7 +664,7 @@ final class ChatViewModel {
         }
 
         applyRemoteMessages(remoteMessages)
-        isOffline = false
+        if isOffline { isOffline = false }
         await ChatCache.shared.save(
             projectID: projectID,
             messages: remoteMessages,
@@ -741,7 +800,7 @@ final class ChatViewModel {
 
     private func reload() async {
         isLoading = true
-        isOffline = false
+        if isOffline { isOffline = false }
         loadFailed = false
 
         var activeGeneration: (jobID: String, cancelling: Bool)?
@@ -801,10 +860,15 @@ final class ChatViewModel {
         isGenerating = true
         activeJobID = jobID
         isCancelling = cancelling
+        if cancelling {
+            // Чат открыт с уже отменяемой job (placeholder «cancelling»):
+            // то же терпение, что и после нажатия Cancel, — от момента
+            // открытия, а не до общего дедлайна опроса.
+            cancellingSince = ContinuousClock.now
+        }
         await pollAndRefresh(jobID: jobID)
         isGenerating = false
-        activeJobID = nil
-        isCancelling = false
+        clearActiveJobState()
     }
 
     private func applyRemoteMessages(_ remoteMessages: [RemoteChatMessage]) {
@@ -829,7 +893,7 @@ final class ChatViewModel {
     }
 
     private func replaceMessages(_ remoteMessages: [RemoteChatMessage]) {
-        let mapped = remoteMessages.compactMap { remoteMessage -> ChatMessage? in
+        let mapped = remoteMessages.enumerated().compactMap { index, remoteMessage -> ChatMessage? in
             let isAssistant = remoteMessage.role.lowercased() == "assistant"
 
             // Бэкенд дописывает в историю виртуальный assistant-placeholder
@@ -864,6 +928,7 @@ final class ChatViewModel {
             }
 
             return ChatMessage(
+                id: Self.stableMessageID(index: index, remoteMessage),
                 type: isAssistant ? .assistant : .user,
                 text: text,
                 date: remoteMessage.createdAt,
@@ -891,6 +956,30 @@ final class ChatViewModel {
         var sectionMessages = sections[sectionIndex].messages
         sectionMessages.append(message)
         sections[sectionIndex] = MessageSection(date: sectionDate, messages: sectionMessages)
+    }
+
+    /// Детерминированный id remote-сообщения: идентичности строк ForEach не
+    /// должны меняться при каждой замене истории, иначе каждый refresh
+    /// пересоздаёт все бабблы и WKWebView вложений (рост памяти).
+    /// Индекс — защита от дублей (одинаковый текст в одну секунду).
+    private static func stableMessageID(index: Int, _ message: RemoteChatMessage) -> UUID {
+        let seed = [
+            message.role,
+            String(message.createdAt.timeIntervalSinceReferenceDate),
+            message.versionID?.uuidString ?? "",
+            message.jobID ?? "",
+            message.error ?? "",
+            message.text ?? "",
+            message.status ?? "",
+            String(index),
+        ].joined(separator: "\u{1f}")
+        let bytes = Array(SHA256.hash(data: Data(seed.utf8)).prefix(16))
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 
     private func makeSections(from messages: [ChatMessage]) -> [MessageSection] {
