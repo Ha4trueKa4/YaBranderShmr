@@ -11,13 +11,13 @@ import {
   GenerationPollingCancelledError,
   GenerationPollingTimeoutError,
   generationProcessStore,
+  getGenerationErrorMessage,
   pollGenerationStatus,
 } from '@features/editorGenerate'
 import {
   pendingGenerationStore,
   useCreateProjectMutation,
 } from '@features/projectCreate'
-import { getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { Footer } from '@widgets/footer'
@@ -132,7 +132,10 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         if (generatedProject.status === 'error') {
           await deleteCancelledProject(createdProjectId)
           toast.error(
-            t('The generated project is unavailable. Please try again.'),
+            getGenerationErrorMessage(
+              generatedProject.message,
+              'The generated project is unavailable. Please try again.',
+            ),
           )
           return
         }
@@ -170,7 +173,7 @@ export const EditorCreatePage = observer(function EditorCreatePage() {
         toast.error(
           error instanceof GenerationPollingTimeoutError
             ? t('Generation is taking too long. Please try again.')
-            : getApiErrorMessage(error),
+            : getGenerationErrorMessage(error),
         )
       } finally {
         if (generationProcessStore.isCancelling) {

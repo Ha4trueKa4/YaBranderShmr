@@ -11,15 +11,14 @@ import {
 } from '@entities/projectChat'
 import {
   getDefaultGenerationModel,
+  getGenerationErrorMessage,
   pollGenerationStatus,
   useGenerateProjectMutation,
   useModelsQuery,
 } from '@features/editorGenerate'
-import { getApiErrorMessage } from '@shared/api/api'
 import { useToast } from '@shared/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 
 interface UseEditorChatGenerationParams {
   canEdit: boolean
@@ -51,7 +50,6 @@ export function useEditorChatGeneration({
   projectId,
   saveVersion,
 }: UseEditorChatGenerationParams) {
-  const { t } = useTranslation()
   const toast = useToast()
   const queryClient = useQueryClient()
   const [isPolling, setIsPolling] = useState(false)
@@ -114,7 +112,12 @@ export function useEditorChatGeneration({
 
         if (generationResult.status !== 'done' || !generationResult.url) {
           appendTransientMessage(createTransientMessage('error', jobId))
-          toast.error(t('Unable to update the design. Please try again.'))
+          toast.error(
+            getGenerationErrorMessage(
+              generationResult.message,
+              'Unable to update the design. Please try again.',
+            ),
+          )
           await chatQuery.refetch()
 
           return
@@ -140,7 +143,7 @@ export function useEditorChatGeneration({
         ])
       } catch (error) {
         appendTransientMessage(createTransientMessage('error'))
-        toast.error(getApiErrorMessage(error))
+        toast.error(getGenerationErrorMessage(error))
       } finally {
         setIsPolling(false)
       }
@@ -156,7 +159,6 @@ export function useEditorChatGeneration({
       projectId,
       queryClient,
       saveVersion,
-      t,
       toast,
       models,
     ],
