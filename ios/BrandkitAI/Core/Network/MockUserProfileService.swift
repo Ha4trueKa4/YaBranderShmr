@@ -1,6 +1,5 @@
 import Foundation
 
-#if DEBUG
 /// Мок сервиса профилей для превью и тестов.
 nonisolated struct MockUserProfileService: UserProfileService {
     let profile: UserProfile
@@ -49,4 +48,3 @@ nonisolated struct MockUserProfileService: UserProfileService {
         )
     }
 }
-#endif
