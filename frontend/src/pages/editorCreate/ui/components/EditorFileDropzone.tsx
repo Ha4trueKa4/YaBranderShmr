@@ -34,7 +34,6 @@ export function EditorFileDropzone({
       const messages = {
         invalidFileType: t('Only SVG and TXT files are supported.'),
         invalidSvg: t('The file must contain valid SVG markup.'),
-        tooLong: t('SVG must not exceed 5000 characters.'),
       }
 
       setError(messages[validationError])
