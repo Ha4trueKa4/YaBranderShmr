@@ -10,6 +10,8 @@
 
 #include <nlohmann/json.hpp>
 #include <fmt/format.h>
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <optional>
 
@@ -72,7 +74,7 @@ constexpr std::string_view kModerationRejectMarker = "МОДЕРАЦИЯ_ОТК�
 constexpr std::string_view kNaturalRefusalPhrases[] = {
     "не могу обсуждать", "не могу помочь с эт", "не могу выполнить эт",
     "не могу создать", "не могу сгенерировать", "не буду создавать",
-    "давайте поговорим о ",
+    "давайте поговорим о ", "запрос отклонён", "запрос отклонен",
 };
 
 std::optional<std::string> ExtractPolisherOutputText(const nlohmann::json& response_json) {
@@ -97,8 +99,12 @@ std::string TrimLeft(std::string_view s) {
 // МОДЕРАЦИЯ_ОТКАЗ: или по характерным фразам естественного отказа модели),
 // иначе nullopt.
 std::optional<std::string> DetectModerationRejection(std::string_view polished) {
-    if (polished.rfind(kModerationRejectMarker, 0) == 0) {
-        std::string reason = TrimLeft(polished.substr(kModerationRejectMarker.size()));
+    // Модель иногда добавляет пробел/перевод строки перед маркером
+    // (" МОДЕРАЦИЯ_ОТКАЗ: ...") — без обрезки такой ответ не совпадал бы с
+    // rfind(marker, 0) и проваливался бы как обычный "очищенный промпт".
+    std::string trimmed = TrimLeft(polished);
+    if (std::string_view(trimmed).rfind(kModerationRejectMarker, 0) == 0) {
+        std::string reason = TrimLeft(std::string_view(trimmed).substr(kModerationRejectMarker.size()));
         return reason.empty() ? "Запрос отклонён модерацией." : reason;
     }
     for (auto phrase : kNaturalRefusalPhrases) {
@@ -107,6 +113,45 @@ std::optional<std::string> DetectModerationRejection(std::string_view polished) 
         }
     }
     return std::nullopt;
+}
+
+bool ContainsCaseInsensitive(std::string_view haystack, std::string_view needle) {
+    auto it = std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
+                           [](unsigned char a, unsigned char b) { return std::tolower(a) == std::tolower(b); });
+    return it != haystack.end();
+}
+
+// Не-200 от AI API — не всегда просто "сервис недоступен": сам API может
+// отклонить запрос ИЗ-ЗА своей собственной модерации входных данных (обычно
+// HTTP 400 с error.code/error.message вида content_policy/safety/moderation),
+// а не сгенерировать текстовый отказ со статусом 200. Такой случай нельзя
+// путать с реальным инфраструктурным сбоем (401/429/5xx) — во втором случае
+// молчаливый fallback на raw prompt оправдан, а в первом — нет: это пропустило
+// бы немодерированный промпт дальше, в основную модель.
+bool IsContentPolicyErrorBody(const std::string& body) {
+    // Прямое совпадение по сырому телу — на случай, если error пришёл не
+    // вложенным объектом {code, message} (как у OpenAI-совместимых API), а
+    // простой строкой на русском.
+    if (body.find("Запрос отклон") != std::string::npos ||
+        body.find("запрос отклон") != std::string::npos) {
+        return true;
+    }
+    try {
+        auto error_json = nlohmann::json::parse(body);
+        if (!error_json.contains("error") || !error_json["error"].is_object()) return false;
+        const auto& error = error_json["error"];
+        std::string code = error.value("code", "");
+        std::string message = error.value("message", "");
+        for (auto marker : {"content", "safety", "moderat", "polic", "filter"}) {
+            if (ContainsCaseInsensitive(code, marker) || ContainsCaseInsensitive(message, marker)) {
+                return true;
+            }
+        }
+    } catch (const std::exception&) {
+        // Тело не JSON или неожиданной формы — не наш случай, считаем
+        // обычным инфраструктурным сбоем.
+    }
+    return false;
 }
 }
 
@@ -127,7 +172,11 @@ PromptPolisherComponent::PromptPolisherComponent(
 std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_prompt) const {
     userver::formats::json::ValueBuilder request_body;
     request_body["model"] = "gpt://b1gttnvmtpd0tagdlb7o/aliceai-llm/latest";
-    request_body["temperature"] = 0.5;
+    // 0.1, а не 0.5: помимо очистки формулировки эта функция теперь ещё и
+    // классифицирует контент на предмет модерации — для такой задачи
+    // стабильность важнее творческой вариативности (0.5 давал разные ответы
+    // на один и тот же промпт между запусками).
+    request_body["temperature"] = 0.1;
     request_body["max_output_tokens"] = 1000;
     request_body["instructions"] = kPolisherGenerateInstructions;
     request_body["input"] = fmt::format("Исходный запрос: {}", raw_prompt);
@@ -144,11 +193,20 @@ std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_promp
     request.data(json_data);
 
     std::optional<std::string> polished;
+    std::optional<std::string> api_rejection_reason;
     try {
         auto response = request.perform();
         if (response->status_code() != 200) {
-            LOG_WARNING() << "Polisher API returned non-200 code: " << response->status_code()
-                          << ". Falling back to raw prompt.";
+            if (IsContentPolicyErrorBody(response->body())) {
+                // Сам API отклонил запрос своей модерацией входных данных
+                // (не 200 с error.code/message про content/safety/moderation)
+                // — это не инфраструктурный сбой, fallback на raw prompt тут
+                // недопустим.
+                api_rejection_reason = "Запрос отклонён: содержание нарушает политику безопасности.";
+            } else {
+                LOG_WARNING() << "Polisher API returned non-200 code: " << response->status_code()
+                              << ". Falling back to raw prompt.";
+            }
         } else {
             polished = ExtractPolisherOutputText(nlohmann::json::parse(response->body()));
         }
@@ -156,6 +214,9 @@ std::string PromptPolisherComponent::PolishGenerate(const std::string& raw_promp
         LOG_WARNING() << "Polisher failed (" << e.what() << "). Falling back to raw prompt.";
     }
 
+    if (api_rejection_reason) {
+        throw std::runtime_error(*api_rejection_reason);
+    }
     if (!polished.has_value()) {
         return raw_prompt;
     }
@@ -187,11 +248,20 @@ std::string PromptPolisherComponent::PolishEdit(const std::string& raw_prompt) c
     request.data(json_data);
 
     std::optional<std::string> polished;
+    std::optional<std::string> api_rejection_reason;
     try {
         auto response = request.perform();
         if (response->status_code() != 200) {
-            LOG_WARNING() << "Polisher API returned non-200 code: " << response->status_code()
-                          << ". Falling back to raw prompt.";
+            if (IsContentPolicyErrorBody(response->body())) {
+                // Сам API отклонил запрос своей модерацией входных данных
+                // (не 200 с error.code/message про content/safety/moderation)
+                // — это не инфраструктурный сбой, fallback на raw prompt тут
+                // недопустим.
+                api_rejection_reason = "Запрос отклонён: содержание нарушает политику безопасности.";
+            } else {
+                LOG_WARNING() << "Polisher API returned non-200 code: " << response->status_code()
+                              << ". Falling back to raw prompt.";
+            }
         } else {
             polished = ExtractPolisherOutputText(nlohmann::json::parse(response->body()));
         }
@@ -199,6 +269,9 @@ std::string PromptPolisherComponent::PolishEdit(const std::string& raw_prompt) c
         LOG_WARNING() << "Polisher failed (" << e.what() << "). Falling back to raw prompt.";
     }
 
+    if (api_rejection_reason) {
+        throw std::runtime_error(*api_rejection_reason);
+    }
     if (!polished.has_value()) {
         return raw_prompt;
     }
