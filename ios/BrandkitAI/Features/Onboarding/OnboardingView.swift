@@ -59,6 +59,7 @@ struct OnboardingView: View {
             OnboardingGradientBackground(state: scrollState)
         }
         .brightness(onboardingOpenAnimation)
+        .opacity(onboardingOpenAnimation + 1)
         .sensoryFeedback(.impact(weight: .light), trigger: generateFeedback)
         .task {
             let duration = onboardingOpenAnimationDuration / 2

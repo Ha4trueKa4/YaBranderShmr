@@ -1313,7 +1313,6 @@ final class ChatViewModel {
         }
     }
 
-    #if DEBUG
     static func makePreview(
         projectID: UUID = UUID(),
         service: any ProjectServiceProtocol = ProjectService()
@@ -1372,5 +1371,4 @@ final class ChatViewModel {
         viewModel.didLoad = true
         return viewModel
     }
-    #endif
 }

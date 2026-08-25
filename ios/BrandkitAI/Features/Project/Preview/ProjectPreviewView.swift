@@ -305,7 +305,6 @@ struct ProjectPreviewView: View {
     }
 }
 
-#if DEBUG
 private nonisolated final class PreviewProjectService: ProjectServiceProtocol {
     func fetchVersionURL(projectID: UUID, versionID: UUID) async throws -> URL {
         URL(string: "https://brandkit.ai/preview/sample-version.svg")!
@@ -326,7 +325,6 @@ private nonisolated final class PreviewProjectService: ProjectServiceProtocol {
         async throws -> ProjectCreationResult { fatalError() }
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project { fatalError() }
 }
-#endif
 
 #Preview {
     NavigationStack {

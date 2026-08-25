@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 
-#if DEBUG
 /// Мок менеджера текущего пользователя для превью и тестов.
 @MainActor
 @Observable
@@ -38,4 +37,3 @@ final class MockCurrentUserService: CurrentUserService {
         email = nil
     }
 }
-#endif
