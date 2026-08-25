@@ -12,6 +12,7 @@
 #include <userver/utils/uuid4.hpp>
 #include <shared_mutex>
 #include <cstdint>
+#include <unordered_set>
 
 #include <ya_brander/sql_queries.hpp>
 
@@ -162,10 +163,23 @@ std::vector<std::string> ProjectManagerComponent::GetRecentUserPrompts(
     const std::string& project_id, std::size_t limit, const std::string& exclude_job_id) {
     auto history_json = FetchChatHistoryJson(project_id);
 
+    // Только job'ы, реально завершившиеся успехом (у assistant-ответа есть
+    // version_id), должны попадать в историю для LLM — иначе отклонённый
+    // модерацией или упавший с ошибкой запрос продолжал бы просачиваться в
+    // контекст всех последующих правок этого проекта.
+    std::unordered_set<std::string> successful_job_ids;
+    for (const auto& entry : history_json) {
+        if (entry["role"].As<std::string>("") == "assistant" && entry.HasMember("version_id")) {
+            successful_job_ids.insert(entry["job_id"].As<std::string>(""));
+        }
+    }
+
     std::vector<std::string> prompts;
     for (const auto& entry : history_json) {
+        auto job_id = entry["job_id"].As<std::string>("");
         if (entry["role"].As<std::string>("") == "user" &&
-            entry["job_id"].As<std::string>("") != exclude_job_id) {
+            job_id != exclude_job_id &&
+            successful_job_ids.count(job_id) > 0) {
             prompts.push_back(entry["text"].As<std::string>(""));
         }
     }
