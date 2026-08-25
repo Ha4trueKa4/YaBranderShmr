@@ -6,9 +6,11 @@ export {
 } from './api/pollGenerationStatus'
 export { useGenerateProjectMutation, useModelsQuery } from './api/queries'
 export { generationProcessStore } from './model/generationProcessStore'
+export { getGenerationErrorMessage } from './model/getGenerationErrorMessage'
 export { GenerationPromptComposer } from './ui/generationPrompt'
 export {
   DEFAULT_GENERATION_MODEL,
+  getDefaultChatGenerationModel,
   getDefaultGenerationModel,
   ModelSelect,
 } from './ui/modelSelect'
