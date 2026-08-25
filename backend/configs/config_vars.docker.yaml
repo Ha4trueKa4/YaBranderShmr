@@ -13,5 +13,6 @@ dbconnection-vector: 'postgresql://user:password@service-vector-postgres:5432/ve
 yandex-gpt-url: 'https://ai.api.cloud.yandex.net/v1/responses'
 yandex-gpt-models-url: 'https://ai.api.cloud.yandex.net/v1/models'
 openai-responses-url: 'https://api.openai.com/v1/responses'
+recraft-api-url: 'https://external.api.recraft.ai/v1'
 yandex-embedding-url: 'https://llm.api.cloud.yandex.net/foundationModels/v1/textEmbedding'
 monium-otlp-endpoint: 'otel-collector:4317'

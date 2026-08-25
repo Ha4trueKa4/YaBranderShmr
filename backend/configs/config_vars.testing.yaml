@@ -14,6 +14,7 @@ dbconnection-vector: 'postgresql://user:password@service-vector-postgres:5432/ve
 yandex-gpt-url: $mockserver/yandex-gpt-mock
 yandex-gpt-models-url: $mockserver/yandex-gpt-models-mock
 openai-responses-url: $mockserver/openai-responses-mock
+recraft-api-url: $mockserver/recraft-api-mock
 yandex-embedding-url: $mockserver/yandex-embedding-mock
 s3-endpoint: $mockserver
 monium-otlp-endpoint: '127.0.0.1:4317'

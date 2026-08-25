@@ -31,7 +31,8 @@ namespace ya_brander::components {
         http_client_(context.FindComponent<userver::components::HttpClient>()
                          .GetHttpClient()),
         yandex_api_url_(config["yandex-api-url"].As<std::string>()),
-        openai_api_url_(config["openai-api-url"].As<std::string>()) {
+        openai_api_url_(config["openai-api-url"].As<std::string>()),
+        recraft_api_url_(config["recraft-api-url"].As<std::string>()) {
     const char* yandex_key = std::getenv("YANDEX_AI_API_KEY");
     if (yandex_key == nullptr || std::string_view(yandex_key).empty()) {
       throw std::runtime_error("YANDEX_AI_API_KEY is not set");
@@ -41,6 +42,11 @@ namespace ya_brander::components {
     const char* openai_key = std::getenv("OPENAI_API_KEY");
     if (openai_key != nullptr && !std::string_view(openai_key).empty()) {
       openai_api_key_ = openai_key;
+    }
+
+    const char* recraft_key = std::getenv("RECRAFT_API_TOKEN");
+    if (recraft_key != nullptr && !std::string_view(recraft_key).empty()) {
+      recraft_api_key_ = recraft_key;
     }
   }
 
@@ -52,12 +58,20 @@ namespace ya_brander::components {
                                  std::size_t max_output_tokens,
                                  const std::string& model,
                                  double temperature) const;
+
+  std::string GenerateRecraftSvg(const std::string& prompt,
+                                 const std::string& model) const;
  private:
+  std::string SendRecraftRequest(const std::string& path,
+                                 const std::string& request_body) const;
+
   userver::clients::http::Client& http_client_;
   std::string yandex_api_url_;
   std::string openai_api_url_;
+  std::string recraft_api_url_;
   std::string yandex_api_key_;
   std::string openai_api_key_;
+  std::string recraft_api_key_;
 };
 
 void AppendLLMClient(userver::components::ComponentList& component_list);
