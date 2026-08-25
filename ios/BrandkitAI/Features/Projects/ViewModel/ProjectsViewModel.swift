@@ -56,6 +56,9 @@ final class ProjectsViewModel {
             do {
                 for item in deletedItems {
                     try await service.deleteProject(id: item.id)
+                    if !Self.removeCachedChat(projectID: item.id) {
+                        errorMessage = "Project deleted, but its saved local data could not be removed."
+                    }
                 }
             } catch {
                 errorMessage = message(for: error)
@@ -111,6 +114,21 @@ final class ProjectsViewModel {
             return String(localized: "Please sign in again.")
         }
         return String(localized: "Unable to load projects.")
+    }
+
+    private static func removeCachedChat(projectID: UUID) -> Bool {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let file = caches
+            .appendingPathComponent("chat-cache", isDirectory: true)
+            .appendingPathComponent("chat-\(projectID.uuidString.lowercased())")
+            .appendingPathExtension("json")
+        guard FileManager.default.fileExists(atPath: file.path) else { return true }
+        do {
+            try FileManager.default.removeItem(at: file)
+            return true
+        } catch {
+            return false
+        }
     }
 
     private static let palettes: [[Color]] = [

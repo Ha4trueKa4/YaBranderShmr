@@ -21,6 +21,8 @@ struct ChatView: View {
     @State private var isModelPickerPresented = false
     @State private var isModelControlVisible = false
     @State private var isComposerExpanded = false
+    @State private var sendTask: Task<Void, Never>?
+    @State private var sendTaskID: UUID?
     @State private var selectedPrivacy = ChatViewModel.ProjectPrivacy.privateProject
     @State private var isRestoringText = false
     @FocusState private var isInputFocused: Bool
@@ -50,7 +52,8 @@ struct ChatView: View {
                     loadFailedState
                 } else {
                     ScrollView {
-                        messageList                    }
+                        messageList
+                    }
                     .scrollDismissesKeyboard(.interactively)
                 }
             }
@@ -139,8 +142,20 @@ struct ChatView: View {
                     Task { await viewModel.updatePrivacy(newPrivacy) }
                 }
             }
+            .onDisappear {
+                sendTask?.cancel()
+                sendTask = nil
+                sendTaskID = nil
+            }
             .sheet(isPresented: $isModelPickerPresented) {
-                ModelPickerSheet(viewModel: viewModel)
+                ModelPickerSheet(
+                    availableModels: viewModel.availableModels,
+                    selectedModelID: viewModel.selectedModel.id,
+                    isLoading: viewModel.isLoadingModels,
+                    loadFailed: viewModel.modelsLoadFailed,
+                    onSelect: viewModel.selectModel,
+                    onRetry: { await viewModel.loadModels(force: true) }
+                )
             }
             .task {
                 await viewModel.loadModels()
@@ -542,12 +557,17 @@ struct ChatView: View {
     }
 
     private func sendMessage() {
-        guard canSendMessage else { return }
+        guard canSendMessage, sendTaskID == nil else { return }
 
         let text = messageText
         messageText = ""
-        Task {
+        let taskID = UUID()
+        sendTaskID = taskID
+        sendTask = Task { @MainActor in
             await viewModel.sendMessage(text)
+            guard sendTaskID == taskID else { return }
+            sendTask = nil
+            sendTaskID = nil
         }
     }
 

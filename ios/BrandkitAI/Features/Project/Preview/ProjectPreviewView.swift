@@ -322,6 +322,8 @@ private nonisolated final class PreviewProjectService: ProjectServiceProtocol {
     func cancelGeneration(projectID: UUID, jobID: String) async throws -> GenerationStatus { .cancelled }
     func deleteProject(id: UUID) async throws {}
     func createProject(name: String, description: String) async throws -> Project { fatalError() }
+    func createProject(name: String, prompt: String, modelID: String)
+        async throws -> ProjectCreationResult { fatalError() }
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project { fatalError() }
 }
 #endif

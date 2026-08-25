@@ -1,9 +1,15 @@
 import Foundation
 
+nonisolated struct ProjectCreationResult: Sendable {
+    let project: Project
+    let jobID: String
+}
+
 nonisolated protocol ProjectServiceProtocol: Sendable {
     func fetchProjects(for userID: UUID) async throws -> [Project]
     func fetchProject(id: UUID) async throws -> Project
     func createProject(name: String, description: String) async throws -> Project
+    func createProject(name: String, prompt: String, modelID: String) async throws -> ProjectCreationResult
     func deleteProject(id: UUID) async throws
     func updateVisibility(projectID: UUID, isPublic: Bool) async throws -> Project
     func fetchChat(projectID: UUID) async throws -> [RemoteChatMessage]
@@ -47,6 +53,25 @@ nonisolated final class ProjectService: ProjectServiceProtocol {
             body: CreateProjectRequest(name: name, description: description)
         )
         return Project(dto: dto)
+    }
+
+    func createProject(
+        name: String,
+        prompt: String,
+        modelID: String
+    ) async throws -> ProjectCreationResult {
+        let dto: ProjectDTO = try await client.request(
+            .post,
+            .projects,
+            authorization: .required,
+            body: CreateProjectWithGenerationRequest(
+                name: name,
+                prompt: prompt,
+                model: modelID
+            )
+        )
+        guard let jobID = dto.jobID else { throw NetworkError.invalidResponse }
+        return ProjectCreationResult(project: Project(dto: dto), jobID: jobID)
     }
 
     func deleteProject(id: UUID) async throws {
@@ -181,6 +206,7 @@ private nonisolated struct ProjectDTO: Decodable, Sendable {
     let isPublic: Bool?
     let createdAt: String?
     let url: URL?
+    let jobID: String?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -190,12 +216,19 @@ private nonisolated struct ProjectDTO: Decodable, Sendable {
         case isPublic
         case createdAt
         case url
+        case jobID = "jobId"
     }
 }
 
 private nonisolated struct CreateProjectRequest: Encodable, Sendable {
     let name: String
     let description: String
+}
+
+private nonisolated struct CreateProjectWithGenerationRequest: Encodable, Sendable {
+    let name: String
+    let prompt: String
+    let model: String
 }
 
 private nonisolated struct UpdateVisibilityRequest: Encodable, Sendable {

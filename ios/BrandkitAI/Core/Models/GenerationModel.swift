@@ -2,6 +2,7 @@ import Foundation
 
 nonisolated struct GenerationModel: Identifiable, Hashable, Sendable {
     static let defaultID = "deepseek-v4-flash/latest"
+    static let selectionStorageKey = "chat.selectedGenerationModel"
     static let fallback = GenerationModel(
         remoteID: defaultID,
         owner: "Yandex AI Studio"

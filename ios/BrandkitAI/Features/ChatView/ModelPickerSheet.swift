@@ -1,7 +1,12 @@
 import SwiftUI
 
 struct ModelPickerSheet: View {
-    let viewModel: ChatViewModel
+    let availableModels: [GenerationModel]
+    let selectedModelID: String
+    let isLoading: Bool
+    let loadFailed: Bool
+    let onSelect: (GenerationModel) -> Void
+    let onRetry: () async -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var pendingSelectionID: String?
@@ -17,10 +22,10 @@ struct ModelPickerSheet: View {
                 .padding(.top, 4)
 
             Group {
-                if viewModel.isLoadingModels && viewModel.availableModels.isEmpty {
+                if isLoading && availableModels.isEmpty {
                     ProgressView("Loading models…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.modelsLoadFailed && viewModel.availableModels.isEmpty {
+                } else if loadFailed && availableModels.isEmpty {
                     unavailableState
                 } else {
                     modelList
@@ -38,7 +43,7 @@ struct ModelPickerSheet: View {
     private var modelList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(viewModel.availableModels) { model in
+                ForEach(availableModels) { model in
                     option(model)
                 }
             }
@@ -47,8 +52,8 @@ struct ModelPickerSheet: View {
     }
 
     private func option(_ model: GenerationModel) -> some View {
-        let selectedModelID = pendingSelectionID ?? viewModel.selectedModel.id
-        let isSelected = model.id == selectedModelID
+        let effectiveSelectionID = pendingSelectionID ?? selectedModelID
+        let isSelected = model.id == effectiveSelectionID
         let cardShape = RoundedRectangle(cornerRadius: 18, style: .circular)
 
         return Button {
@@ -56,7 +61,7 @@ struct ModelPickerSheet: View {
 
             withAnimation(.easeInOut(duration: 0.08)) {
                 pendingSelectionID = model.id
-                viewModel.selectModel(model)
+                onSelect(model)
             }
 
             Task { @MainActor in
@@ -110,7 +115,7 @@ struct ModelPickerSheet: View {
             Text("Check your connection and try again.")
         } actions: {
             Button("Retry") {
-                Task { await viewModel.loadModels(force: true) }
+                Task { await onRetry() }
             }
             .buttonStyle(.borderedProminent)
         }
