@@ -283,7 +283,9 @@ std::string ProjectManagerComponent::RunInitialGeneration(
             LOG_WARNING() << "Recraft generation does not support project references yet; "
                           << "references are ignored for project_id=" << project_id;
         }
-        std::string new_data = llm_client_.GenerateRecraftSvg(prompt, model);
+		std::string polished_prompt_text = prompt_polisher_.PolishGenerate(prompt);
+    	std::string safe_prompt = EscapeXml(polished_prompt_text);
+        std::string new_data = llm_client_.GenerateRecraftSvg(safe_prompt, model);
         return version_storage_.SaveVersion(project_id, new_data);
     }
 
