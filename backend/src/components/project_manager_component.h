@@ -51,6 +51,15 @@ public:
 
   models::Project CreateProject(const std::string& author_id, const std::string& name, const std::string& description);
 
+  /// @brief Сохраняет data как новую версию только что созданного проекта —
+  ///        синхронно, без LLM. Используется CreateProjectHandler в ветке
+  ///        копирования (prompt пуст, data не пуст): перезаписывает
+  ///        плейсхолдер kDefaultSvg, который CreateProject уже сохранил как
+  ///        версию 1. Данные НЕ валидируются — как и data в PATCH
+  ///        /projects/{id} (см. UpdateProject).
+  /// @returns URL только что сохранённой версии (не плейсхолдера).
+  std::string SaveInitialVersion(const std::string& project_id, const std::string& data);
+
   std::optional<models::Project> GetProject(const std::string& id);
 
   void UpdateProject(const std::string& id, std::optional<std::string> name,

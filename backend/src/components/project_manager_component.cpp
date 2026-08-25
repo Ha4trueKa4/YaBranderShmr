@@ -78,6 +78,11 @@ models::Project ProjectManagerComponent::CreateProject(const std::string& author
   	return {project_id, author_id, name, description, false, row["created_at"].As<std::chrono::system_clock::time_point>(), url};
 }
 
+std::string ProjectManagerComponent::SaveInitialVersion(const std::string& project_id, const std::string& data) {
+    version_storage_.SaveVersion(project_id, data);
+    return version_storage_.GetLatestVersionUrl(project_id);
+}
+
 std::optional<models::Project> ProjectManagerComponent::GetProject(const std::string& id) {
     auto res = utils::ExecuteSelectWithRetry("select-project", [&] {
       return pg_cluster_->Execute(
