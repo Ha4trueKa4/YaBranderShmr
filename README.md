@@ -2,6 +2,9 @@
 
 > Проект команды студентов ШРИ/ШБР/ШМР Яндекса
 
+# Итоговая презентация и видео-демонстрация
+https://drive.google.com/drive/folders/1bII5qd-S8iiicqHo7844kBy2_PhnvgKb?usp=drive_link
+
 ---
 
 ## О проекте
