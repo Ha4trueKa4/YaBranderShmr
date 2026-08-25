@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  getUploadedSvgValidationError,
-  MAX_UPLOADED_SVG_LENGTH,
-} from './validateUploadedSvg'
+import { getUploadedSvgValidationError } from './validateUploadedSvg'
 
 describe('getUploadedSvgValidationError', () => {
   it('accepts SVG markup in SVG and TXT files', () => {
@@ -20,14 +17,5 @@ describe('getUploadedSvgValidationError', () => {
     expect(getUploadedSvgValidationError('note.txt', 'just some text')).toBe(
       'invalidSvg',
     )
-  })
-
-  it('uses the backend limit of 5000 UTF-8 characters', () => {
-    expect(
-      getUploadedSvgValidationError(
-        'logo.svg',
-        `<svg>${'😀'.repeat(MAX_UPLOADED_SVG_LENGTH)}</svg>`,
-      ),
-    ).toBe('tooLong')
   })
 })

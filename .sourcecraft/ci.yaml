@@ -96,6 +96,7 @@ workflows:
               ADMIN_ID: ${{ secrets.ADMIN_ID }}
               ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
               ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+              RECRAFT_API_TOKEN: ${{ secrets.RECRAFT_API_TOKEN }}
 
   deploy-frontend-dev:
     tasks:

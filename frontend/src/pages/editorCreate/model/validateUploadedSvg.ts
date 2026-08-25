@@ -1,9 +1,4 @@
-export const MAX_UPLOADED_SVG_LENGTH = 5000
-
-export type UploadedSvgValidationError =
-  | 'invalidFileType'
-  | 'invalidSvg'
-  | 'tooLong'
+export type UploadedSvgValidationError = 'invalidFileType' | 'invalidSvg'
 
 function getFileExtension(fileName: string) {
   return fileName.split('.').pop()?.toLowerCase()
@@ -17,10 +12,6 @@ export function getUploadedSvgValidationError(
 
   if (extension !== 'svg' && extension !== 'txt') {
     return 'invalidFileType'
-  }
-
-  if (Array.from(data).length > MAX_UPLOADED_SVG_LENGTH) {
-    return 'tooLong'
   }
 
   const document = new DOMParser().parseFromString(data, 'image/svg+xml')
