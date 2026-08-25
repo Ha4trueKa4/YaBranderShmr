@@ -77,7 +77,10 @@ void AppendExamples(std::string& input,
     return;
   }
 
-  input += "\nРЕФЕРЕНСЫ RAG:\n";
+  input +=
+      "\nРЕФЕРЕНСЫ RAG (используй только как источник общего стиля и "
+      "техник; не копируй их композицию, элементы, палитру и структуру "
+      "напрямую — создай оригинальную композицию под текущий запрос):\n";
   for (std::size_t index = 0; index < examples.size(); ++index) {
     const auto label = "РЕФЕРЕНС " + std::to_string(index + 1);
     AppendDataBlock(input, label, examples[index]);
