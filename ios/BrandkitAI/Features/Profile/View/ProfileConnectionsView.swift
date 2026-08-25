@@ -48,9 +48,9 @@ struct ProfileConnectionsView: View {
             )
         } else if viewModel.users.isEmpty {
             ContentUnavailableView(
-                "No \(kind.title) Yet",
+                kind.emptyTitle,
                 systemImage: "person.2",
-                description: Text(emptyDescription)
+                description: Text(kind.emptyDescription)
             )
         } else {
             ScrollView(.vertical, showsIndicators: false) {
@@ -84,14 +84,6 @@ struct ProfileConnectionsView: View {
         }
     }
 
-    private var emptyDescription: String {
-        switch kind {
-        case .followers:
-            "Followers will appear here."
-        case .following:
-            "Followed accounts will appear here."
-        }
-    }
 }
 
 #Preview {

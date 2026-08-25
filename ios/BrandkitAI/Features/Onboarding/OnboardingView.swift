@@ -44,7 +44,7 @@ struct OnboardingView: View {
                     onGetStarted()
                 }
             } label: {
-                Text(page < lastPage ? "Next" : "Get Started")
+                Text(page < lastPage ? LocalizedStringKey("Next") : "Get Started")
                     .font(.title3.bold())
                     .padding(12)
                     .frame(maxWidth: .infinity)
@@ -194,7 +194,7 @@ struct OnboardingView: View {
 
             ProfileConnectionRow(
                 name: "Sarah Chen",
-                subtitle: "Brand designer",
+                subtitle: String(localized: "Brand designer"),
                 onOpenProfile: {}
             ) {
                 FollowButton(isSubscribed: false, isBusy: false, action: {})
@@ -217,7 +217,11 @@ struct OnboardingView: View {
             .foregroundStyle(.white)
     }
     
-    func makeTextBlock(firstLine: String, secondLine: String, subtitle: String) -> some View {
+    func makeTextBlock(
+        firstLine: LocalizedStringKey,
+        secondLine: LocalizedStringKey,
+        subtitle: LocalizedStringKey
+    ) -> some View {
         return VStack(spacing: 13) {
             VStack(spacing: 0) {
                 Text(firstLine)

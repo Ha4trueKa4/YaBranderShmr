@@ -293,7 +293,7 @@ nonisolated enum GenerationStatus: Decodable, Sendable {
             let url = try container.decodeIfPresent(URL.self, forKey: .url)
             self = .done(url: url)
         case .error:
-            let message = try container.decodeIfPresent(String.self, forKey: .message) ?? "Generation failed."
+            let message = try container.decodeIfPresent(String.self, forKey: .message) ?? String(localized: "Generation failed.")
             self = .error(message: message)
         case .cancelling:
             self = .cancelling

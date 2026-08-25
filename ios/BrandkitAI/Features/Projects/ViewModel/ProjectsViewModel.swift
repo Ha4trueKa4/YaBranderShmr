@@ -8,7 +8,7 @@ final class ProjectsViewModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
-    let title = "Projects"
+    let title = String(localized: "Projects", comment: "Title of the user projects screen")
 
     private let currentUserService: any CurrentUserService
     private let service: any ProjectServiceProtocol
@@ -57,7 +57,7 @@ final class ProjectsViewModel {
                 for item in deletedItems {
                     try await service.deleteProject(id: item.id)
                     if !Self.removeCachedChat(projectID: item.id) {
-                        errorMessage = "Project deleted, but its saved local data could not be removed."
+                        errorMessage = String(localized: "Project deleted, but its saved local data could not be removed.")
                     }
                 }
             } catch {
@@ -81,7 +81,7 @@ final class ProjectsViewModel {
         await currentUserService.restore()
 
         guard let userID = currentUserService.id else {
-            errorMessage = "Unable to identify the current user."
+            errorMessage = String(localized: "Unable to identify the current user.")
             return
         }
 
@@ -91,7 +91,9 @@ final class ProjectsViewModel {
                 ProjectListItem(
                     id: project.id,
                     title: project.name,
-                    subtitle: project.isPublic ? "Public project" : "Private project",
+                    subtitle: project.isPublic
+                        ? String(localized: "Public project")
+                        : String(localized: "Private project"),
                     previewURL: project.url,
                     isPrivate: !project.isPublic,
                     placeholderColors: Self.palette(for: project.name, index: index)
@@ -108,12 +110,12 @@ final class ProjectsViewModel {
 
     private func message(for error: Error) -> String {
         if case NetworkError.httpError(let statusCode) = error {
-            return "Server error (\(statusCode))"
+            return String(localized: "Server error (\(statusCode))")
         }
         if case NetworkError.missingAccessToken = error {
-            return "Please sign in again."
+            return String(localized: "Please sign in again.")
         }
-        return "Unable to load projects."
+        return String(localized: "Unable to load projects.")
     }
 
     private static func removeCachedChat(projectID: UUID) -> Bool {

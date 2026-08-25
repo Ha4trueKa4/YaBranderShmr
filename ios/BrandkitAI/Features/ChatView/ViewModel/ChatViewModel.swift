@@ -24,22 +24,22 @@ final class ChatViewModel {
 
         var title: String {
             switch self {
-            case .privateProject: "Private Project"
-            case .publicShowcase: "Public Showcase"
+            case .privateProject: String(localized: "Private Project")
+            case .publicShowcase: String(localized: "Public Showcase")
             }
         }
 
         var shortTitle: String {
             switch self {
-            case .privateProject: "Private"
-            case .publicShowcase: "Public"
+            case .privateProject: String(localized: "Private")
+            case .publicShowcase: String(localized: "Public")
             }
         }
 
         var subtitle: String {
             switch self {
-            case .privateProject: "Only workspace members can edit and view"
-            case .publicShowcase: "Index project in public showcase database"
+            case .privateProject: String(localized: "Only workspace members can edit and view")
+            case .publicShowcase: String(localized: "Index project in public showcase database")
             }
         }
 
@@ -222,7 +222,7 @@ final class ChatViewModel {
         let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         guard text.count <= Self.maxPromptLength else {
-            sendErrorMessage = "Message is too long (maximum 5000 characters)."
+            sendErrorMessage = String(localized: "Message is too long (maximum 5000 characters).")
             return
         }
 
@@ -240,7 +240,7 @@ final class ChatViewModel {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isGenerating else { return }
         guard text.count <= Self.maxPromptLength else {
-            sendErrorMessage = "Message is too long (maximum 5000 characters)."
+            sendErrorMessage = String(localized: "Message is too long (maximum 5000 characters).")
             return
         }
 
@@ -265,7 +265,7 @@ final class ChatViewModel {
                 createdAt: chatMessage.date,
                 modelID: modelID
             )
-            sendErrorMessage = "Message is pending and will be sent when the connection recovers."
+            sendErrorMessage = String(localized: "Message is pending and will be sent when the connection recovers.")
             return
         }
 
@@ -296,7 +296,7 @@ final class ChatViewModel {
         } catch NetworkError.generationInProgress(let existingJobID) {
             removeMessage(id: chatMessage.id)
             restorePrompt = text
-            sendErrorMessage = "Another generation is in progress. Your message was not sent."
+            sendErrorMessage = String(localized: "Another generation is in progress. Your message was not sent.")
             activeJobID = existingJobID
             isCancelling = false
             await pollAndRefresh(jobID: existingJobID)
@@ -319,7 +319,7 @@ final class ChatViewModel {
                     modelID: modelID,
                     ambiguousSince: Self.isPossiblyDelivered(error) ? Date() : nil
                 )
-                sendErrorMessage = "Message is pending and will be sent when the connection recovers."
+                sendErrorMessage = String(localized: "Message is pending and will be sent when the connection recovers.")
             } else {
                 markMessageFailed(id: chatMessage.id)
                 await queuePendingMessage(
@@ -618,8 +618,8 @@ final class ChatViewModel {
     func dateTitle(for date: Date) -> String {
         let calendar = Calendar.current
 
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        if calendar.isDateInToday(date) { return String(localized: "Today") }
+        if calendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
         return date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
@@ -668,8 +668,9 @@ final class ChatViewModel {
     /// Сервер отвечает 409 с id job, уже пережившей grace-таймаут
     /// (см. lostJobIDs): новые генерации проекта заблокированы зависшей
     /// job — ждём её повторно бессмысленно, честно сообщаем об этом.
-    private static let stuckGenerationMessage =
-        "The server is busy with a stuck generation. Please try again in a few minutes."
+    private static var stuckGenerationMessage: String {
+        String(localized: "The server is busy with a stuck generation. Please try again in a few minutes.")
+    }
 
     /// Паузы повторных попыток отправки, когда сетевой путь уже поднялся,
     /// а запросы ещё падают (сеть «едет» после VPN-переключений).
@@ -708,7 +709,9 @@ final class ChatViewModel {
             }
             try Task.checkCancellation()
             if ContinuousClock.now >= deadline {
-                return .error(message: "Generation is taking too long. Please refresh the chat in a moment.")
+                return .error(
+                    message: String(localized: "Generation is taking too long. Please refresh the chat in a moment.")
+                )
             }
             if let cancellingSince,
                ContinuousClock.now >= cancellingSince + Self.cancelGracePeriod {
@@ -753,7 +756,9 @@ final class ChatViewModel {
                     continue
                 case .done(let url):
                     guard let url else {
-                        return .error(message: "Generation completed but no result was returned.")
+                        return .error(
+                            message: String(localized: "Generation completed but no result was returned.")
+                        )
                     }
                     return .done(url: url)
                 case .error(let message):
@@ -804,7 +809,7 @@ final class ChatViewModel {
                 // открытие чата не заканчивалось этой ошибкой снова.
                 lostJobIDs.insert(jobID)
                 await ChatCache.shared.markJobLost(jobID, projectID: projectID)
-                sendErrorMessage = "Generation status is unavailable. Please refresh the chat."
+                sendErrorMessage = String(localized: "Generation status is unavailable. Please refresh the chat.")
             } else {
                 sendErrorMessage = failureMessage(for: error)
             }
@@ -1075,16 +1080,16 @@ final class ChatViewModel {
 
     private func failureMessage(for error: Error) -> String? {
         if case NetworkError.httpError(let statusCode) = error {
-            return "Unable to send message (server error \(statusCode))."
+            return String(localized: "Unable to send message (server error \(statusCode)).")
         }
         if case NetworkError.serverValidation = error {
-            return "The server rejected this message."
+            return String(localized: "The server rejected this message.")
         }
         if let urlError = error as? URLError,
            [.timedOut, .networkConnectionLost].contains(urlError.code) {
             return nil
         }
-        return "Unable to send message."
+        return String(localized: "Unable to send message.")
     }
 
     private func reload() async {
@@ -1200,16 +1205,16 @@ final class ChatViewModel {
             if isAssistant {
                 if let versionID = remoteMessage.versionID {
                     attachment = .version(id: versionID, url: versionURLs[versionID])
-                    text = "Generated a new version."
+                    text = String(localized: "Generated a new version.")
                 } else if let errorMessage = remoteMessage.error {
                     attachment = .error(message: errorMessage)
                     text = errorMessage
                 } else if remoteMessage.status == "cancelled" {
                     attachment = .cancelled
-                    text = "Generation cancelled"
+                    text = String(localized: "Generation cancelled")
                 } else {
                     attachment = .none
-                    text = "Generated a new version."
+                    text = String(localized: "Generated a new version.")
                 }
             } else {
                 attachment = .none
@@ -1243,12 +1248,12 @@ final class ChatViewModel {
         viewModel.applyMessages([
             ChatMessage(
                 type: .user,
-                text: "Make the background darker",
+                text: String(localized: "Make the background darker"),
                 date: now.addingTimeInterval(-60)
             ),
             ChatMessage(
                 type: .assistant,
-                text: "Generated a new version.",
+                text: String(localized: "Generated a new version."),
                 date: now.addingTimeInterval(-59),
                 attachment: .mock
             ),

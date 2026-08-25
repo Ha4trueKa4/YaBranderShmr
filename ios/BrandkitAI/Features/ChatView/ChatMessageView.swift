@@ -207,10 +207,10 @@ struct ChatMessageView: View {
         let systemImage: String
 
         if message.isFailed {
-            title = "Not sent"
+            title = String(localized: "Not sent")
             systemImage = "exclamationmark.circle"
         } else if message.isPending {
-            title = "Pending"
+            title = String(localized: "Pending")
             systemImage = "clock.arrow.circlepath"
         } else {
             return 0

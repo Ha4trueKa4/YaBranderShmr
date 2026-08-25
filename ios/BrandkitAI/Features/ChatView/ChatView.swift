@@ -229,7 +229,7 @@ struct ChatView: View {
                     HStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
-                        Text(viewModel.isCancelling ? "Cancelling…" : "Generating…")
+                        Text(generationStatusTitle)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -255,6 +255,10 @@ struct ChatView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private var generationStatusTitle: LocalizedStringKey {
+        viewModel.isCancelling ? "Cancelling…" : "Generating…"
     }
 
     @ToolbarContentBuilder
@@ -339,9 +343,9 @@ struct ChatView: View {
 
             if viewModel.pendingCount > 0 {
                 Label(
-                    viewModel.pendingCount == 1
-                        ? "1 message pending — will send when the network is back."
-                        : "\(viewModel.pendingCount) messages pending — will send when the network is back.",
+                    String(
+                        localized: "\(viewModel.pendingCount) messages pending — will send when the network is back."
+                    ),
                     systemImage: "clock.arrow.circlepath"
                 )
                 .font(.caption)
@@ -526,7 +530,7 @@ struct ChatView: View {
         viewModel.isGenerating || viewModel.hasUnsentMessage
     }
 
-    private var sendButtonAccessibilityLabel: String {
+    private var sendButtonAccessibilityLabel: LocalizedStringKey {
         switch sendButtonAction {
         case .cancelGeneration: return "Cancel generation"
         case .sendMessage: return "Send message"
@@ -544,7 +548,7 @@ struct ChatView: View {
     private var inputErrorMessage: String? {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.count > ChatViewModel.maxPromptLength {
-            return "Message is too long (maximum 5000 characters)."
+            return String(localized: "Message is too long (maximum 5000 characters).")
         }
         return viewModel.sendErrorMessage
     }

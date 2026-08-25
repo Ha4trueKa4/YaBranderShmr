@@ -4,10 +4,47 @@ enum ProfileConnectionsKind: Hashable {
     case followers
     case following
 
+    /// Заголовок экрана. Ключи семантические: в английском «Following» —
+    /// и заголовок списка, и состояние кнопки подписки, а в русском это
+    /// разные слова.
     var title: String {
         switch self {
-        case .followers: "Followers"
-        case .following: "Following"
+        case .followers:
+            String(
+                localized: "connections.title.followers",
+                defaultValue: "Followers",
+                comment: "Navigation title of the followers list"
+            )
+        case .following:
+            String(
+                localized: "connections.title.following",
+                defaultValue: "Following",
+                comment: "Navigation title of the list of accounts the user follows"
+            )
+        }
+    }
+
+    /// Заголовок пустого состояния целиком: в русском нужен родительный падеж,
+    /// поэтому подстановкой названия списка обойтись нельзя.
+    var emptyTitle: String {
+        switch self {
+        case .followers: String(localized: "No Followers Yet")
+        case .following: String(localized: "No Following Yet")
+        }
+    }
+
+    var emptyDescription: String {
+        switch self {
+        case .followers: String(localized: "Followers will appear here.")
+        case .following: String(localized: "Followed accounts will appear here.")
+        }
+    }
+
+    /// Текст ошибки загрузки целиком — по той же причине, что и `emptyTitle`.
+    var loadFailureMessage: String {
+        switch self {
+        case .followers: String(localized: "Couldn't load followers.")
+        case .following: String(localized: "Couldn't load following.")
         }
     }
 }

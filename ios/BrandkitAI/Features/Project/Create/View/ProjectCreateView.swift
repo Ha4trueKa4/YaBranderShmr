@@ -25,16 +25,18 @@ struct ProjectCreateView: View {
         ScrollView {
             VStack(spacing: 24) {
                 FormTextField(
-                    label: "PROJECT NAME",
-                    placeholder: "My Startup Brand",
+                    label: String(localized: "PROJECT NAME"),
+                    placeholder: String(localized: "My Startup Brand"),
                     text: $viewModel.name,
                     autocapitalization: .words,
                     errorMessage: viewModel.nameValidationMessage
                 )
 
                 FormTextEditor(
-                    label: "PROMPT",
-                    placeholder: "Describe the brandkit you want to create — its style, colors, audience, mood, and required elements.",
+                    label: String(localized: "PROMPT"),
+                    placeholder: String(
+                        localized: "Describe the brandkit you want to create — its style, colors, audience, mood, and required elements."
+                    ),
                     text: $viewModel.prompt,
                     errorMessage: viewModel.promptValidationMessage
                 )
@@ -51,7 +53,9 @@ struct ProjectCreateView: View {
                 }
 
                 PrimaryButton(
-                    title: viewModel.isLoading ? "Creating..." : "Generate",
+                    title: viewModel.isLoading
+                        ? String(localized: "Creating...")
+                        : String(localized: "Generate"),
                     isEnabled: viewModel.canSubmit,
                     fill: AnyShapeStyle(Color.accentColor)
                 ) {

@@ -10,7 +10,7 @@ struct ProjectGeneratingView: View {
 
             Button("Open editor", action: onOpenEditor)
         }
-        .customNavigationBar(title: "Generating", onBack: onBack)
+        .customNavigationBar(title: String(localized: "Generating"), onBack: onBack)
     }
 }
 

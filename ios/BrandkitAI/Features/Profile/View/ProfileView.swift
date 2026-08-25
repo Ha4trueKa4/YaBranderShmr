@@ -149,27 +149,62 @@ struct ProfileView: View {
 
     private var stats: some View {
         HStack(spacing: 8) {
-            stat(value: viewModel.projectsCount, title: "Projects")
-            Text("·").foregroundStyle(.secondary)
+            stat(Self.projectsStat(viewModel.projectsCount))
+            separatorDot
             connectionStat(
+                resource: Self.followersStat(viewModel.followersCount),
                 value: viewModel.followersCount,
-                title: "Followers",
+                accessibilityHint: "Opens the followers list",
                 kind: .followers,
                 animated: true
             )
-            Text("·").foregroundStyle(.secondary)
+            separatorDot
             connectionStat(
+                resource: Self.followingStat(viewModel.followingCount),
                 value: viewModel.followingCount,
-                title: "Following",
+                accessibilityHint: "Opens the following list",
                 kind: .following
             )
         }
         .font(.system(size: 13))
     }
 
+    private var separatorDot: some View {
+        Text(verbatim: "·").foregroundStyle(.secondary)
+    }
+
+    // Число и слово лежат в одной строке каталога: без числа внутри строки
+    // формы множественного числа не выбрать, а в русском их три. Число
+    // выделяется в переводе markdown-жирным, остальной текст красится
+    // вторичным цветом уже при отрисовке.
+    private static func projectsStat(_ count: Int) -> LocalizedStringResource {
+        LocalizedStringResource(
+            "profile.stat.projects",
+            defaultValue: "**\(count)** Projects",
+            comment: "Project count on a profile; the number is bold"
+        )
+    }
+
+    private static func followersStat(_ count: Int) -> LocalizedStringResource {
+        LocalizedStringResource(
+            "profile.stat.followers",
+            defaultValue: "**\(count)** Followers",
+            comment: "Follower count on a profile; the number is bold"
+        )
+    }
+
+    private static func followingStat(_ count: Int) -> LocalizedStringResource {
+        LocalizedStringResource(
+            "profile.stat.following",
+            defaultValue: "**\(count)** Following",
+            comment: "Following count on a profile; the number is bold"
+        )
+    }
+
     private func connectionStat(
+        resource: LocalizedStringResource,
         value: Int,
-        title: String,
+        accessibilityHint: LocalizedStringKey,
         kind: ProfileConnectionsKind,
         animated: Bool = false
     ) -> some View {
@@ -177,28 +212,42 @@ struct ProfileView: View {
             guard let profileID = viewModel.profileID else { return }
             onOpenConnections(profileID, kind)
         } label: {
-            stat(value: value, title: title, animated: animated)
+            stat(resource, value: value, animated: animated)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(viewModel.profileID == nil)
-        .accessibilityHint("Opens \(title.lowercased()) list")
+        .accessibilityHint(accessibilityHint)
     }
 
-    private func stat(value: Int, title: String, animated: Bool = false) -> some View {
-        HStack(spacing: 3) {
-            if animated {
-                Text(value.formatted())
-                    .fontWeight(.bold)
-                    .contentTransition(.numericText(value: Double(value)))
-                    .animation(.easeInOut(duration: 0.2), value: value)
-            } else {
-                Text(value.formatted())
-                    .fontWeight(.bold)
-            }
-            Text(title)
-                .foregroundStyle(.secondary)
+    @ViewBuilder
+    private func stat(
+        _ resource: LocalizedStringResource,
+        value: Int = 0,
+        animated: Bool = false
+    ) -> some View {
+        let text = Text(Self.styledStat(resource))
+
+        if animated {
+            text
+                .contentTransition(.numericText(value: Double(value)))
+                .animation(.easeInOut(duration: 0.2), value: value)
+        } else {
+            text
         }
+    }
+
+    /// Жирным markdown в переводе размечено только число — остальное
+    /// дорисовываем вторичным цветом, как было до локализации.
+    private static func styledStat(_ resource: LocalizedStringResource) -> AttributedString {
+        var attributed = AttributedString(localized: resource)
+        let plainRanges = attributed.runs.compactMap { run in
+            run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true ? nil : run.range
+        }
+        for range in plainRanges {
+            attributed[range].foregroundColor = .secondary
+        }
+        return attributed
     }
 
     private static let gridColumns = [

@@ -62,7 +62,7 @@ final class ProfileConnectionsViewModel {
         } catch {
             guard generation == loadGeneration, !error.isTaskCancellation else { return }
             pendingFollowUserID = nil
-            errorMessage = "Couldn't load \(kind.title.lowercased())."
+            errorMessage = kind.loadFailureMessage
         }
     }
 

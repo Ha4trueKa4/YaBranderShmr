@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 enum MainTab: String, CaseIterable, Identifiable, Hashable {
     case feed
@@ -7,7 +7,7 @@ enum MainTab: String, CaseIterable, Identifiable, Hashable {
 
     var id: Self { self }
 
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
         case .feed: "Feed"
         case .create: "Create"

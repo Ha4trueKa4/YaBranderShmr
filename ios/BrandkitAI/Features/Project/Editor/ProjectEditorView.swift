@@ -16,7 +16,7 @@ struct ProjectEditorView: View {
                 isShowingVisibility = true
             }
         }
-        .customNavigationBar(title: "Editor", onBack: onBack)
+        .customNavigationBar(title: String(localized: "Editor"), onBack: onBack)
         .sheet(isPresented: $isShowingVisibility) {
             ProjectVisibilityView()
         }

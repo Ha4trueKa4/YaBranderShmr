@@ -95,8 +95,10 @@ final class ProjectPreviewViewModel {
     var authorInitials: String { authorName.initials }
 
     var dateText: String {
-        let prefix = showsAuthorSection ? "Published" : "Created"
-        return "\(prefix) \(Self.relativeString(for: createdAt))"
+        let relative = Self.relativeString(for: createdAt)
+        return showsAuthorSection
+            ? String(localized: "Published \(relative)")
+            : String(localized: "Created \(relative)")
     }
 
     func versionImageURL() async throws -> URL {
@@ -308,7 +310,7 @@ final class ProjectPreviewViewModel {
     }
 
     private static func relativeString(for date: Date?) -> String {
-        guard let date else { return "just now" }
+        guard let date else { return String(localized: "just now") }
         return date.formatted(.relative(presentation: .named, unitsStyle: .wide))
     }
 }

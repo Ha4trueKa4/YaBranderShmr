@@ -17,8 +17,10 @@ final class ProjectCreateViewModel {
     private(set) var submissionIsUncertain = false
     private(set) var selectedModelID: String
 
-    let title = "New Project"
-    let hint = "Your prompt will become the first message in the project chat and start generation."
+    let title = String(localized: "New Project")
+    let hint = String(
+        localized: "Your prompt will become the first message in the project chat and start generation."
+    )
 
     private let service: any ProjectServiceProtocol
 
@@ -51,13 +53,13 @@ final class ProjectCreateViewModel {
     var nameValidationMessage: String? {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedName.unicodeScalars.count > Self.maxNameLength else { return nil }
-        return "Project name is too long (maximum 255 characters)."
+        return String(localized: "Project name is too long (maximum 255 characters).")
     }
 
     var promptValidationMessage: String? {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedPrompt.unicodeScalars.count > Self.maxPromptLength else { return nil }
-        return "Prompt is too long (maximum 5000 characters)."
+        return String(localized: "Prompt is too long (maximum 5000 characters).")
     }
 
     func loadModels(force: Bool = false) async {
@@ -116,24 +118,26 @@ final class ProjectCreateViewModel {
 
     private func message(for error: Error) -> String {
         if Self.isUncertainSubmission(error) {
-            return "The result is uncertain. Return to the project list and refresh before trying again."
+            return String(
+                localized: "The result is uncertain. Return to the project list and refresh before trying again."
+            )
         }
         if case NetworkError.httpError(let statusCode) = error,
            statusCode == 400 {
-            return "Enter a prompt up to 5000 characters."
+            return String(localized: "Enter a prompt up to 5000 characters.")
         }
         if case NetworkError.httpError(let statusCode) = error {
-            return "Server error (\(statusCode))"
+            return String(localized: "Server error (\(statusCode))")
         }
         if case NetworkError.serverValidation(_, _, let field) = error,
            field == "name" {
-            return "Enter a valid project name."
+            return String(localized: "Enter a valid project name.")
         }
         if case NetworkError.serverValidation(_, _, let field) = error,
            field == "prompt" {
-            return "Enter a prompt up to 5000 characters."
+            return String(localized: "Enter a prompt up to 5000 characters.")
         }
-        return "Unable to create the project."
+        return String(localized: "Unable to create the project.")
     }
 
     private static func isUncertainSubmission(_ error: Error) -> Bool {

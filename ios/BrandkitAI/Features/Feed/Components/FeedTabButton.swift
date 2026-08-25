@@ -16,12 +16,12 @@ struct FeedTabButton: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(tab.rawValue)
+        .accessibilityLabel(tab.title)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private var title: some View {
-        Text(tab.rawValue)
+        Text(tab.title)
             .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
             .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             .lineLimit(1)

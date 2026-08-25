@@ -87,12 +87,12 @@ final class FeedListViewModel {
             switch statusCode {
             case 401:
                 return scope == .following
-                    ? "Sign in to see your subscriptions"
-                    : "Please sign in and try again"
+                    ? String(localized: "Sign in to see your subscriptions")
+                    : String(localized: "Please sign in and try again")
             default:
-                return "Server error (\(statusCode))"
+                return String(localized: "Server error (\(statusCode))")
             }
         }
-        return "Unable to connect to the server"
+        return String(localized: "Unable to connect to the server")
     }
 }

@@ -13,13 +13,13 @@ struct SignUpView: View {
         @Bindable var viewModel = viewModel
 
         FormScreenLayout {
-            ScreenHeader(title: "Create account")
+            ScreenHeader(title: String(localized: "Create account"))
                 .padding(.bottom, 32)
 
             VStack(spacing: 16) {
                 FormTextField(
-                    label: "Full name",
-                    placeholder: "John Doe",
+                    label: String(localized: "Full name"),
+                    placeholder: String(localized: "John Doe"),
                     text: $viewModel.fullName,
                     textContentType: .name,
                     autocapitalization: .words,
@@ -27,8 +27,8 @@ struct SignUpView: View {
                 )
 
                 FormTextField(
-                    label: "Email",
-                    placeholder: "hello@brandkit.ai",
+                    label: String(localized: "Email"),
+                    placeholder: "hello@yabrander.ai",
                     text: $viewModel.email,
                     textContentType: .emailAddress,
                     keyboardType: .emailAddress,
@@ -36,8 +36,8 @@ struct SignUpView: View {
                 )
 
                 FormTextField(
-                    label: "Password",
-                    placeholder: "Enter your password",
+                    label: String(localized: "Password"),
+                    placeholder: String(localized: "Enter your password"),
                     text: $viewModel.password,
                     isSecure: true,
                     textContentType: .newPassword,
@@ -53,7 +53,7 @@ struct SignUpView: View {
             }
 
             PrimaryButton(
-                title: "Create account",
+                title: String(localized: "Create account"),
                 isEnabled: !viewModel.isLoading,
                 isLoading: viewModel.isPasswordLoading,
                 fill: AnyShapeStyle(Color.accentColor),
@@ -72,8 +72,8 @@ struct SignUpView: View {
             .padding(.top, 12)
 
             ScreenFooter(
-                question: "Already have an account?",
-                actionTitle: "Sign in"
+                question: String(localized: "Already have an account?"),
+                actionTitle: String(localized: "Sign in")
             ) {
                 viewModel.clearError()
                 onSignIn()

@@ -32,7 +32,7 @@ struct FeedListView: View {
             } else if let message = viewModel.errorMessage {
                 stateMessage(message, actionTitle: "Retry")
             } else {
-                stateMessage("No projects yet", actionTitle: "Refresh")
+                stateMessage(String(localized: "No projects yet"), actionTitle: "Refresh")
             }
         } else {
             list
@@ -84,7 +84,7 @@ struct FeedListView: View {
         }
     }
 
-    private func stateMessage(_ message: String, actionTitle: String) -> some View {
+    private func stateMessage(_ message: String, actionTitle: LocalizedStringKey) -> some View {
         VStack(spacing: 16) {
             Text(message)
                 .font(.subheadline)
