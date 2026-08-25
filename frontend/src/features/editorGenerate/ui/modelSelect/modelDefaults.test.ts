@@ -6,7 +6,17 @@ import {
 } from './modelDefaults'
 
 describe('getDefaultGenerationModel', () => {
-  it('prefers GPT Luna when it is available', () => {
+  it('prefers Recraft when it is available', () => {
+    expect(
+      getDefaultGenerationModel([
+        { id: 'deepseek-v4-flash/latest', owner: 'DeepSeek' },
+        { id: 'gpt-5.6-luna', owner: 'OpenAI' },
+        { id: 'recraftv2_vector', owner: 'Recraft' },
+      ]),
+    ).toBe('recraftv2_vector')
+  })
+
+  it('falls back to GPT Luna when Recraft is unavailable', () => {
     expect(
       getDefaultGenerationModel([
         { id: 'deepseek-v4-flash/latest', owner: 'DeepSeek' },
