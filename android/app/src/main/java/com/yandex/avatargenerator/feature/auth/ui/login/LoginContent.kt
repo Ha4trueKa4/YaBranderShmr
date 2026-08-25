@@ -202,7 +202,7 @@ private fun LoginContentPreview() {
     AvatarGeneratorTheme {
         LoginContent(
             state = LoginState(
-                email = "hello@brandkit.ai",
+                email = "name@example.com",
                 password = "secret123",
                 formError = AuthFormError.InvalidCredentials,
                 isYandexAvailable = true,

@@ -17,7 +17,7 @@
     <string name="auth_field_email">Email</string>
     <string name="auth_field_password">Пароль</string>
     <string name="auth_placeholder_full_name">Иван Иванов</string>
-    <string name="auth_placeholder_email">hello@brandkit.ai</string>
+    <string name="auth_placeholder_email">name@example.com</string>
     <string name="auth_placeholder_password">Введите пароль</string>
     <string name="auth_no_account">Нет аккаунта?</string>
     <string name="auth_register">Зарегистрироваться</string>
@@ -42,8 +42,6 @@
     <string name="auth_error_unknown">Что-то пошло не так. Попробуйте ещё раз</string>
 
     <!-- Онбординг: слайды -->
-    <string name="onboarding_brand_title">Ya Brander</string>
-
     <string name="onboarding_generate_title">Превращайте слова</string>
     <string name="onboarding_generate_title_accent">в фирменный стиль</string>
     <string name="onboarding_generate_subtitle">Опишите бренд в брифе — ИИ соберёт логотип, палитру и типографику в векторе</string>
@@ -92,8 +90,6 @@
     <string name="onboarding_page_indicator_description">Страница %1$d из %2$d</string>
 
     <!-- Лента -->
-    <string name="feed_brand_name">Brandkit</string>
-    <string name="feed_brand_name_accent">AI</string>
     <string name="feed_search_description">Поиск</string>
 
     <string name="feed_tab_all">Все</string>

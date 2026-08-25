@@ -1,36 +1,22 @@
 package com.yandex.avatargenerator.feature.auth.ui.components
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.HighlightOff
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.yandex.avatargenerator.ui.components.brandSurface
-import com.yandex.avatargenerator.ui.theme.AppColors
-import com.yandex.avatargenerator.ui.theme.AppShape
+import com.yandex.avatargenerator.R
 
 /**
- * Небольшой квадратный значок бренда над заголовком формы (см. "small-logo" в макете Figma).
+ * Логотип-марка бренда (без текста) над заголовком формы входа/регистрации.
  * Общий для экранов входа и регистрации.
  */
 @Composable
 internal fun AuthBrandMark(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .size(40.dp)
-            .brandSurface(RoundedCornerShape(AppShape.s)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.HighlightOff,
-            contentDescription = null,
-            tint = AppColors.AccentText,
-            modifier = Modifier.size(20.dp)
-        )
-    }
+    Image(
+        painter = painterResource(R.drawable.ic_logo_mark),
+        contentDescription = null,
+        modifier = modifier.size(48.dp),
+    )
 }

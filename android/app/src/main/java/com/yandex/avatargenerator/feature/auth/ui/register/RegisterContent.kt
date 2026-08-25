@@ -159,7 +159,7 @@ private fun RegisterContentPreview() {
         RegisterContent(
             state = RegisterState(
                 nickname = "John Doe",
-                email = "hello@brandkit.ai",
+                email = "name@example.com",
                 password = "12345",
                 passwordError = AuthFormError.InvalidPassword,
             ),
