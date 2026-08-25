@@ -455,7 +455,9 @@ namespace ya_brander::components {
     userver::formats::json::ValueBuilder request_body;
     request_body["model"] =
         is_openai ? model : "gpt://b1gttnvmtpd0tagdlb7o/" + model;
-    request_body["temperature"] = temperature;
+    if (!is_openai) {
+      request_body["temperature"] = temperature;
+    }
     request_body["max_output_tokens"] = max_output_tokens;
     request_body["instructions"] = prompt.instructions;
     request_body["input"] = prompt.input;
