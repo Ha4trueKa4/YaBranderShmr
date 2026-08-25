@@ -10,7 +10,7 @@ import {
   useProjectChatQuery,
 } from '@entities/projectChat'
 import {
-  getDefaultGenerationModel,
+  getDefaultChatGenerationModel,
   getGenerationErrorMessage,
   pollGenerationStatus,
   useGenerateProjectMutation,
@@ -88,7 +88,7 @@ export function useEditorChatGeneration({
 
       try {
         const generation = await generateProject({
-          model: getDefaultGenerationModel(models),
+          model: getDefaultChatGenerationModel(models),
           projectId,
           prompt,
         })

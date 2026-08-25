@@ -26,3 +26,14 @@ export function getDefaultGenerationModel(models: GenerationModel[]): string {
     DEFAULT_GENERATION_MODEL
   )
 }
+
+export function getDefaultChatGenerationModel(
+  models: GenerationModel[],
+): string {
+  return (
+    models.find(isGptLuna)?.id ??
+    models.find(isRecraft)?.id ??
+    models.find(isDeepSeek)?.id ??
+    DEFAULT_GENERATION_MODEL
+  )
+}
