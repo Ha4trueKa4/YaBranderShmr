@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">YaBrander</string>
+    <string name="app_name" translatable="false">Ya Brander</string>
 
     <!-- Дизайн-система -->
     <string name="brand_version_restore">Restore</string>
@@ -19,7 +19,7 @@
     <string name="auth_field_email">Email</string>
     <string name="auth_field_password">Password</string>
     <string name="auth_placeholder_full_name">John Doe</string>
-    <string name="auth_placeholder_email">hello@ya.brander</string>
+    <string name="auth_placeholder_email">name@example.com</string>
     <string name="auth_placeholder_password">Enter your password</string>
     <string name="auth_no_account">No account?</string>
     <string name="auth_register">Register</string>
@@ -44,7 +44,7 @@
     <string name="auth_error_unknown">Something went wrong. Try again</string>
 
     <!-- Онбординг: слайды -->
-    <string name="onboarding_brand_title">Ya Brander</string>
+    <string name="onboarding_brand_title" translatable="false">Ya Brander</string>
 
     <string name="onboarding_generate_title">Turn words into</string>
     <string name="onboarding_generate_title_accent">brand identity</string>
@@ -94,7 +94,7 @@
     <string name="onboarding_page_indicator_description">Page %1$d of %2$d</string>
 
     <!-- Лента -->
-    <string name="feed_brand_name">Brandkit</string>
+    <string name="feed_brand_name" translatable="false">Ya Brander</string>
     <string name="feed_search_description">Search</string>
 
     <string name="feed_tab_all">All</string>
@@ -134,7 +134,7 @@
     <string name="create_project_description_label">Brand description &amp; brief (optional)</string>
     <string name="create_project_description_placeholder">Describe your brand values, target audience, preferred color scheme, visual mood…</string>
     <string name="create_project_hint">Describe the shapes, colors, and mood you want — the more specific the prompt, the closer the result.</string>
-    <string name="create_project_submit">Generate Brandkit</string>
+    <string name="create_project_submit">Generate brandbook</string>
     <string name="create_project_submitting">Generating brand assets…</string>
     <string name="create_project_error">Couldn\'t generate brand assets. Please try again.</string>
 
@@ -155,7 +155,7 @@
     <string name="project_visibility_public_badge">Public</string>
     <string name="project_visibility_open_description">Change project visibility</string>
     <string name="project_visibility_title">Project visibility</string>
-    <string name="project_visibility_subtitle">Manage who can view and copy your brandkit.</string>
+    <string name="project_visibility_subtitle">Manage who can view and copy your brandbook.</string>
     <string name="project_visibility_private_title">Private project</string>
     <string name="project_visibility_private_subtitle">Only you can view and edit it</string>
     <string name="project_visibility_public_title">Public project</string>

@@ -62,10 +62,8 @@ internal object OnboardingDefaults {
     /** Прозрачность неактивной точки индикатора — цвет ей задаёт вызывающий. */
     const val InactiveDotAlpha = 0.25f
 
-    // --- слайд 1: плитка лого ---
-    val LogoTileSize = 88.dp
-    val LogoTileRadius = AppShape.l * 1.5f
-    val LogoGlyphSize = 40.dp
+    // --- слайд 1: марка бренда ---
+    val LogoMarkSize = 88.dp
     val LogoBrandSpacing = AppSpacing.l
 
     // --- слайд 2: чат ---

@@ -118,7 +118,7 @@ private fun BrandCardPreview() {
         ) {
             BrandCard(
                 title = "Neon Gradient Kit",
-                subtitle = "By Brandkit AI",
+                subtitle = "By Ya Brander",
                 modifier = Modifier.width(160.dp),
                 onClick = {}
             )
